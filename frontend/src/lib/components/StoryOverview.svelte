@@ -11,6 +11,7 @@
 	import { useReview } from '$lib/review/context';
 	import { OVERVIEW_PART } from '$lib/review/story-keys';
 	import type { OverviewList, OverviewText, StoryHeld } from '$lib/types';
+	import Bands from '$lib/ui/Bands.svelte';
 	import EdgeFrame from '$lib/ui/EdgeFrame.svelte';
 	import Row from '$lib/ui/Row.svelte';
 	import AskableBlock from './AskableBlock.svelte';
@@ -84,14 +85,14 @@
 
 	<section>
 		<h2 class="sr-only">The change in short</h2>
-		<EdgeFrame {...AGENTS_VOICE} holds="bands" testId="story-in-short">
-			<div class="cr-askable-stack">
+		<EdgeFrame {...AGENTS_VOICE} testId="story-in-short">
+			<Bands testId="overview-lines">
 				{@render line(overviewLine('task'), overview.task, 'overview-task')}
 				{@render line(overviewLine('done'), overview.done, 'overview-done')}
 				{#if overview.doubt}
 					{@render line(overviewLine('doubt'), overview.doubt, 'overview-doubt')}
 				{/if}
-			</div>
+			</Bands>
 		</EdgeFrame>
 	</section>
 
@@ -108,14 +109,14 @@
 				{/snippet}
 			</Row>
 			{#if listsOpen}
-				<EdgeFrame {...AGENTS_VOICE} holds="bands" testId="overview-lists">
+				<EdgeFrame {...AGENTS_VOICE} testId="overview-lists">
 					<div class="flex flex-col gap-4">
 						{#each OVERVIEW_LISTS_IN_ORDER as list (list)}
 							{#if overview[list].length > 0}
-								<section>
-									<h3 class="cr-voice-inset cr-muted text-xs font-semibold">{LIST_HEADINGS[list]}</h3>
+								<section class="flex flex-col gap-2">
+									<h3 class="cr-muted text-xs font-semibold">{LIST_HEADINGS[list]}</h3>
 									<!-- Each thing listed may be asked about, as the overview's lines may -->
-									<ul class="cr-askable-stack mt-2">
+									<Bands listed testId="overview-list">
 										{#each overview[list] as item, itemPlace (itemPlace)}
 											<li>
 												<AskableBlock block={overviewItem(list, itemPlace)} words={item.text} testId="overview-item">
@@ -128,7 +129,7 @@
 												</AskableBlock>
 											</li>
 										{/each}
-									</ul>
+									</Bands>
 								</section>
 							{/if}
 						{/each}

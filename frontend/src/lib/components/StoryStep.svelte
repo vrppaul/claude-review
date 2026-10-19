@@ -75,11 +75,12 @@
 
 {#if step.shown === null}
 	<!-- A step whose code the review cannot place in the change now: its number, its reason, and a line
-		that says its code in its file is no longer found, and no code, which would be other code or a
-		file's status no longer true. It draws no lines, so it is no section of the page -->
+		that says its code in its file is no longer found, standing where its number does, and no code,
+		which would be other code or a file's status no longer true. It draws no lines, so it is no
+		section of the page -->
 	<div data-testid="story-step-without-code">
 		{@render numberAndReason()}
-		<p data-testid="step-code-not-found" class="cr-voice-inset cr-muted text-xs wrap-anywhere">
+		<p data-testid="step-code-not-found" class="cr-muted text-xs wrap-anywhere">
 			{codeNoLongerFound(told.file)}
 		</p>
 	</div>

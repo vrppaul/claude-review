@@ -741,24 +741,6 @@
 	font-variant-numeric: tabular-nums;
 }
 
-/* What hangs under a block begins where its band ends, which reaches below its words */
-.cr-askable-hangs {
-	margin-top: var(--cr-band-reach);
-}
-/* Words beside framed blocks the reader may ask about, which stand as far in as theirs do */
-.cr-voice-inset {
-	padding-left: var(--cr-edge-inset);
-}
-/*
- * Blocks of the agent's words one under another: as far apart as the offer
- * over each is tall, so it lies over none of the words of the block above
- */
-.cr-askable-stack {
-	display: flex;
-	flex-direction: column;
-	row-gap: var(--cr-button-xs);
-}
-
 /*
  * A thread the agent raised.
  *

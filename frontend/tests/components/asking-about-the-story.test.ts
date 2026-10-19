@@ -186,7 +186,7 @@ describe("the story's other blocks", () => {
 		async ({ drawnIn }) => {
 			render(ReviewScreen, { props: { review } });
 			const asked = screen.getByTestId(drawnIn);
-			const frame = within(asked).getByTestId('askable-frame');
+			const frame = within(asked).getByTestId(`${drawnIn}-frame`);
 
 			await userEvent.setup().click(within(asked).getByTestId('ask-about-this'));
 			expect(within(asked).getByTestId('comment-box')).toBeTruthy();

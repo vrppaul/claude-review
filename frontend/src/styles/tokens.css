@@ -81,7 +81,7 @@
 	--cr-edge-block-room: 0.5rem;
 	/*
 	 * How far a band (lib/ui Band) reaches above and below its words: into
-	 * the room a frame of bands keeps there, so a band fills its frame
+	 * the room its frame keeps there, so a band fills its frame
 	 */
 	--cr-band-reach: var(--cr-edge-block-room);
 

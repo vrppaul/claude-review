@@ -163,7 +163,7 @@ async def test_ask_about_this_stands_over_the_top_edge_of_the_block_pointed_at_o
     review: RunningReview, page: Page, width: int
 ) -> None:
     doubt = await _read_as_story_at(page, review, width)
-    band = doubt.get_by_test_id("askable-band")
+    band = doubt.get_by_test_id("overview-doubt-band")
     asking = doubt.get_by_test_id("ask-about-this")
     words = doubt.get_by_test_id("block-words")
     words_above = page.get_by_test_id("overview-done").get_by_test_id("block-words")
@@ -200,7 +200,7 @@ async def test_a_chapters_doubt_pointed_at_is_lit_by_the_pointers_light_with_the
     """Pointed at, the doubt is lit as a block is, by a light that takes no edge and leaves the warning's wash under it."""
     await _read_as_story(page, review)
     doubt = page.get_by_test_id("chapter-doubt-block")
-    band = doubt.get_by_test_id("askable-band")
+    band = doubt.get_by_test_id("chapter-doubt-block-band")
 
     await band.hover()
 
@@ -210,7 +210,7 @@ async def test_a_chapters_doubt_pointed_at_is_lit_by_the_pointers_light_with_the
         await on_a_probe(page, "backgroundColor", "transparent"),
         NO_EDGE,
     )
-    assert (await painted(doubt.get_by_test_id("askable-frame"))).ground == await on_a_probe(
+    assert (await painted(doubt.get_by_test_id("chapter-doubt-block-frame"))).ground == await on_a_probe(
         page, "backgroundColor", "var(--cr-warning-tint)"
     )
     assert await doubt.get_by_test_id("ask-about-this").evaluate(DRAWN_STRENGTH) == FULLY_DRAWN
@@ -226,12 +226,12 @@ async def test_a_chapters_doubt_a_thread_hangs_under_is_drawn_as_the_one_the_rea
 
     await page.get_by_test_id("overview-task").get_by_test_id("block-words").click()
 
-    band = await painted(doubt.get_by_test_id("askable-band"))
+    band = await painted(doubt.get_by_test_id("chapter-doubt-block-band"))
     assert (band.ground, band.edge) == (
         await on_a_probe(page, "backgroundColor", "var(--cr-selected)"),
         await on_a_probe(page, "boxShadow", "var(--cr-shadow-selected-start)"),
     )
-    assert (await painted(doubt.get_by_test_id("askable-frame"))).ground == await on_a_probe(
+    assert (await painted(doubt.get_by_test_id("chapter-doubt-block-frame"))).ground == await on_a_probe(
         page, "backgroundColor", "var(--cr-warning-tint)"
     )
 
@@ -245,8 +245,10 @@ async def test_a_chapters_doubt_a_thread_hangs_under_shows_the_warnings_edge_bes
 
     await page.get_by_test_id("overview-task").get_by_test_id("block-words").click()
 
-    band = doubt.get_by_test_id("askable-band")
-    assert await doubt.get_by_test_id("askable-frame").evaluate(EDGE_SEEN_BESIDE, await band.element_handle())
+    band = doubt.get_by_test_id("chapter-doubt-block-band")
+    assert await doubt.get_by_test_id("chapter-doubt-block-frame").evaluate(
+        EDGE_SEEN_BESIDE, await band.element_handle()
+    )
 
 
 @pytest.mark.parametrize("framed", IN_FRAMES_OF_THEIR_OWN, ids=[framed.block for framed in IN_FRAMES_OF_THEIR_OWN])
@@ -255,9 +257,9 @@ async def test_a_chapters_block_bands_its_own_frame_inside_its_edge_to_its_far_s
 ) -> None:
     await _read_as_story(page, review)
     block = page.get_by_test_id(framed.block)
-    frame = await block.get_by_test_id("askable-frame").element_handle()
+    frame = await block.get_by_test_id(f"{framed.block}-frame").element_handle()
 
-    in_its_frame = await block.get_by_test_id("askable-band").evaluate(BAND_IN_ITS_FRAME, frame)
+    in_its_frame = await block.get_by_test_id(f"{framed.block}-band").evaluate(BAND_IN_ITS_FRAME, frame)
     words_in = await block.get_by_test_id(framed.words).evaluate(LEFT_OF_ANOTHER, frame)
 
     in_from_the_edge = await on_a_probe(page, "paddingLeft", WORDS_IN_FROM_THE_EDGE)
@@ -271,7 +273,7 @@ async def test_a_line_of_the_overview_bands_the_frame_it_shares_inside_its_edge_
     doubt = await _read_as_story(page, review)
     frame = await page.get_by_test_id("story-in-short").element_handle()
 
-    in_its_frame = await doubt.get_by_test_id("askable-band").evaluate(BAND_IN_ITS_FRAME, frame)
+    in_its_frame = await doubt.get_by_test_id("overview-doubt-band").evaluate(BAND_IN_ITS_FRAME, frame)
 
     assert in_its_frame == [pytest.approx(0), pytest.approx(0)]
 
@@ -284,7 +286,7 @@ async def test_ask_about_this_over_a_chapters_why_stands_over_none_of_what_heads
     why = page.get_by_test_id("chapter-why-block")
     asking = why.get_by_test_id("ask-about-this")
 
-    await why.get_by_test_id("askable-band").hover()
+    await why.get_by_test_id("chapter-why-block-band").hover()
 
     assert await asking.evaluate(DRAWN_STRENGTH) == FULLY_DRAWN
     chapter = page.get_by_test_id("story-chapter")
@@ -302,8 +304,8 @@ async def test_a_block_with_a_thread_under_it_stays_banded_where_the_reader_neit
 
     await page.get_by_test_id("overview-task").get_by_test_id("block-words").click()
 
-    unbanded = (await painted(done.get_by_test_id("askable-band"))).ground
-    assert (await painted(doubt.get_by_test_id("askable-band"))).ground != unbanded
+    unbanded = (await painted(done.get_by_test_id("overview-done-band"))).ground
+    assert (await painted(doubt.get_by_test_id("overview-doubt-band"))).ground != unbanded
 
 
 async def test_a_block_whose_thread_is_folded_away_is_banded_no_more_than_the_blocks_beside_it(
@@ -315,8 +317,8 @@ async def test_a_block_whose_thread_is_folded_away_is_banded_no_more_than_the_bl
     await doubt.get_by_test_id("fold-comment").click()
     await page.get_by_test_id("overview-task").get_by_test_id("block-words").click()
 
-    unbanded = (await painted(page.get_by_test_id("overview-done").get_by_test_id("askable-band"))).ground
-    assert (await painted(doubt.get_by_test_id("askable-band"))).ground == unbanded
+    unbanded = (await painted(page.get_by_test_id("overview-done-band"))).ground
+    assert (await painted(doubt.get_by_test_id("overview-doubt-band"))).ground == unbanded
 
 
 async def test_what_more_the_overview_says_folds_under_a_chevron_at_the_end_of_its_row_down_while_away_up_while_open(
@@ -340,9 +342,11 @@ async def test_a_comment_written_on_the_storys_words_stands_in_from_them_as_a_ca
 
     await doubt.get_by_test_id("ask-about-this").click()
 
-    block_left, _, block_right = await doubt.evaluate(EDGES)
+    # The block as the reader sees it is its band, which reaches past its words across the frame they share
+    band = doubt.get_by_test_id("overview-doubt-band")
+    block_left, _, block_right = await band.evaluate(EDGES)
     card_left, card_top, card_right = await doubt.get_by_test_id("comment-box").evaluate(EDGES)
-    words_end = await doubt.get_by_test_id("askable-band").evaluate(BOTTOM_OF)
+    words_end = await band.evaluate(BOTTOM_OF)
     frame_end = await page.get_by_test_id("story-in-short").evaluate(BOTTOM_OF)
     card_end = await doubt.get_by_test_id("comment-box").evaluate(BOTTOM_OF)
     assert (card_left - block_left, block_right - card_right) == (pytest.approx(CARD_INSET), pytest.approx(CARD_INSET))
@@ -371,8 +375,27 @@ async def test_a_thread_on_a_chapters_own_words_hangs_below_the_frame_they_stand
     await _ask_about(page, why, "Why do these belong together?")
 
     # The frame holds the words and their band, and ends with them: the thread under them is no part of it
-    frame_ends = await why.get_by_test_id("askable-frame").evaluate(BOTTOM_OF)
-    assert frame_ends == await why.get_by_test_id("askable-band").evaluate(BOTTOM_OF)
+    frame_ends = await why.get_by_test_id("chapter-why-block-frame").evaluate(BOTTOM_OF)
+    assert frame_ends == await why.get_by_test_id("chapter-why-block-band").evaluate(BOTTOM_OF)
+
+
+async def test_a_thread_hangs_as_far_below_a_block_in_a_frame_of_its_own_as_below_a_line_of_the_overview(
+    review: RunningReview, page: Page
+) -> None:
+    """Under its band, as a thread hangs under its line: the frame a block stands in keeps no room of its own below it."""
+    doubt = await _read_as_story(page, review)
+    why = page.get_by_test_id("chapter-why-block")
+    await _ask_about(page, doubt, "Was it needed?")
+    await _ask_about(page, why, "Why do these belong together?")
+
+    under_a_line = await doubt.get_by_test_id("thread-card").evaluate(TOP_OF) - await doubt.get_by_test_id(
+        "overview-doubt-band"
+    ).evaluate(BOTTOM_OF)
+    under_a_frame = await why.get_by_test_id("thread-card").evaluate(TOP_OF) - await why.get_by_test_id(
+        "chapter-why-block-band"
+    ).evaluate(BOTTOM_OF)
+
+    assert under_a_frame == pytest.approx(under_a_line)
 
 
 async def test_a_thread_on_the_story_deleted_gives_the_keyboard_back_to_what_offered_its_block(

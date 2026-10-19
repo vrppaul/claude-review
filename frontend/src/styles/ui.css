@@ -406,36 +406,51 @@
 /*
  * A frame with an edge at its start (EdgeFrame, lib/ui/frame.ts): the edge
  * in its tone's colour, round at its other corners, on its tone's ground
- * where it lays one
+ * where it lays one; its words in from its edge and its far side, and above
+ * and below them
  */
 .cr-ui-edge-frame {
+	padding: var(--cr-edge-block-room) var(--cr-edge-end-room) var(--cr-edge-block-room) var(--cr-edge-inset);
 	border-left: var(--cr-edge-width) solid;
 	border-radius: 0 var(--radius-field) var(--radius-field) 0;
 }
-/* Its words stand in from its edge and its far side, and above and below them */
-.cr-ui-frame-holds-words {
-	padding: var(--cr-edge-block-room) var(--cr-edge-end-room) var(--cr-edge-block-room) var(--cr-edge-inset);
-}
 /*
- * Bands stand from inside its edge to its far side, and take that room
- * inside them; it keeps the room above and below, which they reach into
- */
-.cr-ui-frame-holds-bands {
-	padding-block: var(--cr-edge-block-room);
-}
-/*
- * A band (Band) in a frame of bands: across the frame from inside its edge
- * to its far side, its words standing in as a frame's words do, its corners
- * at the far side the frame's. It reaches above and below its words into
- * the room the frame keeps there, and takes none: a block stands where its
- * words would without it. As the one the reader is at (.cr-ui-band-current)
- * it is painted as a row the reader is at, below
+ * A band (Band) in a frame: across the frame from inside its edge to its
+ * far side, its corners at the far side the frame's. It reaches past its
+ * words into the room the frame keeps round them, on every side, and takes
+ * none: its words stand where the frame's would without it. As the one the
+ * reader is at (.cr-ui-band-current) it is painted as a row the reader is
+ * at, below
  */
 .cr-ui-band {
 	position: relative;
-	margin-block: calc(-1 * var(--cr-band-reach));
+	margin: calc(-1 * var(--cr-band-reach)) calc(-1 * var(--cr-edge-end-room)) calc(-1 * var(--cr-band-reach))
+		calc(-1 * var(--cr-edge-inset));
 	padding: var(--cr-band-reach) var(--cr-edge-end-room) var(--cr-band-reach) var(--cr-edge-inset);
 	border-radius: 0 var(--radius-field) var(--radius-field) 0;
+}
+/*
+ * What hangs under a block (Band) hangs under its band, as what hangs under
+ * a line hangs under its row: at the foot of the block's own frame where it
+ * has one, which the band ends at; where it shares the frame round it, past
+ * the band's reach below its words, and as wide as the band, into the
+ * frame's room either side
+ */
+.cr-ui-band + .cr-ui-band-under {
+	margin: var(--cr-band-reach) calc(-1 * var(--cr-edge-end-room)) 0 calc(-1 * var(--cr-edge-inset));
+}
+/*
+ * Blocks one under another (Bands): as far apart as the offer over a band
+ * is tall, so it lies over none of the words of the block above; and as far
+ * from words that head them, where they stand under some
+ */
+.cr-ui-bands {
+	display: flex;
+	flex-direction: column;
+	row-gap: var(--cr-button-xs);
+}
+.cr-ui-bands-headed {
+	margin-top: var(--cr-button-xs);
 }
 /* Pointed at, or holding the keyboard, in the pointer's light, the frame's wash showing through */
 .cr-ui-band:not(.cr-ui-band-current):is(:hover, :focus-within) {

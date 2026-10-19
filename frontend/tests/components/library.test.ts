@@ -24,6 +24,7 @@ import Dot from '$lib/ui/Dot.svelte';
 import Key from '$lib/ui/Key.svelte';
 import Tag from '$lib/ui/Tag.svelte';
 import Band from '$lib/ui/Band.svelte';
+import Bands from '$lib/ui/Bands.svelte';
 
 // What a test hands the library's parts to draw inside them, and what it finds each by
 const WORDS = 'Show the whole diff';
@@ -174,9 +175,13 @@ const WITH_A_CLASS_FROM_OUTSIDE = [
 		render: () => render(Key, { keys: CHORD, testId: TEST_ID, class: FROM_OUTSIDE } as never)
 	},
 	{
-		part: 'a band in a frame of bands',
+		part: 'a block the reader may ask about',
 		render: () =>
 			render(Band, { current: false, testId: TEST_ID, children: drawn, offer: drawn, class: FROM_OUTSIDE } as never)
+	},
+	{
+		part: 'blocks one under another the reader may ask about',
+		render: () => render(Bands, { testId: TEST_ID, children: drawn, class: FROM_OUTSIDE } as never)
 	}
 ];
 

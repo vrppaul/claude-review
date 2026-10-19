@@ -413,18 +413,34 @@ const STILL_PRESSED_BY_HAND = [
 ];
 const BUTTON_IN_THE_LIBRARY = { elements: ['button'], message: PRESSED_IN_THE_LIBRARY };
 
-// A block of the story the reader may ask about is banded by the library (Band, in an EdgeFrame of bands), and
-// nothing outside it bands one its own way: the page's band reached back over its frame's room and edge by
-// margins built from the frame's tokens, and lay its edge over a warning's. The classes it was drawn with are
-// refused in a class list and in any string a component holds; stylelint refuses a margin outside the library
-// that takes back a library part's room, however the band is drawn anew
-const DRAWN_AS_A_BAND = 'Band a block the reader may ask about with lib/ui Band, in an EdgeFrame of bands.';
-// The classes the page drew its bands with
-const A_BAND_OF_ITS_OWN = '/(^|\\s)([^\\s:]+:)*(cr-askable|cr-askable-written-under|cr-ask-over-block)(\\s|$)/';
+// A block of the story the reader may ask about is banded by the library (Band, stacked by Bands), and nothing
+// outside it bands one its own way: the page's band reached back over its frame's room and edge by margins built
+// from the frame's tokens, and lay its edge over a warning's. The classes it was drawn and laid out with are
+// refused in a class list and in any string a component holds; the tokens of the library's room, however the
+// band is drawn anew, below
+const DRAWN_AS_A_BAND = 'Band a block the reader may ask about with lib/ui Band, and stack such blocks with Bands.';
+// The classes the page drew its bands with, and laid out round them
+const A_BAND_OF_ITS_OWN =
+	'/(^|\\s)([^\\s:]+:)*(cr-askable|cr-askable-written-under|cr-ask-over-block|cr-askable-hangs|cr-askable-stack|cr-voice-inset)(\\s|$)/';
 const NO_BANDS_OF_ITS_OWN = [
 	...inClassLists(A_BAND_OF_ITS_OWN, DRAWN_AS_A_BAND),
 	{ selector: `Literal[value=${A_BAND_OF_ITS_OWN}]`, message: DRAWN_AS_A_BAND },
 	{ selector: `TemplateElement[value.raw=${A_BAND_OF_ITS_OWN}]`, message: DRAWN_AS_A_BAND }
+];
+
+// A part of the library keeps its own room, named after it in tokens.css — a frame's edge and room, a band's
+// reach, a card's, a notice's and a pane's room, a button's height — and lays out what stands round it itself: the
+// page hung a band's threads past its reach, stood words as far in as a frame's and stacked blocks as far apart as
+// a button is tall, each by naming such a token. Named in a class list or in any string, or set by a style
+// directive, one is refused outside the library; stylelint refuses one named in a stylesheet but the library's
+const LAID_OUT_BY_THE_LIBRARY =
+	'Lay out round a part of the library with the library: the tokens of its room are its own.';
+const A_LIBRARY_ROOM = '/--cr-(edge|band|card|notice|pane|button)-/';
+const NO_LAYOUT_ROUND_THE_LIBRARY = [
+	...inClassLists(A_LIBRARY_ROOM, LAID_OUT_BY_THE_LIBRARY),
+	{ selector: `Literal[value=${A_LIBRARY_ROOM}]`, message: LAID_OUT_BY_THE_LIBRARY },
+	{ selector: `TemplateElement[value.raw=${A_LIBRARY_ROOM}]`, message: LAID_OUT_BY_THE_LIBRARY },
+	{ selector: `SvelteStyleDirective[key.name.name=${A_LIBRARY_ROOM}]`, message: LAID_OUT_BY_THE_LIBRARY }
 ];
 
 // A part of the library takes no look from outside: what the page needs of one is a variant inside it, with its
@@ -458,7 +474,8 @@ const DRAWN_BY_THE_LIBRARY_ALONE = [
 	...NO_NOTICES_OF_THEIR_OWN,
 	...NO_MARKS_OF_ITS_OWN,
 	...NO_ROWS_OF_ITS_OWN,
-	...NO_BANDS_OF_ITS_OWN
+	...NO_BANDS_OF_ITS_OWN,
+	...NO_LAYOUT_ROUND_THE_LIBRARY
 ];
 
 /**

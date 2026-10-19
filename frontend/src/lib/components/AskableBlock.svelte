@@ -6,7 +6,6 @@
 	import type { StoryBlock } from '$lib/types';
 	import Band from '$lib/ui/Band.svelte';
 	import Button from '$lib/ui/Button.svelte';
-	import EdgeFrame from '$lib/ui/EdgeFrame.svelte';
 	import type { FrameLook } from '$lib/ui/frame';
 	import Icon from '$lib/ui/Icon.svelte';
 	import CommentBox from './CommentBox.svelte';
@@ -23,9 +22,9 @@
 		children: Snippet;
 		/**
 		 * The frame its words stand in where they have one of their own, as its
-		 * part of the story draws it: a frame of bands, which its band fills,
-		 * and what hangs under the block hangs below it. None for a block that
-		 * shares the frame of bands of the blocks around it.
+		 * part of the story draws it, which its band fills and what hangs under
+		 * the block hangs below. None for a block that shares the frame of the
+		 * blocks around it.
 		 */
 		frame?: FrameLook | undefined;
 	}
@@ -51,6 +50,8 @@
 	const writtenUnder = $derived(
 		threads.some((thread) => !review.threads.reading.isFolded(thread.id)) || field !== undefined
 	);
+	// Whether anything hangs under it, open or folded away
+	const hangsSomething = $derived(threads.length > 0 || field !== undefined);
 
 	// Announced to the review, which gives it the keyboard back once what hung under it goes
 	$effect(() => (asking ? review.sections.registerBlock(blockKey(block), asking) : undefined));
@@ -62,55 +63,41 @@
 	}
 </script>
 
-{#snippet band()}
-	<Band current={writtenUnder} testId="askable-band">
-		{@render children()}
-		{#snippet offer()}
-			<Button
-				bind:element={asking}
-				tone="asking"
-				size="xs"
-				testId="ask-about-this"
-				aria-label={name}
-				onclick={() => review.threads.writing.askAbout(block, words)}
-			>
-				<Icon name="conversation" size="xs" />
-				{ASK_ABOUT_THIS}
-			</Button>
-		{/snippet}
-	</Band>
+{#snippet offer()}
+	<Button
+		bind:element={asking}
+		tone="asking"
+		size="xs"
+		testId="ask-about-this"
+		aria-label={name}
+		onclick={() => review.threads.writing.askAbout(block, words)}
+	>
+		<Icon name="conversation" size="xs" />
+		{ASK_ABOUT_THIS}
+	</Button>
+{/snippet}
+
+<!-- What is asked about it hangs under it as a thread, as under a line, and outside any frame of its own -->
+{#snippet hung()}
+	{#each threads as thread (thread.id)}
+		<CommentThread {thread} hangs="block" />
+	{/each}
+	{#if field}
+		<div class="cr-thread-hang">
+			<CommentBox
+				{field}
+				onSave={() => sayComment(review, field)}
+				onAsk={review.canAsk ? () => askComment(review, field) : undefined}
+				onCancel={() => putAway(field)}
+				label={blockLabel(block)}
+				hangs="block"
+			/>
+		</div>
+	{/if}
 {/snippet}
 
 <!-- A block of the agent's words the reader may ask about, as a line is commented on: banded while it is
-	pointed at, it offers "Ask about this"; what is asked hangs under it as a thread, as under a line, and
-	outside any frame of the block's own -->
-<div data-testid={testId}>
-	{#if frame}
-		<EdgeFrame {...frame} holds="bands" testId="askable-frame">
-			{@render band()}
-		</EdgeFrame>
-	{:else}
-		{@render band()}
-	{/if}
-	{#if threads.length > 0 || field !== undefined}
-		<!-- What hangs under the block hangs under its band, as what hangs under a line hangs under its row: the
-			band reaches below the words into the room under them, and the cards begin past it -->
-		<div data-testid="askable-hangs" class="cr-askable-hangs">
-			{#each threads as thread (thread.id)}
-				<CommentThread {thread} hangs="block" />
-			{/each}
-			{#if field}
-				<div class="cr-thread-hang">
-					<CommentBox
-						{field}
-						onSave={() => sayComment(review, field)}
-						onAsk={review.canAsk ? () => askComment(review, field) : undefined}
-						onCancel={() => putAway(field)}
-						label={blockLabel(block)}
-						hangs="block"
-					/>
-				</div>
-			{/if}
-		</div>
-	{/if}
-</div>
+	pointed at, it offers "Ask about this" -->
+<Band current={writtenUnder} {frame} {testId} {offer} under={hangsSomething ? hung : undefined}>
+	{@render children()}
+</Band>
