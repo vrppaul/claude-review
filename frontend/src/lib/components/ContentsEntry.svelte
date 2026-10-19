@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import { useReview } from '$lib/review/context';
+	import Count from '$lib/ui/Count.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import Row from '$lib/ui/Row.svelte';
 	import { calledOnceRead, calledWithThreads } from './story-words';
@@ -57,7 +58,7 @@
 	entry's name to whoever cannot see it -->
 {#snippet threadsInIt()}
 	{#if threads > 0}
-		<span data-testid="part-threads" aria-hidden="true" class="badge badge-xs badge-primary">{threads}</span>
+		<Count count={threads} testId="part-threads" aria-hidden />
 	{/if}
 {/snippet}
 

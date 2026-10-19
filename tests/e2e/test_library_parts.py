@@ -550,13 +550,14 @@ async def test_every_notice_is_as_tall_as_one_with_a_button_its_words_alike_on_i
 POINT_ROUTE = "/api/point"
 CHANGED_LINE = 2
 # Every tag, count and chip a review draws once the agent raised a question on a line, each where it stands: what
-# the thread asks for and that it is the agent's, on its card; how many threads hang on the file, on its header;
-# what handing the review over costs, and the thread named in the panel's note of it; and what the thread asks
-# for, in the list a round is sent from
+# the thread asks for and that it is the agent's, on its card; how many threads hang on the file, on its header and
+# on its row of the tree; what handing the review over costs, and the thread named in the panel's note of it; and
+# what the thread asks for, in the list a round is sent from
 EVERY_MARK_IN_A_LINE = [
     "comment-severity",
     "comment-raised",
     "section-comment-count",
+    "file-threads",
     "review-weight",
     "panel-thread-ref",
     "finish-severity",

@@ -7,6 +7,7 @@
 	import { counted, type CountedWords, FILES } from '$lib/utils/words';
 	import { useReview } from '$lib/review/context';
 	import { fileSectionKey } from '$lib/review/reading-view';
+	import Dot from '$lib/ui/Dot.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import Row from '$lib/ui/Row.svelte';
 	import ChangedLines from './ChangedLines.svelte';
@@ -90,11 +91,7 @@
 			{#if !review.diff.narrowed && review.lastRetake.isChanged(file.path)}
 				<!-- The same fact the file header spells out, where there is no
 					room to spell it -->
-				<span
-					data-testid="file-changed-mark"
-					class="h-1.5 w-1.5 shrink-0 rounded-full bg-(--cr-mark)"
-					title="Changed since round {review.lastRetake.changedSince}"
-				></span>
+				<Dot tone="reader" title="Changed since round {review.lastRetake.changedSince}" testId="file-changed-mark" />
 				<span class="sr-only">changed since round {review.lastRetake.changedSince}</span>
 			{/if}
 			{#if viewed}

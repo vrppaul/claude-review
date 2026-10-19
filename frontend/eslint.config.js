@@ -1,3 +1,5 @@
+import { readdirSync } from 'node:fs';
+import { basename } from 'node:path';
 import eslint from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import svelte from 'eslint-plugin-svelte';
@@ -225,9 +227,14 @@ const NO_DAISY_BUTTONS = [
 // A part of the library is handed its test id one way, as `testId`, a prop svelte-check holds every caller to
 // give. A part that takes its element's attributes would take a `data-testid` among them too, unseen by any type
 const HANDED_ITS_TEST_ID = 'Hand a part of the library its test id as testId, which it lays on what it draws.';
-// The parts of the library, by the names the page draws them under
-const LIBRARY_PART =
-	'/^(Band|Button|Card|Chip|CodeBox|ColumnBar|ColumnRail|Count|Dialog|Dot|EdgeFrame|FoldChevron|Icon|IconButton|Key|Link|NoticeBar|Pane|PaneHead|PopoverPanel|Row|Segment|Segmented|Tag)$/';
+// The parts of the library, by the names the page draws them under: every component in its folder, read as the
+// config is, so a part added is held as it is written and none is left out of a list kept by hand
+const LIBRARY_FOLDER = new URL('./src/lib/ui/', import.meta.url);
+const COMPONENT = '.svelte';
+const LIBRARY_PARTS = readdirSync(LIBRARY_FOLDER)
+	.filter((file) => file.endsWith(COMPONENT))
+	.map((file) => basename(file, COMPONENT));
+const LIBRARY_PART = `/^(${LIBRARY_PARTS.join('|')})$/`;
 const NO_BUTTONS_OF_ITS_OWN = [
 	...NO_DAISY_BUTTONS,
 	...inClassLists(LIBRARY_CLASS, DRAWN_BY_THE_LIBRARY),
@@ -285,35 +292,44 @@ const NO_NOTICES_OF_THEIR_OWN = [
 // Chip, Dot, Key) — and nothing outside it draws one its own way: the page drew a tag two ways, an edged word its
 // class lowercased and a filled pill, at three heights by the line each stood in; counted threads with DaisyUI's
 // badges at two sizes, at the box's corner where a tag had the field's; drew its chips by hand, the cross that
-// takes one out of a message a button of its own beside them; its dots as a glyph, as circles of 6 px and of 5;
-// and its keys as a `kbd` of its own and as bare words. The classes it drew them with are refused in a class list
-// and in any string a component holds. DaisyUI's `badge` joins them once the rows of the tree and of a story's
-// contents count with Count, and `rounded-full` once the tree's dot is a Dot
+// takes one out of a message a button of its own beside them; its dots as a glyph, as circles of 6 px and of 5,
+// one of utilities in the tree and one of its own in a story's contents; and its keys as a `kbd` of its own and as
+// bare words. The classes it drew them with are refused in a class list and in any string a component holds
 const DRAWN_AS_A_MARK =
 	'Draw a tag, a count, a chip, a dot or a key with lib/ui (Tag, Count, Chip, Dot, Key), not with classes of its own.';
 // The classes the page drew its marks with
 const A_MARK_OF_ITS_OWN =
-	'/(^|\\s)([^\\s:]+:)*(cr-tag|cr-pill|cr-severity-[a-z]*|cr-raised-tag|cr-thread-chip(-[a-z]+)?|cr-chip-drop|cr-dot(-[a-z]+)?|cr-guide-hint-dot|cr-guide-key)(\\s|$)/';
-// DaisyUI's key, behind any variants and at any size, refused inside the library too, which draws its own: `kbd`,
-// `kbd-sm`. In any string as well: `<svelte:element this="kbd">` would draw one past the rule on elements below
-const DAISY_KEY = '/(^|\\s)([^\\s:]+:)*kbd(-[a-z]+)?(\\s|$)/';
+	'/(^|\\s)([^\\s:]+:)*(cr-tag|cr-pill|cr-severity-[a-z]*|cr-raised-tag|cr-thread-chip(-[a-z]+)?|cr-chip-drop|cr-dot(-[a-z]+)?|cr-contents-dot|cr-guide-hint-dot|cr-guide-key)(\\s|$)/';
+// A mark drawn anew is round, as a dot or a pill is, and only the library's Dot is drawn round: a corner made round
+// by a utility — `rounded-full` on any side or corner, or a radius written in place of half a box or of hundreds of
+// pixels — is refused outside the library, behind any variants. Nothing in markup is round now. The page's own
+// round drawings — a thread's avatars, a story's nodes, the cross on the news card's drawing of a pasted image —
+// are drawn by main.css, which no rule here reads
+const A_ROUND_CORNER = '/(^|\\s)([^\\s:]+:)*rounded(-[a-z]{1,2})?-(full|\\[50%\\]|\\[[0-9]{3,}px\\])(\\s|$)/';
+// DaisyUI's key and badge, behind any variants and at any size, refused inside the library too, which draws its
+// own: `kbd`, `kbd-sm`, `badge`, `badge-primary`. In any string as well: `<svelte:element this="kbd">` would draw a
+// key past the rule on elements below, and a badge's classes are as often kept in a constant as written in markup
+const DAISY_MARK = '/(^|\\s)([^\\s:]+:)*(kbd|badge)(-[a-z]+)?(\\s|$)/';
 // A dot or a cross written as a glyph, in words of markup or in a string: drawn at the size of the words round it,
 // it drifts with them, as the page's three dots drawn so were 7 px across beside dots of 6 and 5
 const DRAWN_AS_A_GLYPH = 'Draw a dot with lib/ui Dot, and a cross with <Icon name="cross">, not as a glyph in words.';
 const A_GLYPH_MARK = '/[●•⬤×✕✖]/';
-const NO_GLYPHS_OR_DAISY_KEYS = [
-	...inClassLists(DAISY_KEY, DRAWN_AS_A_MARK),
-	{ selector: `Literal[value=${DAISY_KEY}]`, message: DRAWN_AS_A_MARK },
-	{ selector: `TemplateElement[value.raw=${DAISY_KEY}]`, message: DRAWN_AS_A_MARK },
+const NO_GLYPHS_OR_DAISY_MARKS = [
+	...inClassLists(DAISY_MARK, DRAWN_AS_A_MARK),
+	{ selector: `Literal[value=${DAISY_MARK}]`, message: DRAWN_AS_A_MARK },
+	{ selector: `TemplateElement[value.raw=${DAISY_MARK}]`, message: DRAWN_AS_A_MARK },
 	{ selector: `SvelteText[value=${A_GLYPH_MARK}]`, message: DRAWN_AS_A_GLYPH },
 	{ selector: `Literal[value=${A_GLYPH_MARK}]`, message: DRAWN_AS_A_GLYPH },
 	{ selector: `TemplateElement[value.raw=${A_GLYPH_MARK}]`, message: DRAWN_AS_A_GLYPH }
 ];
 const NO_MARKS_OF_ITS_OWN = [
-	...NO_GLYPHS_OR_DAISY_KEYS,
+	...NO_GLYPHS_OR_DAISY_MARKS,
 	...inClassLists(A_MARK_OF_ITS_OWN, DRAWN_AS_A_MARK),
 	{ selector: `Literal[value=${A_MARK_OF_ITS_OWN}]`, message: DRAWN_AS_A_MARK },
-	{ selector: `TemplateElement[value.raw=${A_MARK_OF_ITS_OWN}]`, message: DRAWN_AS_A_MARK }
+	{ selector: `TemplateElement[value.raw=${A_MARK_OF_ITS_OWN}]`, message: DRAWN_AS_A_MARK },
+	...inClassLists(A_ROUND_CORNER, DRAWN_AS_A_MARK),
+	{ selector: `Literal[value=${A_ROUND_CORNER}]`, message: DRAWN_AS_A_MARK },
+	{ selector: `TemplateElement[value.raw=${A_ROUND_CORNER}]`, message: DRAWN_AS_A_MARK }
 ];
 
 // What can be pressed is the library's to draw, a row of a list as much as a button: the page drew its rows
@@ -647,7 +663,7 @@ export default tseslint.config(
 				...NO_CHOOSING,
 				...NO_DAISY_BUTTONS,
 				...TAKES_NO_CLASS,
-				...NO_GLYPHS_OR_DAISY_KEYS
+				...NO_GLYPHS_OR_DAISY_MARKS
 			]
 		}
 	},

@@ -493,11 +493,12 @@
   what it is by its ground and its mark. The bar saying the review is over
   is no longer larger, bolder and centred.
 - **A tag and a count stand in one box**, 18 pixels tall wherever they
-  stand — a thread, the panel, a file's header, the list a round is sent
-  from, a story — at a field's corner, never as a pill. A tag shows its
-  words as written, so a measure says "1M", not "1m". What a question the
-  agent raised asks for is in the agent's colour in the finish list too,
-  and a count of threads stands on the reader's mark. A thread or a file
+  stand — a thread, the panel, a file's header, a row of the tree or of a
+  story's contents, the list a round is sent from, a story — at a field's
+  corner, never as a pill. A tag shows its words as written, so a measure
+  says "1M", not "1m". What a question the agent raised asks for is in the
+  agent's colour in the finish list too, and a count of threads stands on
+  the reader's mark. A thread or a file
   named in what is said is a chip in the same box, in the colour of who
   named it; the cross that takes one out of a message being written is
   the chip's own.
@@ -505,19 +506,19 @@
   tree's files and folders, a story's contents, the bases to read against,
   the replies, the @-picker, the comments the finish pane lists, Help's
   entries and the threads a narrower base cannot draw, where rows stood
-  from 24 to 48. Each
-  is lit the same under the pointer, and the one the reader is at stands
-  on their tint with an edge at its start. A story's contents read as the
-  tree does: a part read through steps back in faint words. A chapter's
-  title longer than the column is wide wraps onto more lines and reads
-  whole, its node and its count level with its first line; a file's name
-  stays one line, cut where its row ends. A list of threads gives one line
-  to each: where it hangs, then what it says.
+  from 24 to 48. Each is lit the same under the pointer, and the one the
+  reader is at stands on their tint with an edge at its start. A story's
+  contents read as the tree does: a part read through steps back in faint
+  words. A chapter's title longer than the column is wide wraps onto more
+  lines and reads whole, its node and its count level with its first line;
+  a file's name stays one line, cut where its row ends. A list of threads
+  gives one line to each: where it hangs, then what it says.
 - **Every dot is one dot, and every key one key.** A reply not read, the
-  agent there, a turn on its way: round, 6 pixels across. A key to press,
-  in Help's list, on its button and on the welcome card: in the code's
-  face, in a line round it, as tall as a tag; a key held with another is
-  one key, `Ctrl+Enter`.
+  agent there, a turn on its way, a file changed since the round, the
+  overview's node in a story's contents: round, 6 pixels across. A key to
+  press, in Help's list, on its button and on the welcome card: in the
+  code's face, in a line round it, as tall as a tag; a key held with
+  another is one key, `Ctrl+Enter`.
 - **Every icon is drawn at one of four sizes**, as tall as the words it
   stands beside: the smallest marks grow from 10 to 12 pixels, and Help's
   plus is as large as the compass above it.

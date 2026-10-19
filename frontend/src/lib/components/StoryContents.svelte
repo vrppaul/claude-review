@@ -8,6 +8,7 @@
 		threadsOnTheOverview,
 		threadsOnThePiece
 	} from '$lib/review/story-reading';
+	import Dot from '$lib/ui/Dot.svelte';
 	import Row from '$lib/ui/Row.svelte';
 	import { fileStats } from '$lib/utils/file-stats';
 	import { fileName } from '$lib/utils/paths';
@@ -76,7 +77,7 @@
 				threads={threadsOnTheOverview(story.overview, review.threads).length}
 			>
 				{#snippet node()}
-					<span class="cr-contents-dot"></span>
+					<Dot tone="inherited" testId="overview-dot" />
 				{/snippet}
 			</ContentsEntry>
 			{#each contents.chapters as chapter (chapter.part)}

@@ -903,13 +903,6 @@
 	color: var(--cr-mark-text);
 	box-shadow: var(--cr-shadow-current-node);
 }
-/* The overview has no number: a dot stands in its node, in the node's own colour */
-.cr-contents-dot {
-	width: var(--cr-contents-dot);
-	height: var(--cr-contents-dot);
-	border-radius: 50%;
-	background: currentColor;
-}
 /*
  * What is set in as far as an entry's title: the files under a chapter, and
  * under the entries what the story leaves out and housekeeping

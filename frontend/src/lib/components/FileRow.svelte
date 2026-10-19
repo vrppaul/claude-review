@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import type { FileStatus } from '$lib/types';
+	import Count from '$lib/ui/Count.svelte';
 	import Row from '$lib/ui/Row.svelte';
 	import StatusLetter from './StatusLetter.svelte';
 
@@ -57,7 +58,7 @@
 {#snippet trailing()}
 	{@render marks?.()}
 	{#if threads > 0}
-		<span data-testid="file-threads" class="badge badge-xs badge-primary">{threads}</span>
+		<Count count={threads} testId="file-threads" />
 	{/if}
 	{@render end?.()}
 {/snippet}

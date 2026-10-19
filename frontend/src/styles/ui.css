@@ -871,6 +871,10 @@
 .cr-ui-dot-reader {
 	background-color: var(--cr-mark);
 }
+/* In the colour of what it stands in, as an icon is drawn in the colour of its words */
+.cr-ui-dot-inherited {
+	background-color: currentColor;
+}
 /*
  * One that breathes while what it marks is on its way, as a line that never
  * changes reads as a hang; dots side by side breathe in turn, 0.18 s apart.

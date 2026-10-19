@@ -303,6 +303,18 @@ describe('the component library', () => {
 		expect(getByTestId(TEST_ID).getAttribute('aria-hidden')).toBe('true');
 	});
 
+	it('shows what a dot marks under the pointer, where it is handed the words', () => {
+		const { getByTestId } = render(Dot, { tone: 'reader', title: WORDS, testId: TEST_ID });
+
+		expect(getByTestId(TEST_ID).getAttribute('title')).toBe(WORDS);
+	});
+
+	it('leaves a count unsaid to whoever cannot see it, where the name of what it stands in says how many', () => {
+		const { getByTestId } = render(Count, { count: THREADS, 'aria-hidden': true, testId: TEST_ID });
+
+		expect(getByTestId(TEST_ID).getAttribute('aria-hidden')).toBe('true');
+	});
+
 	it('says a key is a key of the keyboard, to whoever cannot see its box', () => {
 		const { getByTestId } = render(Key, { keys: CHORD, testId: TEST_ID });
 

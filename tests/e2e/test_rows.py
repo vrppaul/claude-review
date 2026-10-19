@@ -346,3 +346,47 @@ async def test_a_chapter_whose_title_is_longer_than_the_contents_are_wide_wraps_
     # Its node stands level with its first line, as in a row of one line, so the axis through the nodes meets it
     node_middle = await chapter.get_by_test_id("part-node").evaluate(MIDDLE)
     assert node_middle - await chapter.evaluate(TOP) == ROW_HEIGHT / 2
+
+
+# The library's dot, how the agent stands with the review in the header; and the dots rows draw: the mark of a file
+# changed since the diff was last taken, in the tree, once the reader sees it taken again; and the overview's, in
+# its node in a story's contents
+THE_LIBRARYS_DOT = "presence-dot"
+NOTES_CHANGED_AGAIN = {HOUSEKEEPING_FILE: "a third note\n"}
+CHANGED_MARK = "file-changed-mark"
+OVERVIEWS_DOT = "overview-dot"
+# How a dot is drawn: how wide and tall, and how round
+DOT_LOOK = """(dot) => {
+    const box = dot.getBoundingClientRect();
+    return [box.width, box.height, getComputedStyle(dot).borderTopLeftRadius];
+}"""
+
+
+async def test_every_dot_a_row_draws_is_drawn_as_the_librarys_dot_is(
+    repository: Path, review: RunningReview, page: Page
+) -> None:
+    await page.goto(review.url)
+    await page.get_by_test_id("sidebar").wait_for()
+    write_files(repository, NOTES_CHANGED_AGAIN)
+    async with AsyncClient(base_url=review.url) as agent:
+        await agent.post(RETAKE_ROUTE, json={})
+    library = await page.get_by_test_id(THE_LIBRARYS_DOT).first.evaluate(DOT_LOOK)
+    changed = await page.get_by_test_id(CHANGED_MARK).first.evaluate(DOT_LOOK)
+
+    await page.get_by_test_id("read-as-story").click()
+
+    overview = await page.get_by_test_id(OVERVIEWS_DOT).evaluate(DOT_LOOK)
+    assert [changed, overview] == [library, library]
+
+
+@pytest.mark.parametrize("scheme", SCHEMES)
+async def test_the_overviews_dot_stands_in_the_colour_of_its_node(
+    review: RunningReview, page: Page, scheme: str
+) -> None:
+    await _open_in(page, review, scheme)
+
+    await page.get_by_test_id("read-as-story").click()
+
+    dot = page.get_by_test_id(OVERVIEWS_DOT)
+    node = page.get_by_test_id("part-node").filter(has=dot)
+    assert (await painted(dot)).ground == (await painted(node)).words
