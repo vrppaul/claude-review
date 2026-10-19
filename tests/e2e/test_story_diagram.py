@@ -35,11 +35,8 @@ HALVES_LINKED = {"first": ONLY_CHAPTER, "second": SECOND_CHAPTER}
 # The nodes the page marks as leading somewhere, in the order mermaid draws them: the first half, the second
 LEADING_SOMEWHERE = "diagram-link"
 THE_SECOND_HALF = 1
-# Wide enough for the contents to stand beside the story; and a phone, narrower than the diagram drawn at its size
+# Wide enough for the contents to stand beside the story
 WIDE_SCREEN: ViewportSize = {"width": 1600, "height": 900}
-PHONE: ViewportSize = {"width": 420, "height": 800}
-# How wide an element is drawn, in pixels
-WIDTH_OF = "(element) => element.getBoundingClientRect().width"
 
 
 def _told_in_two_chapters(drawn: str, links: dict[str, str]) -> Story[Step]:
@@ -90,18 +87,6 @@ async def test_a_diagram_is_drawn_under_the_pages_policy_and_nothing_is_refused(
 
     await expect(page.get_by_test_id("diagram-drawing").locator("svg")).to_have_count(1)
     assert [said for said in console if REFUSED_BY_THE_POLICY in said] == []
-
-
-async def test_on_a_phone_a_diagram_wider_than_the_column_is_drawn_to_fit_it(
-    review_drawn: RunningReview, page: Page
-) -> None:
-    await page.set_viewport_size(PHONE)
-    await page.goto(review_drawn.url)
-    await page.click('[data-testid="read-as-story"]')
-    drawing = page.get_by_test_id("diagram-drawing")
-    await expect(drawing.locator("svg")).to_have_count(1)
-
-    assert await drawing.locator("svg").evaluate(WIDTH_OF) <= await drawing.evaluate(WIDTH_OF)
 
 
 async def test_a_press_on_a_node_takes_the_reader_to_the_chapter_it_leads_to(

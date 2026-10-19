@@ -48,9 +48,9 @@ function placed(element: HTMLElement, sentTo: number): Standing {
 	return standing;
 }
 
-// Where each file stands is invented here, jsdom laying nothing out: where a
-// real scroll leaves a file, and that it is marked there, is held in the
-// browser by tests/e2e/test_jumps.py
+// Where each file stands is invented here, jsdom laying nothing out: that a
+// real scroll brings a file into view, and that it is marked there, is held
+// in the browser by tests/e2e/test_jumps.py
 describe('being taken to a file somebody else pointed at', () => {
 	beforeEach(() => {
 		document.body.innerHTML = '';

@@ -14,15 +14,13 @@ from playwright.async_api import Page, expect
 
 from claude_review.hosting.workspace import ReaderFiles
 from tests.e2e.browsers_loop import in_the_browsers_loop
-from tests.e2e.line_keys import LESS_THAN_A_LINE_APART, LINES_UNDER_THE_HEADER, SCROLLED
+from tests.e2e.page_reads import FOCUSED_ELEMENT, FOCUSED_TEST_ID, SCROLLED
 from tests.helpers import ReviewServers, RunningReview, committed_repository, git, repository_opening, write_files
 
 # One file, changed on a line, so the first line number the keys reach is in it
 CHANGED_FILE = "main.py"
 COMMITTED = {CHANGED_FILE: "def hello():\n    return 'hello'\n"}
 CHANGED = {CHANGED_FILE: "def hello():\n    return 'hi'\n"}
-# What has the keyboard, by the test id it carries
-FOCUSED_TEST_ID = "document.activeElement?.dataset.testid"
 # Files changed on every line, each long enough to fill more than the band at
 # the top of the screen, for jumps between them to land on a file's header
 JUMPED_TO = ("first.py", "second.py", "third.py", "fourth.py")
@@ -43,9 +41,9 @@ CHANGED_NEAR_THE_END = 55
 # What the keyboard is on: the test id it carries, and the line its number names
 FOCUSED_PLACE = "document.activeElement?.dataset.place"
 # What stands between the side of a line and its number in the place a line number names, and how far
-# up two steps of `k` go
+# up a step of `k` goes
 PLACE_PARTS = ":"
-TWO_LINES = 2
+A_LINE = 1
 # How the welcome says how many stops the tour has, and how the tour says where it is
 STOPS_ANNOUNCED = re.compile(r"(\d+) stops")
 STOP_REACHED = re.compile(r"^\d+ of (\d+)$")
@@ -129,24 +127,25 @@ async def test_a_line_key_after_a_file_picked_in_the_tree_lands_on_its_first_lin
     assert await files.evaluate(SCROLLED) >= scrolled_to > 0
 
 
-async def test_a_line_key_deep_in_a_file_lands_on_the_first_line_in_sight_under_the_header_kept_over_it(
+async def test_a_line_key_deep_in_a_file_lands_on_a_line_the_reader_sees_and_leaves_the_files_where_they_are(
     several_files: RunningReview, page: Page
 ) -> None:
-    """Scrolled by hand, the keyboard is on nothing: the key starts at the first line the reader sees."""
+    """Scrolled by hand, the keyboard is on nothing: the key starts where the reader reads.
+
+    The pointer is brought to the line it lands on: one under the header kept in sight would be scrolled out to reach.
+    """
     await _open_review(page, several_files)
     files = page.get_by_test_id("diff-view")
     await files.evaluate("(area, depth) => area.scrollBy(0, depth)", DEEP_IN_THE_FILE)
 
     await page.keyboard.press("j")
+    await page.locator(FOCUSED_ELEMENT).hover()
 
-    # The file the reader is deep in is the first: its header is the one kept in sight over its lines
-    kept_in_sight = page.get_by_test_id("file-header").first
     assert await _focused(page) == "line-gutter"
-    assert -LESS_THAN_A_LINE_APART <= await kept_in_sight.evaluate(LINES_UNDER_THE_HEADER) < 1
     assert await files.evaluate(SCROLLED) == DEEP_IN_THE_FILE
 
 
-async def test_a_line_key_with_the_keyboard_on_a_line_scrolled_away_lands_on_the_first_line_in_sight(
+async def test_a_line_key_with_the_keyboard_on_a_line_scrolled_away_lands_on_a_line_the_reader_sees(
     several_files: RunningReview, page: Page
 ) -> None:
     """The line the keyboard was left on is out of sight: the key starts where the reader reads, and takes them nowhere back."""
@@ -156,16 +155,15 @@ async def test_a_line_key_with_the_keyboard_on_a_line_scrolled_away_lands_on_the
     await files.evaluate("(area, depth) => area.scrollBy(0, depth)", DEEP_IN_THE_FILE)
 
     await page.keyboard.press("j")
+    await page.locator(FOCUSED_ELEMENT).hover()
 
-    kept_in_sight = page.get_by_test_id("file-header").first
-    assert -LESS_THAN_A_LINE_APART <= await kept_in_sight.evaluate(LINES_UNDER_THE_HEADER) < 1
     assert await files.evaluate(SCROLLED) == DEEP_IN_THE_FILE
 
 
-async def test_k_from_the_first_line_in_sight_brings_each_line_above_it_into_sight_under_the_header(
+async def test_k_from_the_first_line_in_sight_steps_up_onto_a_line_the_reader_sees(
     several_files: RunningReview, page: Page
 ) -> None:
-    """A line the keyboard steps to is one the reader sees: never one behind the header kept in sight over it."""
+    """The line above is under the header kept in sight until the page scrolls it out from under it."""
     await _open_review(page, several_files)
     files = page.get_by_test_id("diff-view")
     await files.evaluate("(area, depth) => area.scrollBy(0, depth)", DEEP_IN_THE_FILE)
@@ -173,12 +171,11 @@ async def test_k_from_the_first_line_in_sight_brings_each_line_above_it_into_sig
     side, first_in_sight = (await page.evaluate(FOCUSED_PLACE)).split(PLACE_PARTS)
 
     await page.keyboard.press("k")
-    await page.keyboard.press("k")
+    stepped_to = await files.evaluate(SCROLLED)
+    await page.locator(FOCUSED_ELEMENT).hover()
 
-    kept_in_sight = page.get_by_test_id("file-header").first
-    assert await page.evaluate(FOCUSED_PLACE) == f"{side}{PLACE_PARTS}{int(first_in_sight) - TWO_LINES}"
-    assert -LESS_THAN_A_LINE_APART <= await kept_in_sight.evaluate(LINES_UNDER_THE_HEADER) < LESS_THAN_A_LINE_APART
-    assert await files.evaluate(SCROLLED) < DEEP_IN_THE_FILE
+    assert await page.evaluate(FOCUSED_PLACE) == f"{side}{PLACE_PARTS}{int(first_in_sight) - A_LINE}"
+    assert await files.evaluate(SCROLLED) == stepped_to < DEEP_IN_THE_FILE
 
 
 async def test_the_tour_moves_on_to_the_field_the_reader_opened_and_keeps_its_count(

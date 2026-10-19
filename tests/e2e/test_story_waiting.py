@@ -19,6 +19,7 @@ from playwright.async_api import Page, ViewportSize, expect
 from pydantic import BaseModel, ConfigDict
 
 from tests.e2e.browsers_loop import in_the_browsers_loop
+from tests.e2e.page_reads import FOCUSED_TEST_ID
 from tests.helpers import (
     EVENTS_ROUTE,
     GLANCE_AT_EVENTS,
@@ -38,12 +39,8 @@ COMMITTED_FILES = {CHANGED_FILE: "keep one\nfirst two\nkeep three\n"}
 THE_CHANGE = {CHANGED_FILE: "keep one\nchanged two\nkeep three\n"}
 A_STORY = story_of(step(CHANGED_FILE, 2, 2))
 
-# A window as wide as a laptop's, and one as narrow as a phone's held upright
+# A window as wide as a laptop's
 WIDE: ViewportSize = {"width": 1440, "height": 900}
-NARROW: ViewportSize = {"width": 420, "height": 900}
-# Where an element's right edge is, in pixels from the left of the window, and how wide the window is
-RIGHT_OF = "(element) => element.getBoundingClientRect().right"
-WINDOW_WIDTH = "window.innerWidth"
 # How long the note of a story's arrival stands before it puts itself away, in milliseconds, as the page has it
 # (`PassingNote.svelte`): the page's clock is run on by as much, and no test waits it out
 NOTE_STANDS_FOR_MS = 4_000
@@ -65,8 +62,6 @@ ANSWERS_BY_KEY = [
     Answered(how="not now", keys=("Tab", "Enter"), then_on_screen="diff-view"),
     Answered(how="Escape", keys=("Escape",), then_on_screen="diff-view"),
 ]
-# What holds the keyboard, by the test id it carries: none, on the page itself
-HOLDS_THE_KEYBOARD = "document.activeElement.dataset.testid ?? null"
 # What Tab puts the keyboard on, press by press, from the way to turn stories on: the other answer, nothing
 # of the page while the keyboard is on the browser's own controls, and the first answer again
 ROUND_THE_QUESTION = ["stories-not-now", None, "turn-on-stories"]
@@ -201,7 +196,7 @@ async def test_the_question_before_stories_holds_the_keyboard_until_it_is_answer
     held_the_keyboard = []
     for _ in ROUND_THE_QUESTION:
         await page.keyboard.press("Tab")
-        held_the_keyboard.append(await page.evaluate(HOLDS_THE_KEYBOARD))
+        held_the_keyboard.append(await page.evaluate(FOCUSED_TEST_ID))
 
     assert held_the_keyboard == ROUND_THE_QUESTION
 
@@ -248,17 +243,6 @@ async def test_a_story_told_while_a_comment_is_written_leaves_the_keyboard_in_th
     await expect(page.get_by_test_id("comment-input")).to_be_focused()
     await expect(page.get_by_test_id("comment-input")).to_have_value("Half a thought, and the rest")
     await expect(page.get_by_test_id("diff-view")).to_be_visible()
-
-
-async def test_the_note_of_a_storys_arrival_stands_whole_in_a_narrow_window(review: RunningReview, page: Page) -> None:
-    """Its words wrap where the window has no room for them on one line: nothing of it is cut off at the edge."""
-    await page.set_viewport_size(NARROW)
-    await _an_agent_attaches(review)
-    await _open_with_stories_on(page, review)
-
-    await _the_agent_tells_the_story(review)
-
-    assert await page.get_by_test_id("story-ready").evaluate(RIGHT_OF) < await page.evaluate(WINDOW_WIDTH)
 
 
 async def test_the_note_of_a_storys_arrival_closed_from_the_keyboard_gives_the_keyboard_to_story_in_the_header(

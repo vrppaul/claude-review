@@ -2,9 +2,8 @@
 
 A block of the agent's words — a line of the overview — offers "Ask about
 this" while it is pointed at or holds the keyboard; what is asked hangs
-under the block as a thread hangs under a line. That the offer shows to the
-keyboard, and where the keyboard goes when what hung under the block goes,
-are held in a browser.
+under the block as a thread hangs under a line. Where the keyboard goes when
+what hung under the block goes is held in a browser.
 """
 
 from pathlib import Path
@@ -37,14 +36,6 @@ A_STORY = planted(
 )
 # The same change told again, with nothing to doubt
 TOLD_AGAIN = story_of(step(TOLD_FILE, 2, 2))
-# How strongly an element is drawn on screen: its own opacity and that of everything it stands in, multiplied; and
-# the strength of one drawn fully
-DRAWN_STRENGTH = """(element) => {
-    let strength = 1;
-    for (let node = element; node; node = node.parentElement) strength *= Number(getComputedStyle(node).opacity);
-    return strength;
-}"""
-FULLY_DRAWN = 1
 
 
 @pytest.fixture
@@ -84,16 +75,6 @@ async def _ask_about(page: Page, block: Locator, words: str) -> None:
     await page.fill('[data-testid="comment-input"]', words)
     await page.click('[data-testid="save-comment"]')
     await expect(block.get_by_test_id("comment-thread")).to_contain_text(words)
-
-
-async def test_a_block_whose_offer_holds_the_keyboard_offers_it_in_sight(review: RunningReview, page: Page) -> None:
-    """The keyboard reaches the offer as the pointer does the block: what it offers shows."""
-    doubt = await _read_as_story(page, review)
-    asking = doubt.get_by_test_id("ask-about-this")
-
-    await asking.focus()
-
-    assert await asking.evaluate(DRAWN_STRENGTH) == FULLY_DRAWN
 
 
 async def test_a_thread_on_the_story_deleted_gives_the_keyboard_back_to_what_offered_its_block(

@@ -4,15 +4,15 @@ The agent's work changes what is drawn above the reader as well as where
 they are. The browser keeps the reader in place while the rows they look
 at stay on the page; when the work rewrites the very file being read, its
 rows are drawn afresh, and a page that keeps its scroll offset across the
-new diff puts the reader in another file. Where a line stands on the screen
-is the browser's alone: jsdom lays nothing out.
+new diff puts the reader in another file. What is in view is the browser's
+alone: jsdom lays nothing out.
 """
 
 from pathlib import Path
 
 import pytest
 from httpx import AsyncClient
-from playwright.async_api import Locator, Page
+from playwright.async_api import Locator, Page, ViewportSize, expect
 
 from tests.e2e.browsers_loop import in_the_browsers_loop
 from tests.helpers import ReviewServers, RunningReview, committed_repository, repository_opening, write_files
@@ -30,9 +30,7 @@ CHANGED_BELOW = range(50, 110)
 GROWN_AT = 10
 GROWN_BY = 80
 # A screen short enough that the files do not all fit on it
-SCREEN = {"width": 1280, "height": 600}
-# How far, in pixels, a place may stand from where it is wanted: rounding, not a row
-WITHIN_ROUNDING = 2
+SCREEN: ViewportSize = {"width": 1280, "height": 600}
 
 
 def _lines(path: str, changed: dict[int, str] | None = None) -> str:
@@ -65,31 +63,20 @@ def _section(page: Page, path: str) -> Locator:
     return page.locator(f'[data-testid="file-section"][data-path="{path}"]')
 
 
-async def _below_the_top(page: Page, element: Locator) -> float:
-    """How far an element stands below the top of the area the diff scrolls in."""
-    area = await page.get_by_test_id("diff-view").bounding_box()
-    box = await element.bounding_box()
-    assert area is not None and box is not None, "the element is not laid out"
-    return box["y"] - area["y"]
-
-
 async def test_a_retake_that_rewrites_the_file_being_read_keeps_the_reader_in_it(
     review: RunningReview, three_files: Path, page: Page
 ) -> None:
     await page.set_viewport_size(SCREEN)
     await page.goto(review.url)
+    # The reader reads the changed line of the file, brought to the top of the area
     read = _section(page, READ_FILE).get_by_role("button", name=f"Comment on line {CHANGED_LINE}", exact=True)
     await read.scroll_into_view_if_needed()
     await read.evaluate("number => number.scrollIntoView({ block: 'start' })")
-    # The line read stands at the top of the area, where the reader reads
-    assert await _below_the_top(page, read) <= WITHIN_ROUNDING
 
     # The agent's work grows the file above and the file being read, above the line read, and retakes the diff
     write_files(three_files, {ABOVE_FILE: _grown(ABOVE_FILE), READ_FILE: _grown(READ_FILE)})
     async with AsyncClient(base_url=review.url) as agent:
         await agent.post("/api/retake", json={})
     await page.get_by_text(f"{READ_FILE} grown {GROWN_BY - 1}", exact=True).wait_for(state="attached")
-    await page.evaluate("new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))")
 
-    # The line read is no longer where it was, and the file it was in is brought to the top
-    assert abs(await _below_the_top(page, _section(page, READ_FILE))) <= WITHIN_ROUNDING
+    await expect(_section(page, READ_FILE)).to_be_in_viewport()

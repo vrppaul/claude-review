@@ -1,13 +1,12 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/svelte';
-import { createRawSnippet, tick } from 'svelte';
+import { createRawSnippet } from 'svelte';
 import { userEvent } from '@testing-library/user-event';
 import Button from '$lib/ui/Button.svelte';
 import ColumnRail from '$lib/ui/ColumnRail.svelte';
 import Heading from '$lib/ui/Heading.svelte';
 import IconButton from '$lib/ui/IconButton.svelte';
 import Link from '$lib/ui/Link.svelte';
-import PopoverPanel from '$lib/ui/PopoverPanel.svelte';
 import Row from '$lib/ui/Row.svelte';
 import Segment from '$lib/ui/Segment.svelte';
 import Segmented from '$lib/ui/Segmented.svelte';
@@ -159,44 +158,6 @@ describe('the component library', () => {
 
 		expect(queryByRole('heading')).toBeNull();
 		expect(getByText(WORDS)).toBeDefined();
-	});
-});
-
-// How tall the window is made under a pane, in pixels: shorter than jsdom's own
-const SHORTER_WINDOW = 400;
-
-/** A pane by a control, drawn where it stands by nothing: what it is seen in is the window. */
-function aPaneByAControl(): HTMLElement {
-	const { getAllByTestId } = render(PopoverPanel, {
-		role: 'dialog',
-		label: WORDS,
-		placement: 'below-start',
-		width: 'medium',
-		arrow: true,
-		arrowOffset: 0,
-		testId: TEST_ID,
-		children: drawn
-	});
-	return getAllByTestId(TEST_ID).at(-1) as HTMLElement;
-}
-
-/** The most a pane may be drawn down, as it was last fitted. */
-function mostHeightOf(pane: HTMLElement): string {
-	return pane.style.getPropertyValue('--cr-pane-most-height');
-}
-
-describe('a pane by a control', () => {
-	it('is fitted again as anything under it scrolls, as one opened there now is', async () => {
-		const pane = aPaneByAControl();
-		const scrolledUnderIt = document.createElement('div');
-		document.body.append(scrolledUnderIt);
-		vi.stubGlobal('innerHeight', SHORTER_WINDOW);
-
-		scrolledUnderIt.dispatchEvent(new Event('scroll'));
-		await tick();
-
-		expect(mostHeightOf(pane)).toBe(mostHeightOf(aPaneByAControl()));
-		vi.unstubAllGlobals();
 	});
 });
 

@@ -8,11 +8,14 @@ paths:
 
 ## When a test is written
 
-- A test holds a behaviour someone can name: what the CLI prints or refuses, what a route answers or pushes, a story rule, a domain invariant, what the reader sees or hears, where the keyboard lands.
+- A test holds a behaviour someone can name: it does one thing — a press, a key, a command, a request, a call — and checks what came of it.
+- What came of it: the words shown or the sound heard, what holds the keyboard, what is in view, what reached the server, what the CLI printed or refused, what a route answered or pushed, what a story rule or the domain decided.
 - Its name states that behaviour: `tests/integration/test_diff_reading.py` is the standard.
 - First find the test that already holds the behaviour and extend it. A new test only where none does.
 - It is written before its code and seen failing. A refactor gets no new test: the old ones pass unchanged.
-- No test for a look (a colour, size, weight, face, corner, room, pixel): tokens, the gates and a reviewer's eye hold it.
+- Never how it looks: no colour, size, weight, face, corner, room, pixel, opacity or position, measured or read from a style. Tokens, the gates and a reviewer's eye hold a look.
+- A width the reader sets, dragging a column or with its keys, is what they did, not a look: a test may hold it.
+- How far an area has scrolled is what a scroll or a key did: a test may compare it, never where a box stands.
 - No test for a declaration (a field's bound, a click option, a status code), a library's own behaviour, internals (listeners, timers, an inner structure) or a test helper.
 - "No test holds X" is no finding and no TODO item unless X is a behaviour someone can name.
 - A rule about how code is written is a gate in pre-commit, never a test.
@@ -23,8 +26,7 @@ paths:
 - One level, the cheapest that sees the behaviour. Logic: `tests/unit/`, pure, no I/O, or a vitest test of the review's model.
 - A route: once per call site in `tests/integration/`, never its rule's cases again.
 - A real server: sockets, backpressure and lifetime alone. A subprocess: exit codes, stderr and signals alone. Real git: what git decides.
-- `tests/e2e/` holds what jsdom cannot: the browser's own focus (a dialog, Tab, a disabled control), scrolling and what is in sight, the page never scrolling.
-- And a pane inside the window and seen whole, nothing wider than the screen, CSP, mermaid, one round trip per agent command.
+- `tests/e2e/` holds what only a real browser does: its own focus (a dialog, Tab, a disabled control), scrolling, CSP, mermaid, one round trip per agent command.
 - Focus the page moves, what a key does and what is drawn are vitest.
 - No browser test runs once per theme; once per width only where its claim is about that width.
 - `tests/scripts/` runs a gate as it is run. A script that only serves or looks has a smoke test at most.

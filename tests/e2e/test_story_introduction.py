@@ -14,14 +14,13 @@ from playwright.async_api import Page, expect
 from claude_review.domain.models import GuideState
 from claude_review.hosting.workspace import ReaderFiles
 from tests.e2e.browsers_loop import in_the_browsers_loop
+from tests.e2e.page_reads import FOCUSED_TEST_ID
 from tests.helpers import ReviewServers, RunningReview, committed_repository, repository_opening, write_files
 
 CHANGED_FILE = "told.py"
 COMMITTED_FILES = {CHANGED_FILE: "keep one\nfirst two\n"}
 # The change under review, which a story can be told of
 THE_CHANGE = {CHANGED_FILE: "keep one\nchanged two\n"}
-# Which element holds the keyboard, by its test id
-FOCUSED_TEST_ID = "document.activeElement?.dataset.testid"
 
 
 @pytest.fixture

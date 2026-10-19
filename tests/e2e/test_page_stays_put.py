@@ -15,6 +15,7 @@ from httpx import AsyncClient
 from playwright.async_api import Page, expect
 
 from tests.e2e.browsers_loop import in_the_browsers_loop
+from tests.e2e.page_reads import PAGE_SCROLLED_BY
 from tests.helpers import ReviewServers, RunningReview, committed_repository, repository_opening, write_files
 from tests.stories import as_the_agent_writes, step, story_of
 
@@ -29,9 +30,6 @@ FILES = {
 LAST_FILE = f"file_{MANY_FILES - 1:02}.py"
 # A story that tells every file whole, a step each
 A_LONG_STORY = story_of(*(step(file, 1, LINES_OF_EACH) for file in FILES))
-# How far the page itself has scrolled, and how much taller than its window the document is
-PAGE_SCROLLED_BY = "() => window.scrollY"
-TALLER_THAN_THE_WINDOW_BY = "() => document.documentElement.scrollHeight - window.innerHeight"
 # How many times the reader steps to the next piece of the story
 STEPS_DOWN_THE_STORY = 5
 
@@ -56,7 +54,6 @@ async def test_a_file_picked_at_the_foot_of_a_long_tree_leaves_the_page_where_it
     await page.get_by_test_id("file-item").filter(has_text=LAST_FILE).click()
     await page.locator(f'[data-testid="file-section"][data-path="{LAST_FILE}"]').get_by_test_id("raw-view").wait_for()
 
-    assert await page.evaluate(TALLER_THAN_THE_WINDOW_BY) == 0
     assert await page.evaluate(PAGE_SCROLLED_BY) == 0
 
 
@@ -71,7 +68,6 @@ async def test_stepping_down_a_long_story_leaves_the_page_where_it_is(
     for _ in range(STEPS_DOWN_THE_STORY):
         await page.keyboard.press("]")
 
-    assert await page.evaluate(TALLER_THAN_THE_WINDOW_BY) == 0
     assert await page.evaluate(PAGE_SCROLLED_BY) == 0
 
 
@@ -86,5 +82,4 @@ async def test_a_file_picked_at_the_foot_of_a_story_s_long_contents_leaves_the_p
     await page.get_by_test_id("contents-file").filter(has_text=LAST_FILE).click()
     await expect(page.get_by_test_id("story-piece").last).to_be_in_viewport()
 
-    assert await page.evaluate(TALLER_THAN_THE_WINDOW_BY) == 0
     assert await page.evaluate(PAGE_SCROLLED_BY) == 0

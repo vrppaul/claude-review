@@ -152,9 +152,11 @@
   refuses, what a route answers, what the reader sees or where the keyboard
   lands — once, at the cheapest level that sees it; never for a look, a
   declaration or internals (`.claude/rules/tests.md`). About a thousand
-  cases that held none went. `uv run pytest` leaves the API schema's
-  fuzzing out unless asked for with `-m schema`; `scripts/look.py` only
-  serves a long change and its story, for whoever looks at the page.
+  cases that held none went. A test does one thing and checks what came of
+  it, never how it looks: a browser test asks what is in view, what a press
+  reached, or how far an area scrolled. `uv run pytest` leaves the API
+  schema's fuzzing out unless asked for with `-m schema`; `scripts/look.py`
+  only serves a long change and its story, for whoever looks at the page.
 - **One set of buttons across the page.** Every button is one of a few
   tones at one of two heights: primary, the one act a pane or a card leads
   to; quiet, an act that must not outweigh the words beside it; secondary,

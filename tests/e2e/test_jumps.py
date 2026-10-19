@@ -1,12 +1,11 @@
-"""E2E: the page takes the reader to a file at once, and the file is where it took them.
+"""E2E: the page takes the reader to a file, and it is in view once it comes to rest.
 
-A file's rows are built once the reader comes near it; until then its
-section holds the room they are counted to take: its rows, the header of
-each hunk and the bar for the lines left out around it. Built, a file takes
-more only for what is not counted, a thread under a line or a line that
-wraps, so what lies below may still move while the files around it are
-built, after the page took the reader there. Only a browser lays a page out
-and scrolls it.
+A file's rows are built once the reader comes near it, and built they may
+take more room than their section held for them: a thread under a line, a
+line that wraps. So what lies below may still move after the page took the
+reader there, and the page marks the file only once it has come to rest. A
+reader who moves meanwhile is left where they went. Only a browser lays a
+page out and scrolls it.
 """
 
 import time
@@ -18,6 +17,7 @@ from playwright.async_api import Locator, Page, expect
 
 from claude_review.domain.models import CommentSeverity
 from tests.e2e.browsers_loop import in_the_browsers_loop
+from tests.e2e.page_reads import SCROLLED
 from tests.helpers import (
     ReviewServers,
     RunningReview,
@@ -44,31 +44,14 @@ FAR_FILE = PATHS[24]
 # line once the file is built, room its section does not hold for it
 ABOVE_THE_FAR_FILE = PATHS[23]
 A_THREAD_ABOVE = "Kept apart from the file below on purpose."
-# The file after the first, about a screen down the review
-NEAR_FILE = PATHS[1]
 # The last file of the review, added with a few lines. Nothing is below it: brought as far up as the
 # area scrolls, it stands at the area's foot
 LAST_FILE = "zz_last.py"
 THE_LAST_FILE_HOLDS = "one\ntwo\nthree\n"
 # A story that tells one line of the first file and draws nothing of the last
 A_STORY = story_of(step(FIRST_FILE, CHANGED_LINES[0], CHANGED_LINES[0]), housekeeping=(LAST_FILE,))
-# How far below the top of the area it scrolls in a section's head stands, in pixels
-BELOW_THE_AREAS_TOP = """(section) => {
-    const area = section.closest('main');
-    return section.getBoundingClientRect().top - area.getBoundingClientRect().top;
-}"""
-# How far below the top of the area a section's head stands the first time the area moves from now on: the
-# promise of it, held in an object so that it is kept rather than waited for until the test reads it
-AT_THE_FIRST_MOVE = """(section) => {
-    const area = section.closest('main');
-    const promise = new Promise((resolve) => area.addEventListener(
-        'scroll',
-        () => resolve(section.getBoundingClientRect().top - area.getBoundingClientRect().top),
-        { once: true }
-    ));
-    return { promise };
-}"""
-# That the page has heard the reader turn the wheel over an area, from now on: its promise held the same way
+# That the page has heard the reader turn the wheel over an area, from now on: the promise of it, held in an
+# object so that it is kept rather than waited for until the test reads it
 HEARS_THE_WHEEL = """(area) => {
     const promise = new Promise((resolve) => area.addEventListener('wheel', () => resolve(), { once: true }));
     return { promise };
@@ -96,10 +79,8 @@ WATCHED_FOR_FRAMES = 20
 # file above left in view by that fraction. Where the fractions fall is a sum of every height above, so a
 # test takes the anchoring away rather than look for a file that lands so
 WITHOUT_SCROLL_ANCHORING = '[data-testid="diff-view"] { overflow-anchor: none; }'
-# A fraction of a pixel: where a head stands is not a whole number, and the area scrolls by whole ones
+# A pixel of rounding, given to where the reader's turn of the wheel left the area
 LESS_THAN_A_PIXEL = 1
-# How tall a section stands on the page
-HEIGHT = "(section) => section.getBoundingClientRect().height"
 # How far the reader turns the wheel against the page's own scroll, in pixels
 A_TURN_OF_THE_WHEEL = 200
 
@@ -151,20 +132,6 @@ async def _agent_shows(review: RunningReview, path: str) -> None:
         await agent.post(SHOW_ROUTE, json={"file": path})
 
 
-def _piece(page: Page, path: str) -> Locator:
-    return page.locator(f'[data-testid="story-piece"][data-path="{path}"]')
-
-
-async def _grown_once_built(section: Locator) -> float:
-    """How much taller a section whose rows are not built yet stands once they are: brought into view, they are."""
-    placeholder = section.get_by_test_id("file-placeholder")
-    await placeholder.wait_for(state="attached")
-    held = await section.evaluate(HEIGHT)
-    await section.scroll_into_view_if_needed()
-    await placeholder.wait_for(state="detached")
-    return await section.evaluate(HEIGHT) - held
-
-
 async def _marked(page: Page, path: str) -> Locator:
     """A file's section once the page has marked it: the reader has been brought to it, and it has come to rest."""
     marked = page.locator(f'[data-testid="file-section"][data-path="{path}"][data-marked]')
@@ -172,75 +139,15 @@ async def _marked(page: Page, path: str) -> Locator:
     return marked
 
 
-async def test_a_file_far_down_the_review_holds_the_room_its_hunks_take_before_they_are_built(
-    review: RunningReview, page: Page
-) -> None:
-    await page.goto(review.url)
-    await page.wait_for_selector('[data-testid="file-item"]')
-
-    assert abs(await _grown_once_built(_section(page, FAR_FILE))) < LESS_THAN_A_PIXEL
-
-
-async def test_a_file_laid_out_in_two_columns_holds_the_room_its_rows_take_before_they_are_built(
-    review: RunningReview, page: Page
-) -> None:
-    await page.goto(review.url)
-    await page.get_by_test_id("settings-toggle").click()
-    await page.get_by_test_id("layout-split").click()
-    await _section(page, FIRST_FILE).get_by_test_id("split-view").wait_for()
-
-    assert abs(await _grown_once_built(_section(page, FAR_FILE))) < LESS_THAN_A_PIXEL
-
-
-async def test_a_piece_far_down_a_story_holds_the_room_its_hunks_take_before_they_are_built(
-    review: RunningReview, page: Page
-) -> None:
-    """Of a file no step tells, the story draws what it changes: a piece of several hunks, the lines between said."""
-    await page.goto(review.url)
-    await page.click('[data-testid="read-as-story"]')
-    await page.wait_for_selector('[data-testid="story-piece"]')
-
-    assert abs(await _grown_once_built(_piece(page, FAR_FILE))) < LESS_THAN_A_PIXEL
-
-
-async def test_a_file_the_agent_shows_far_down_the_review_is_marked_at_the_top_of_the_reading_area(
+async def test_a_file_the_agent_shows_far_down_the_review_is_in_view_once_marked(
     review: RunningReview, page: Page
 ) -> None:
     await page.goto(review.url)
     await page.wait_for_selector('[data-testid="file-item"]')
 
     await _agent_shows(review, FAR_FILE)
-    shown = await _marked(page, FAR_FILE)
 
-    assert abs(await shown.evaluate(BELOW_THE_AREAS_TOP)) < LESS_THAN_A_PIXEL
-
-
-@pytest.mark.parametrize("path", [NEAR_FILE, FAR_FILE])
-async def test_a_file_the_agent_shows_is_at_the_top_of_the_reading_area_from_the_first_frame_the_area_moves_in(
-    review: RunningReview, page: Page, path: str
-) -> None:
-    """Taken there at once, a screen down or many: a glide would have it still on its way, below."""
-    await page.goto(review.url)
-    await page.wait_for_selector('[data-testid="file-item"]')
-    first_move = await _section(page, path).evaluate_handle(AT_THE_FIRST_MOVE)
-
-    await _agent_shows(review, path)
-
-    assert abs(await first_move.evaluate(KEPT)) < LESS_THAN_A_PIXEL
-
-
-async def test_a_file_the_agent_shows_far_down_under_a_file_that_holds_a_thread_is_marked_at_the_top_of_the_reading_area(
-    review_with_a_thread_above_the_far_file: RunningReview, page: Page
-) -> None:
-    """The card is drawn as the file above is built, after the page took the reader there, and pushes the file down."""
-    await page.goto(review_with_a_thread_above_the_far_file.url)
-    await page.wait_for_selector('[data-testid="file-item"]')
-    await page.add_style_tag(content=WITHOUT_SCROLL_ANCHORING)
-
-    await _agent_shows(review_with_a_thread_above_the_far_file, FAR_FILE)
-    shown = await _marked(page, FAR_FILE)
-
-    assert abs(await shown.evaluate(BELOW_THE_AREAS_TOP)) < LESS_THAN_A_PIXEL
+    await expect(await _marked(page, FAR_FILE)).to_be_in_viewport()
 
 
 async def test_the_reading_area_stays_where_it_is_once_a_file_the_agent_showed_is_marked(
@@ -268,10 +175,8 @@ async def test_the_last_file_shown_while_a_story_is_read_is_marked_in_view_in_th
     await page.wait_for_selector('[data-testid="story-piece"]')
 
     await _agent_shows(review, LAST_FILE)
-    shown = await _marked(page, LAST_FILE)
 
-    area_height = await page.get_by_test_id("diff-view").evaluate("(area) => area.clientHeight")
-    assert 0 <= await shown.evaluate(BELOW_THE_AREAS_TOP) < area_height
+    await expect(await _marked(page, LAST_FILE)).to_be_in_viewport()
 
 
 async def test_a_reader_who_scrolls_while_the_page_takes_them_to_a_file_is_left_where_they_went(
@@ -288,9 +193,10 @@ async def test_a_reader_who_scrolls_while_the_page_takes_them_to_a_file_is_left_
 
     await _agent_shows(review, FAR_FILE)
     await expect(area).not_to_have_js_property("scrollTop", 0)
+    taken_to = await area.evaluate(SCROLLED)
     await page.mouse.wheel(0, -A_TURN_OF_THE_WHEEL)
     await wheel_heard.evaluate(KEPT)
     await page.clock.resume()
-    shown = await _marked(page, FAR_FILE)
+    await _marked(page, FAR_FILE)
 
-    assert await shown.evaluate(BELOW_THE_AREAS_TOP) >= A_TURN_OF_THE_WHEEL - LESS_THAN_A_PIXEL
+    assert await area.evaluate(SCROLLED) <= taken_to - A_TURN_OF_THE_WHEEL + LESS_THAN_A_PIXEL

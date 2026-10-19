@@ -6,12 +6,10 @@ import { frames } from './frames';
 /** An observer the test reports crossings through, as the browser would once it has laid the page out. */
 class ReportedObserver {
 	static latest: ReportedObserver | null = null;
-	readonly options: IntersectionObserverInit;
 	readonly #callback: IntersectionObserverCallback;
 
-	constructor(callback: IntersectionObserverCallback, options: IntersectionObserverInit) {
+	constructor(callback: IntersectionObserverCallback) {
 		this.#callback = callback;
-		this.options = options;
 		ReportedObserver.latest = this;
 	}
 
@@ -206,11 +204,5 @@ describe('the file being read', () => {
 		stopTheFirst();
 
 		expect(sections.fileInView).toBe('a.py');
-	});
-
-	it('leaves out a section that touches the band by less than a pixel', () => {
-		band();
-
-		expect(ReportedObserver.latest?.options.rootMargin).toBe('-1px 0px -85% 0px');
 	});
 });

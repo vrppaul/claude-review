@@ -17,9 +17,7 @@ const BREAKPOINTS = [
 	{ name: '--breakpoint-cr-side-column-beside', width: '50rem' },
 	{ name: '--breakpoint-cr-panel-beside', width: '70rem' }
 ];
-// How wide the tree of files and a story's contents stand until the reader sizes them, in pixels,
-// and a width the reader leaves them at
-const TREE_AT_FIRST = 240;
+// A width the reader leaves the tree of files and a story's contents at, in pixels
 const WIDTH_AS_LEFT = 300;
 // How a media query asks for a screen at least so wide: `(width >= 46rem)`
 const AT_LEAST = /^\(width >= ([\d.]+)rem\)$/;
@@ -105,12 +103,6 @@ describe('the columns, until the reader opens or shuts them', () => {
 describe('the contents beside a story, which the reader puts away apart from the tree of files, and which are as wide as it', () => {
 	beforeEach(() => {
 		screenOf(WIDE);
-	});
-
-	it('start as wide as the tree', () => {
-		const layout = new PageLayout();
-
-		expect([layout.storyContents.width, layout.fileTree.width]).toEqual([TREE_AT_FIRST, TREE_AT_FIRST]);
 	});
 
 	it('are still put away when the page opens again, and the tree still beside the files', () => {

@@ -13,6 +13,7 @@ from claude_review.domain.models import ReviewMode
 from claude_review.services.text_files import read_text_files
 from claude_review.services.transcript import read_transcript
 from tests.e2e.browsers_loop import in_the_browsers_loop
+from tests.e2e.page_reads import FOCUSED_TEST_ID
 from tests.helpers import (
     EVENTS_ROUTE,
     GLANCE_AT_EVENTS,
@@ -293,7 +294,7 @@ async def test_a_removed_line_beside_its_replacement_takes_a_comment_from_the_ke
 
     await page.keyboard.press("j")
     await page.keyboard.press("Tab")
-    reached = await page.evaluate("document.activeElement.getAttribute('aria-label')")
+    reached = await page.evaluate(FOCUSED_LABEL)
     await page.keyboard.press("Enter")
 
     assert reached == "Comment on removed line 2"
@@ -346,7 +347,7 @@ async def test_the_keyboard_leaving_a_pane_closes_it(diff_review: RunningReview,
     await page.get_by_test_id("base-picker").click()
     await page.get_by_test_id("base-option").first.wait_for()
 
-    while await page.evaluate("document.activeElement?.dataset.testid") != "quick-submit":
+    while await page.evaluate(FOCUSED_TEST_ID) != "quick-submit":
         await page.keyboard.press("Tab")
     await page.keyboard.press("Enter")
     await page.get_by_test_id("finish-review").wait_for()
@@ -369,7 +370,7 @@ async def test_the_keyboard_comes_back_to_the_send_button_after_a_round(diff_rev
     await page.get_by_test_id("finish-review").wait_for(state="detached")
 
     assert (await waiting)["type"] == "round"
-    assert await page.evaluate("document.activeElement?.dataset.testid") == "quick-submit"
+    assert await page.evaluate(FOCUSED_TEST_ID) == "quick-submit"
 
 
 async def test_comments_survive_a_reload(diff_review: RunningReview, page: Page) -> None:
