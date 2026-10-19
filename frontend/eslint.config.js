@@ -302,11 +302,33 @@ const DRAWN_AS_A_MARK =
 const A_MARK_OF_ITS_OWN =
 	'/(^|\\s)([^\\s:]+:)*(cr-tag|cr-pill|cr-severity-[a-z]*|cr-raised-tag|cr-thread-chip(-[a-z]+)?|cr-chip-drop|cr-dot(-[a-z]+)?|cr-contents-dot|cr-guide-hint-dot|cr-guide-key)(\\s|$)/';
 // A mark drawn anew is round, as a dot or a pill is, and only the library's Dot is drawn round: a corner made round
-// by a utility — `rounded-full` on any side or corner, or a radius written in place of half a box or of hundreds of
-// pixels — is refused outside the library, behind any variants. Nothing in markup is round now. The page's own
-// round drawings — a thread's avatars, a story's nodes, the cross on the news card's drawing of a pasted image —
-// are drawn by main.css, which no rule here reads
-const A_ROUND_CORNER = '/(^|\\s)([^\\s:]+:)*rounded(-[a-z]{1,2})?-(full|\\[50%\\]|\\[[0-9]{3,}px\\])(\\s|$)/';
+// by a utility — `rounded-full` on any side or corner, or any radius written in place, `rounded-[100%]` as much as
+// `rounded-[999px]` — is refused outside the library, behind any variants. Nothing in markup is round now. The
+// page's own round drawings — a thread's avatars, a story's nodes, the cross on the news card's drawing of a pasted
+// image — are drawn by main.css, which no rule here reads
+const A_ROUND_CORNER = '/(^|\\s)([^\\s:]+:)*rounded(-[a-z]{1,2})?-(full|\\[[^\\]\\s]*\\])(\\s|$)/';
+// A mark drawn anew need not be round: a corner made round at any radius on a ground laid by a utility is one,
+// `h-1.5 w-1.5 rounded bg-(--cr-unread)` a dot and `rounded bg-(--cr-mark) px-1.5 font-semibold` a count. So a
+// rounded utility and a ground utility among the classes of one element are refused outside the library, as they
+// are in one string a component holds. A field still draws its own box so, until the library draws fields; a mark
+// whose corner and ground are split over two strings, or over a class and a rule of a stylesheet, passes
+const A_ROUNDED_CORNER = '/(^|\\s)([^\\s:]+:)*rounded(-\\S+)?(\\s|$)/';
+const A_GROUND = '/(^|\\s)([^\\s:]+:)*bg-\\S/';
+/** What of an element's start tag holds a pattern among its classes: its class list, written any way, or a class directive. */
+function amongItsClasses(pattern) {
+	const inTheList = `SvelteLiteral[value=${pattern}], Literal[value=${pattern}], TemplateElement[value.raw=${pattern}]`;
+	return `:matches(SvelteAttribute[key.name='class'] :matches(${inTheList}), SvelteDirective[kind='Class'][key.name.name=${pattern}])`;
+}
+// The start tag of every element but a field, an input or a textarea
+const NOT_A_FIELD = 'SvelteElement:not([name.name=/^(input|textarea)$/]) > SvelteStartTag';
+const NO_MARKS_OF_UTILITIES = [
+	{
+		selector: `${NOT_A_FIELD}:has(${amongItsClasses(A_ROUNDED_CORNER)}):has(${amongItsClasses(A_GROUND)})`,
+		message: DRAWN_AS_A_MARK
+	},
+	{ selector: `Literal[value=${A_ROUNDED_CORNER}][value=${A_GROUND}]`, message: DRAWN_AS_A_MARK },
+	{ selector: `TemplateElement[value.raw=${A_ROUNDED_CORNER}][value.raw=${A_GROUND}]`, message: DRAWN_AS_A_MARK }
+];
 // DaisyUI's key and badge, behind any variants and at any size, refused inside the library too, which draws its
 // own: `kbd`, `kbd-sm`, `badge`, `badge-primary`. In any string as well: `<svelte:element this="kbd">` would draw a
 // key past the rule on elements below, and a badge's classes are as often kept in a constant as written in markup
@@ -330,7 +352,8 @@ const NO_MARKS_OF_ITS_OWN = [
 	{ selector: `TemplateElement[value.raw=${A_MARK_OF_ITS_OWN}]`, message: DRAWN_AS_A_MARK },
 	...inClassLists(A_ROUND_CORNER, DRAWN_AS_A_MARK),
 	{ selector: `Literal[value=${A_ROUND_CORNER}]`, message: DRAWN_AS_A_MARK },
-	{ selector: `TemplateElement[value.raw=${A_ROUND_CORNER}]`, message: DRAWN_AS_A_MARK }
+	{ selector: `TemplateElement[value.raw=${A_ROUND_CORNER}]`, message: DRAWN_AS_A_MARK },
+	...NO_MARKS_OF_UTILITIES
 ];
 
 // What can be pressed is the library's to draw, a row of a list as much as a button: the page drew its rows
@@ -345,14 +368,37 @@ const A_PRESSED_PART = '/^(button|link|option|menuitem|menuitemcheckbox|menuitem
 // The classes the page drew its rows, and the rail of a column put away, with; and the row the reader was at
 const A_ROW_OF_ITS_OWN =
 	'/(^|\\s)([^\\s:]+:)*(cr-tree-row|cr-contents-row|cr-aside-row|cr-option|cr-guide-entry|cr-side-column-rail|cr-current)(\\s|$)/';
+// A role handed in by an expression can be the part of one that is pressed, past the rule that reads a role as it
+// is written: `<div role={PRESSED}>` is a row drawn on a <div> where PRESSED is 'option'. So outside the library an
+// element's role is written as it is. A role in a spread of attributes passes
+const ROLE_AS_WRITTEN = 'Write the role of an element as it is: one handed in can be the part of what is pressed.';
 const NO_ROWS_OF_ITS_OWN = [
 	{
 		selector: `SvelteElement[kind='html'] > SvelteStartTag > SvelteAttribute[key.name='role'] SvelteLiteral[value=${A_PRESSED_PART}]`,
 		message: PRESSED_IN_THE_LIBRARY
 	},
+	{
+		selector:
+			"SvelteElement:not([kind='component']) > SvelteStartTag > SvelteAttribute[key.name='role'] > SvelteMustacheTag",
+		message: ROLE_AS_WRITTEN
+	},
 	...inClassLists(A_ROW_OF_ITS_OWN, PRESSED_IN_THE_LIBRARY),
 	{ selector: `Literal[value=${A_ROW_OF_ITS_OWN}]`, message: PRESSED_IN_THE_LIBRARY },
 	{ selector: `TemplateElement[value.raw=${A_ROW_OF_ITS_OWN}]`, message: PRESSED_IN_THE_LIBRARY }
+];
+// An element handed its kind can be one that is pressed, past every rule that reads an element as it is written:
+// `<svelte:element this={ELEMENT}>` draws a button where ELEMENT is 'button', and `this="kbd"` a key. So outside
+// the library `<svelte:element>` is refused, but in the components handed the element they draw by a prop whose type
+// names only elements that are not pressed, which no rule here can read
+const ELEMENT_AS_WRITTEN = 'Write the element as it is: one handed its kind can be one that is pressed.';
+const NO_ELEMENTS_HANDED_THEIR_KIND = [
+	{ selector: "SvelteElement[kind='special'][name.name='svelte:element']", message: ELEMENT_AS_WRITTEN }
+];
+const HANDED_THEIR_ELEMENT = [
+	// A file's name: a heading at the level of where it stands, or plain words where something else heads it
+	'src/lib/components/FileTitle.svelte',
+	// A column beside what is read: the landmark it is, the tree's aside or a story's contents' nav
+	'src/lib/components/SideColumn.svelte'
 ];
 // The components that still draw a <button> of their own, each with the part that is to take it or why it is the
 // page's: each is let off the rule that refuses one, and nothing else is
@@ -403,6 +449,26 @@ const TAKES_NO_CLASS = [
 		message: NO_LOOK_FROM_OUTSIDE
 	}
 ];
+
+// What a component outside the library is refused: drawing a part of the library its own way
+const DRAWN_BY_THE_LIBRARY_ALONE = [
+	...NO_BUTTONS_OF_ITS_OWN,
+	...NO_CARDS_OF_ITS_OWN,
+	...NO_CODE_BOXES_OF_ITS_OWN,
+	...NO_NOTICES_OF_THEIR_OWN,
+	...NO_MARKS_OF_ITS_OWN,
+	...NO_ROWS_OF_ITS_OWN,
+	...NO_BANDS_OF_ITS_OWN
+];
+
+/**
+ * The syntax refused in a place: what every file of the page is refused, and the lists that place is refused
+ * besides. The rule takes one list for a file, the last a block gives it, so a block for a place inside another
+ * names again all it still refuses; each such list is written here, from the same parts.
+ */
+function refusedSyntax(...besides) {
+	return ['error', ...NO_NESTED_HELPERS, ...NO_INLINE_STYLING, ...besides.flat()];
+}
 
 // A pane opened from a control is a Popover, which stands by the control; a modal stands over the whole review,
 // by none. The modals the page asks in, each with why: the question before stories are turned on, asked on the
@@ -567,18 +633,7 @@ export default tseslint.config(
 				'error',
 				{ selector: 'typeParameter', format: ['PascalCase'], custom: { regex: TYPE_NAME, match: true } }
 			],
-			'no-restricted-syntax': [
-				'error',
-				...NO_NESTED_HELPERS,
-				...NO_INLINE_STYLING,
-				...NO_BUTTONS_OF_ITS_OWN,
-				...NO_CARDS_OF_ITS_OWN,
-				...NO_CODE_BOXES_OF_ITS_OWN,
-				...NO_NOTICES_OF_THEIR_OWN,
-				...NO_MARKS_OF_ITS_OWN,
-				...NO_ROWS_OF_ITS_OWN,
-				...NO_BANDS_OF_ITS_OWN
-			],
+			'no-restricted-syntax': refusedSyntax(DRAWN_BY_THE_LIBRARY_ALONE, NO_ELEMENTS_HANDED_THEIR_KIND),
 			// A function an interface asks for is a property: a method's parameters are compared
 			// loosely, so a value that takes only one kind could stand where every kind is passed
 			'@typescript-eslint/method-signature-style': ['error', 'property'],
@@ -618,54 +673,36 @@ export default tseslint.config(
 	{
 		files: ['src/lib/**'],
 		rules: {
-			'no-restricted-syntax': [
-				'error',
-				...NO_NESTED_HELPERS,
-				...NO_INLINE_STYLING,
-				...NO_PAGE_LOOKUPS,
-				...NO_CHOOSING,
-				...NO_BUTTONS_OF_ITS_OWN,
-				...NO_CARDS_OF_ITS_OWN,
-				...NO_CODE_BOXES_OF_ITS_OWN,
-				...NO_NOTICES_OF_THEIR_OWN,
-				...NO_MARKS_OF_ITS_OWN,
-				...NO_ROWS_OF_ITS_OWN,
-				...NO_BANDS_OF_ITS_OWN
-			]
+			'no-restricted-syntax': refusedSyntax(
+				NO_PAGE_LOOKUPS,
+				NO_CHOOSING,
+				DRAWN_BY_THE_LIBRARY_ALONE,
+				NO_ELEMENTS_HANDED_THEIR_KIND
+			)
 		}
 	},
 	{
 		files: CHOOSERS,
 		rules: {
-			'no-restricted-syntax': [
-				'error',
-				...NO_NESTED_HELPERS,
-				...NO_INLINE_STYLING,
-				...NO_PAGE_LOOKUPS,
-				...NO_BUTTONS_OF_ITS_OWN,
-				...NO_CARDS_OF_ITS_OWN,
-				...NO_CODE_BOXES_OF_ITS_OWN,
-				...NO_NOTICES_OF_THEIR_OWN,
-				...NO_MARKS_OF_ITS_OWN,
-				...NO_ROWS_OF_ITS_OWN,
-				...NO_BANDS_OF_ITS_OWN
-			]
+			'no-restricted-syntax': refusedSyntax(NO_PAGE_LOOKUPS, DRAWN_BY_THE_LIBRARY_ALONE, NO_ELEMENTS_HANDED_THEIR_KIND)
 		}
+	},
+	{
+		// A component handed the element it draws, by a prop that names only elements not pressed, draws it as handed
+		files: HANDED_THEIR_ELEMENT,
+		rules: { 'no-restricted-syntax': refusedSyntax(NO_PAGE_LOOKUPS, NO_CHOOSING, DRAWN_BY_THE_LIBRARY_ALONE) }
 	},
 	{
 		// The library draws its parts with its own classes, and takes no look from outside
 		files: ['src/lib/ui/**'],
 		rules: {
-			'no-restricted-syntax': [
-				'error',
-				...NO_NESTED_HELPERS,
-				...NO_INLINE_STYLING,
-				...NO_PAGE_LOOKUPS,
-				...NO_CHOOSING,
-				...NO_DAISY_BUTTONS,
-				...TAKES_NO_CLASS,
-				...NO_GLYPHS_OR_DAISY_MARKS
-			]
+			'no-restricted-syntax': refusedSyntax(
+				NO_PAGE_LOOKUPS,
+				NO_CHOOSING,
+				NO_DAISY_BUTTONS,
+				TAKES_NO_CLASS,
+				NO_GLYPHS_OR_DAISY_MARKS
+			)
 		}
 	},
 	{
