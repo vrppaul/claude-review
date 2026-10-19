@@ -12,7 +12,8 @@
 		type PaneFit,
 		type PaneHead as Head,
 		type PaneWidth,
-		type Placement
+		type Placement,
+		type ScreenBox
 	} from './pane';
 
 	interface Props extends Omit<HTMLAttributes<HTMLDivElement>, 'class' | 'style' | 'children' | 'role' | 'aria-label'> {
@@ -20,7 +21,13 @@
 		role: 'dialog' | 'listbox' | 'status';
 		/** What the pane is called, said to whoever cannot see it. */
 		label: string;
+		/** Where it opens, unless it would not stand whole there and the other way has more room. */
 		placement: Placement;
+		/**
+		 * What of the window the pane can be seen in where it is drawn, asked each time it is fitted: the window, or
+		 * the part of a reading area not under what is kept in sight at its top (dom/in-sight.ts).
+		 */
+		seenIn: (pane: HTMLElement) => ScreenBox;
 		width: PaneWidth;
 		/** Whether it points at what it stands by: a note that is not about that control does not. */
 		arrow: boolean;
@@ -44,6 +51,7 @@
 		role,
 		label,
 		placement,
+		seenIn,
 		width,
 		arrow,
 		arrowOffset,
@@ -58,16 +66,16 @@
 		...attributes
 	}: Props = $props();
 
-	// How the pane is fitted into the window, once it is drawn
+	// How the pane is fitted into what it is seen in, once it is drawn
 	let fit = $state<PaneFit | null>(null);
 
-	// Measured as it is drawn, and whenever the window it is in changes under it
+	// Measured as it is drawn, and whenever what it is seen in changes under it
 	$effect(() => {
-		if (pane) measure();
+		if (pane && body) measure();
 	});
 
 	function measure() {
-		if (pane) fit = fitted(laidOut(pane), placement, { width: innerWidth, height: innerHeight });
+		if (pane && body) fit = fitted(laidOut(pane, body), placement, seenIn(pane));
 	}
 
 	/** A number of pixels as the stylesheet takes it, or none before the pane is measured. */
@@ -76,12 +84,13 @@
 	}
 </script>
 
-<!-- The window's size, and the place of what the pane stands by, change as it is resized and as anything under
-	the pane scrolls: the pane is fitted to them again -->
+<!-- What the pane is seen in, and the place of what it stands by, change as the window is resized and as anything
+	under the pane scrolls: the pane is fitted to them again -->
 <svelte:window onresize={measure} onscrollcapture={measure} />
 
 <!-- One look for every pane that stands by a control, opened from it by the reader or put there by the page as a
-	note: lifted off the page, with an arrow pointing at the control, moved in to stand whole in the window -->
+	note: lifted off the page, with an arrow pointing at the control, opened the way it has room and moved in to
+	stand whole in what it is seen in -->
 <div
 	{...attributes}
 	bind:this={pane}
@@ -90,7 +99,7 @@
 	data-testid={testId}
 	class={[
 		'cr-ui-pane cr-ui-popover',
-		placedAs(placement),
+		placedAs(fit?.placement ?? placement),
 		PANE_WIDTHS[width],
 		edge && PANE_EDGES[edge],
 		!arrow && 'cr-ui-arrowless',

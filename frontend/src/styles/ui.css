@@ -262,10 +262,11 @@
 }
 /*
  * A pane that stands by a control (PopoverPanel), over what is under it,
- * with an arrow pointing at the middle of the control. Measured in the
- * window, it is moved along to stand whole inside it and kept as narrow and
- * as short as the window leaves it room for; the arrow is moved back as
- * far, so it still points at the control.
+ * with an arrow pointing at the middle of the control. Measured in what it
+ * is seen in (lib/ui/pane.ts), it opens the way it has room, is moved along
+ * to stand whole inside and kept as narrow and as short as that leaves it
+ * room for; the arrow is moved back as far, so it still points at the
+ * control.
  */
 .cr-ui-popover {
 	position: absolute;

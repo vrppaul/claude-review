@@ -21,6 +21,7 @@
 
 <script lang="ts">
 	import { tick, untrack, type Snippet } from 'svelte';
+	import { seenIn } from '$lib/dom/in-sight';
 	import { isComposingText } from '$lib/dom/keyboard';
 	import type { TourTarget } from '$lib/guide/tour';
 	import { arrowOffsetTo, type PaneHead, type PaneWidth, type Placement, type TriggerProps } from '$lib/ui/pane';
@@ -97,9 +98,12 @@
 	}
 
 	// An open pane gives the keyboard to the first of what it holds, unless something in it already has it — a
-	// field it opened on. Only where it holds nothing that takes the keyboard does its close take it
+	// field it opened on. Only where it holds nothing that takes the keyboard does its close take it. It is given
+	// without moving the screen: the pane is fitted to stand where the reader sees it, and the browser would
+	// scroll the reading area to where what takes the keyboard stood before the fit was drawn
 	$effect(() => {
-		if (pane && body && !pane.contains(document.activeElement)) (firstFocusable(body) ?? firstFocusable(pane))?.focus();
+		if (pane && body && !pane.contains(document.activeElement))
+			(firstFocusable(body) ?? firstFocusable(pane))?.focus({ preventScroll: true });
 	});
 
 	/** Close the pane from the close at its head, as Escape does: the keyboard goes back as it would then. */
@@ -182,6 +186,7 @@
 			data-tour={tour}
 			{label}
 			{placement}
+			{seenIn}
 			{width}
 			arrow
 			{arrowOffset}

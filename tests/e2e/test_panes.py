@@ -52,6 +52,33 @@ AFTER = "value = 2\n"
 # How far the tree is scrolled down, in pixels, and whether an element has moved up from where it stood
 SCROLLED_BY = 400
 SCROLLED_ABOVE = "([element, top]) => element.getBoundingClientRect().top < top"
+# A file changed on every line, long enough for the reading area to scroll it far under its header; and a line
+# deep in it to comment on, by its place among the line numbers drawn
+LONG_FILE = "long.py"
+LONG_FILE_LINES = 80
+DEEP_LINE = 40
+# How far under the foot of the file's header a control is scrolled to, and how far its foot stands above the
+# foot of the reading area, in pixels: near enough that a question opened its own way would lie under the
+# header, or past the area's foot
+JUST_UNDER_THE_HEADER = 10
+JUST_ABOVE_THE_FOOT = 20
+# Scroll the reading area by as much as stands a control's top that far under the foot of a header kept over it
+TOP_UNDER = """(area, [control, header, under]) => {
+    area.scrollTop += control.getBoundingClientRect().top - (header.getBoundingClientRect().bottom + under);
+}"""
+# Scroll the reading area by as much as stands a control's foot that far above the area's own foot
+FOOT_ABOVE = """(area, [control, above]) => {
+    area.scrollTop += control.getBoundingClientRect().bottom - (area.getBoundingClientRect().bottom - above);
+}"""
+# Whether an element is what the reader sees at its middle: nothing is drawn over it there, nothing clips it
+SEEN_AT_ITS_MIDDLE = """(element) => {
+    const box = element.getBoundingClientRect();
+    return element.contains(document.elementFromPoint((box.left + box.right) / 2, (box.top + box.bottom) / 2));
+}"""
+# How far a reading area has scrolled, in pixels
+SCROLLED = "(area) => area.scrollTop"
+# A question's two answers, by their test ids
+ANSWERS = ("confirm-keep", "confirm-go-ahead")
 
 
 class Pane(BaseModel):
@@ -254,6 +281,105 @@ async def test_the_question_before_a_comment_is_discarded_hangs_over_the_cancel_
     above_by = cancel["y"] - (question["y"] + question["height"])
     ends_apart = abs(question["x"] + question["width"] - (cancel["x"] + cancel["width"]))
     assert (0 <= above_by <= ARROWS_ROOM, ends_apart <= WITHIN_ROUNDING) == (True, True), (cancel, question)
+
+
+@in_the_browsers_loop
+async def long_change(tmp_path: Path, servers: ReviewServers) -> RunningReview:
+    """A review of one file changed on every one of its many lines."""
+    committed_repository(tmp_path, {LONG_FILE: "".join(f"before = {number}\n" for number in range(LONG_FILE_LINES))})
+    write_files(tmp_path, {LONG_FILE: "".join(f"after = {number}\n" for number in range(LONG_FILE_LINES))})
+    return await servers.start(await repository_opening(tmp_path))
+
+
+async def _comment_deep_in_the_file(page: Page, words: str) -> None:
+    """Write a comment on a line deep in the long file, and leave it being written."""
+    await page.get_by_test_id("line-gutter").nth(DEEP_LINE).click()
+    await page.get_by_test_id("comment-input").wait_for()
+    await page.keyboard.type(words)
+
+
+async def _seen_whole(page: Page, question: str) -> bool:
+    """Whether a question stands whole in what is seen of the reading area, under its file's header, and the
+    middle of each of its answers is the answer: nothing lies over it, nothing cuts it off."""
+    area = await page.get_by_test_id("diff-view").bounding_box()
+    header = await page.get_by_test_id("file-header").bounding_box()
+    asked = await page.get_by_test_id(question).bounding_box()
+    assert area is not None
+    assert header is not None
+    assert asked is not None
+    answers_seen = [await page.get_by_test_id(answer).evaluate(SEEN_AT_ITS_MIDDLE) for answer in ANSWERS]
+    return all(
+        [
+            asked["y"] >= header["y"] + header["height"] - WITHIN_ROUNDING,
+            asked["y"] + asked["height"] <= area["y"] + area["height"] + WITHIN_ROUNDING,
+            *answers_seen,
+        ]
+    )
+
+
+async def test_the_question_before_a_comment_is_discarded_asked_just_under_the_files_header_opens_below_cancel_seen_whole(
+    long_change: RunningReview, page: Page
+) -> None:
+    await _open(page, long_change, SHORT_LAPTOP)
+    await _comment_deep_in_the_file(page, "Half a thought")
+    cancel = page.get_by_test_id("cancel-comment")
+    await page.get_by_test_id("diff-view").evaluate(
+        TOP_UNDER,
+        [
+            await cancel.element_handle(),
+            await page.get_by_test_id("file-header").element_handle(),
+            JUST_UNDER_THE_HEADER,
+        ],
+    )
+
+    await cancel.click()
+
+    cancel_box, question = await _boxes(page, "cancel-comment", "discard-dialog")
+    below_by = question["y"] - (cancel_box["y"] + cancel_box["height"])
+    assert (0 <= below_by <= ARROWS_ROOM, await _seen_whole(page, "discard-dialog")) == (True, True), (
+        cancel_box,
+        question,
+    )
+
+
+async def _bin_near_the_foot(page: Page, review: RunningReview) -> None:
+    """A comment saved deep in the long file, its bin scrolled to stand just above the foot of the reading area."""
+    await _open(page, review, SHORT_LAPTOP)
+    await _comment_deep_in_the_file(page, "Name it after the unit")
+    await page.keyboard.press("Control+Enter")
+    bin_button = page.get_by_test_id("delete-comment")
+    await bin_button.wait_for()
+    await page.get_by_test_id("diff-view").evaluate(
+        FOOT_ABOVE, [await bin_button.element_handle(), JUST_ABOVE_THE_FOOT]
+    )
+
+
+async def test_the_question_before_a_comment_is_deleted_asked_near_the_foot_of_the_reading_area_opens_above_the_bin_seen_whole(
+    long_change: RunningReview, page: Page
+) -> None:
+    await _bin_near_the_foot(page, long_change)
+
+    await page.get_by_test_id("delete-comment").click()
+
+    bin_box, question = await _boxes(page, "delete-comment", "delete-dialog")
+    above_by = bin_box["y"] - (question["y"] + question["height"])
+    assert (0 <= above_by <= ARROWS_ROOM, await _seen_whole(page, "delete-dialog")) == (True, True), (
+        bin_box,
+        question,
+    )
+
+
+async def test_the_question_taking_the_keyboard_leaves_the_reading_area_where_the_reader_had_it(
+    long_change: RunningReview, page: Page
+) -> None:
+    await _bin_near_the_foot(page, long_change)
+    area = page.get_by_test_id("diff-view")
+    scrolled_to = await area.evaluate(SCROLLED)
+
+    await page.get_by_test_id("delete-comment").click()
+
+    await page.get_by_test_id("delete-dialog").wait_for()
+    assert (await page.evaluate(FOCUSED_TEST_ID), await area.evaluate(SCROLLED)) == ("confirm-keep", scrolled_to)
 
 
 @pytest.fixture

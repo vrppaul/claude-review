@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { KEPT_IN_SIGHT_ROLE } from '$lib/dom/keyboard';
+	import { KEPT_IN_SIGHT_ROLE } from '$lib/dom/in-sight';
 	import { useReview } from '$lib/review/context';
 	import Button from '$lib/ui/Button.svelte';
 	import Icon from '$lib/ui/Icon.svelte';

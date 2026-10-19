@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import type { ClassValue } from 'svelte/elements';
-	import { KEPT_IN_SIGHT_ROLE } from '$lib/dom/keyboard';
+	import { KEPT_IN_SIGHT_ROLE } from '$lib/dom/in-sight';
 
 	interface Props {
 		testId: string;

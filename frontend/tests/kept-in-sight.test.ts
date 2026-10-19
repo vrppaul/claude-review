@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { KEPT_IN_SIGHT_ROLE } from '$lib/dom/keyboard';
+import { KEPT_IN_SIGHT_ROLE } from '$lib/dom/in-sight';
 import { styleRules } from './stylesheets';
 
 // How a rule keeps its box in sight while what it heads scrolls under it

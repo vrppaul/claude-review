@@ -9,6 +9,7 @@
  */
 
 import { tick } from 'svelte';
+import { inSightFrom, TOUCHING_WITHIN } from '$lib/dom/in-sight';
 
 /** Text-entry inputs; a checkbox or a button is not one of them. */
 const TYPED_INTO = new Set(['text', 'search', 'email', 'url', 'tel', 'password', 'number']);
@@ -53,34 +54,6 @@ export function lineNumbersIn(within: HTMLElement): HTMLElement[] {
 /** Whether an element comes after another in the document. */
 function follows(element: Element, other: Element): boolean {
 	return (other.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
-}
-
-/**
- * What everything kept in sight at the top of a reading area carries, while
- * what it heads scrolls under it: the header of a section, the slot of a
- * chapter's bar. A line behind one is drawn, and the reader does not see it.
- * The role is what keeps it there: the stylesheet has one rule that does,
- * and it is the role's.
- */
-export const KEPT_IN_SIGHT_ROLE = 'kept-in-sight';
-
-// How near two edges stand that touch, in pixels: where an edge stands is not a whole number
-const TOUCHING_WITHIN = 1;
-
-/**
- * Where what the reader sees of a reading area begins: at its top edge, or
- * at the foot of what is kept in sight there, one thing under another — the
- * bar of a chapter, and under it the header of the piece being read. They
- * are looked at in the order the page draws them, which is down the area:
- * each one that begins no lower than what is seen so far takes its room too.
- */
-function inSightFrom(area: HTMLElement): number {
-	let seenFrom = area.getBoundingClientRect().top;
-	for (const kept of area.querySelectorAll(`[data-role="${KEPT_IN_SIGHT_ROLE}"]`)) {
-		const box = kept.getBoundingClientRect();
-		if (box.top - seenFrom < TOUCHING_WITHIN) seenFrom = Math.max(seenFrom, box.bottom);
-	}
-	return seenFrom;
 }
 
 /**

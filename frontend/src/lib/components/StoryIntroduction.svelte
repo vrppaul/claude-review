@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { seenIn } from '$lib/dom/in-sight';
 	import { focusWhatRemains } from '$lib/dom/keyboard';
 	import { useReview } from '$lib/review/context';
 	import Button from '$lib/ui/Button.svelte';
@@ -64,6 +65,7 @@
 		role="dialog"
 		label={TITLE}
 		placement="below-start"
+		{seenIn}
 		width="medium"
 		arrow
 		{arrowOffset}

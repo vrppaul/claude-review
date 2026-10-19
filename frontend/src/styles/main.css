@@ -372,9 +372,10 @@
 /*
  * What is kept in sight at the top of a reading area while what it heads
  * scrolls under it: whatever says so by its role, and nothing else. The
- * page's own code reads the same role to know which lines stand behind it
- * (`inSightFrom`, dom/keyboard.ts), so nothing is in sight to the eye that
- * the page does not know of. Where each stands is its own rule's to say.
+ * page's own code reads the same role to know which lines and panes stand
+ * behind it (`inSightFrom`, dom/in-sight.ts), so nothing is in sight to the
+ * eye that the page does not know of. Where each stands is its own rule's to
+ * say.
  */
 [data-role='kept-in-sight'] {
 	position: sticky;
