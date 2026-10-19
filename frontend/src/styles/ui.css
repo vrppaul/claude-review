@@ -605,13 +605,14 @@
 }
 
 /*
- * A tag and a count (Tag, Count, lib/ui/tag.ts): a mark standing in a line
- * of words, in one box for both, as tall whatever line it stands in — small
- * words at a leading of their own, room either side, an edge, a field's
- * corner
+ * A tag, a count and a chip (Tag, Count, lib/ui/tag.ts; Chip,
+ * lib/ui/chip.ts): a mark standing in a line of words, in one box for all
+ * three, as tall whatever line it stands in — small words at a leading of
+ * their own, room either side, an edge, a field's corner
  */
 .cr-ui-tag,
-.cr-ui-count {
+.cr-ui-count,
+.cr-ui-chip {
 	display: inline-flex;
 	align-items: center;
 	gap: 0.25rem;
@@ -651,4 +652,41 @@
 	color: var(--color-primary-content);
 	font-weight: 600;
 	font-variant-numeric: tabular-nums;
+}
+/* A chip names a thread or a file in the code's face, on the tint of whoever named it */
+.cr-ui-chip {
+	gap: 0.125rem;
+	font-family: var(--font-mono);
+}
+.cr-ui-chip-reader {
+	background-color: var(--cr-mark-chip);
+	color: var(--cr-mark-text);
+}
+.cr-ui-chip-agent {
+	background-color: var(--cr-agent-chip);
+	color: var(--cr-agent);
+}
+/* One out of reach is named, not a way there: no tint, its edge broken in its voice's colour */
+.cr-ui-chip-out-of-reach {
+	border-style: dashed;
+	background-color: transparent;
+}
+.cr-ui-chip-reader.cr-ui-chip-out-of-reach {
+	border-color: var(--cr-mark-border);
+}
+.cr-ui-chip-agent.cr-ui-chip-out-of-reach {
+	border-color: var(--cr-agent-border);
+}
+/*
+ * The cross that takes a chip out of the message being written: inside it,
+ * as tall as its line, so the chip keeps its height, and in its colour, as
+ * part of it
+ */
+.cr-ui-chip-remove {
+	display: inline-flex;
+	align-items: center;
+	align-self: stretch;
+	padding-inline: 0.125rem;
+	border-radius: calc(var(--radius-field) - 1px);
+	color: inherit;
 }

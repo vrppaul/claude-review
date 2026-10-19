@@ -548,14 +548,16 @@ async def test_every_notice_is_as_tall_as_one_with_a_button_its_words_alike_on_i
 # Where the agent raises a thread on a line, and the line of the changed file it raises them on
 POINT_ROUTE = "/api/point"
 CHANGED_LINE = 2
-# Every tag and count a review draws once the agent raised a question on a line, each where it stands: what the
-# thread asks for and that it is the agent's, on its card; how many threads hang on the file, on its header; what
-# handing the review over costs, in the panel; and what the thread asks for, in the list a round is sent from
-EVERY_TAG_AND_COUNT = [
+# Every tag, count and chip a review draws once the agent raised a question on a line, each where it stands: what
+# the thread asks for and that it is the agent's, on its card; how many threads hang on the file, on its header;
+# what handing the review over costs, and the thread named in the panel's note of it; and what the thread asks
+# for, in the list a round is sent from
+EVERY_MARK_IN_A_LINE = [
     "comment-severity",
     "comment-raised",
     "section-comment-count",
     "review-weight",
+    "panel-thread-ref",
     "finish-severity",
 ]
 
@@ -588,7 +590,7 @@ async def _box_of(page: Page, test_id: str) -> MarkBox:
 
 
 @pytest.mark.parametrize("scheme", SCHEMES)
-async def test_every_tag_and_count_stands_in_one_box_at_a_fields_corner_whatever_line_it_stands_in(
+async def test_every_tag_count_and_chip_stands_in_one_box_at_a_fields_corner_whatever_line_it_stands_in(
     review: RunningReview, page: Page, scheme: str
 ) -> None:
     await _open_in(page, review, scheme)
@@ -598,7 +600,7 @@ async def test_every_tag_and_count_stands_in_one_box_at_a_fields_corner_whatever
     await page.get_by_test_id("quick-submit").click()
     await page.get_by_test_id("finish-severity").wait_for()
 
-    boxes = [await _box_of(page, test_id) for test_id in EVERY_TAG_AND_COUNT]
+    boxes = [await _box_of(page, test_id) for test_id in EVERY_MARK_IN_A_LINE]
 
     corner = await on_a_probe(page, "borderTopLeftRadius", "var(--radius-field)")
-    assert boxes == [MarkBox(height=boxes[0].height, corner=corner, size=boxes[0].size)] * len(EVERY_TAG_AND_COUNT)
+    assert boxes == [MarkBox(height=boxes[0].height, corner=corner, size=boxes[0].size)] * len(EVERY_MARK_IN_A_LINE)

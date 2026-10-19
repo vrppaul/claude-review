@@ -16,6 +16,7 @@ import Pane from '$lib/ui/Pane.svelte';
 import PopoverPanel from '$lib/ui/PopoverPanel.svelte';
 import Segment from '$lib/ui/Segment.svelte';
 import Segmented from '$lib/ui/Segmented.svelte';
+import Chip from '$lib/ui/Chip.svelte';
 import Count from '$lib/ui/Count.svelte';
 import Tag from '$lib/ui/Tag.svelte';
 
@@ -28,6 +29,8 @@ const FROM_OUTSIDE = 'from-outside';
 const RELEASE = 'https://github.com/pavelparanin/claude-review/releases';
 // How many threads a count says hang on what it stands beside
 const THREADS = 3;
+// What a chip's cross says it does
+const REMOVING = 'Take this thread out of the message';
 
 /** A part of the library, drawn with what every one of them is drawn with, and a class handed to it besides. */
 const WITH_A_CLASS_FROM_OUTSIDE = [
@@ -143,6 +146,17 @@ const WITH_A_CLASS_FROM_OUTSIDE = [
 	{
 		part: 'a count',
 		render: () => render(Count, { count: THREADS, testId: TEST_ID, class: FROM_OUTSIDE } as never)
+	},
+	{
+		part: 'a chip',
+		render: () =>
+			render(Chip, {
+				voice: 'reader',
+				onclick: () => undefined,
+				testId: TEST_ID,
+				children: drawn,
+				class: FROM_OUTSIDE
+			} as never)
 	}
 ];
 
@@ -226,5 +240,39 @@ describe('the component library', () => {
 		const { getByTestId } = render(Count, { count: THREADS, testId: TEST_ID });
 
 		expect(getByTestId(TEST_ID).textContent).toBe(String(THREADS));
+	});
+
+	it('draws a chip that names a way somewhere as a button, which takes the reader there when pressed', async () => {
+		const onclick = vi.fn();
+		const { getByTestId } = render(Chip, { voice: 'agent', onclick, testId: TEST_ID, children: drawn });
+
+		await userEvent.click(getByTestId(TEST_ID));
+
+		expect(getByTestId(TEST_ID).tagName).toBe('BUTTON');
+		expect(onclick).toHaveBeenCalledOnce();
+	});
+
+	it('takes a chip out of what is being written by its own cross, which says so', async () => {
+		const onRemove = vi.fn();
+		const { getByTestId } = render(Chip, {
+			voice: 'reader',
+			removing: REMOVING,
+			onRemove,
+			testId: TEST_ID,
+			children: drawn
+		});
+
+		await userEvent.click(getByTestId(`${TEST_ID}-remove`));
+
+		expect(getByTestId(`${TEST_ID}-remove`).getAttribute('aria-label')).toBe(REMOVING);
+		expect(onRemove).toHaveBeenCalledOnce();
+	});
+
+	it('draws a chip whose name is out of reach as words, with nothing to press', () => {
+		const { getByTestId } = render(Chip, { voice: 'agent', outOfReach: true, testId: TEST_ID, children: drawn });
+
+		expect(getByTestId(TEST_ID).textContent).toBe(WORDS);
+		expect(getByTestId(TEST_ID).querySelector('button')).toBeNull();
+		expect(getByTestId(TEST_ID).tagName).toBe('SPAN');
 	});
 });

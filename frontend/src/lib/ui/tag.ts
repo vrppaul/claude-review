@@ -6,10 +6,10 @@
  * are shown as they are written: a tag holds a measure too, and "1M"
  * lowercased would read as "1m".
  *
- * A count (Count) stands in the same box, so a tag and a count in one line
- * stand as tall, whatever line that is: small words at a leading of their
- * own, at a field's corner, as a button and a chip at that size have it,
- * never a pill. Both are written in styles/ui.css.
+ * A count (Count) and a chip (Chip, lib/ui/chip.ts) stand in the same box,
+ * so marks in one line stand as tall, whatever line that is: small words at
+ * a leading of their own, at a field's corner, as a button at that size has
+ * it, never a pill. All three are written in styles/ui.css.
  */
 
 /**

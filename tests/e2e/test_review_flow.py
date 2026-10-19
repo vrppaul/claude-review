@@ -1145,7 +1145,7 @@ async def test_a_thread_pointed_at_in_a_message_being_written_is_a_chip_as_tall_
     await page.get_by_test_id("panel-input").fill("Look again at @")
     await page.get_by_test_id("thread-option").first.click()
     being_written = await painted(page.get_by_test_id("pointed-thread"))
-    cross = await painted(page.get_by_test_id("drop-thread"))
+    cross = await painted(page.get_by_test_id("pointed-thread-remove"))
 
     await page.get_by_test_id("send-message").click()
     await waiting

@@ -227,7 +227,7 @@ const NO_DAISY_BUTTONS = [
 const HANDED_ITS_TEST_ID = 'Hand a part of the library its test id as testId, which it lays on what it draws.';
 // The parts of the library, by the names the page draws them under
 const LIBRARY_PART =
-	'/^(Button|Card|CodeBox|ColumnBar|Count|Dialog|EdgeFrame|Icon|IconButton|Link|NoticeBar|Pane|PaneHead|PopoverPanel|Segment|Segmented|Tag)$/';
+	'/^(Button|Card|Chip|CodeBox|ColumnBar|Count|Dialog|EdgeFrame|Icon|IconButton|Link|NoticeBar|Pane|PaneHead|PopoverPanel|Segment|Segmented|Tag)$/';
 const NO_BUTTONS_OF_ITS_OWN = [
 	...NO_DAISY_BUTTONS,
 	...inClassLists(LIBRARY_CLASS, DRAWN_BY_THE_LIBRARY),
@@ -281,15 +281,17 @@ const NO_NOTICES_OF_THEIR_OWN = [
 	{ selector: `TemplateElement[value.raw=${A_NOTICE_OF_ITS_OWN}]`, message: DRAWN_AS_A_NOTICE }
 ];
 
-// A mark standing in a line of words is drawn by the library — a tag or a count (Tag, Count) — and nothing
-// outside it draws one its own way: the page drew a tag two ways, an edged word its class lowercased and a filled
-// pill, at three heights by the line each stood in, and counted threads with DaisyUI's badges at two sizes, at the
-// box's corner where a tag had the field's. The classes it drew them with are refused in a class list and in any
+// A mark standing in a line of words is drawn by the library — a tag, a count or a chip (Tag, Count, Chip) — and
+// nothing outside it draws one its own way: the page drew a tag two ways, an edged word its class lowercased and a
+// filled pill, at three heights by the line each stood in; counted threads with DaisyUI's badges at two sizes, at
+// the box's corner where a tag had the field's; and drew its chips by hand, the cross that takes one out of a
+// message a button of its own beside them. The classes it drew them with are refused in a class list and in any
 // string a component holds. DaisyUI's `badge` joins them once the rows of the tree and of a story's contents count
 // with Count too
-const DRAWN_AS_A_MARK = 'Draw a tag or a count with lib/ui (Tag, Count), not with classes of its own.';
+const DRAWN_AS_A_MARK = 'Draw a tag, a count or a chip with lib/ui (Tag, Count, Chip), not with classes of its own.';
 // The classes the page drew its marks with
-const A_MARK_OF_ITS_OWN = '/(^|\\s)([^\\s:]+:)*(cr-tag|cr-pill|cr-severity-[a-z]*|cr-raised-tag)(\\s|$)/';
+const A_MARK_OF_ITS_OWN =
+	'/(^|\\s)([^\\s:]+:)*(cr-tag|cr-pill|cr-severity-[a-z]*|cr-raised-tag|cr-thread-chip(-[a-z]+)?|cr-chip-drop)(\\s|$)/';
 const NO_MARKS_OF_ITS_OWN = [
 	...inClassLists(A_MARK_OF_ITS_OWN, DRAWN_AS_A_MARK),
 	{ selector: `Literal[value=${A_MARK_OF_ITS_OWN}]`, message: DRAWN_AS_A_MARK },

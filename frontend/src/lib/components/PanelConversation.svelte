@@ -2,6 +2,8 @@
 	import { anchorShortPlace } from '$lib/anchors/views';
 	import { useReview } from '$lib/review/context';
 	import Card from '$lib/ui/Card.svelte';
+	import Chip from '$lib/ui/Chip.svelte';
+	import type { ChipVoice } from '$lib/ui/chip';
 	import CodeBox from '$lib/ui/CodeBox.svelte';
 	import EdgeFrame from '$lib/ui/EdgeFrame.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
@@ -61,19 +63,14 @@
 </script>
 
 <!-- The threads a turn points at, a chip each, in the colour of whoever said it -->
-{#snippet threadChips(threadIds: string[], testId: string, byTheAgent: boolean)}
+{#snippet threadChips(threadIds: string[], testId: string, voice: ChipVoice)}
 	<div class="mt-2 flex flex-wrap gap-1">
 		{#each threadIds as threadId (threadId)}
 			{@const thread = threadNamed(threadId)}
 			{#if thread}
-				<button
-					type="button"
-					data-testid={testId}
-					class={['cr-thread-chip cr-pressable', byTheAgent && 'cr-thread-chip-agent']}
-					onclick={() => review.navigator.reveal(thread)}
-				>
+				<Chip {voice} {testId} onclick={() => review.navigator.reveal(thread)}>
 					{anchorShortPlace(thread.anchor)}
-				</button>
+				</Chip>
 			{/if}
 		{/each}
 	</div>
@@ -133,14 +130,9 @@
 						<span></span>
 						{#if raised}
 							<!-- A thread the agent raised: the agent's arrival, in its colour -->
-							<button
-								type="button"
-								data-testid="panel-thread-ref"
-								class="cr-thread-chip cr-thread-chip-agent cr-pressable"
-								onclick={() => review.navigator.reveal(raised)}
-							>
+							<Chip voice="agent" testId="panel-thread-ref" onclick={() => review.navigator.reveal(raised)}>
 								{turn.body}
-							</button>
+							</Chip>
 						{:else}
 							<span class="cr-faint text-xs">{turn.body}</span>
 						{/if}
@@ -155,7 +147,7 @@
 							{/if}
 							<SaidImages images={turn.images ?? []} />
 							{#if turn.threads && turn.threads.length > 0}
-								{@render threadChips(turn.threads, 'panel-thread-ref', false)}
+								{@render threadChips(turn.threads, 'panel-thread-ref', 'reader')}
 							{/if}
 							{#if turn.cancelled}
 								<p data-testid="panel-cancelled" class="cr-faint mt-1 text-xs">
@@ -170,7 +162,7 @@
 						<MarkdownRenderer text={turn.body} dense />
 						{#if turn.threads && turn.threads.length > 0}
 							<!-- Threads its words mention, drawn as the reader's mentions are -->
-							{@render threadChips(turn.threads, 'answer-thread', true)}
+							{@render threadChips(turn.threads, 'answer-thread', 'agent')}
 						{/if}
 						{#if turn.files && turn.files.length > 0}
 							<div class="mt-2 flex flex-wrap gap-1">

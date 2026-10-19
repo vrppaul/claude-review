@@ -6,7 +6,7 @@
 	import { isComposingText, isTypingTarget } from '$lib/dom/keyboard';
 	import { useReview } from '$lib/review/context';
 	import Button from '$lib/ui/Button.svelte';
-	import Icon from '$lib/ui/Icon.svelte';
+	import Chip from '$lib/ui/Chip.svelte';
 	import AttachedImages from './AttachedImages.svelte';
 	import { FIELD_KEYS, isFieldChord } from './keymap';
 	import MentionPicker from './MentionPicker.svelte';
@@ -141,20 +141,9 @@
 	{#if pointed.length > 0}
 		<div class="mb-2 flex flex-wrap gap-1">
 			{#each pointed as thread (thread.id)}
-				<span data-testid="pointed-thread" class="cr-thread-chip">
+				<Chip voice="reader" testId="pointed-thread" removing={DROP_THREAD} onRemove={() => drop(thread)}>
 					{anchorShortPlace(thread.anchor)}
-					<!-- Drawn by the page until the library has a chip: its smallest button is taller than the chip's line -->
-					<button
-						type="button"
-						data-testid="drop-thread"
-						class="cr-chip-drop cr-pressable"
-						aria-label={DROP_THREAD}
-						title={DROP_THREAD}
-						onclick={() => drop(thread)}
-					>
-						<Icon name="cross" size="xs" />
-					</button>
-				</span>
+				</Chip>
 			{/each}
 		</div>
 	{/if}

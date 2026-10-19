@@ -136,6 +136,19 @@ describe('the agent panel', () => {
 		expect(getByTestId('pointed-thread').textContent).toContain('routes.py');
 	});
 
+	it('takes a thread out of the message by the cross on its chip', async () => {
+		const user = userEvent.setup({ delay: null });
+		review.threads.add(newComment({ file: 'src/routes.py', startLine: 2, body: 'Why catch here?' }));
+		const { getByTestId, getAllByTestId, queryByTestId } = render(AgentPanel, inReview(review));
+		await user.type(getByTestId('panel-input'), 'Look at @');
+		await user.click(getAllByTestId('thread-option')[0]);
+
+		await user.click(getByTestId('pointed-thread-remove'));
+
+		expect((getByTestId('panel-input') as HTMLTextAreaElement).value).not.toContain('@src/routes.py:2-2');
+		expect(queryByTestId('pointed-thread')).toBeNull();
+	});
+
 	it('points at a file nobody has commented on', async () => {
 		const user = userEvent.setup({ delay: null });
 
@@ -690,7 +703,7 @@ describe('a file the agent names', () => {
 
 	it('says one the diff does not hold yet is not in it, and takes the reader nowhere', async () => {
 		const user = userEvent.setup();
-		const shown = vi.spyOn(review.sections, 'show');
+		const shown = vi.spyOn(review.navigator, 'showFile');
 		review.conversation.receive(chatPush('Split it out.', { files: ['src/made_since.py'] }));
 		review.answerer.showWork(work({ text: 'splitting it out', files: ['src/made_since.py'] }));
 		const { getByTestId } = render(AgentPanel, inReview(review));
