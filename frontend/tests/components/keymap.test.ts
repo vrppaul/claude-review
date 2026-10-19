@@ -209,6 +209,20 @@ describe('the keys the review answers', () => {
 		]);
 	});
 
+	it('draws each key the help lists as a key of its own, the two of a pair apart', async () => {
+		const user = userEvent.setup();
+		render(ReviewScreen, { props: { review } });
+
+		await user.keyboard('?');
+
+		const [downAndUp] = within(screen.getByTestId('shortcuts-list')).getAllByRole('term');
+		expect(
+			within(downAndUp)
+				.getAllByTestId('shortcut-key')
+				.map((key) => key.textContent)
+		).toEqual(['j', 'k']);
+	});
+
 	it('lists in the help no key of a line, a file or a comment over a diff of no file: none of them is drawn', async () => {
 		const user = userEvent.setup();
 		review = openReview({ files: [], facts: { answerer_attached: true } });

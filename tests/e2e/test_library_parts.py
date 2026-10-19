@@ -608,6 +608,55 @@ async def test_every_tag_count_and_chip_stands_in_one_box_at_a_fields_corner_wha
     assert boxes == [MarkBox(height=boxes[0].height, corner=corner, size=boxes[0].size)] * len(EVERY_MARK_IN_A_LINE)
 
 
+# How an element's words are cased, as the browser works it out, and words left as they are written
+CASED = "(element) => getComputedStyle(element).textTransform"
+AS_WRITTEN = "none"
+
+
+@pytest.mark.parametrize("scheme", SCHEMES)
+async def test_a_count_says_how_many_in_bold_a_chip_names_in_the_codes_face_and_a_tag_says_its_words_as_written(
+    review: RunningReview, page: Page, scheme: str
+) -> None:
+    await _open_in(page, review, scheme)
+    await page.get_by_test_id("toggle-panel").click()
+    await _the_agent_raises_a_question(review)
+
+    await page.get_by_test_id("panel-thread-ref").wait_for()
+
+    assert (await painted(page.get_by_test_id("section-comment-count"))).weight == BOLD
+    chip = await painted(page.get_by_test_id("panel-thread-ref"))
+    assert chip.face == await on_a_probe(page, "fontFamily", "var(--font-mono)")
+    assert await page.get_by_test_id("comment-severity").evaluate(CASED) == AS_WRITTEN
+
+
+@pytest.mark.parametrize("scheme", SCHEMES)
+async def test_the_cross_that_takes_a_chip_out_of_a_message_stands_in_the_chips_colour(
+    review: RunningReview, page: Page, scheme: str
+) -> None:
+    await _open_in(page, review, scheme)
+    await _comment_on_the_first_line(page)
+    await page.get_by_test_id("toggle-panel").click()
+    await _an_agent_attaches_and_answers(review)
+    await page.get_by_test_id("panel-input").fill("Look again at @")
+
+    await page.get_by_test_id("thread-option").click()
+
+    chip = page.get_by_test_id("pointed-thread")
+    assert (await painted(chip.get_by_test_id("pointed-thread-remove"))).words == (await painted(chip)).words
+
+
+@pytest.mark.parametrize("scheme", SCHEMES)
+async def test_the_rail_a_column_put_away_leaves_draws_its_chevron_faint(
+    review: RunningReview, page: Page, scheme: str
+) -> None:
+    await _open_in(page, review, scheme)
+
+    await page.get_by_test_id("hide-sidebar").click()
+
+    rail = await painted(page.get_by_test_id("show-sidebar"))
+    assert rail.words == await on_a_probe(page, "color", "var(--cr-faint)")
+
+
 # Every dot a review draws once an agent is at work and raised a thread, each where it stands: how the agent stands
 # with the review, in the header; that the thread's answer is new, on its card; and the dots that breathe while the
 # agent works, on the card of its work
@@ -629,12 +678,13 @@ class DotLook(BaseModel):
 
 
 class KeyLook(BaseModel):
-    """How a key is drawn: how tall, at what corner, in words of what size, weight and face."""
+    """How a key is drawn: how tall, at what corner, edged in what colour, in words of what size, weight and face."""
 
     model_config = ConfigDict(frozen=True)
 
     height: float
     corner: str
+    edge: str
     size: str
     weight: str
     face: str
@@ -652,7 +702,9 @@ async def _dot_of(page: Page, test_id: str) -> DotLook:
 async def _key_of(page: Page, test_id: str) -> KeyLook:
     """How the first key of a test id is drawn, as the browser works it out."""
     look = await painted(page.get_by_test_id(test_id).first)
-    return KeyLook(height=look.height, corner=look.radius, size=look.size, weight=look.weight, face=look.face)
+    return KeyLook(
+        height=look.height, corner=look.radius, edge=look.border, size=look.size, weight=look.weight, face=look.face
+    )
 
 
 @pytest.mark.parametrize("scheme", SCHEMES)
@@ -681,7 +733,9 @@ async def test_every_key_the_help_shows_stands_in_one_box_in_the_codes_regular_f
 
     face = await on_a_probe(page, "fontFamily", "var(--font-mono)")
     corner = await on_a_probe(page, "borderTopLeftRadius", "var(--radius-field)")
-    one_box = KeyLook(height=keys[0].height, corner=corner, size=keys[0].size, weight=REGULAR, face=face)
+    # Edged in a line between surfaces, as a field is, not in the colour of the words it says
+    edge = await on_a_probe(page, "borderTopColor", "var(--color-base-300)")
+    one_box = KeyLook(height=keys[0].height, corner=corner, edge=edge, size=keys[0].size, weight=REGULAR, face=face)
     assert keys == [one_box] * len(EVERY_KEY)
 
 

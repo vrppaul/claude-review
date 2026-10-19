@@ -93,14 +93,23 @@ export interface StyleRule {
 	declarations: string;
 }
 
+/** A sheet as it is written, its comments taken out. */
+function writtenWithoutComments(sheet: Sheet): string {
+	return readFileSync(join(STYLES, sheet), 'utf8').replaceAll(/\/\*[\s\S]*?\*\//g, '');
+}
+
 /** The rules of one sheet, in its order: one written inside an `@media` among them. Comments are taken out, so that what stands before a rule is its selectors alone. */
 function parsed(sheet: Sheet): StyleRule[] {
-	const written = readFileSync(join(STYLES, sheet), 'utf8').replaceAll(/\/\*[\s\S]*?\*\//g, '');
-	return [...written.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(([, selectors, declarations]) => ({
+	return [...writtenWithoutComments(sheet).matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(([, selectors, declarations]) => ({
 		sheet,
 		selectors: selectors.trim(),
 		declarations
 	}));
+}
+
+/** ui.css and main.css as they are written, their comments taken out, in the order the page has them: what no rule shows, as a `@keyframes`, is read here. */
+export function sheetsAsWritten(): string[] {
+	return DRAWN_WITH.map(writtenWithoutComments);
 }
 
 // Each sheet's rules, read once

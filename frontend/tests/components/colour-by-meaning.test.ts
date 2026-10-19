@@ -93,6 +93,17 @@ describe('each thing is drawn in the colour of what it means', () => {
 		expectDrawnIn(getByTestId('panel-thread-ref'), 'color', AGENTS);
 	});
 
+	it('edges what the reader asked in the panel in their mark, as a thread in their hands is edged', async () => {
+		listeningToThePanel();
+		const review = answeredReview();
+		review.conversation.composer.setText('Why is it shorter?');
+		await review.conversation.send([]);
+
+		const { getByTestId } = render(AgentPanel, inReview(review));
+
+		expectDrawnIn(getByTestId('panel-said'), 'border-color', THE_READERS_EDGE);
+	});
+
 	it('draws a thread the reader pointed at in their own colour, not the agent’s', async () => {
 		listeningToThePanel();
 		const review = answeredReview();
@@ -230,6 +241,16 @@ describe('what a thread asks for is said in the colour of whoever asks it', () =
 		const { getByTestId } = render(FinishReview, inReview(review));
 
 		expectDrawnIn(getByTestId('finish-severity'), drawn, meaning);
+	});
+
+	it('says a thread the agent raised is its own in its colour, in the list a round is sent from', () => {
+		const review = answeredReview();
+		review.threads.raise('raised-1', lineAnchor('src/routes.py', 'new', 2, 2, ['y = 3']), 'On purpose?', 'question');
+		review.submission.setFinishing(true);
+
+		const { getByTestId } = render(FinishReview, inReview(review));
+
+		expectDrawnIn(getByTestId('finish-raised'), 'color', AGENTS);
 	});
 });
 

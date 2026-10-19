@@ -736,7 +736,7 @@
 /*
  * The cross that takes a chip out of the message being written: inside it,
  * as tall as its line, so the chip keeps its height, and in its colour, as
- * part of it
+ * part of it, which a button takes from what it stands in
  */
 .cr-ui-chip-remove {
 	display: inline-flex;
@@ -744,7 +744,6 @@
 	align-self: stretch;
 	padding-inline: 0.125rem;
 	border-radius: calc(var(--radius-field) - 1px);
-	color: inherit;
 }
 
 /*
@@ -918,7 +917,7 @@
 .cr-ui-dot-breathing:nth-of-type(3) {
 	animation-delay: 0.36s;
 }
-/* A breath: faint, whole, and faint again */
+/* A breath: faint, whole, and faint again; what a story's sketch shows written first breathes by it too (main.css) */
 @keyframes cr-breathe {
 	0%,
 	100% {

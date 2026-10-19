@@ -71,7 +71,7 @@
 		{/if}
 		<span class="cr-ui-row-label">{@render label()}</span>
 		{#if said}
-			<span class="cr-ui-row-said">{@render said()}</span>
+			<span data-testid="{testId}-said" class="cr-ui-row-said">{@render said()}</span>
 		{/if}
 		{#if trailing || folded !== undefined}
 			<span class="cr-ui-row-end">

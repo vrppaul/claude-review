@@ -39,6 +39,8 @@ SCHEMES = ["light", "dark"]
 ROW_HEIGHT = 32
 # What a row shows while nothing is laid over its ground
 NOTHING_LAID = "none"
+# The weight of words that are not set in bold
+REGULAR = "400"
 
 # A file in a folder, which the story leaves out; a file the agent calls housekeeping; and a file added whole,
 # longer than a screen, which the story tells in one chapter and which the work answering round 1 changes
@@ -289,6 +291,9 @@ async def test_the_rows_of_the_picker_of_what_a_message_points_at_and_of_the_rep
     await page.get_by_test_id("panel-input").fill("")
     await page.get_by_test_id("replies-menu").click()
     await _expect_rows_of_one_height_lit_by_the_pointer(page, IN_THE_REPLIES)
+    # What a row says of what it names, after its name: quieter, in muted words of the regular weight
+    said = await painted(page.get_by_test_id("reply-row-said"))
+    assert (said.words, said.weight) == (await on_a_probe(page, "color", "var(--cr-muted)"), REGULAR)
 
 
 @pytest.mark.parametrize("scheme", SCHEMES)

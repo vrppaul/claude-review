@@ -194,6 +194,19 @@ async def test_ask_about_this_is_offered_in_the_readers_colour_on_the_pages_own_
     )
 
 
+async def test_a_block_whose_offer_holds_the_keyboard_is_lit_as_one_pointed_at_and_offers_it_in_sight(
+    review: RunningReview, page: Page
+) -> None:
+    """The keyboard reaches the offer as the pointer does the block: the band lights, and what it offers shows."""
+    doubt = await _read_as_story(page, review)
+    asking = doubt.get_by_test_id("ask-about-this")
+
+    await asking.focus()
+
+    assert (await painted(doubt.get_by_test_id("overview-doubt-band"))).laid == await light(page, "--cr-hover")
+    assert await asking.evaluate(DRAWN_STRENGTH) == FULLY_DRAWN
+
+
 async def test_a_chapters_doubt_pointed_at_is_lit_by_the_pointers_light_with_the_warnings_wash_showing_through(
     review: RunningReview, page: Page
 ) -> None:

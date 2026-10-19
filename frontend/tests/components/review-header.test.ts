@@ -5,6 +5,7 @@ import { userEvent } from '@testing-library/user-event';
 import ReviewHeader from '$lib/components/ReviewHeader.svelte';
 import ReviewScreen from '$lib/components/ReviewScreen.svelte';
 import type { Review } from '$lib/review/review.svelte';
+import { ICONS } from '$lib/ui/icons';
 import { contextLine, diffFile, hunk } from '../diff';
 import { fakeServer, SERVER_ERROR } from '../fake-server';
 import { newComment } from '../new-comment';
@@ -67,6 +68,18 @@ describe('a review that is over', () => {
 
 		expect(getByTestId('submitted-banner').textContent).toContain('Review sent');
 		expect(queryByTestId('top-bar')).toBeNull();
+	});
+
+	it('marks a review sent with a check, as something done', () => {
+		const review = openReview({ files: [file] });
+
+		review.link.end('finished');
+		const { getByTestId } = render(ReviewHeader, inReview(review));
+
+		const drawn = [...getByTestId('submitted-banner-mark').querySelectorAll('path')].map((path) =>
+			path.getAttribute('d')
+		);
+		expect(drawn).toEqual(ICONS.check.paths);
 	});
 
 	it('says one stopped under the reader keeps what was not sent', () => {
