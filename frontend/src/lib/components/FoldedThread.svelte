@@ -65,22 +65,24 @@
 	{/if}
 {/snippet}
 
-<!-- Folded, by hand or by settling it: one row as wide as the card it folds, the line it hangs on and the first
-	words of what was said, one press anywhere on it to open it again, its chevron at the far end where the open
-	card has its own. A settled one is taken up again by Reopen beside it -->
+<!-- Folded, by hand or by settling it: one row across the card it folds, the line it hangs on and the first words
+	of what was said, one press anywhere on it to open it again, its chevron at the row's end. A settled one is taken
+	up again by Reopen after the row, which gives up its width to it -->
 <EdgeFrame tone={drawnAs.tone} ground="tint" testId={drawnAs.testId}>
 	<div class={['flex items-center gap-3', folded === 'raised' && 'cr-raised']}>
-		<Row
-			names="path"
-			folded
-			testId="unfold-thread"
-			data-role={FOLD_TOGGLE_ROLE}
-			leading={thread.resolved ? settled : undefined}
-			label={hangsOn}
-			said={firstWords}
-			trailing={replies}
-			onclick={unfold}
-		/>
+		<div data-testid="folded-row" class="min-w-0 flex-1">
+			<Row
+				names="path"
+				folded
+				testId="unfold-thread"
+				data-role={FOLD_TOGGLE_ROLE}
+				leading={thread.resolved ? settled : undefined}
+				label={hangsOn}
+				said={firstWords}
+				trailing={replies}
+				onclick={unfold}
+			/>
+		</div>
 		{#if thread.resolved}
 			<ReopenButton {thread} />
 		{/if}

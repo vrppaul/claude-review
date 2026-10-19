@@ -393,7 +393,10 @@
 .cr-thread-aside {
 	padding-left: calc(var(--cr-avatar-size) + var(--cr-turn-gap));
 }
-/* Positioned, and drawn after its row's piece of the spine, so it lies over the spine */
+/*
+ * Who said a turn, round: the thread's own drawing, as the turn's grid and the spine are laid out from its size.
+ * Positioned, and drawn after its row's piece of the spine, so it lies over the spine
+ */
 .cr-avatar {
 	position: relative;
 	display: inline-flex;

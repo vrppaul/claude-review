@@ -1,8 +1,6 @@
 <script lang="ts">
-	import { tourStop } from '$lib/guide/tour';
 	import { useReview } from '$lib/review/context';
-	import Column from '$lib/ui/Column.svelte';
-	import { AGENT_COLUMN } from './agent-column';
+	import AgentColumn from './AgentColumn.svelte';
 	import MessageComposer from './MessageComposer.svelte';
 	import PanelConversation from './PanelConversation.svelte';
 	import PanelStatus from './PanelStatus.svelte';
@@ -16,12 +14,7 @@
 
 <!-- The conversation about everything a thread is not: who is answering, what has been said, and what is being
 	written. It takes the right edge and what is read keeps the rest, as what is discussed has to stay on screen -->
-<Column
-	{...AGENT_COLUMN}
-	width={review.layout.agentPanel}
-	testIds={{ column: 'agent-panel', resize: 'panel-resize' }}
-	data-tour={tourStop('agent-panel')}
->
+<AgentColumn testId="agent-panel">
 	<PanelStatus />
 	<PanelConversation bind:atFoot />
 	{#snippet foot()}
@@ -33,4 +26,4 @@
 			</p>
 		{/if}
 	{/snippet}
-</Column>
+</AgentColumn>

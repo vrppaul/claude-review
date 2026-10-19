@@ -246,8 +246,9 @@
   spine are laid out from its size.
 - **Everything that folds folds one way.** A thread folded to a line is
   one row of the library's that opens it again pressed anywhere, its
-  chevron at the far end, where the line and the chevron were two buttons
-  that did the same; folding a thread leaves the keyboard on that row.
+  chevron at the row's end, where the line and the chevron were two buttons
+  that did the same; a settled thread's Reopen stands after the row, and
+  folding a thread leaves the keyboard on the row.
   The panel's way to attach an agent by hand is a row that folds its
   commands away until asked for, where it was the browser's own
   `<details>`, its triangle beside the page's chevrons. eslint refuses a

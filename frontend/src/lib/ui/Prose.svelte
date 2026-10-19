@@ -2,7 +2,7 @@
 	import type { Snippet } from 'svelte';
 
 	interface Props {
-		/** Inside a thread, set in a comment's reading face, the measure of what it stands in already set. */
+		/** Inside a thread or the panel: set in a comment's reading face. */
 		dense?: boolean;
 		testId: string;
 		/** The words written in Markdown, drawn as the page draws them. */

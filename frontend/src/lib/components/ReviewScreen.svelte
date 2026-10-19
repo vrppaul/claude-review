@@ -5,10 +5,9 @@
 	import { provideReview } from '$lib/review/context';
 	import { markTab } from '$lib/dom/tab';
 	import Button from '$lib/ui/Button.svelte';
-	import Column from '$lib/ui/Column.svelte';
 	import NoticeBar from '$lib/ui/NoticeBar.svelte';
 	import { COMMENTS, counted } from '$lib/utils/words';
-	import { AGENT_COLUMN } from './agent-column';
+	import AgentColumn from './AgentColumn.svelte';
 	import AgentPanel from './AgentPanel.svelte';
 	import { reportBroken } from './broken-parts';
 	import DiffNotice from './DiffNotice.svelte';
@@ -106,13 +105,9 @@
 				<AgentPanel />
 				{#snippet failed(error, retry)}
 					<!-- Where the panel stood, as wide, so the review beside it does not move -->
-					<Column
-						{...AGENT_COLUMN}
-						width={review.layout.agentPanel}
-						testIds={{ column: 'agent-panel-failed', resize: 'panel-resize' }}
-					>
+					<AgentColumn testId="agent-panel-failed">
 						<PartFailed what="The agent panel" {error} {retry} />
-					</Column>
+					</AgentColumn>
 				{/snippet}
 			</svelte:boundary>
 		{/if}

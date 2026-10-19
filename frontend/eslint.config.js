@@ -252,7 +252,7 @@ const NO_INLINE_STYLING = [
 // where the class is no word of a sentence: `btn`, `kbd` and `badge` alone, as `<svelte:element this="kbd">` would
 // draw a key past the rule on elements below, and any component's variant, `alert-error`, `modal-box`,
 // `toggle-primary`: a component whose name is a word the page's test ids also start with (toggle, step, diff,
-// progress, list) by its variants' own words, its colours, sizes and states. Tailwind's own `table`, `collapse`,
+// progress, list) by its own variants as DaisyUI writes them, so `step-number` is no class of its. Tailwind's own `table`, `collapse`,
 // `list-…`, `select-…` and `mask-…` share names with DaisyUI's, so only the forms Tailwind has not are refused: held
 // against every class DaisyUI 5.5 writes and Tailwind 4.2 lists, the two rules refuse no class of Tailwind's, and
 // let through of DaisyUI's only `mask-circle`, which Tailwind has too, the names of its states and sizes inside
@@ -263,7 +263,7 @@ const DRAWN_BY_A_PART =
 const DAISY_COMPONENT =
 	'/(^|\\s)([^\\s:]+:)*((alert|avatar|badge|breadcrumbs|btn|cally|card|carousel|chat|checkbox|countdown|diff|divider|dock|drawer|dropdown|fab|fieldset|file-input|floating-label|footer|hero|hover-3d|hover-gallery|image-full|indicator|input|join|kbd|label|link|loading|menu|mockup|modal|navbar|progress|radial-progress|radio|range|rating|skeleton|stack|stat|stats|status|step|steps|swap|tab|tabs|text-rotate|textarea|timeline|toast|toggle|tooltip|validator)(-[a-z0-9-]+)?|collapse-(title|content|arrow|plus|open|close)|filter(-reset)?|list(-row|-col-(grow|wrap))?|mask(-(squircle|heart|hexagon(-2)?|decagon|pentagon|diamond|square|star(-2)?|triangle(-[2-4])?|half-[12]))?|row-hover|select(-(bordered|ghost|primary|secondary|accent|neutral|info|success|warning|error|xs|sm|md|lg|xl))?|table-(zebra|pin-rows|pin-cols|xs|sm|md|lg|xl))(\\s|$)/';
 const DAISY_COMPONENT_IN_A_STRING =
-	'/(^|\\s)((btn|kbd|badge|file-input|radial-progress)(-[a-z0-9-]+)?|join-item|(alert|avatar|card|carousel|chat|checkbox|collapse|countdown|divider|dock|drawer|dropdown|fieldset|hero|indicator|loading|menu|mockup|modal|navbar|radio|rating|skeleton|stat|steps|swap|tabs|textarea|timeline|toast|tooltip|validator)-[a-z0-9-]+|(diff|fab|footer|input|link|progress|range|select|stack|stats|status|step|tab|toggle)-(primary|secondary|accent|neutral|info|success|warning|error|ghost|xs|sm|md|lg|xl|hover|active|disabled|content|horizontal|vertical|center|title|top|bottom|start|end|close|main-action|flower|item-[12]|resizer|icon)|table-(zebra|pin-rows|pin-cols|xs|sm|md|lg|xl)|list-(row|col-grow|col-wrap)|mask-(squircle|heart|hexagon(-2)?|decagon|pentagon|diamond|square|star(-2)?|triangle(-[2-4])?|half-[12])|filter-reset|floating-label|hover-3d|hover-gallery|image-full|text-rotate|row-hover)(\\s|$)/';
+	'/(^|\\s)((btn|kbd|badge|file-input|radial-progress)(-[a-z0-9-]+)?|join-item|(alert|avatar|card|carousel|chat|checkbox|collapse|countdown|divider|dock|drawer|dropdown|fieldset|hero|indicator|loading|menu|mockup|modal|navbar|radio|rating|skeleton|stat|steps|swap|tabs|textarea|timeline|toast|tooltip|validator)-[a-z0-9-]+|diff-(item-1|item-2|resizer)|fab-(close|flower|main-action)|footer-(center|horizontal|title|vertical)|input-(accent|error|ghost|info|lg|md|neutral|primary|secondary|sm|success|warning|xl|xs)|link-(accent|error|hover|info|neutral|primary|secondary|success|warning)|progress-(accent|error|info|neutral|primary|secondary|success|warning)|range-(accent|error|info|lg|md|neutral|primary|secondary|sm|success|warning|xl|xs)|select-(accent|error|ghost|info|lg|md|neutral|primary|secondary|sm|success|warning|xl|xs)|stack-(bottom|end|start|top)|stats-(horizontal|vertical)|status-(accent|error|info|lg|md|neutral|primary|secondary|sm|success|warning|xl|xs)|step-(accent|error|icon|info|neutral|primary|secondary|success|warning)|tab-(active|content|disabled)|toggle-(accent|error|info|lg|md|neutral|primary|secondary|sm|success|warning|xl|xs)|table-(zebra|pin-rows|pin-cols|xs|sm|md|lg|xl)|list-(row|col-grow|col-wrap)|mask-(squircle|heart|hexagon(-2)?|decagon|pentagon|diamond|square|star(-2)?|triangle(-[2-4])?|half-[12])|filter-reset|floating-label|hover-3d|hover-gallery|image-full|text-rotate|row-hover)(\\s|$)/';
 const NO_DAISY_COMPONENTS = [
 	...inClassLists(DAISY_COMPONENT, DRAWN_BY_A_PART),
 	{ selector: `Literal[value=${DAISY_COMPONENT_IN_A_STRING}]`, message: DRAWN_BY_A_PART },
@@ -355,7 +355,8 @@ const A_MARK_OF_ITS_OWN =
 // by a utility — `rounded-full` on any side or corner, or any radius written in place, `rounded-[100%]` as much as
 // `rounded-[999px]` — is refused outside the library, behind any variants. Nothing in markup is round now. The
 // page's own round drawings — a thread's avatars, a story's nodes, the cross on the news card's drawing of a pasted
-// image — are drawn by main.css, which no rule here reads
+// image — are drawn by main.css, which no rule here reads. An avatar is the thread's, not a part of the library:
+// the turn's grid and the thread's spine are laid out from its size (--cr-avatar-size)
 const A_ROUND_CORNER = '/(^|\\s)([^\\s:]+:)*rounded(-[a-z]{1,2})?-(full|\\[[^\\]\\s]*\\])(\\s|$)/';
 // A mark drawn anew need not be round: a corner made round at any radius on a ground laid by a utility is one,
 // `h-1.5 w-1.5 rounded bg-(--cr-unread)` a dot and `rounded bg-(--cr-mark) px-1.5 font-semibold` a count. So a
@@ -436,9 +437,10 @@ const ELEMENT_AS_WRITTEN = 'Write the element as it is: one handed its kind can 
 const NO_ELEMENTS_HANDED_THEIR_KIND = [
 	{ selector: "SvelteElement[kind='special'][name.name='svelte:element']", message: ELEMENT_AS_WRITTEN }
 ];
-// The controls that are the code's own drawing, drawn with its rows as the code's rows and gutter are the page's
-// (page.md): a line's number, which a comment is begun on, and the ways to the lines a gap leaves out, each a
-// <button> laid in the table of the code. They are let off the rule that refuses a button, and nothing else is
+// The controls that are the code's own drawing, as the code's rows, the gaps between its pieces and its gutter are
+// the page's drawings (ui.css's head): a line's number, a <button> in its row's gutter cell, which a comment is begun
+// on; and the ways to the lines a gap leaves out, <button>s in the gap's row between two pieces of the code, in the
+// code's face on the gap's ground. They are let off the rule that refuses a button, and nothing else is
 const PRESSED_IN_THE_CODE = ['src/lib/components/LineGutter.svelte', 'src/lib/components/HunkGap.svelte'];
 const BUTTON_IN_THE_LIBRARY = { elements: ['button'], message: PRESSED_IN_THE_LIBRARY };
 // A field is drawn by the library (Field, Filter, Checkbox), and nothing outside it draws one: the page drew its
@@ -596,8 +598,10 @@ const DRAWN_BY_THE_LIBRARY_ALONE = [
 // The tour lights a place by the name a component marks it with (lib/guide/tour.ts), which svelte-check holds to the
 // tour's stops only when it is written through tourStop: it reads no value of a data- attribute. So outside the
 // library a name is written as a tourStop(…) call, or as such a call in a branch of a condition whose other branch is
-// undefined, or after an `&&`; written any other way — words, a string, a constant, a member, a prop typed string —
-// it is refused. Inside the library a part hands on the name it was handed so
+// undefined, or after an `&&`; written any other way — words, a string, a constant, a member, a prop typed string,
+// after `||` or `??` — it is refused. A component of the page handing on a name it was handed typed TourTarget writes
+// it through tourStop too (ThreadTurn), as the rule reads no type; inside the library a part hands on the name it
+// was handed as it is
 const NAMED_THROUGH_THE_TOUR =
 	"Name a place for the tour with tourStop(…) from lib/guide/tour.ts, which holds the name to the tour's stops.";
 const TOUR_ATTRIBUTE = "SvelteAttribute[key.name='data-tour']";
@@ -606,7 +610,7 @@ const NOT_A_TOUR_STOP = `:not(${A_TOUR_STOP})`;
 const NO_UNCHECKED_TOUR_NAMES = [
 	{ selector: `${TOUR_ATTRIBUTE} > SvelteLiteral`, message: NAMED_THROUGH_THE_TOUR },
 	{
-		selector: `${TOUR_ATTRIBUTE} > SvelteMustacheTag > :not(${A_TOUR_STOP}, ConditionalExpression, LogicalExpression)`,
+		selector: `${TOUR_ATTRIBUTE} > SvelteMustacheTag > :not(${A_TOUR_STOP}, ConditionalExpression, LogicalExpression[operator='&&'])`,
 		message: NAMED_THROUGH_THE_TOUR
 	},
 	{
@@ -618,7 +622,7 @@ const NO_UNCHECKED_TOUR_NAMES = [
 		message: NAMED_THROUGH_THE_TOUR
 	},
 	{
-		selector: `${TOUR_ATTRIBUTE} > SvelteMustacheTag > LogicalExpression > ${NOT_A_TOUR_STOP}.right`,
+		selector: `${TOUR_ATTRIBUTE} > SvelteMustacheTag > LogicalExpression[operator='&&'] > ${NOT_A_TOUR_STOP}.right`,
 		message: NAMED_THROUGH_THE_TOUR
 	}
 ];
@@ -750,7 +754,7 @@ export default tseslint.config(
 		rules: { 'svelte/no-restricted-html-elements': ['error', SVG_IN_ITS_COMPONENT] }
 	},
 	{
-		// Outside the library a component draws no button, field, image, link or heading of its own either
+		// Outside the library a component draws no button, field, image, link, fold or heading of its own either
 		files: ['src/**/*.svelte'],
 		ignores: ['src/lib/ui/**', ...DRAWING_COMPONENTS, ...PRESSED_IN_THE_CODE],
 		rules: {
@@ -768,7 +772,7 @@ export default tseslint.config(
 		}
 	},
 	{
-		// A control of the code's draws its button, and no field, image, link or heading of its own
+		// A control of the code's draws its button, and no field, image, link, fold or heading of its own
 		files: PRESSED_IN_THE_CODE,
 		rules: {
 			'svelte/no-restricted-html-elements': [
@@ -784,7 +788,7 @@ export default tseslint.config(
 		}
 	},
 	{
-		// A component of the page that draws a drawing draws no button, field, image, link or heading of its own
+		// A component of the page that draws a drawing draws no button, field, image, link, fold or heading of its own
 		files: DRAWING_COMPONENTS,
 		ignores: ['src/lib/ui/**'],
 		rules: {

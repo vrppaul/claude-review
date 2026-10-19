@@ -3,22 +3,18 @@
 	import { useReview } from '$lib/review/context';
 	import Card from '$lib/ui/Card.svelte';
 	import Chip from '$lib/ui/Chip.svelte';
-	import CodeBox from '$lib/ui/CodeBox.svelte';
 	import EmptyNote from '$lib/ui/EmptyNote.svelte';
-	import Row from '$lib/ui/Row.svelte';
 	import type { Voice } from '$lib/ui/voice';
 	import { READER, THE_REVIEW } from '$lib/utils/speakers';
 	import { clockTime } from '$lib/utils/time';
 	import AgentAtWork from './AgentAtWork.svelte';
+	import AttachByHand from './AttachByHand.svelte';
 	import FileChip from './FileChip.svelte';
 	import MarkdownRenderer from './MarkdownRenderer.svelte';
 	import SaidImages from './SaidImages.svelte';
 
 	// How near the bottom, in pixels, still counts as reading the newest turn
 	const FOOT_SLACK = 80;
-	// What attaches an agent by hand to a review started in the foreground: the review again in the background,
-	// and its listening half in a loop
-	const ATTACH_BY_HAND = 'claude-review diff --no-open &\nclaude-review wait --port <port> --until-event';
 
 	interface Props {
 		/**
@@ -33,9 +29,6 @@
 	const review = useReview();
 
 	let stream = $state<HTMLElement | null>(null);
-	// Whether the commands for attaching an agent by hand are open: folded away until asked for, as they are for
-	// whoever started the review themselves
-	let showingHowToAttach = $state(false);
 
 	const attached = $derived(review.answerer.attached);
 	const working = $derived(review.conversation.working);
@@ -110,27 +103,7 @@
 				class="flex h-full flex-col items-center justify-center gap-3 px-4 text-center"
 			>
 				<p class="cr-faint text-sm">The agent joins once it starts listening. Comments you write meanwhile are kept.</p>
-				<div data-testid="attach-by-hand" class="w-full text-left">
-					<Row
-						names="title"
-						folded={!showingHowToAttach}
-						testId="panel-attach-by-hand"
-						onclick={() => (showingHowToAttach = !showingHowToAttach)}
-					>
-						{#snippet label()}
-							Started the review yourself?
-						{/snippet}
-					</Row>
-					{#if showingHowToAttach}
-						<div class="mt-2 flex flex-col gap-2">
-							<p class="cr-faint text-xs">
-								Nothing answers a review run in the foreground. Start it in the background and keep the listening half
-								in a loop:
-							</p>
-							<CodeBox code={ATTACH_BY_HAND} testId="attach-commands" />
-						</div>
-					{/if}
-				</div>
+				<AttachByHand />
 			</div>
 		{/if}
 	{:else}

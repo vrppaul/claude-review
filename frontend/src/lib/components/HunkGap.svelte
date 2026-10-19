@@ -67,6 +67,17 @@
 	hunk the code runs on unbroken, and a marker saying otherwise is a line of
 	punctuation in the middle of a sentence. What is drawn here is counted
 	before it is drawn, by `roomOf`: a change to what is drawn changes it too. -->
+<!-- What the gap says of the lines it leaves out: that they are being read, while they are, or how many it hides -->
+{#snippet readingOr(said: string)}
+	{#if reading}
+		<BreathingDots tone="inherited" testId="reading-dots" />
+		Reading
+	{:else}
+		<Icon name="expand" size="xs" />
+		{said}
+	{/if}
+{/snippet}
+
 {#if drawn}
 	{#if header}
 		<div data-testid="hunk-header" class="cr-hunk-header cr-muted bg-base-200 font-mono text-xs">{header}</div>
@@ -83,23 +94,11 @@
 					disabled={reading}
 					onclick={(event) => widen(inOneGo, event.currentTarget)}
 				>
-					{#if reading}
-						<BreathingDots tone="inherited" testId="reading-dots" />
-						Reading
-					{:else}
-						<Icon name="expand" size="xs" />
-						Show the {hiddenLines}
-					{/if}
+					{@render readingOr(`Show the ${hiddenLines}`)}
 				</button>
 			{:else}
 				<span class="cr-muted flex flex-1 items-center gap-2 px-4">
-					{#if reading}
-						<BreathingDots tone="inherited" testId="reading-step-dots" />
-						Reading
-					{:else}
-						<Icon name="expand" size="xs" />
-						{hiddenLines}
-					{/if}
+					{@render readingOr(hiddenLines)}
 				</span>
 				{#if stepUp}
 					{@const said = `Show ${sizeOf(stepUp)} more lines, up from the change below`}
