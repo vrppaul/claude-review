@@ -14,6 +14,20 @@ const A_NOTICE_WASH = ['/var\\(--cr-(warning-tint|mark-soft)\\)/'];
 // with a margin, and page rules hung threads past a band's reach, stood words as far in as a frame's and stacked
 // blocks as far apart as a button is tall. Refused in every stylesheet but the library's, and the tokens' own
 const A_LIBRARY_ROOM = ['/var\\(--cr-(edge|band|card|notice|pane|button)-/'];
+// The functions that write a colour, and the curve a motion eases along: each written once, in tokens.css
+const WRITTEN_IN_THE_TOKENS = [
+	'rgb',
+	'rgba',
+	'hsl',
+	'hsla',
+	'hwb',
+	'lab',
+	'lch',
+	'oklab',
+	'oklch',
+	'color-mix',
+	'cubic-bezier'
+];
 // Every size is taken off one scale, which tokens.css sets out: a length or a time written as a number is named
 // there once and named everywhere else. Nothing is no size in any unit
 const A_WRITTEN_SIZE = ['/(?<![\\w.-])(?!0[a-z]+\\b)\\d*\\.?\\d+(px|rem|em|ch|ms|s)\\b/'];
@@ -32,16 +46,18 @@ export default {
 	rules: {
 		'color-no-hex': true,
 		'color-named': 'never',
-		'function-disallowed-list': ['rgb', 'rgba', 'hsl', 'hsla', 'hwb', 'lab', 'lch', 'oklab', 'oklch', 'color-mix'],
-		'declaration-property-value-allowed-list': { 'z-index': A_LAYER, 'box-shadow': A_SHADOW },
-		'declaration-property-value-disallowed-list': { '/.*/': [...A_NOTICE_WASH, ...A_LIBRARY_ROOM] },
+		'function-disallowed-list': WRITTEN_IN_THE_TOKENS,
+		'declaration-property-value-allowed-list': { 'z-index': A_LAYER, 'box-shadow': A_SHADOW, ...THE_SCALES_WORDS },
+		'declaration-property-value-disallowed-list': {
+			'/.*/': [...A_WRITTEN_SIZE, ...OFF_THE_SCALE, ...A_NOTICE_WASH, ...A_LIBRARY_ROOM]
+		},
 		'no-duplicate-selectors': true,
 		'declaration-no-important': true
 	},
 	overrides: [
 		{
-			// The palette: where the colours and the sizes are written down, the library's rooms some in terms of
-			// others, its spacing on the scale's steps
+			// The palette: where the colours, the sizes and the curves are written down, the library's rooms some in
+			// terms of others, its spacing on the scale's steps
 			files: ['src/styles/tokens.css'],
 			rules: {
 				'color-no-hex': null,
@@ -50,14 +66,9 @@ export default {
 			}
 		},
 		{
-			// The library's stylesheet, which lays a notice's washes, every size of it off the scale
+			// The library's stylesheet, which lays a notice's washes and its parts' rooms
 			files: ['src/styles/ui.css'],
 			rules: {
-				'declaration-property-value-allowed-list': {
-					'z-index': A_LAYER,
-					'box-shadow': A_SHADOW,
-					...THE_SCALES_WORDS
-				},
 				'declaration-property-value-disallowed-list': { '/.*/': [...A_WRITTEN_SIZE, ...OFF_THE_SCALE] }
 			}
 		}

@@ -166,6 +166,16 @@
   the review is read, the diff's layout, the theme, what a comment asks
   for — stands 24 pixels tall, level with the buttons beside it, where it
   stood 26.5.
+- **Every size is taken off one scale.** Room between things is one of
+  nine steps from 0 to 32 pixels, words one of a few sizes in two weights,
+  a line 1 or 2 pixels, a corner a field's or a box's. What moves: who said
+  a turn of a thread is named at the size of its head, 12 pixels, where it
+  was 13; the field to reply in has the corner of the field it opens; the
+  guide's card speaks at 14 pixels, where it spoke at 13; the branches of
+  the agent's work are listed at 12 pixels, their rail a thin line; a
+  story's chapters stand 12 pixels apart in its contents, where they stood
+  10, their numbers at 11 pixels, where they were 10; a fact of a story on
+  its way stands its mark in a column as wide as the mark.
 - **A story follows its code when the diff is taken again.** Each step
   follows its lines through what git says changed between the take it was
   told of and this one: a line kept moves as the lines above it moved, a

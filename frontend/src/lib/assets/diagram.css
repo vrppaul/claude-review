@@ -47,12 +47,12 @@ span {
 	color: var(--color-base-content);
 }
 
-/* The lines between nodes, and their heads: quieter than the nodes they join, so drawn twice as wide as a node's
-   edge */
+/* The lines between nodes, and their heads: quieter than the nodes they join, so drawn as a strong line, twice as
+   wide as a node's edge */
 .flowchart-link,
 .edgePaths .path {
 	stroke: var(--cr-faint);
-	stroke-width: 2px;
+	stroke-width: var(--cr-line-strong);
 }
 .marker,
 .arrowheadPath {

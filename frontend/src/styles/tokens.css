@@ -27,9 +27,9 @@
  * mark's (2xs), at code's or at a comment's, each at its own leading, and in
  * one of two weights, normal and semibold. A corner is a field's or a box's
  * (in each theme below), or round; a line is one of the two below. Whatever
- * else has a size — a row, a pane, an arrow — is named here once, and
- * stylelint refuses a length or a time written as a number in the library's
- * stylesheet.
+ * else has a size, a time or a strength — a row, a pane, an arrow, a breath
+ * — is named here once, and stylelint refuses one written as a number
+ * anywhere else.
  */
 
 :root {
@@ -45,6 +45,9 @@
 	--cr-code-leading: 1.55;
 	/* A row of code, as tall as its line */
 	--cr-row-height: calc(var(--cr-code-size) * var(--cr-code-leading));
+	/* A suggested line's sign, + or −: a little over a character of the code wide, half a character before it */
+	--cr-sign-width: 1.25ch;
+	--cr-sign-gap: 0.5ch;
 	/*
 	 * What a section of a file's lines takes up, beside its rows, before they
 	 * are drawn: what each of its parts is as tall as, set here once, which
@@ -59,6 +62,8 @@
 	/* Comments outrank the code they annotate: they are what the review produces */
 	--cr-comment-size: 0.9375rem;
 	--cr-comment-leading: 1.6;
+	/* How wide written words run before they wrap, prose rendered from Markdown as a comment's */
+	--cr-prose-measure: 72ch;
 	/* The tallest a field being written in grows with its text, before it scrolls instead */
 	--cr-field-tallest: 30rem;
 	/*
@@ -68,8 +73,6 @@
 	 */
 	--cr-contents-node: 1.125rem;
 	--cr-contents-indent: calc(var(--cr-contents-node) + var(--cr-list-row-gap));
-	/* The number a node holds, small enough that two digits fit its ring */
-	--cr-contents-node-number: 0.625rem;
 	/* The room either side of a story's words in its area; its code reaches through it, as a file's does */
 	--cr-story-gutter: --spacing(6);
 
@@ -170,6 +173,10 @@
 	--cr-breath-turn: 0.18s;
 	/* How far across a dot (lib/ui Dot) is */
 	--cr-dot-size: 0.375rem;
+	/* How long what arrives stays marked before it fades: an answer landing, a file the agent brings the reader to */
+	--cr-arrival: 2s;
+	/* How the tour's light glides from one step to the next: fast away, slowing as it lands */
+	--cr-glide-easing: cubic-bezier(0.2, 0.7, 0.2, 1);
 
 	/*
 	 * A notice (lib/ui NoticeBar): how far its words stand in from its edges,
@@ -304,6 +311,23 @@
 	--cr-panel-least-width: 17.5rem;
 	/* What a side column put away leaves standing beside the diff, at every width */
 	--cr-side-column-rail-width: 1.5rem;
+	/* A column's edge, there to be dragged: a target as wide as this, centred on the edge */
+	--cr-grip-width: 0.375rem;
+	/* An image the reader pasted into the panel: small enough to keep the words beside it in view */
+	--cr-image-thumb: 4rem;
+	/* What the reader waits on while a story is written: one narrow column */
+	--cr-story-waiting-width: 28.75rem;
+	/*
+	 * The guide's card: its tour's progress, a tick for each step; and the news's
+	 * drawing of an image pasted into the panel — its thumbnail, a line of code
+	 * drawn in it, and the field it was pasted into
+	 */
+	--cr-tour-tick-width: 0.75rem;
+	--cr-tour-tick-height: 0.25rem;
+	--cr-drawn-thumb-width: 3.5rem;
+	--cr-drawn-thumb-height: 2.5rem;
+	--cr-drawn-code-line: 0.1875rem;
+	--cr-drawn-field-height: 1.75rem;
 
 	/*
 	 * What differs inside a changed line, in the change's own colour: still a
@@ -312,6 +336,14 @@
 	 */
 	--cr-add-word: color-mix(in srgb, var(--cr-add-edge) 20%, transparent);
 	--cr-del-word: color-mix(in srgb, var(--cr-del-edge) 20%, transparent);
+	/* How tall that band is: shorter than its line, so the bands of rows one under another never touch as one block */
+	--cr-word-band: 1.2em;
+	/*
+	 * The side of a replaced line where nothing stood: hatched with lines
+	 * between surfaces this far apart, the hatch drawn at this strength
+	 */
+	--cr-absent-hatch: --spacing(3);
+	--cr-absent-strength: 0.5;
 	/* The ground of something the review warns about, and the edge of it */
 	--cr-warning-tint: color-mix(in srgb, var(--color-warning) 10%, transparent);
 	--cr-warning-border: color-mix(in srgb, var(--color-warning) 35%, transparent);
@@ -319,9 +351,10 @@
 
 /*
  * The size a mark's words are set at — a tag, a count, a chip, a segment of
- * a track — below Tailwind's least, at the leading that keeps a mark as tall
- * in whatever line it stands in. Handed to Tailwind's theme, so the markup
- * sets it as `text-2xs`, as it does the theme's own sizes.
+ * a track — and a caption's, who said a turn of the panel: below Tailwind's
+ * least, at the leading that keeps a mark as tall in whatever line it stands
+ * in. Handed to Tailwind's theme, so the markup sets it as `text-2xs`, as it
+ * does the theme's own sizes.
  */
 @theme {
 	--text-2xs: 0.6875rem;
