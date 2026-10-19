@@ -75,7 +75,6 @@ const WITH_A_CLASS_FROM_OUTSIDE = [
 				role: 'dialog',
 				label: WORDS,
 				placement: 'below-start',
-				seenIn: () => new DOMRect(),
 				width: 'medium',
 				arrow: true,
 				arrowOffset: 0,

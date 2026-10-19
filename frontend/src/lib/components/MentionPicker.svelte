@@ -1,7 +1,6 @@
 <script lang="ts">
 	import type { Thread } from '$lib/types';
 	import { anchorShortPlace } from '$lib/anchors/views';
-	import { seenIn } from '$lib/dom/in-sight';
 	import PopoverPanel from '$lib/ui/PopoverPanel.svelte';
 	import Row from '$lib/ui/Row.svelte';
 	import { counted } from '$lib/utils/words';
@@ -45,7 +44,6 @@
 	role="listbox"
 	label="Threads and files to point at"
 	placement="above-start"
-	{seenIn}
 	width="along"
 	arrow
 	arrowOffset={INTO_THE_FIELD}

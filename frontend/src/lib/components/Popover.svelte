@@ -21,7 +21,6 @@
 
 <script lang="ts">
 	import { tick, untrack, type Snippet } from 'svelte';
-	import { seenIn } from '$lib/dom/in-sight';
 	import { isComposingText } from '$lib/dom/keyboard';
 	import type { TourTarget } from '$lib/guide/tour';
 	import { arrowOffsetTo, type PaneHead, type PaneWidth, type Placement, type TriggerProps } from '$lib/ui/pane';
@@ -186,7 +185,6 @@
 			data-tour={tour}
 			{label}
 			{placement}
-			{seenIn}
 			{width}
 			arrow
 			{arrowOffset}

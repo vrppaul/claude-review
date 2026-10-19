@@ -1,6 +1,5 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import { seenIn } from '$lib/dom/in-sight';
 	import { focusWhatRemains } from '$lib/dom/keyboard';
 	import { arrowOffsetTo, type PaneEdge } from '$lib/ui/pane';
 	import PopoverPanel from '$lib/ui/PopoverPanel.svelte';
@@ -56,7 +55,6 @@
 		role="status"
 		{label}
 		placement="below-start"
-		{seenIn}
 		width="fitted"
 		{arrow}
 		{arrowOffset}

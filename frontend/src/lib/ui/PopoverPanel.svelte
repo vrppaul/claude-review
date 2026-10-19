@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
+	import { seenIn } from '$lib/dom/in-sight';
 	import PaneHead from './PaneHead.svelte';
 	import {
 		fitted,
@@ -12,8 +13,7 @@
 		type PaneFit,
 		type PaneHead as Head,
 		type PaneWidth,
-		type Placement,
-		type ScreenBox
+		type Placement
 	} from './pane';
 
 	interface Props extends Omit<HTMLAttributes<HTMLDivElement>, 'class' | 'style' | 'children' | 'role' | 'aria-label'> {
@@ -23,11 +23,6 @@
 		label: string;
 		/** Where it opens, unless it would not stand whole there and the other way has more room. */
 		placement: Placement;
-		/**
-		 * What of the window the pane can be seen in where it is drawn, asked each time it is fitted: the window, or
-		 * the part of a reading area not under what is kept in sight at its top (dom/in-sight.ts).
-		 */
-		seenIn: (pane: HTMLElement) => ScreenBox;
 		width: PaneWidth;
 		/** Whether it points at what it stands by: a note that is not about that control does not. */
 		arrow: boolean;
@@ -51,7 +46,6 @@
 		role,
 		label,
 		placement,
-		seenIn,
 		width,
 		arrow,
 		arrowOffset,
@@ -74,6 +68,10 @@
 		if (pane && body) measure();
 	});
 
+	/**
+	 * Fit the pane into what of the window it is seen in where it is drawn: the window, or the part of a reading
+	 * area not under what is kept in sight at its top (dom/in-sight.ts).
+	 */
 	function measure() {
 		if (pane && body) fit = fitted(laidOut(pane, body), placement, seenIn(pane));
 	}

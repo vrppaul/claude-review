@@ -10,8 +10,9 @@ import svelteConfig from './svelte.config.js';
 // components, which build on everything, are built on by nothing but
 // components.
 const LAYERS = {
-	// The component library: what the page is drawn with, building on nothing of the page
-	ui: [],
+	// The component library: what the page is drawn with, building on nothing of the page but what the page does to
+	// the document, which builds on nothing itself: a pane asks it what of the window the pane is seen in
+	ui: ['dom'],
 	types: [],
 	// Plain helpers over plain data; nothing of the page in them
 	utils: ['types'],
