@@ -228,6 +228,11 @@ const NO_INLINE_STYLING = [
 	{ selector: "SvelteAttribute[key.name='style']", message: STYLED_BY_CLASSES },
 	{ selector: 'SvelteStyleDirective:not([key.name.name=/^--/])', message: STYLED_BY_CLASSES },
 	...inClassLists(Z_UTILITY, LAYERED_BY_TOKENS),
+	// A layer or a scrolling box held in a script's string is handed to a class list all the same
+	{ selector: `Literal[value=${Z_UTILITY}]`, message: LAYERED_BY_TOKENS },
+	{ selector: `TemplateElement[value.raw=${Z_UTILITY}]`, message: LAYERED_BY_TOKENS },
+	{ selector: `Literal[value=${SCROLLING_UTILITY}]`, message: SCROLLS_IN_ITS_OWN_BOX },
+	{ selector: `TemplateElement[value.raw=${SCROLLING_UTILITY}]`, message: SCROLLS_IN_ITS_OWN_BOX },
 	...inClassLists(COLOUR_UTILITY, PAINTED_BY_TOKENS),
 	...inClassLists(SHADOW_UTILITY, PAINTED_BY_TOKENS),
 	...inClassLists(STATE_VARIANT, PAINTED_BY_STATE_TOKENS),
@@ -394,7 +399,7 @@ const NO_MARKS_OF_ITS_OWN = [
 // and no element given the part of one by its role, as a row drawn on a <div> would be — and the classes the page
 // drew its rows with are refused in a class list and in any string
 const PRESSED_IN_THE_LIBRARY =
-	'Draw what can be pressed with lib/ui (Button, IconButton, Link, Segment, Chip, Row, ColumnRail, FieldButton, Checkbox, CheckChip), not with an element of its own.';
+	'Draw what can be pressed with lib/ui (Button, IconButton, Link, Segment, Chip, Row, ColumnRail, FieldButton, Checkbox), not with an element of its own.';
 // The parts an element can be given that are pressed or picked
 const A_PRESSED_PART = '/^(button|link|option|menuitem|menuitemcheckbox|menuitemradio|tab|treeitem|checkbox|switch)$/';
 // The classes the page drew its rows, and the rail of a column put away, with; and the row the reader was at
@@ -440,13 +445,25 @@ const STILL_PRESSED_BY_HAND = [
 	'src/lib/components/HunkGap.svelte'
 ];
 const BUTTON_IN_THE_LIBRARY = { elements: ['button'], message: PRESSED_IN_THE_LIBRARY };
-// A field is drawn by the library (Field, Filter, Checkbox, CheckChip), and nothing outside it draws one: the page
-// drew its three fields to write in two ways, with DaisyUI's textarea and with utilities of their own, its two
-// filters on two grounds, the field a reply is begun in as a button of main.css, and its checkboxes as DaisyUI's
-// and as a chip of main.css
-const DRAWN_AS_A_FIELD =
-	'Draw a field with lib/ui (Field, Filter, Checkbox, CheckChip), not with an element of its own.';
+// A field is drawn by the library (Field, Filter, Checkbox), and nothing outside it draws one: the page drew its
+// three fields to write in two ways, with DaisyUI's textarea and with utilities of their own, its two filters on
+// two grounds, the field a reply is begun in as a button of main.css, and its checkboxes as DaisyUI's and as a
+// chip of main.css
+const DRAWN_AS_A_FIELD = 'Draw a field with lib/ui (Field, Filter, Checkbox), not with an element of its own.';
 const FIELD_IN_THE_LIBRARY = { elements: ['input', 'textarea', 'select'], message: DRAWN_AS_A_FIELD };
+// Nor an element given the part of a field by its role, or made a field by being editable, as a field drawn on a
+// <div> would be
+const A_FIELD_PART = '/^(textbox|searchbox|combobox|spinbutton|slider)$/';
+const NO_FIELDS_OF_ITS_OWN = [
+	{
+		selector: `SvelteElement[kind='html'] > SvelteStartTag > SvelteAttribute[key.name='role'] SvelteLiteral[value=${A_FIELD_PART}]`,
+		message: DRAWN_AS_A_FIELD
+	},
+	{
+		selector: "SvelteElement[kind='html'] > SvelteStartTag > SvelteAttribute[key.name='contenteditable']",
+		message: DRAWN_AS_A_FIELD
+	}
+];
 // A heading is drawn by the library (lib/ui Heading), as what it heads says, and nothing outside it draws one: the
 // tour's step title and a pane's heading named the same type tokens in two rules, a file's name was a heading drawn
 // by a component handed its element, and the story's headings each took their size from utilities of their own
@@ -537,6 +554,7 @@ const DRAWN_BY_THE_LIBRARY_ALONE = [
 	...NO_NOTICES_OF_THEIR_OWN,
 	...NO_MARKS_OF_ITS_OWN,
 	...NO_ROWS_OF_ITS_OWN,
+	...NO_FIELDS_OF_ITS_OWN,
 	...NO_HEADINGS_OF_ITS_OWN,
 	...NO_BANDS_OF_ITS_OWN,
 	...NO_FAILURES_OF_ITS_OWN,

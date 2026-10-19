@@ -3,9 +3,9 @@
 	import { useReview } from '$lib/review/context';
 	import Card from '$lib/ui/Card.svelte';
 	import Chip from '$lib/ui/Chip.svelte';
-	import type { ChipVoice } from '$lib/ui/chip';
 	import CodeBox from '$lib/ui/CodeBox.svelte';
 	import EmptyNote from '$lib/ui/EmptyNote.svelte';
+	import type { Voice } from '$lib/ui/voice';
 	import { READER, THE_REVIEW } from '$lib/utils/speakers';
 	import { clockTime } from '$lib/utils/time';
 	import AgentAtWork from './AgentAtWork.svelte';
@@ -62,7 +62,7 @@
 </script>
 
 <!-- The threads a turn points at, a chip each, in the colour of whoever said it -->
-{#snippet threadChips(threadIds: string[], testId: string, voice: ChipVoice)}
+{#snippet threadChips(threadIds: string[], testId: string, voice: Voice)}
 	<div class="mt-2 flex flex-wrap gap-1">
 		{#each threadIds as threadId (threadId)}
 			{@const thread = threadNamed(threadId)}

@@ -1,14 +1,17 @@
 <script lang="ts">
 	import type { HTMLTextareaAttributes } from 'svelte/elements';
-	import { FIELD_HOLDS, FIELD_VOICES, type FieldHolds, type FieldVoice } from './field';
+	import { FIELD_HOLDS, FIELD_VOICES, type FieldHolds } from './field';
+	import type { Voice } from './voice';
 
-	interface Props extends Omit<HTMLTextareaAttributes, 'class' | 'style' | 'value' | 'children'> {
+	// What sets how tall it stands is what it holds: no caller sizes it by rows or columns of its own
+	interface Props extends Omit<HTMLTextareaAttributes, 'class' | 'style' | 'value' | 'children' | 'rows' | 'cols'> {
 		/** What it holds, which sets how tall it stands and whether it grows with what is written. */
 		holds: FieldHolds;
-		voice: FieldVoice;
+		/** Whose thread it is written in. */
+		voice: Voice;
 		testId: string;
 		/** What is written in it. */
-		value?: string;
+		value: string;
 		/** The field itself, for whoever hands the keyboard to it or reads where its caret stands. */
 		element?: HTMLTextAreaElement | undefined;
 	}
@@ -39,5 +42,5 @@
 	bind:value
 	{...attributes}
 	data-testid={testId}
-	class={['cr-ui-field cr-ui-field-written', drawn.drawnAs, FIELD_VOICES[voice]]}
+	class={['cr-ui-field cr-comment-body cr-ui-field-written', drawn.drawnAs, FIELD_VOICES[voice]]}
 ></textarea>

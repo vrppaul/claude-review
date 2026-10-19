@@ -12,11 +12,10 @@
  * way there, its edge broken.
  */
 
-/** Whose words named it, by their colour: the reader's, or the agent's. */
-export type ChipVoice = 'reader' | 'agent';
+import type { Voice } from './voice';
 
-// The class of each voice in the library's stylesheet
-export const CHIP_VOICES: Record<ChipVoice, string> = { reader: 'cr-ui-chip-reader', agent: 'cr-ui-chip-agent' };
+// The class of each voice, whose words named it, in the library's stylesheet
+export const CHIP_VOICES: Record<Voice, string> = { reader: 'cr-ui-chip-reader', agent: 'cr-ui-chip-agent' };
 
 /** What a chip does: takes the reader to what it names; is taken out of a message by its cross; or names what is out of reach. */
 export type ChipReach =

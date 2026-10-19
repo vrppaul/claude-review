@@ -45,7 +45,6 @@
 			label={labelOf(field)}
 			suggestFrom={field.at.quote}
 			hangs="line"
-			voice="reader"
 		/>
 	</div>
 {/each}

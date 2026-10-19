@@ -8,9 +8,9 @@
 	import type { CardHanging } from '$lib/ui/card';
 	import Failure from '$lib/ui/Failure.svelte';
 	import Field from '$lib/ui/Field.svelte';
-	import type { FieldVoice } from '$lib/ui/field';
 	import Segment from '$lib/ui/Segment.svelte';
 	import Segmented from '$lib/ui/Segmented.svelte';
+	import type { Voice } from '$lib/ui/voice';
 	import { hasSuggestion, withSuggestion } from '$lib/utils/suggestion';
 	import AttachedImages from './AttachedImages.svelte';
 	import ConfirmPopover from './ConfirmPopover.svelte';
@@ -31,7 +31,13 @@
 		{ value: 'blocker', label: 'Blocker' }
 	];
 
-	interface Props {
+	/**
+	 * Where it is written: as the card it becomes, hanging where that will, a card of the reader's; or as a reply,
+	 * inside the thread it joins, whose card is drawn round it already, edged in the colour of whose thread it is.
+	 */
+	type WrittenAs = { hangs: CardHanging; voice?: never } | { hangs: 'in-its-thread'; voice: Voice };
+
+	type Props = WrittenAs & {
 		/** What is being written: held by the review, so it outlives this field. */
 		field: CommentField;
 		/** Put what is written into the review. */
@@ -45,16 +51,19 @@
 		suggestFrom?: string[] | undefined;
 		/** A reply has no weight of its own: the thread's belongs to the comment. */
 		severityPicker?: boolean;
-		/**
-		 * Where it is written: as the card it becomes, hanging where that will; or as a reply, inside the thread it
-		 * joins, whose card is drawn round it already.
-		 */
-		hangs: CardHanging | 'in-its-thread';
-		/** Whose thread it is written in: a reply in a thread the agent raised is edged in the agent's colour. */
-		voice: FieldVoice;
-	}
+	};
 
-	let { field, onSave, onAsk, onCancel, label, suggestFrom, severityPicker = true, hangs, voice }: Props = $props();
+	let {
+		field,
+		onSave,
+		onAsk,
+		onCancel,
+		label,
+		suggestFrom,
+		severityPicker = true,
+		hangs,
+		voice = 'reader'
+	}: Props = $props();
 	const review = useReview();
 	const fieldId = $props.id();
 

@@ -1,10 +1,12 @@
 <script lang="ts">
-	import { FIELD_VOICES, type FieldVoice } from './field';
+	import { FIELD_VOICES } from './field';
+	import type { Voice } from './voice';
 
 	interface Props {
 		/** What the field it opens says before anything is written in it: "Reply…". */
 		placeholder: string;
-		voice: FieldVoice;
+		/** Whose thread the field it opens is written in. */
+		voice: Voice;
 		testId: string;
 		/** Open the field to write in, in its place. */
 		onclick: () => void;

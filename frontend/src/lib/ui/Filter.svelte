@@ -1,12 +1,16 @@
 <script lang="ts">
 	import type { HTMLInputAttributes } from 'svelte/elements';
 
-	interface Props extends Omit<HTMLInputAttributes, 'class' | 'style' | 'type' | 'value' | 'children' | 'aria-label'> {
+	// It is as wide as what it stands in: no caller sizes it by a count of characters of its own
+	interface Props extends Omit<
+		HTMLInputAttributes,
+		'class' | 'style' | 'type' | 'value' | 'children' | 'aria-label' | 'size'
+	> {
 		/** What it narrows, said to whoever cannot see the list beside it: "Filter the bases". */
 		label: string;
 		testId: string;
 		/** What the reader typed into it. */
-		value?: string;
+		value: string;
 	}
 
 	let { label, testId, value = $bindable(), ...attributes }: Props = $props();

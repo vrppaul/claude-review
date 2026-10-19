@@ -250,6 +250,18 @@
 }
 
 /*
+ * What a comment says, in its reading face: what the review produces, so set
+ * larger than the code it annotates, in the reading face rather than the code
+ * one. Written in a field (Field), and taken by the page's own words of a
+ * comment, as the states above are taken by its drawings
+ */
+.cr-comment-body {
+	font-family: var(--font-sans);
+	font-size: var(--cr-comment-size);
+	line-height: var(--cr-comment-leading);
+}
+
+/*
  * A field the reader fills (Field, Filter, FieldButton; lib/ui/field.ts):
  * on the ground of whatever it stands in, at a field's corner, so only its
  * edge, in the reader's mark or the agent's, says it is theirs to fill; the
@@ -273,12 +285,9 @@
 	color: var(--cr-placeholder);
 	opacity: 1;
 }
-/* What is written in one (Field): in a comment's reading face, in from its edge */
+/* What is written in one (Field): in a comment's reading face (cr-comment-body), in from its edge */
 .cr-ui-field-written {
 	padding: --spacing(2) --spacing(3);
-	font-family: var(--font-sans);
-	font-size: var(--cr-comment-size);
-	line-height: var(--cr-comment-leading);
 }
 .cr-ui-field-comment {
 	min-height: var(--cr-field-comment-least);
@@ -303,13 +312,30 @@
 	text-align: left;
 }
 
+/*
+ * A setting of a pane (Setting, and a Checkbox drawn as a box): what it is
+ * called first and its control at the far end of the line; what more is said
+ * of it under its words, quieter
+ */
+.cr-ui-setting {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: --spacing(3);
+}
+.cr-ui-setting-note {
+	display: block;
+	color: var(--cr-faint);
+	font-size: var(--text-xs);
+	line-height: var(--text-xs--line-height);
+}
 /* A box ticked or not (Checkbox): the browser's own, in the colour of the reader's controls */
 .cr-ui-checkbox {
 	accent-color: var(--cr-control);
 }
 /*
- * A choice drawn as a chip (CheckChip), the whole of which is the box to
- * press: its checkbox laid over all of it, unseen, and the ring of the
+ * A choice drawn as a chip (Checkbox drawn as one), the whole of which is the
+ * box to press: its box laid over all of it, unseen, and the ring of the
  * keyboard drawn round the chip while the box holds it
  */
 .cr-ui-check-chip {

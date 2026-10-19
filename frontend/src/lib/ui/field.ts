@@ -6,6 +6,8 @@
  * fill. Their look is written in styles/ui.css.
  */
 
+import type { Voice } from './voice';
+
 /**
  * What a field holds, which sets how tall it stands before anything is
  * written in it:
@@ -18,14 +20,12 @@
  */
 export type FieldHolds = 'comment' | 'message';
 
-/** Whose thread it is written in, by the colour of its edge: the reader's, or one the agent raised. */
-export type FieldVoice = 'reader' | 'agent';
-
 /** How a field holding each is drawn: its class in the library's stylesheet, and whether it grows with its words. */
 export const FIELD_HOLDS: Record<FieldHolds, { drawnAs: string; grows: boolean }> = {
 	comment: { drawnAs: 'cr-ui-field-comment', grows: true },
 	message: { drawnAs: 'cr-ui-field-message', grows: false }
 };
 
-// The class of each voice in the library's stylesheet; the reader's edge is every field's own
-export const FIELD_VOICES: Record<FieldVoice, string | null> = { reader: null, agent: 'cr-ui-field-agent' };
+// The class of each voice, whose thread it is written in, in the library's stylesheet; the reader's edge is every
+// field's own
+export const FIELD_VOICES: Record<Voice, string | null> = { reader: null, agent: 'cr-ui-field-agent' };

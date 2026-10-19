@@ -194,18 +194,10 @@
 }
 
 /*
- * Comments.
- *
- * A comment is what the review produces, so it is set larger than the code
- * it annotates, in the reading face rather than the code one. Its colour is
- * the mark colour — the same one selection uses — because both are the
- * reader's own marks on someone else's code.
+ * Where a comment hangs, named in its words: in the mark colour — the same
+ * one selection uses — because both are the reader's own marks on someone
+ * else's code. What a comment says is set in its reading face (ui.css).
  */
-.cr-comment-body {
-	font-family: var(--font-sans);
-	font-size: var(--cr-comment-size);
-	line-height: var(--cr-comment-leading);
-}
 .cr-comment-ref {
 	color: var(--cr-mark-text);
 	font-variant-numeric: tabular-nums;

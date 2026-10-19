@@ -184,18 +184,20 @@
   first, with a rule in eslint that refuses it anywhere else. Two rules it
   held that eslint and stylelint hold whole, no `style="…"` or `z-` utility
   in markup and what scrolls being a `cr-scroller`, are left to them.
-- **One look for every field.** A comment, a reply, a review's summary, a
-  message to the agent and both filters stand on the ground they are in,
-  at a field's corner, edged in the reader's mark, or in the agent's
-  colour in a thread the agent raised; the two filters stood on two
-  grounds. The field a reply is begun in is edged as the field it opens,
-  and lit under the pointer as whatever can be pressed is; the avatar
-  beside it stands at the top of its row, as every speaker's does. A
-  message to the agent stands as tall as the summary before anything is
-  written in it, and the settings' checkboxes are the browser's own, in
-  the colour of the reader's controls. Fields, filters and checkboxes are
-  parts of the library, and eslint refuses an `<input>`, a `<textarea>` or
-  a `<select>` anywhere else.
+- **One look for every field.** The field a comment is written in had
+  DaisyUI's room and corner, the summary and a message to the agent their
+  own; all three now stand alike, and a message stands as tall as the
+  summary before anything is written in it. The two filters, which stood
+  on two grounds, stand on none, edged in the reader's mark as the fields
+  to write in are. The field a reply is begun in, a surface's grey edge,
+  is edged as the field it opens, in the agent's colour in a thread the
+  agent raised, and lit under the pointer as whatever can be pressed is;
+  the avatar beside it stands at the top of its row, as every speaker's
+  does. The settings' checkboxes are the browser's own, in the colour of
+  the reader's controls, each named by its words. Fields, filters and
+  checkboxes are parts of the library, and eslint refuses an `<input>`, a
+  `<textarea>`, a `<select>`, an element given a field's role or one made
+  editable anywhere else.
 - **One look for what is on its way, for what failed, and for nothing.**
   Whatever is on its way — the review opening, a review being sent, an
   image uploading, an answer, the agent at work, a story being written —

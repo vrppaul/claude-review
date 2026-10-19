@@ -7,10 +7,10 @@
 
 import type { Thread } from '$lib/types';
 import type { TagTone } from '$lib/ui/tag';
-import { raisedByAgent } from '$lib/utils/speakers';
+import { threadVoice } from './thread-voice';
 
 /** The tone of the tag a thread says what it asks for by: a question is asked in the colour of whoever wrote it. */
 export function severityTone(thread: Thread): TagTone {
 	if (thread.severity === 'blocker') return 'blocking';
-	return raisedByAgent(thread) ? 'agent' : 'reader';
+	return threadVoice(thread);
 }

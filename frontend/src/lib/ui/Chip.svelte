@@ -1,10 +1,12 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import { CHIP_VOICES, type ChipReach, type ChipVoice } from './chip';
+	import { CHIP_VOICES, type ChipReach } from './chip';
 	import Icon from './Icon.svelte';
+	import type { Voice } from './voice';
 
 	type Props = ChipReach & {
-		voice: ChipVoice;
+		/** Whose words named it. */
+		voice: Voice;
 		/** What it names in full, shown under the pointer, where its words are short of that. */
 		title?: string | undefined;
 		/** Its test id; its cross, where it has one, is known by this followed by `-remove`. */

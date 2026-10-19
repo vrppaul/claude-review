@@ -6,6 +6,7 @@
 	import IconButton from '$lib/ui/IconButton.svelte';
 	import Segment from '$lib/ui/Segment.svelte';
 	import Segmented from '$lib/ui/Segmented.svelte';
+	import Setting from '$lib/ui/Setting.svelte';
 	import Popover from './Popover.svelte';
 
 	// What the pane is called, and headed with, and what its control says to whoever cannot see the gear
@@ -38,8 +39,7 @@
 
 	<div class="flex flex-col gap-2 p-3 text-xs">
 		{#if review.mode === 'diff'}
-			<div class="flex items-center justify-between gap-3">
-				<span>Diff layout</span>
+			<Setting label="Diff layout" testId="diff-layout-setting">
 				<Segmented label="Diff layout" testId="diff-layout-toggle">
 					{#each layouts as layout (layout.value)}
 						<Segment
@@ -51,20 +51,19 @@
 						</Segment>
 					{/each}
 				</Segmented>
-			</div>
+			</Setting>
 
-			<label class="flex items-center justify-between gap-3">
-				<span>Ignore whitespace</span>
-				<Checkbox
-					checked={review.settings.current.ignore_whitespace}
-					testId="ignore-whitespace"
-					onToggle={(checked: boolean) => review.setIgnoreWhitespace(checked)}
-				/>
-			</label>
+			<Checkbox
+				drawn="box"
+				checked={review.settings.current.ignore_whitespace}
+				testId="ignore-whitespace"
+				onToggle={(checked: boolean) => review.setIgnoreWhitespace(checked)}
+			>
+				Ignore whitespace
+			</Checkbox>
 		{/if}
 
-		<div class="flex items-center justify-between gap-3">
-			<span>Theme</span>
+		<Setting label="Theme" testId="theme-setting">
 			<Segmented label="Theme" testId="theme-toggle">
 				{#each themes as choice (choice.value)}
 					<Segment
@@ -76,31 +75,27 @@
 					</Segment>
 				{/each}
 			</Segmented>
-		</div>
+		</Setting>
 
-		<label class="flex items-center justify-between gap-3">
-			<span>
-				Tick on a new reply
-				<span class="cr-faint block text-xs">only in a background tab</span>
-			</span>
-			<Checkbox
-				checked={review.settings.current.sound_on_replies}
-				testId="reply-sound"
-				onToggle={(checked: boolean) => review.settings.change({ sound_on_replies: checked })}
-			/>
-		</label>
+		<Checkbox
+			drawn="box"
+			note="only in a background tab"
+			checked={review.settings.current.sound_on_replies}
+			testId="reply-sound"
+			onToggle={(checked: boolean) => review.settings.change({ sound_on_replies: checked })}
+		>
+			Tick on a new reply
+		</Checkbox>
 
 		<!-- Drawn in every review, one no story can be told of too: the choice is the reader's, for all of them -->
-		<label class="flex items-center justify-between gap-3">
-			<span>
-				Stories
-				<span class="cr-faint block text-xs">Each story spends the agent's tokens</span>
-			</span>
-			<Checkbox
-				checked={review.settings.current.stories}
-				testId="stories"
-				onToggle={(checked: boolean) => (checked ? review.turnStoriesOn() : review.turnStoriesOff())}
-			/>
-		</label>
+		<Checkbox
+			drawn="box"
+			note="Each story spends the agent's tokens"
+			checked={review.settings.current.stories}
+			testId="stories"
+			onToggle={(checked: boolean) => (checked ? review.turnStoriesOn() : review.turnStoriesOff())}
+		>
+			Stories
+		</Checkbox>
 	</div>
 </Popover>

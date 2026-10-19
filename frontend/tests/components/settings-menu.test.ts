@@ -62,15 +62,25 @@ describe('the settings', () => {
 		expect(server.bodiesSentTo('PUT /api/settings')).toEqual([{ stories: true }]);
 	});
 
-	it('turn stories on behind the gear, for the server to ask the agent for this review’s story', async () => {
+	it('hide whitespace changes behind the gear, taking the diff again without them', async () => {
 		const user = userEvent.setup();
 		const { getByTestId } = render(ReviewHeader, inReview(review));
 
 		await user.click(getByTestId('settings-toggle'));
-		await user.click(getByTestId('stories'));
+		await user.click(getByTestId('ignore-whitespace'));
 		await settled();
 
-		expect(server.bodiesSentTo('PUT /api/settings')).toEqual([{ stories: true }]);
+		expect(server.requestsTo('GET /api/diff').map((request) => request.query.ignore_whitespace)).toEqual(['true']);
+	});
+
+	it('tick on a new reply once it is chosen behind the gear', async () => {
+		const user = userEvent.setup();
+		const { getByTestId } = render(ReviewHeader, inReview(review));
+
+		await user.click(getByTestId('settings-toggle'));
+		await user.click(getByTestId('reply-sound'));
+
+		expect(review.settings.current.sound_on_replies).toBe(true);
 	});
 
 	it('turn stories off again behind the gear, for the server to stop the story being written', async () => {

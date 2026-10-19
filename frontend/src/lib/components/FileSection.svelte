@@ -6,7 +6,7 @@
 	import { useReview } from '$lib/review/context';
 	import { fileSectionKey } from '$lib/review/reading-view';
 	import Button from '$lib/ui/Button.svelte';
-	import CheckChip from '$lib/ui/CheckChip.svelte';
+	import Checkbox from '$lib/ui/Checkbox.svelte';
 	import Failure from '$lib/ui/Failure.svelte';
 	import ContentViewToggle from './ContentViewToggle.svelte';
 	import FileTitle from './FileTitle.svelte';
@@ -100,10 +100,15 @@
 				<ContentViewToggle />
 			{/if}
 
-			<CheckChip checked={viewed} testId="viewed-toggle" onToggle={() => review.reading.toggleViewed(file.path)}>
+			<Checkbox
+				drawn="chip"
+				checked={viewed}
+				testId="viewed-toggle"
+				onToggle={() => review.reading.toggleViewed(file.path)}
+			>
 				<!-- One box per file, so the box says which file it is about -->
 				Viewed<span class="sr-only">: {file.path}</span>
-			</CheckChip>
+			</Checkbox>
 
 			<!-- Its lines fold under the chevron at the header's far end, as everything on the page folds -->
 			<FoldToggle
