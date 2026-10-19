@@ -175,7 +175,12 @@
   the agent's work are listed at 12 pixels, their rail a thin line; a
   story's chapters stand 12 pixels apart in its contents, where they stood
   10, their numbers at 11 pixels, where they were 10; a fact of a story on
-  its way stands its mark in a column as wide as the mark.
+  its way stands its mark in a column as wide as the mark; what a story
+  leaves out is headed at a chapter's size, 18 pixels, where it was 16;
+  the parts of Story's introduction, of its waiting room and its question,
+  of the settings, of the guide's card and of a diagram stand 8 pixels
+  apart, where they stood 10, and the words of a passing note 12 pixels in
+  from its edge, where they stood 14.
 - **A story follows its code when the diff is taken again.** Each step
   follows its lines through what git says changed between the take it was
   told of and this one: a line kept moves as the lines above it moved, a

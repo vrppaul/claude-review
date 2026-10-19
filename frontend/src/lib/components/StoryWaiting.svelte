@@ -82,7 +82,7 @@
 		</div>
 		<!-- The facts of it, on a card: a row each -->
 		<Card tone="quiet" testId="story-wait-facts">
-			<ul class="flex flex-col gap-2.5">
+			<ul class="flex flex-col gap-2">
 				{#each factsOnTheWay(wait, review.clock) as fact (fact.says)}
 					<li data-testid="story-wait-fact" class={['cr-wait-fact', DRAWN_AS[fact.state].class]}>
 						<span class="cr-wait-mark"><Icon name={DRAWN_AS[fact.state].mark} size="sm" /></span>
@@ -93,7 +93,7 @@
 				{/each}
 			</ul>
 		</Card>
-		<div class="flex flex-wrap justify-center gap-2.5">
+		<div class="flex flex-wrap justify-center gap-2">
 			{@render readFilesMeanwhile()}
 			{#if wait.kind === 'writing'}
 				<Button tone="quiet" size="sm" testId="stop-writing" onclick={() => review.story.stop()}>Stop writing</Button>

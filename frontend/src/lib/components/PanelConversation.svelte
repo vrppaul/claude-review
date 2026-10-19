@@ -91,7 +91,7 @@
 		{#if attached}
 			<div data-testid="panel-empty" class="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
 				<span class="text-base-300"><Icon name="conversation" size="xl" /></span>
-				<p class="cr-faint text-sm leading-relaxed">
+				<p class="cr-faint text-sm">
 					Ask about anything — the plan, the tests, a file nobody commented on. A thread is about one line; this is
 					about the rest.
 				</p>
@@ -105,13 +105,11 @@
 				data-testid="panel-unattached"
 				class="flex h-full flex-col items-center justify-center gap-3 px-4 text-center"
 			>
-				<p class="cr-faint text-sm leading-relaxed">
-					The agent joins once it starts listening. Comments you write meanwhile are kept.
-				</p>
+				<p class="cr-faint text-sm">The agent joins once it starts listening. Comments you write meanwhile are kept.</p>
 				<details data-testid="panel-attach-by-hand" class="w-full text-left">
 					<summary class="cr-faint cursor-pointer text-center text-xs"> Started the review yourself? </summary>
 					<div class="mt-2 flex flex-col gap-2">
-						<p class="cr-faint text-xs leading-relaxed">
+						<p class="cr-faint text-xs">
 							Nothing answers a review run in the foreground. Start it in the background and keep the listening half in
 							a loop:
 						</p>

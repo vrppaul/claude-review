@@ -81,7 +81,7 @@
 	<div class="cr-guide-place">
 		<Pane width="medium" testId="guide-tour" aria-label="Tour of the review">
 			<div class="cr-guide-card">
-				<div class="flex items-center gap-2.5">
+				<div class="flex items-center gap-2">
 					<div class="flex gap-1" aria-hidden="true">
 						{#each stepNumbers as index (index)}
 							<span class={['cr-guide-tick', index <= review.guide.stepPosition && 'cr-guide-tick-done']}></span>
@@ -181,7 +181,7 @@
 				{/if}
 				<p class="cr-guide-body">{news.body}</p>
 				{#if news.also.length > 0}
-					<div class="flex flex-col gap-1.5 border-t border-base-300 pt-2.5">
+					<div class="flex flex-col gap-1.5 border-t border-base-300 pt-3">
 						<span class="cr-faint text-xs">Also in this release</span>
 						{#each news.also as line (line)}
 							<span class="cr-guide-body">{line}</span>

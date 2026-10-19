@@ -35,7 +35,7 @@
 		</IconButton>
 	{/snippet}
 
-	<div class="flex flex-col gap-2.5 p-3 text-xs">
+	<div class="flex flex-col gap-2 p-3 text-xs">
 		{#if review.mode === 'diff'}
 			<div class="flex items-center justify-between gap-3">
 				<span>Diff layout</span>

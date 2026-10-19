@@ -73,7 +73,7 @@
 <!-- The diagram under the overview's lines: only its caption while mermaid draws it, the first time the
 	story comes on screen. Its caption is written in each branch, where the compiler sees it is the figure's
 	own -->
-<figure data-testid="story-diagram" aria-label={name} class="flex flex-col gap-2.5">
+<figure data-testid="story-diagram" aria-label={name} class="flex flex-col gap-2">
 	{#await review.story.diagramDrawn(source, (drawn) => drawDiagram(drawn, inlineId))}
 		{#if diagram.caption}
 			<figcaption class="flex items-center gap-3 text-xs">{@render caption(false)}</figcaption>

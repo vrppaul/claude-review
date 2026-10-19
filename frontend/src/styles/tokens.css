@@ -28,8 +28,9 @@
  * one of two weights, normal and semibold. A corner is a field's or a box's
  * (in each theme below), or round; a line is one of the two below. Whatever
  * else has a size, a time or a strength — a row, a pane, an arrow, a breath
- * — is named here once, and stylelint refuses one written as a number
- * anywhere else.
+ * — is named here once. stylelint refuses one written as a number in any
+ * other stylesheet, and eslint refuses room, words or a value written in
+ * place off the scale in the markup.
  */
 
 :root {
@@ -75,6 +76,8 @@
 	--cr-contents-indent: calc(var(--cr-contents-node) + var(--cr-list-row-gap));
 	/* The room either side of a story's words in its area; its code reaches through it, as a file's does */
 	--cr-story-gutter: --spacing(6);
+	/* A line of a story's overview on a screen wide enough: what it is, in a column this wide, beside its words */
+	--cr-overview-columns: 4rem minmax(0, 1fr);
 
 	/*
 	 * A card (lib/ui Card) — a thread, a comment being written, every turn of

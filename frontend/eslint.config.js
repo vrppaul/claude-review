@@ -186,6 +186,19 @@ const STATE_VARIANT =
 const SCROLLS_IN_ITS_OWN_BOX = 'Make what scrolls a cr-scroller: it is the box its contents are placed in.';
 // A utility that makes a box scroll down: `overflow-auto`, `overflow-y-auto`, `overflow-scroll`, `overflow-y-scroll`
 const SCROLLING_UTILITY = `/${UTILITY_START}overflow-(y-)?(auto|scroll)${UTILITY_END}/`;
+// Every size is taken off one scale (tokens.css), in markup as in a stylesheet, where stylelint holds the same
+// steps: what stands apart, stands in or is set in stands one of its steps of Tailwind's spacing; words are set at
+// one of its sizes, at that size's own leading, in one of its two weights; and nothing is written as an arbitrary
+// value, a token being named instead, as a colour is (`grid-cols-(--cr-…)`)
+const ON_THE_SCALE =
+	'Take the size off the scale (tokens.css): a spacing step it has, a size and weight of its words, or a token by name.';
+// A utility of room at a step off the scale, behind any variants and its sign: `gap-2.5`, `md:pl-3.5`, `-mt-5`
+const ROOM_OFF_THE_SCALE = `/${UTILITY_START}(p[xytblrse]?|m[xytblrse]?|gap(-[xy])?|space-[xy])-(?!(0|0\\.5|1|1\\.5|2|3|4|6|8)${UTILITY_END})[0-9]/`;
+// A value written in place: `grid-cols-[4rem_1fr]`, `w-[26rem]`, `text-[13px]`
+const ARBITRARY_VALUE = `/${UTILITY_START}[a-z0-9-]+-\\[/`;
+// Words at a size off the scale, with a leading of their own beside their size's, or in a weight off it:
+// `text-base`, `text-2xl`, `text-sm/6`, `leading-relaxed`, `font-medium`
+const WORDS_OFF_THE_SCALE = `/${UTILITY_START}(text-([2-9]xl|base)(${UTILITY_END}|\\/)|text-[a-z0-9]+\\/|leading-|font-(thin|extralight|light|medium|bold|extrabold|black)${UTILITY_END})/`;
 
 /** Selectors for every way a class list is written in markup, holding a pattern. */
 function inClassLists(pattern, message) {
@@ -204,7 +217,10 @@ const NO_INLINE_STYLING = [
 	...inClassLists(COLOUR_UTILITY, PAINTED_BY_TOKENS),
 	...inClassLists(SHADOW_UTILITY, PAINTED_BY_TOKENS),
 	...inClassLists(STATE_VARIANT, PAINTED_BY_STATE_TOKENS),
-	...inClassLists(SCROLLING_UTILITY, SCROLLS_IN_ITS_OWN_BOX)
+	...inClassLists(SCROLLING_UTILITY, SCROLLS_IN_ITS_OWN_BOX),
+	...inClassLists(ROOM_OFF_THE_SCALE, ON_THE_SCALE),
+	...inClassLists(ARBITRARY_VALUE, ON_THE_SCALE),
+	...inClassLists(WORDS_OFF_THE_SCALE, ON_THE_SCALE)
 ];
 
 // A button is drawn by the component library (lib/ui), in its tones and sizes, and nothing outside it draws one

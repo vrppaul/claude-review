@@ -71,9 +71,9 @@
 		head={{ heading: TITLE, close: putAwayForNow, closing: CLOSE_FOR_NOW }}
 		testId="story-introduction"
 	>
-		<div class="flex flex-col gap-2.5 p-3">
+		<div class="flex flex-col gap-2 p-3">
 			<StorySketch />
-			<p class="text-sm leading-relaxed">
+			<p class="text-sm">
 				The agent that made it walks you through: a short overview, then chapters, with its reason above each piece of
 				code. Your threads and rounds work the same.
 			</p>
@@ -93,7 +93,7 @@
 		testId="story-introduction-hidden"
 		onGone={() => (hiddenForGood = false)}
 	>
-		<div class="flex flex-wrap items-center gap-x-3 gap-y-2 py-2 pr-2.5 pl-3.5 text-sm">
+		<div class="flex flex-wrap items-center gap-x-3 gap-y-2 py-2 pr-2 pl-3 text-sm">
 			<span class="text-(--cr-done)"><Icon name="check" size="sm" /></span>
 			<span>Won't show again, in any review. Story is still in the header.</span>
 			<Button bind:element={undo} tone="secondary" size="xs" testId="story-introduction-undo" onclick={showAgain}>

@@ -64,7 +64,7 @@
 
 	<div class="flex flex-col p-3">
 		<!-- The ways back to the tour and the news, a row each -->
-		<div class="mb-5 flex flex-col gap-1">
+		<div class="mb-4 flex flex-col gap-1">
 			<Row names="title" testId="take-tour" onclick={takeTour}>
 				{#snippet leading()}
 					<span class="cr-guide-compass"><Icon name="compass" size="xl" /></span>

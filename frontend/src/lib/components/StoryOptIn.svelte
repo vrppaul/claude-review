@@ -29,7 +29,7 @@
 	keyboard; Escape and a press outside are "Not now" -->
 <Dialog label={QUESTION} width="wide" testId="story-opt-in" {onClose}>
 	{#snippet children({ close, closeThen }: Closing)}
-		<div class="flex flex-col gap-3.5 p-4 text-sm">
+		<div class="flex flex-col gap-3 p-4 text-sm">
 			<!-- A question has no head of its own: it is asked first, and its answers close it -->
 			<div class="flex items-center gap-2">
 				<span class="text-(--cr-agent)"><Icon name="story" size="sm" /></span>
@@ -52,7 +52,7 @@
 			<p class="cr-muted text-xs">
 				Stories stay on for every review on this machine. Turn them off in Settings, the gear in the header.
 			</p>
-			<div class="flex flex-wrap gap-2.5 pt-1">
+			<div class="flex flex-wrap gap-2 pt-1">
 				<Button tone="primary" size="sm" testId="turn-on-stories" onclick={() => closeThen(onTurnOn)}>
 					Turn on stories
 				</Button>
