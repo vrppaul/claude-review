@@ -31,6 +31,13 @@ GROUND_AND_EDGE = """(line) => {
     const style = getComputedStyle(line);
     return [style.backgroundColor, style.borderLeftColor];
 }"""
+# Every block laid inside a line of words — a box, a paragraph, a list or a heading inside a span, a paragraph, a
+# button, a label, a link or a heading — where HTML lets only words and what marks them stand: by its test id, or
+# its tag where it has none
+BLOCKS_IN_A_LINE = """(element) => [...element.querySelectorAll(
+    ':is(span, p, button, label, a, strong, em, h1, h2, h3, h4, h5, h6) '
+    + ':is(div, p, ul, ol, section, header, footer, table, pre, h1, h2, h3, h4, h5, h6, nav, form)'
+)].map((inside) => inside.dataset.testid ?? inside.tagName)"""
 
 
 @pytest.fixture
@@ -69,6 +76,17 @@ async def test_a_thread_hangs_right_under_its_line_as_wide_as_the_line_less_a_li
 
     assert 0 < card_top - row_bottom <= MOST_UNDER_ITS_LINE
     assert (card_left - row_left, row_right - card_right) == (pytest.approx(CARD_INSET), pytest.approx(CARD_INSET))
+
+
+async def test_a_thread_and_the_question_its_bin_asks_lay_no_block_inside_a_line_of_words(
+    review: RunningReview, page: Page
+) -> None:
+    await _comment_on_the_first_line(page, review)
+
+    await page.get_by_test_id("delete-comment").click()
+
+    await page.get_by_test_id("delete-dialog").wait_for()
+    assert await page.get_by_test_id("thread-card").evaluate(BLOCKS_IN_A_LINE) == []
 
 
 async def test_a_thread_under_its_line_points_up_at_it(review: RunningReview, page: Page) -> None:

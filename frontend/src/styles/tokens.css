@@ -121,14 +121,18 @@
 
 	/*
 	 * How wide a pane is drawn (lib/ui/pane.ts): one of rows — controls,
-	 * keys, things to pick — and one of what was written. And the arrow it
-	 * points at what opened it with, which stands out from its edge half its
-	 * diagonal: the room between the two.
+	 * keys, things to pick — and one of what was written.
 	 */
 	--cr-pane-medium: 20rem;
 	--cr-pane-wide: 24rem;
-	--cr-pane-arrow: 0.625rem;
-	--cr-pane-gap: calc(var(--cr-pane-arrow) / sqrt(2));
+	/*
+	 * An arrow: what a pane points at what opened it with, and a hanging
+	 * card up at what it is about, a square this long on its side turned on
+	 * its corner. It stands out from its edge half its diagonal, the room
+	 * between a pane and what opened it.
+	 */
+	--cr-arrow: 0.625rem;
+	--cr-pane-gap: calc(var(--cr-arrow) / sqrt(2));
 
 	/*
 	 * The bar a chapter of a story is read under: one row, never wrapping,

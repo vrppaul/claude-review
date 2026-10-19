@@ -99,7 +99,9 @@
 {:else if sentIn !== undefined}
 	<span data-testid="comment-sent">sent · round {sentIn}</span>
 {/if}
-<span data-testid="thread-actions" class="flex items-center gap-1">
+<!-- What can be done to the thread, in a box rather than a line of words: the question the bin asks is a pane
+	laid out inside it -->
+<div data-testid="thread-actions" class="flex items-center gap-1">
 	{#if thread.resolved}
 		<ReopenButton {thread} />
 	{:else}
@@ -138,4 +140,4 @@
 		</ConfirmPopover>
 	{/if}
 	<FoldToggle folded={false} subject="this thread" testId="fold-comment" tone="secondary" onToggle={foldAway} />
-</span>
+</div>

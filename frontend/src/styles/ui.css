@@ -289,19 +289,38 @@
 	overflow: hidden;
 }
 /*
- * The arrow: a square with the pane's fill and edge, turned on its corner
- * and centred on the pane's inner side. Its outer half covers the pane's
- * edge where it leaves it and carries that edge on to a point; its inner
- * half lies under what the pane holds.
+ * An arrow, out of a pane's edge at the control it stands by and out of a
+ * hanging card's top at what it is about (.cr-ui-card-tailed): a square on
+ * the ground and in the edge of what it leaves, turned on its corner and
+ * centred on that one's inner side. Its outer half covers the edge where it
+ * leaves it, and its two outer sides carry the edge on to a point; its inner
+ * two are edged in nothing, and its inner half lies on the same ground as
+ * what it leaves, so the two read as one.
  */
-.cr-ui-popover::before {
+.cr-ui-popover::before,
+.cr-ui-card-tailed::before {
 	content: '';
 	position: absolute;
-	width: var(--cr-pane-arrow);
-	height: var(--cr-pane-arrow);
+	width: var(--cr-arrow);
+	height: var(--cr-arrow);
 	border: inherit;
 	background: inherit;
 	rotate: 45deg;
+}
+/* Pointing up, out of a top edge: from a pane opened below what it stands by, and from a hanging card */
+.cr-ui-below-start::before,
+.cr-ui-below-end::before,
+.cr-ui-card-tailed::before {
+	top: calc(var(--cr-arrow) / -2);
+	border-right-color: transparent;
+	border-bottom-color: transparent;
+}
+/* Pointing down, out of a foot: from a pane opened above what it stands by */
+.cr-ui-above-start::before,
+.cr-ui-above-end::before {
+	bottom: calc(var(--cr-arrow) / -2);
+	border-top-color: transparent;
+	border-left-color: transparent;
 }
 .cr-ui-below-start,
 .cr-ui-below-end {
@@ -318,14 +337,6 @@
 .cr-ui-below-end,
 .cr-ui-above-end {
 	right: 0;
-}
-.cr-ui-below-start::before,
-.cr-ui-below-end::before {
-	top: calc(var(--cr-pane-arrow) / -2);
-}
-.cr-ui-above-start::before,
-.cr-ui-above-end::before {
-	bottom: calc(var(--cr-pane-arrow) / -2);
 }
 /* Centred on the middle of the control, measured from the edge the pane lines up with, less how far it was moved */
 .cr-ui-below-start::before,
@@ -521,22 +532,10 @@
 	box-shadow: var(--cr-shadow-hanging);
 }
 /*
- * Its tail, where something drawn above it is what it is about: a square
- * turned on its corner, half over the card's top edge, on its ground and in
- * its edge's colour, as far in from its left edge as where it hangs says
+ * Its tail, where something drawn above it is what it is about: the arrow a
+ * pane points with (above), out of its top, as far in from its left edge as
+ * where it hangs says
  */
-.cr-ui-card-tailed::before {
-	content: '';
-	position: absolute;
-	top: -0.375rem;
-	width: 0.625rem;
-	height: 0.625rem;
-	border-top: 1px solid;
-	border-left: 1px solid;
-	border-color: inherit;
-	background: inherit;
-	transform: rotate(45deg);
-}
 .cr-ui-card-under-a-line::before {
 	left: var(--cr-card-tail-under-a-line);
 }

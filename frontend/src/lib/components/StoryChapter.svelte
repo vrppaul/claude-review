@@ -28,6 +28,11 @@
 	const told = $derived(chapter.told);
 </script>
 
+<!-- What heads a warning among the chapter's words, the same over each: in the warning's colour, a line of its own -->
+{#snippet warningHead(words: string)}
+	<span class="block text-xs font-semibold text-warning">{words}</span>
+{/snippet}
+
 <!-- Changes that belong together: why they do, where to look hardest, then one step after another -->
 <StoryPart
 	partKey={chapter.part}
@@ -52,7 +57,7 @@
 			is updating it, only while it is -->
 		<EdgeFrame {...A_WARNING} testId="chapter-changed">
 			<p>
-				<span class="block text-xs font-semibold text-warning">{CHANGED_AFTER_TOLD_HEAD}</span>
+				{@render warningHead(CHANGED_AFTER_TOLD_HEAD)}
 				{stepsChanged(told.changed_steps)}
 				{CODE_BELOW_IS_CURRENT}
 				{#if review.story.wait?.kind === 'writing'}
@@ -70,7 +75,7 @@
 		{@const doubt = chapterText(told.id, 'doubt')}
 		<AskableBlock block={doubt} words={told.doubt} testId="chapter-doubt-block" frame={A_WARNING}>
 			<p data-testid="chapter-doubt">
-				<span class="block text-xs font-semibold text-warning">{blockLabel(doubt)}</span>
+				{@render warningHead(blockLabel(doubt))}
 				{told.doubt}
 			</p>
 		</AskableBlock>
