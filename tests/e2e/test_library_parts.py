@@ -339,6 +339,21 @@ async def test_a_segment_pressed_stands_on_the_selected_tint_with_its_edge_at_it
     assert (not_pressed.laid, not_pressed.edge, not_pressed.weight) == (NOTHING_LAID, NOTHING_LAID, REGULAR)
 
 
+# Every track of segments in the header and in the settings: how the review is read, the diff's layout, the theme
+EVERY_TRACK = ["reading-view", "diff-layout-toggle", "theme-toggle"]
+
+
+async def test_every_track_of_segments_stands_as_tall_as_the_smallest_button_level_with_the_buttons_beside_it(
+    review: RunningReview, page: Page
+) -> None:
+    await _open_in(page, review, SCHEMES[0])
+
+    await page.get_by_test_id("settings-toggle").click()
+
+    heights = [(await painted(page.get_by_test_id(track))).height for track in EVERY_TRACK]
+    assert heights == [XS] * len(EVERY_TRACK)
+
+
 @pytest.mark.parametrize(("test_id", "height"), ICONS_ALONE)
 async def test_a_button_that_is_an_icon_alone_is_as_wide_as_it_is_tall(
     review: RunningReview, page: Page, test_id: str, height: float

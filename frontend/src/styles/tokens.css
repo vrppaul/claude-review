@@ -18,9 +18,29 @@
  * what of that is not read yet (--cr-unread); green, beside what the diff
  * added, what is done (--cr-done); yellow a warning; orange a modified
  * file's letter.
+ *
+ * Every size is taken off one scale. What stands apart, stands in or is set
+ * in stands one of Tailwind's spacing steps (--spacing, a quarter of a rem)
+ * off what is beside it: 0, ½, 1, 1½, 2, 3, 4, 6 or 8 of them, from 0 to 32
+ * px, written `p-2` in the markup and `--spacing(2)` in a stylesheet, here
+ * too. Words are set at one of Tailwind's sizes — xs, sm, lg, xl — at a
+ * mark's (2xs), at code's or at a comment's, each at its own leading, and in
+ * one of two weights, normal and semibold. A corner is a field's or a box's
+ * (in each theme below), or round; a line is one of the two below. Whatever
+ * else has a size — a row, a pane, an arrow — is named here once, and
+ * stylelint refuses a length or a time written as a number in the library's
+ * stylesheet.
  */
 
 :root {
+	/*
+	 * A line: between surfaces and round a box; and a strong one, an edge
+	 * that says whose or what a thing is, or a ring round what holds the
+	 * keyboard
+	 */
+	--cr-line: 1px;
+	--cr-line-strong: 2px;
+
 	--cr-code-size: 0.8125rem;
 	--cr-code-leading: 1.55;
 	/* A row of code, as tall as its line */
@@ -33,7 +53,7 @@
 	 * diff left out: each a line of small text, room either side of it, and
 	 * a rule above and below.
 	 */
-	--cr-hunk-rule: 1px;
+	--cr-hunk-rule: var(--cr-line);
 	--cr-hunk-header-height: calc(1.5rem + 2 * var(--cr-hunk-rule));
 	--cr-gap-height: calc(1.75rem + 2 * var(--cr-hunk-rule));
 	/* Comments outrank the code they annotate: they are what the review produces */
@@ -51,7 +71,7 @@
 	/* The number a node holds, small enough that two digits fit its ring */
 	--cr-contents-node-number: 0.625rem;
 	/* The room either side of a story's words in its area; its code reaches through it, as a file's does */
-	--cr-story-gutter: 1.5rem;
+	--cr-story-gutter: --spacing(6);
 
 	/*
 	 * A card (lib/ui Card) — a thread, a comment being written, every turn of
@@ -61,22 +81,23 @@
 	 * how far in from its left edge its tail points up at that: under a line,
 	 * or under a block of a story's words, where the block's heading is.
 	 */
-	--cr-card-room: 1rem;
+	--cr-card-room: --spacing(4);
 	--cr-card-tail-under-a-line: 6rem;
 	--cr-card-tail-under-a-block: 2.5rem;
 
 	/*
 	 * A frame with an edge at its start (lib/ui EdgeFrame) — the agent's words
-	 * in a story, a warning, a thread folded to a line: its edge, how
-	 * far its words stand in from it, and from its other side as far as a
-	 * card stands what it holds in from its own, so a thread folded to a
-	 * frame keeps what stands at its end where it stood; and the room it
-	 * keeps above and below what it holds.
+	 * in a story, a warning, a thread folded to a line: its edge, a strong
+	 * line; how far its words stand in from it and from its other side, as
+	 * far as a card stands what it holds in from its own edge, so the two
+	 * stand their words alike and a thread folded to a frame keeps what stands
+	 * at its end where it stood; and the room it keeps above and below what it
+	 * holds.
 	 */
-	--cr-edge-width: 2px;
-	--cr-edge-inset: 1.25rem;
+	--cr-edge-width: var(--cr-line-strong);
+	--cr-edge-inset: var(--cr-card-room);
 	--cr-edge-end-room: var(--cr-card-room);
-	--cr-edge-block-room: 0.5rem;
+	--cr-edge-block-room: --spacing(2);
 	/*
 	 * How far a band (lib/ui Band) reaches above and below its words: into
 	 * the room its frame keeps there, so a band fills its frame
@@ -87,15 +108,15 @@
 	 * Where a thread hangs under a line, or under a block of a story's words:
 	 * how far in from each side of it the thread's card stands
 	 */
-	--cr-thread-inset: 0.75rem;
+	--cr-thread-inset: --spacing(3);
 	/*
 	 * A thread's turns, a row each: the room between rows, the avatar each
 	 * speaker stands by and the gap between it and what was said, and the
 	 * field a reply is begun in, which its avatar stands level with.
 	 */
-	--cr-thread-row-gap: 1rem;
+	--cr-thread-row-gap: --spacing(4);
 	--cr-avatar-size: 1.5rem;
-	--cr-turn-gap: 0.75rem;
+	--cr-turn-gap: --spacing(3);
 	--cr-reply-field-height: 2.25rem;
 
 	/*
@@ -112,9 +133,9 @@
 	 * one is set in for each folder of the tree it stands in.
 	 */
 	--cr-list-row-height: 2rem;
-	--cr-list-row-room: 0.5rem;
-	--cr-list-row-gap: 0.5rem;
-	--cr-list-row-indent: 0.75rem;
+	--cr-list-row-room: --spacing(2);
+	--cr-list-row-gap: --spacing(2);
+	--cr-list-row-indent: --spacing(3);
 
 	/*
 	 * How wide a pane is drawn (lib/ui/pane.ts): one of rows — controls,
@@ -133,21 +154,30 @@
 
 	/*
 	 * The bar a chapter of a story is read under: one row, never wrapping,
-	 * so as tall as its buttons, half a rem above and below them, and the
+	 * so as tall as its buttons, two steps above and two below them, and the
 	 * line under it. What is read under it stands that far down.
 	 */
-	--cr-chapter-bar-height: calc(var(--cr-button-sm) + 1rem + 1px);
+	--cr-chapter-bar-height: calc(var(--cr-button-sm) + --spacing(4) + var(--cr-line));
 
-	/* How long one breath takes of whatever breathes while the agent works on it: a dot (lib/ui Dot), a story's sketch */
+	/*
+	 * Whatever breathes while the agent works on it — a dot (lib/ui Dot), a
+	 * story's sketch: how long one breath takes, how faint it is at its
+	 * faintest, and how long each of dots side by side waits on the one
+	 * before it, so they breathe in turn
+	 */
 	--cr-breath: 1.4s;
+	--cr-breath-faint: 0.25;
+	--cr-breath-turn: 0.18s;
+	/* How far across a dot (lib/ui Dot) is */
+	--cr-dot-size: 0.375rem;
 
 	/*
 	 * A notice (lib/ui NoticeBar): how far its words stand in from its edges,
 	 * above and below them and at either end, as far as the review's header
 	 * stands what it holds in from the window's edge
 	 */
-	--cr-notice-room-block: 0.375rem;
-	--cr-notice-room-inline: 1rem;
+	--cr-notice-room-block: --spacing(1.5);
+	--cr-notice-room-inline: --spacing(4);
 
 	/*
 	 * What lies over what, lowest first: a file's sticky header and a
@@ -170,23 +200,23 @@
 	 * The edge of the one of a set the reader is at, laid inside it: at the
 	 * start of a row read down a column, at the foot of a control in a bar
 	 */
-	--cr-shadow-selected-start: inset 2px 0 0 var(--cr-selected-edge);
-	--cr-shadow-selected-foot: inset 0 -2px 0 var(--cr-selected-edge);
+	--cr-shadow-selected-start: inset var(--cr-line-strong) 0 0 var(--cr-selected-edge);
+	--cr-shadow-selected-foot: inset 0 calc(-1 * var(--cr-line-strong)) 0 var(--cr-selected-edge);
 	/*
 	 * And at the foot of a filled button whose pane is open, in the colour of
 	 * its own words: the mark's edge would vanish on the mark's own fill
 	 */
-	--cr-shadow-selected-foot-on-fill: inset 0 -2px 0 currentColor;
+	--cr-shadow-selected-foot-on-fill: inset 0 calc(-1 * var(--cr-line-strong)) 0 currentColor;
 	/* The tour's light: a ring round the control it points at, in a shade spread over any screen */
-	--cr-shadow-spotlight: 0 0 0 2px var(--cr-control), 0 0 0 9999px var(--cr-shade);
+	--cr-shadow-spotlight: 0 0 0 var(--cr-line-strong) var(--cr-control), 0 0 0 9999px var(--cr-shade);
 	/* The reader's mark round the node of the part of a story they are reading */
 	--cr-shadow-current-node: 0 0 0 3px var(--cr-mark-chip);
 	/* The agent's colour round the node of the part of a story it is writing */
 	--cr-shadow-written-node: 0 0 0 3px var(--cr-agent-chip);
 	/* A line inside the edge of a control that leads to what the agent brought and the reader has not read */
-	--cr-shadow-unread-edge: inset 0 0 0 1px var(--cr-unread);
+	--cr-shadow-unread-edge: inset 0 0 0 var(--cr-line) var(--cr-unread);
 	/* A line inside the edge of the control the page introduces the agent's way of reading at: Story, while it does */
-	--cr-shadow-introduced-edge: inset 0 0 0 1px var(--cr-agent);
+	--cr-shadow-introduced-edge: inset 0 0 0 var(--cr-line) var(--cr-agent);
 	/* What lifts a card off what it hangs under: a thread's, or a comment being written */
 	--cr-shadow-hanging: 0 8px 24px rgb(0 0 0 / 0.25);
 	/* The card's ground in a ring round an avatar in a thread, which parts it from the spine behind it */
@@ -243,6 +273,11 @@
 	--cr-selected: var(--cr-mark-tint);
 	--cr-selected-edge: var(--cr-mark);
 	--cr-focus-ring: var(--cr-control);
+	/* The ring: a strong line, a line's width off what it rings */
+	--cr-focus-ring-width: var(--cr-line-strong);
+	--cr-focus-ring-offset: var(--cr-line);
+	/* How far under the words that lead somewhere their line is drawn, under the pointer */
+	--cr-underline-offset: 0.2em;
 	/* An answer or a thread from the agent that the reader has not looked at yet: an arrival of the agent's */
 	--cr-unread: var(--cr-agent);
 	/* Something done, or ready: a thread settled, a branch of work finished, a file viewed, an agent listening */
@@ -280,6 +315,17 @@
 	/* The ground of something the review warns about, and the edge of it */
 	--cr-warning-tint: color-mix(in srgb, var(--color-warning) 10%, transparent);
 	--cr-warning-border: color-mix(in srgb, var(--color-warning) 35%, transparent);
+}
+
+/*
+ * The size a mark's words are set at — a tag, a count, a chip, a segment of
+ * a track — below Tailwind's least, at the leading that keeps a mark as tall
+ * in whatever line it stands in. Handed to Tailwind's theme, so the markup
+ * sets it as `text-2xs`, as it does the theme's own sizes.
+ */
+@theme {
+	--text-2xs: 0.6875rem;
+	--text-2xs--line-height: 1rem;
 }
 
 /*

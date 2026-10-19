@@ -24,7 +24,8 @@
   by the keyboard, every block of the agent's words — the Task, Done and
   Doubt of the overview, each thing its lists hold, a chapter's Why and
   Doubt, a step's reason — is banded and offers "Ask about
-  this", floating over the block's top edge so no word moves; a screen
+  this", floating over the block's top edge so no word moves, its end where
+  the block's words end; a screen
   reader names each by its place, "Ask about this: Story · Doubt", "Ask
   about this: ch-2 · Why", so no two chapters' offers sound alike. The
   agent points at lines alone: a block of the story it names is refused.
@@ -161,7 +162,10 @@
   the primary on a surface's grey. A thread's buttons stand 24 pixels tall
   with a field's corners, where they stood 26 with a box's; every × is the
   cross the rest of the page draws; "Skip tour" and the release's link are
-  links, in the colour of the reader's controls.
+  links, in the colour of the reader's controls. A track of segments — how
+  the review is read, the diff's layout, the theme, what a comment asks
+  for — stands 24 pixels tall, level with the buttons beside it, where it
+  stood 26.5.
 - **A story follows its code when the diff is taken again.** Each step
   follows its lines through what git says changed between the take it was
   told of and this one: a line kept moves as the lines above it moved, a
@@ -470,8 +474,8 @@
   scrolled away with its files.
 - **Words set apart by an edge are framed one way**: the agent's voice in
   a story and its broken edge where it read the change out of the code, a
-  warning, a thread folded away and the lines a thread lost. One edge and one corner, the words 20 pixels in from
-  the edge, 16 from the far side and 8 above and below. A chapter's
+  warning, a thread folded away and the lines a thread lost. One edge and one corner, the words 16 pixels in from
+  the edge and from the far side, as far as a card's, and 8 above and below. A chapter's
   "Changed after it was told" and its Doubt are both warnings, headed
   alike, and what a story costs is said in one. A block of the story
   pointed at is banded inside its frame's edge; one a thread of the

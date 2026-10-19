@@ -14,6 +14,19 @@ const A_NOTICE_WASH = ['/var\\(--cr-(warning-tint|mark-soft)\\)/'];
 // with a margin, and page rules hung threads past a band's reach, stood words as far in as a frame's and stacked
 // blocks as far apart as a button is tall. Refused in every stylesheet but the library's, and the tokens' own
 const A_LIBRARY_ROOM = ['/var\\(--cr-(edge|band|card|notice|pane|button)-/'];
+// Every size is taken off one scale, which tokens.css sets out: a length or a time written as a number is named
+// there once and named everywhere else. Nothing is no size in any unit
+const A_WRITTEN_SIZE = ['/(?<![\\w.-])(?!0[a-z]+\\b)\\d*\\.?\\d+(px|rem|em|ch|ms|s)\\b/'];
+// What stands apart, stands in or is set in stands one of the scale's steps of Tailwind's spacing
+const OFF_THE_SCALE = ['/--spacing\\((?!(0|0\\.5|1|1\\.5|2|3|4|6|8)\\))/'];
+// Words at one of the scale's sizes, at its own leading, in one of its two weights; and a thing seen whole, gone,
+// or at a strength tokens.css names
+const THE_SCALES_WORDS = {
+	'font-size': ['/^var\\(--(text-[0-9a-z]+|cr-(code|comment)-size)\\)$/'],
+	'line-height': ['/^var\\(--(text-[0-9a-z]+--line-height|cr-(code|comment)-leading)\\)$/'],
+	'font-weight': ['/^var\\(--font-weight-(normal|semibold)\\)$/'],
+	opacity: ['0', '1', '/^var\\(--cr-[a-z-]+\\)$/']
+};
 
 export default {
 	rules: {
@@ -27,18 +40,26 @@ export default {
 	},
 	overrides: [
 		{
-			// The palette: where the colours are written down, and the library's rooms, some in terms of others
+			// The palette: where the colours and the sizes are written down, the library's rooms some in terms of
+			// others, its spacing on the scale's steps
 			files: ['src/styles/tokens.css'],
 			rules: {
 				'color-no-hex': null,
 				'function-disallowed-list': null,
-				'declaration-property-value-disallowed-list': null
+				'declaration-property-value-disallowed-list': { '/.*/': OFF_THE_SCALE }
 			}
 		},
 		{
-			// The library's stylesheet, which lays a notice's washes
+			// The library's stylesheet, which lays a notice's washes, every size of it off the scale
 			files: ['src/styles/ui.css'],
-			rules: { 'declaration-property-value-disallowed-list': null }
+			rules: {
+				'declaration-property-value-allowed-list': {
+					'z-index': A_LAYER,
+					'box-shadow': A_SHADOW,
+					...THE_SCALES_WORDS
+				},
+				'declaration-property-value-disallowed-list': { '/.*/': [...A_WRITTEN_SIZE, ...OFF_THE_SCALE] }
+			}
 		}
 	]
 };

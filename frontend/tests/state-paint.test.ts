@@ -29,9 +29,9 @@ const STATES = [
 		tokens: ['--cr-hover']
 	},
 	{
-		state: 'holding the keyboard',
+		state: "holding the keyboard: ringed in the ring's colour, at the ring's width",
 		named: /:focus(?:-visible)?(?![\w-])/,
-		tokens: ['--cr-focus-ring']
+		tokens: ['--cr-focus-ring', '--cr-focus-ring-width']
 	},
 	{
 		state: 'a filled button whose pane is open: its edge in its own words, which the mark would vanish on',
