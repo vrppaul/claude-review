@@ -8,7 +8,7 @@
 	import Tag from '$lib/ui/Tag.svelte';
 	import { raisedByAgent } from '$lib/utils/speakers';
 	import { splitSuggestions } from '$lib/utils/suggestion';
-	import { COMMENTS, counted } from '$lib/utils/words';
+	import { COMMENTS, counted, type CountedWords } from '$lib/utils/words';
 	import { finishingTitle } from './finishing';
 	import { FINISH_KEYS } from './keymap';
 	import Popover from './Popover.svelte';
@@ -24,6 +24,8 @@
 	const unsent = $derived(review.threads.unsent.length);
 	// Comments still open in their fields, which go with whatever is sent
 	const open = $derived(review.threads.open);
+	// What those comments are said to do, counted
+	const OPEN_COMMENTS_GOING: CountedWords = { one: 'comment still open goes', many: 'comments still open go' };
 
 	/** Put the pane away and go to a thread in it. */
 	function jump(thread: Thread) {
@@ -144,7 +146,7 @@
 			<!-- Written and not added: it goes, as a pending comment does, so it is shown before it does -->
 			<div data-testid="open-fields" class="mb-3">
 				<p class="cr-faint mb-1.5 text-xs">
-					{counted(open.length, { one: 'comment still open goes', many: 'comments still open go' })} with the review:
+					{counted(open.length, OPEN_COMMENTS_GOING)} with the review:
 				</p>
 				<ul class="flex flex-col gap-1.5">
 					{#each open as { field, anchor } (field.key)}

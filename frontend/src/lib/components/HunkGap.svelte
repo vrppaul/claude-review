@@ -5,7 +5,7 @@
 	import { type ContextGap, EXPAND_STEP, type GapRead, hiddenIn, sizeOf } from '$lib/utils/expansions';
 	import { messageOf } from '$lib/utils/errors';
 	import { placeKey } from '$lib/utils/line-places';
-	import { counted } from '$lib/utils/words';
+	import { counted, type CountedWords } from '$lib/utils/words';
 	import type { FileDrawing } from './file-drawing.svelte';
 
 	interface Props {
@@ -36,9 +36,9 @@
 	// of a file; null where the lines may be read in instead, and the gap
 	// then says how many it hides, as far as that is known
 	const onlySaid = $derived(drawing.saidOfAGap);
-	const hiddenLines = $derived(
-		hidden === null ? 'The file may go on below' : counted(hidden, { one: 'hidden line', many: 'hidden lines' })
-	);
+	// What the lines a gap hides are called, counted, where they may be read in
+	const HIDDEN_LINES: CountedWords = { one: 'hidden line', many: 'hidden lines' };
+	const hiddenLines = $derived(hidden === null ? 'The file may go on below' : counted(hidden, HIDDEN_LINES));
 
 	/**
 	 * Read lines into the gap. The button pressed keeps the keyboard while

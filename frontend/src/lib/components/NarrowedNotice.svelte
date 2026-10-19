@@ -7,7 +7,7 @@
 	import NoticeBar from '$lib/ui/NoticeBar.svelte';
 	import Row from '$lib/ui/Row.svelte';
 	import { plainWords } from '$lib/utils/plain-words';
-	import { counted, FILES, wordsFor } from '$lib/utils/words';
+	import { counted, type CountedWords, FILES, wordsFor } from '$lib/utils/words';
 
 	const review = useReview();
 
@@ -23,6 +23,8 @@
 	// What the list's button says, while the list is shown and while it is not, of one thread or of several
 	const LIST_WORDS = { shown: { one: 'Hide it', many: 'Hide them' }, folded: { one: 'List it', many: 'List them' } };
 	const listWords = $derived(LIST_WORDS[listing ? 'shown' : 'folded']);
+	// What the threads this screen does not draw are said to be, counted
+	const THREADS_BEING: CountedWords = { one: 'thread is', many: 'threads are' };
 </script>
 
 <!-- A state, not news: no Dismiss, because dismissing it would leave the
@@ -35,7 +37,7 @@
 		Showing {review.diff.phrase} — {counted(review.diff.files.length, FILES)}.
 	{/if}
 	{#if offScreen.length > 0}
-		{counted(offScreen.length, { one: 'thread is', many: 'threads are' })} not on this screen.
+		{counted(offScreen.length, THREADS_BEING)} not on this screen.
 	{/if}
 	{#snippet actions()}
 		{#if review.diff.wholeReviewFailed}

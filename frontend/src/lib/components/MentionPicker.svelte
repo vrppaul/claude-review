@@ -3,11 +3,13 @@
 	import { anchorShortPlace } from '$lib/anchors/views';
 	import PopoverPanel from '$lib/ui/PopoverPanel.svelte';
 	import Row from '$lib/ui/Row.svelte';
-	import { counted } from '$lib/utils/words';
+	import { counted, type CountedWords } from '$lib/utils/words';
 	import { keyOf, optionIdOf, type Mentionable, type Mentions } from './mentions.svelte';
 
 	// The arrow points down into the field, near where its words start: this far in from the list's left edge, in pixels
 	const INTO_THE_FIELD = 20;
+	// What the turns under a thread's opening comment are called, counted, where the picker says a thread is live
+	const TURNS: CountedWords = { one: 'turn', many: 'turns' };
 
 	interface Props {
 		mentions: Mentions;
@@ -22,7 +24,7 @@
 	function threadState(thread: Thread): string {
 		if (thread.anchor.outdated) return 'outdated';
 		if (thread.resolved) return 'resolved';
-		if (thread.turns.length > 0) return counted(thread.turns.length, { one: 'turn', many: 'turns' });
+		if (thread.turns.length > 0) return counted(thread.turns.length, TURNS);
 		return '';
 	}
 
