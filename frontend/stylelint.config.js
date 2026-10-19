@@ -9,11 +9,12 @@ const A_SHADOW = ['/^var\\(--cr-shadow-[a-z-]+\\)$/', 'none'];
 // as main.css's .cr-warning-bar drew the bar saying the review cannot be reached beside the library's
 const A_NOTICE_WASH = ['/var\\(--cr-(warning-tint|mark-soft)\\)/'];
 // A part of the library keeps its own room, named after it in tokens.css — an EdgeFrame's edge and room, a band's
-// reach, a card's, a notice's, a pane's and a track's room, a button's height — and lays out what stands round it
-// itself, so no rule outside the library names such a token: the page's band reached back over its frame's room and
-// edge with a margin, and page rules hung threads past a band's reach, stood words as far in as a frame's and
-// stacked blocks as far apart as a button is tall. Refused in every stylesheet but the library's, and the tokens' own
-const A_LIBRARY_ROOM = ['/var\\(--cr-(edge|band|card|notice|pane|track|button)-/'];
+// reach, a card's, a notice's, a pane's and a track's room, a button's and a field's heights — and lays out what
+// stands round it itself, so no rule outside the library names such a token: the page's band reached back over its
+// frame's room and edge with a margin, page rules hung threads past a band's reach, stood words as far in as a
+// frame's and stacked blocks as far apart as a button is tall, and a thread's spine ended half as far down as the
+// field to reply in stood tall. Refused in every stylesheet but the library's, and the tokens' own
+const A_LIBRARY_ROOM = ['/var\\(--cr-(edge|band|card|notice|pane|track|button|field)-/'];
 // The functions that write a colour, and the curve a motion eases along: each written once, in tokens.css
 const WRITTEN_IN_THE_TOKENS = [
 	'rgb',

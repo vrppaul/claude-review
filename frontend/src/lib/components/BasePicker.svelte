@@ -2,6 +2,7 @@
 	import type { ReviewVersion, VersionKind } from '$lib/types';
 	import { useReview } from '$lib/review/context';
 	import Button from '$lib/ui/Button.svelte';
+	import Filter from '$lib/ui/Filter.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import Row from '$lib/ui/Row.svelte';
 	import { messageOf } from '$lib/utils/errors';
@@ -94,13 +95,7 @@
 	{/snippet}
 
 	<div class="px-3 pt-2 pb-1">
-		<input
-			data-testid="base-filter"
-			class="w-full rounded-field border border-base-300 bg-base-100 px-2 py-1 font-mono text-xs"
-			placeholder="filter"
-			aria-label="Filter the bases"
-			bind:value={filter}
-		/>
+		<Filter bind:value={filter} label="Filter the bases" testId="base-filter" placeholder="filter" />
 	</div>
 
 	<!-- Each base a row, inside the pane's margin, its words as far in as the heading's -->

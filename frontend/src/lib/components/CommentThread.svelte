@@ -50,6 +50,7 @@
 			onCancel={() => editDone(() => review.threads.writing.discard(editing))}
 			label={anchorLabel(thread.anchor)}
 			{hangs}
+			voice="reader"
 		/>
 	{:else if review.threads.reading.isFolded(thread.id)}
 		<FoldedThread {thread} />

@@ -294,12 +294,6 @@
 	color: var(--cr-faint);
 }
 
-/* What a field says before anything is written in it, in a colour of the palette rather than half the text's */
-::placeholder {
-	color: var(--cr-placeholder);
-	opacity: 1;
-}
-
 /*
  * Words lent the keyboard, as the heading of a part of a story is by a bar
  * that goes (`lendKeyboard`): they have no room of their own around them, so
@@ -307,32 +301,6 @@
  */
 .cr-lent-keyboard:focus-visible {
 	outline-offset: --spacing(2);
-}
-
-/* A chip the whole of which is the hit target: its checkbox laid over all of it, unseen */
-.cr-chip {
-	position: relative;
-	display: inline-flex;
-	align-items: center;
-	gap: --spacing(1.5);
-	padding: --spacing(1) --spacing(2);
-	border-radius: var(--radius-field);
-	color: var(--cr-muted);
-	font-size: var(--text-xs);
-}
-/* A box ticked is something done: a file read through */
-.cr-chip:has(:checked) {
-	color: var(--cr-done);
-}
-.cr-chip input {
-	position: absolute;
-	inset: 0;
-	opacity: 0;
-	cursor: inherit;
-}
-.cr-chip:has(:focus-visible) {
-	outline: var(--cr-focus-ring-width) solid var(--cr-focus-ring);
-	outline-offset: var(--cr-focus-ring-offset);
 }
 
 /* Rendered prose gets the same measure as a comment: it is prose too */
@@ -441,8 +409,8 @@
  * it, beside their name, how long ago, and what was said. A spine joins the
  * avatars down the card. Each row draws its own piece of it, from its top
  * into the room before the next row, so the spine holds whatever a row's
- * height: it begins at the first avatar and ends at the last row's, the
- * field to reply in.
+ * height: it begins at the first avatar and ends at the last, the reader's
+ * own beside the field to reply in.
  */
 .cr-thread-row {
 	position: relative;
@@ -461,7 +429,7 @@
 }
 .cr-thread-row:nth-last-child(1 of .cr-thread-row)::before {
 	bottom: auto;
-	height: calc(var(--cr-reply-field-height) / 2);
+	height: calc(var(--cr-avatar-size) / 2);
 }
 .cr-thread-turn {
 	display: grid;
@@ -492,9 +460,8 @@
 	background: var(--cr-avatar-agent);
 	color: var(--cr-agent);
 }
-/* The reader's turn not said yet, in the field to reply in: grey, and level with the field */
+/* The reader's turn not said yet, in the field to reply in: grey */
 .cr-turn-reply .cr-avatar {
-	margin-top: calc((var(--cr-reply-field-height) - var(--cr-avatar-size)) / 2);
 	background: var(--color-base-300);
 	color: var(--cr-faint);
 }
@@ -520,19 +487,6 @@
 .cr-turn-agent .cr-turn-name {
 	color: var(--cr-agent);
 }
-/* Where a reply is begun: drawn as the field it opens, at its corner, before anything is written in it */
-.cr-reply-field {
-	display: block;
-	width: 100%;
-	height: var(--cr-reply-field-height);
-	padding: 0 --spacing(3);
-	border: var(--cr-line) solid var(--color-base-300);
-	border-radius: var(--radius-field);
-	background: var(--color-base-100);
-	color: var(--cr-placeholder);
-	font-size: var(--text-sm);
-	text-align: left;
-}
 
 /*
  * What the agent writes first in a story's sketch (.cr-sketch-waiting)
@@ -554,22 +508,6 @@
 	100% {
 		background: transparent;
 	}
-}
-
-/*
- * Where the reader writes: on the ground of whatever it is written in, so
- * only its edge, in the reader's mark, says it is theirs to fill.
- */
-.cr-field {
-	background: transparent;
-	border: var(--cr-line) solid var(--cr-mark-border);
-}
-.cr-field:focus {
-	border-color: var(--cr-focus-ring);
-}
-/* A field that grows with what is written in it, up to a height, and scrolls from there */
-.cr-field-grows {
-	max-height: var(--cr-field-tallest);
 }
 
 /* Where a round ended, inside a thread that outlived it */
@@ -748,14 +686,12 @@
  * Not the reader's mark colour: the marks in a review are theirs, and one
  * that arrived from the other side has to say so before it is read. Violet
  * is the agent's, and nothing else's. Its card says so by its edge, its
- * folded line by its frame in the agent's tone, and what is said inside
- * either in the agent's colour.
+ * folded line by its frame in the agent's tone, the field to reply in by its
+ * voice (lib/ui/field.ts), and what is said inside either in the agent's
+ * colour.
  */
 .cr-raised .cr-comment-ref {
 	color: var(--cr-agent);
-}
-.cr-raised .cr-field {
-	border-color: var(--cr-agent-border);
 }
 
 /*

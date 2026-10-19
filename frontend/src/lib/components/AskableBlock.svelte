@@ -91,6 +91,7 @@
 				onCancel={() => putAway(field)}
 				label={blockLabel(block)}
 				hangs="block"
+				voice="reader"
 			/>
 		</div>
 	{/if}

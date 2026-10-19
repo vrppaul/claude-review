@@ -6,6 +6,8 @@
 	import Button from '$lib/ui/Button.svelte';
 	import Card from '$lib/ui/Card.svelte';
 	import type { CardHanging } from '$lib/ui/card';
+	import Field from '$lib/ui/Field.svelte';
+	import type { FieldVoice } from '$lib/ui/field';
 	import Segment from '$lib/ui/Segment.svelte';
 	import Segmented from '$lib/ui/Segmented.svelte';
 	import { hasSuggestion, withSuggestion } from '$lib/utils/suggestion';
@@ -47,9 +49,11 @@
 		 * joins, whose card is drawn round it already.
 		 */
 		hangs: CardHanging | 'in-its-thread';
+		/** Whose thread it is written in: a reply in a thread the agent raised is edged in the agent's colour. */
+		voice: FieldVoice;
 	}
 
-	let { field, onSave, onAsk, onCancel, label, suggestFrom, severityPicker = true, hangs }: Props = $props();
+	let { field, onSave, onAsk, onCancel, label, suggestFrom, severityPicker = true, hangs, voice }: Props = $props();
 	const review = useReview();
 	const fieldId = $props.id();
 
@@ -62,14 +66,6 @@
 	// image still on its way is waited for
 	const sayable = $derived(field.sayable);
 
-	// Grow with the text: a suggestion inserts several lines at once, and a
-	// fixed box scrolls them out of sight with nothing to say so. How tall it
-	// may grow is the stylesheet's (cr-field-grows)
-	$effect(() => {
-		void field.text;
-		if (textarea) fitToText(textarea);
-	});
-
 	// The cursor goes to the field when it is opened, or asked for again — not
 	// whenever it is drawn: one drawn again, a file unfolded or the page
 	// reloaded, leaves the reader where they are. A field opened near the
@@ -80,12 +76,6 @@
 		textarea.scrollIntoView({ block: 'nearest' });
 		field.focusTaken();
 	});
-
-	/** As tall as the text in it: measured from nothing, as only the field itself can say. */
-	function fitToText(element: HTMLTextAreaElement) {
-		element.style.height = 'auto';
-		element.style.height = `${element.scrollHeight}px`;
-	}
 
 	function save() {
 		if (sayable) onSave();
@@ -183,18 +173,19 @@
 			</Segmented>
 		{/if}
 	</div>
-	<textarea
-		bind:this={textarea}
+	<Field
+		bind:element={textarea}
+		bind:value={field.text}
+		holds="comment"
+		{voice}
+		testId="comment-input"
 		id={fieldId}
-		data-testid="comment-input"
 		aria-label={label ? undefined : REPLY}
-		class="cr-field cr-field-grows cr-comment-body textarea min-h-(--cr-comment-field-least) w-full"
 		placeholder={PLACEHOLDERS[field.at.kind]}
 		maxlength={review.limits.max_text_length}
-		bind:value={field.text}
 		onkeydown={handleKeydown}
 		onpaste={onPaste}
-	></textarea>
+	/>
 	<AttachedImages attachments={field.attachments} onLost={onImageLost} />
 	{#if failed}
 		<p data-testid="comment-error" class="text-xs text-error">{failed}</p>

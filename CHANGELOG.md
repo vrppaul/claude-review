@@ -184,6 +184,18 @@
   first, with a rule in eslint that refuses it anywhere else. Two rules it
   held that eslint and stylelint hold whole, no `style="…"` or `z-` utility
   in markup and what scrolls being a `cr-scroller`, are left to them.
+- **One look for every field.** A comment, a reply, a review's summary, a
+  message to the agent and both filters stand on the ground they are in,
+  at a field's corner, edged in the reader's mark, or in the agent's
+  colour in a thread the agent raised; the two filters stood on two
+  grounds. The field a reply is begun in is edged as the field it opens,
+  and lit under the pointer as whatever can be pressed is; the avatar
+  beside it stands at the top of its row, as every speaker's does. A
+  message to the agent stands as tall as the summary before anything is
+  written in it, and the settings' checkboxes are the browser's own, in
+  the colour of the reader's controls. Fields, filters and checkboxes are
+  parts of the library, and eslint refuses an `<input>`, a `<textarea>` or
+  a `<select>` anywhere else.
 - **Every size is taken off one scale.** Room between things is one of
   nine steps from 0 to 32 pixels, words one of a few sizes in two weights
   at their size's own leading, a line 1 or 2 pixels, a corner a field's or

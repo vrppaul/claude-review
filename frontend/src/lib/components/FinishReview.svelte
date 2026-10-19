@@ -3,6 +3,7 @@
 	import { anchorPlace, anchorReplaces } from '$lib/anchors/views';
 	import { useReview } from '$lib/review/context';
 	import Button from '$lib/ui/Button.svelte';
+	import Field from '$lib/ui/Field.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import Row from '$lib/ui/Row.svelte';
 	import Tag from '$lib/ui/Tag.svelte';
@@ -65,16 +66,17 @@
 <!-- A summary, and the two ways out: at the pane's foot, in sight however far what was written scrolls -->
 {#snippet sending()}
 	<div class="p-3">
-		<textarea
+		<Field
 			{@attach focusOnDraw}
-			data-testid="review-body"
-			class="cr-field cr-comment-body min-h-(--cr-summary-field-least) w-full rounded-field px-3 py-2"
+			holds="message"
+			voice="reader"
+			testId="review-body"
 			placeholder="Summary — optional, about the change as a whole"
 			maxlength={review.limits.max_text_length}
 			aria-label="Summary of the review"
 			value={submission.body}
-			oninput={(event) => submission.setBody(event.currentTarget.value)}
-		></textarea>
+			oninput={(event: Event & { currentTarget: HTMLTextAreaElement }) => submission.setBody(event.currentTarget.value)}
+		/>
 
 		<div class="mt-2 flex items-center gap-2">
 			<span class="cr-faint hidden text-xs lg:inline">{FINISH_KEYS} sends</span>

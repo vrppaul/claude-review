@@ -343,8 +343,8 @@ const A_ROUND_CORNER = '/(^|\\s)([^\\s:]+:)*rounded(-[a-z]{1,2})?-(full|\\[[^\\]
 // A mark drawn anew need not be round: a corner made round at any radius on a ground laid by a utility is one,
 // `h-1.5 w-1.5 rounded bg-(--cr-unread)` a dot and `rounded bg-(--cr-mark) px-1.5 font-semibold` a count. So a
 // rounded utility and a ground utility among the classes of one element are refused outside the library, as they
-// are in one string a component holds. A field still draws its own box so, until the library draws fields; a mark
-// whose corner and ground are split over two strings, or over a class and a rule of a stylesheet, passes
+// are in one string a component holds. A mark whose corner and ground are split over two strings, or over a class
+// and a rule of a stylesheet, passes
 const A_ROUNDED_CORNER = '/(^|\\s)([^\\s:]+:)*rounded(-\\S+)?(\\s|$)/';
 const A_GROUND = '/(^|\\s)([^\\s:]+:)*bg-\\S/';
 /** What of an element's start tag holds a pattern among its classes: its class list, written any way, or a class directive. */
@@ -352,11 +352,9 @@ function amongItsClasses(pattern) {
 	const inTheList = `SvelteLiteral[value=${pattern}], Literal[value=${pattern}], TemplateElement[value.raw=${pattern}]`;
 	return `:matches(SvelteAttribute[key.name='class'] :matches(${inTheList}), SvelteDirective[kind='Class'][key.name.name=${pattern}])`;
 }
-// The start tag of every element but a field, an input or a textarea
-const NOT_A_FIELD = 'SvelteElement:not([name.name=/^(input|textarea)$/]) > SvelteStartTag';
 const NO_MARKS_OF_UTILITIES = [
 	{
-		selector: `${NOT_A_FIELD}:has(${amongItsClasses(A_ROUNDED_CORNER)}):has(${amongItsClasses(A_GROUND)})`,
+		selector: `SvelteStartTag:has(${amongItsClasses(A_ROUNDED_CORNER)}):has(${amongItsClasses(A_GROUND)})`,
 		message: DRAWN_AS_A_MARK
 	},
 	{ selector: `Literal[value=${A_ROUNDED_CORNER}][value=${A_GROUND}]`, message: DRAWN_AS_A_MARK },
@@ -395,7 +393,7 @@ const NO_MARKS_OF_ITS_OWN = [
 // and no element given the part of one by its role, as a row drawn on a <div> would be — and the classes the page
 // drew its rows with are refused in a class list and in any string
 const PRESSED_IN_THE_LIBRARY =
-	'Draw what can be pressed with lib/ui (Button, IconButton, Link, Segment, Chip, Row, ColumnRail), not with an element of its own.';
+	'Draw what can be pressed with lib/ui (Button, IconButton, Link, Segment, Chip, Row, ColumnRail, FieldButton, Checkbox, CheckChip), not with an element of its own.';
 // The parts an element can be given that are pressed or picked
 const A_PRESSED_PART = '/^(button|link|option|menuitem|menuitemcheckbox|menuitemradio|tab|treeitem|checkbox|switch)$/';
 // The classes the page drew its rows, and the rail of a column put away, with; and the row the reader was at
@@ -434,8 +432,6 @@ const HANDED_THEIR_ELEMENT = [
 // The components that still draw a <button> of their own, each with the part that is to take it or why it is the
 // page's: each is let off the rule that refuses one, and nothing else is
 const STILL_PRESSED_BY_HAND = [
-	// The field a reply is begun in, drawn as the button that opens it: the library's Field is to draw it
-	'src/lib/components/OpenThread.svelte',
 	// The line a thread is folded to, which opens it again: the library's Fold is to draw it
 	'src/lib/components/FoldedThread.svelte',
 	// A line's number, and the ways to the lines a gap leaves out: controls in the code, drawn with its rows
@@ -443,6 +439,13 @@ const STILL_PRESSED_BY_HAND = [
 	'src/lib/components/HunkGap.svelte'
 ];
 const BUTTON_IN_THE_LIBRARY = { elements: ['button'], message: PRESSED_IN_THE_LIBRARY };
+// A field is drawn by the library (Field, Filter, Checkbox, CheckChip), and nothing outside it draws one: the page
+// drew its three fields to write in two ways, with DaisyUI's textarea and with utilities of their own, its two
+// filters on two grounds, the field a reply is begun in as a button of main.css, and its checkboxes as DaisyUI's
+// and as a chip of main.css
+const DRAWN_AS_A_FIELD =
+	'Draw a field with lib/ui (Field, Filter, Checkbox, CheckChip), not with an element of its own.';
+const FIELD_IN_THE_LIBRARY = { elements: ['input', 'textarea', 'select'], message: DRAWN_AS_A_FIELD };
 // A heading is drawn by the library (lib/ui Heading), as what it heads says, and nothing outside it draws one: the
 // tour's step title and a pane's heading named the same type tokens in two rules, a file's name was a heading drawn
 // by a component handed its element, and the story's headings each took their size from utilities of their own
@@ -473,13 +476,14 @@ const NO_BANDS_OF_ITS_OWN = [
 ];
 
 // A part of the library keeps its own room, named after it in tokens.css — a frame's edge and room, a band's
-// reach, a card's, a notice's, a pane's and a track's room, a button's height — and lays out what stands round it
-// itself: the page hung a band's threads past its reach, stood words as far in as a frame's and stacked blocks as
-// far apart as a button is tall, each by naming such a token. Named in a class list or in any string, or set by a
-// style directive, one is refused outside the library; stylelint refuses one named in a stylesheet but the library's
+// reach, a card's, a notice's, a pane's and a track's room, a button's and a field's heights — and lays out what
+// stands round it itself: the page hung a band's threads past its reach, stood words as far in as a frame's and
+// stacked blocks as far apart as a button is tall, each by naming such a token. Named in a class list or in any
+// string, or set by a style directive, one is refused outside the library; stylelint refuses one named in a
+// stylesheet but the library's
 const LAID_OUT_BY_THE_LIBRARY =
 	'Lay out round a part of the library with the library: the tokens of its room are its own.';
-const A_LIBRARY_ROOM = '/--cr-(edge|band|card|notice|pane|track|button)-/';
+const A_LIBRARY_ROOM = '/--cr-(edge|band|card|notice|pane|track|button|field)-/';
 const NO_LAYOUT_ROUND_THE_LIBRARY = [
 	...inClassLists(A_LIBRARY_ROOM, LAID_OUT_BY_THE_LIBRARY),
 	{ selector: `Literal[value=${A_LIBRARY_ROOM}]`, message: LAID_OUT_BY_THE_LIBRARY },
@@ -650,7 +654,7 @@ export default tseslint.config(
 		rules: { 'svelte/no-restricted-html-elements': ['error', SVG_IN_ITS_COMPONENT] }
 	},
 	{
-		// Outside the library a component draws no button or heading of its own either
+		// Outside the library a component draws no button, field or heading of its own either
 		files: ['src/**/*.svelte'],
 		ignores: ['src/lib/ui/**', ...DRAWING_COMPONENTS, ...STILL_PRESSED_BY_HAND],
 		rules: {
@@ -659,24 +663,26 @@ export default tseslint.config(
 				SVG_IN_ITS_COMPONENT,
 				KBD_IN_ITS_COMPONENT,
 				BUTTON_IN_THE_LIBRARY,
+				FIELD_IN_THE_LIBRARY,
 				HEADING_IN_THE_LIBRARY
 			]
 		}
 	},
 	{
-		// A component still pressed by hand draws its button, and no heading of its own
+		// A component still pressed by hand draws its button, and no field or heading of its own
 		files: STILL_PRESSED_BY_HAND,
 		rules: {
 			'svelte/no-restricted-html-elements': [
 				'error',
 				SVG_IN_ITS_COMPONENT,
 				KBD_IN_ITS_COMPONENT,
+				FIELD_IN_THE_LIBRARY,
 				HEADING_IN_THE_LIBRARY
 			]
 		}
 	},
 	{
-		// A component of the page that draws a drawing draws no button or heading of its own
+		// A component of the page that draws a drawing draws no button, field or heading of its own
 		files: DRAWING_COMPONENTS,
 		ignores: ['src/lib/ui/**'],
 		rules: {
@@ -684,6 +690,7 @@ export default tseslint.config(
 				'error',
 				KBD_IN_ITS_COMPONENT,
 				BUTTON_IN_THE_LIBRARY,
+				FIELD_IN_THE_LIBRARY,
 				HEADING_IN_THE_LIBRARY
 			]
 		}

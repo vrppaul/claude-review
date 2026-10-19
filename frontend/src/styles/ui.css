@@ -250,6 +250,94 @@
 }
 
 /*
+ * A field the reader fills (Field, Filter, FieldButton; lib/ui/field.ts):
+ * on the ground of whatever it stands in, at a field's corner, so only its
+ * edge, in the reader's mark or the agent's, says it is theirs to fill; the
+ * edge takes the colour of the keyboard while the field holds it.
+ */
+.cr-ui-field {
+	box-sizing: border-box;
+	width: 100%;
+	border: var(--cr-line) solid var(--cr-mark-border);
+	border-radius: var(--radius-field);
+	background: transparent;
+}
+.cr-ui-field-agent {
+	border-color: var(--cr-agent-border);
+}
+.cr-ui-field:focus {
+	border-color: var(--cr-focus-ring);
+}
+/* What a field says before anything is written in it, in a colour of the palette rather than half the text's */
+.cr-ui-field::placeholder {
+	color: var(--cr-placeholder);
+	opacity: 1;
+}
+/* What is written in one (Field): in a comment's reading face, in from its edge */
+.cr-ui-field-written {
+	padding: --spacing(2) --spacing(3);
+	font-family: var(--font-sans);
+	font-size: var(--cr-comment-size);
+	line-height: var(--cr-comment-leading);
+}
+.cr-ui-field-comment {
+	min-height: var(--cr-field-comment-least);
+	max-height: var(--cr-field-tallest);
+}
+.cr-ui-field-message {
+	min-height: var(--cr-field-message-least);
+}
+/* A filter (Filter): small, in the code's face, as the paths and names it is matched against are */
+.cr-ui-filter {
+	padding: --spacing(1) --spacing(2);
+	font-family: var(--font-mono);
+	font-size: var(--text-xs);
+}
+/* A field not begun (FieldButton): a line tall, saying what the field it opens says before anything is in it */
+.cr-ui-field-button {
+	display: block;
+	height: var(--cr-field-button-height);
+	padding: 0 --spacing(3);
+	color: var(--cr-placeholder);
+	font-size: var(--text-sm);
+	text-align: left;
+}
+
+/* A box ticked or not (Checkbox): the browser's own, in the colour of the reader's controls */
+.cr-ui-checkbox {
+	accent-color: var(--cr-control);
+}
+/*
+ * A choice drawn as a chip (CheckChip), the whole of which is the box to
+ * press: its checkbox laid over all of it, unseen, and the ring of the
+ * keyboard drawn round the chip while the box holds it
+ */
+.cr-ui-check-chip {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	gap: --spacing(1.5);
+	padding: --spacing(1) --spacing(2);
+	border-radius: var(--radius-field);
+	color: var(--cr-muted);
+	font-size: var(--text-xs);
+}
+/* A box ticked is something done: a file read through */
+.cr-ui-check-chip:has(:checked) {
+	color: var(--cr-done);
+}
+.cr-ui-check-chip input {
+	position: absolute;
+	inset: 0;
+	opacity: 0;
+	cursor: inherit;
+}
+.cr-ui-check-chip:has(:focus-visible) {
+	outline: var(--cr-focus-ring-width) solid var(--cr-focus-ring);
+	outline-offset: var(--cr-focus-ring-offset);
+}
+
+/*
  * A pane (PopoverPanel, Dialog, Pane): what the reader opens from a
  * control, what the page puts by one as a note, a modal and the guide's
  * card, all on one ground, edge, corner and lift, at one of the widths of

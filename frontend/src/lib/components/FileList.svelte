@@ -8,6 +8,7 @@
 	import { useReview } from '$lib/review/context';
 	import { fileSectionKey } from '$lib/review/reading-view';
 	import Dot from '$lib/ui/Dot.svelte';
+	import Filter from '$lib/ui/Filter.svelte';
 	import Heading from '$lib/ui/Heading.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import Row from '$lib/ui/Row.svelte';
@@ -150,15 +151,15 @@
 		<Heading tag="h2" heads="pane" testId="sidebar-heading">{headedBy}</Heading>
 	{/snippet}
 
-	<input
-		data-testid="file-filter"
-		type="search"
-		class="mb-2 w-full rounded-field border border-base-300 bg-base-200 px-2 py-1 font-mono text-xs"
-		placeholder="Jump to a {listed.sought}"
-		aria-label="Find a {listed.sought} by its {listed.soughtBy}"
-		bind:value={() => layout.filter, (next: string) => layout.setFilter(next)}
-		onkeydown={onFilterKey}
-	/>
+	<div class="mb-2">
+		<Filter
+			bind:value={() => layout.filter, (next: string) => layout.setFilter(next)}
+			label="Find a {listed.sought} by its {listed.soughtBy}"
+			testId="file-filter"
+			placeholder="Jump to a {listed.sought}"
+			onkeydown={onFilterKey}
+		/>
+	</div>
 
 	{#if review.diff.files.length === 0}
 		<!-- An empty diff, the work undone, say: there is nothing a filter could have missed -->

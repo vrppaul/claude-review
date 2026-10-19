@@ -6,7 +6,7 @@
 	import { useReview } from '$lib/review/context';
 	import { fileSectionKey } from '$lib/review/reading-view';
 	import Button from '$lib/ui/Button.svelte';
-	import Icon from '$lib/ui/Icon.svelte';
+	import CheckChip from '$lib/ui/CheckChip.svelte';
 	import ContentViewToggle from './ContentViewToggle.svelte';
 	import FileTitle from './FileTitle.svelte';
 	import { type Extent, type FileView, linesView } from './file-drawing.svelte';
@@ -99,17 +99,10 @@
 				<ContentViewToggle />
 			{/if}
 
-			<label class="cr-chip cr-pressable">
-				<input
-					data-testid="viewed-toggle"
-					type="checkbox"
-					checked={viewed}
-					onchange={() => review.reading.toggleViewed(file.path)}
-				/>
-				<Icon name={viewed ? 'ticked' : 'box'} size="xs" />
+			<CheckChip checked={viewed} testId="viewed-toggle" onToggle={() => review.reading.toggleViewed(file.path)}>
 				<!-- One box per file, so the box says which file it is about -->
 				Viewed<span class="sr-only">: {file.path}</span>
-			</label>
+			</CheckChip>
 
 			<!-- Its lines fold under the chevron at the header's far end, as everything on the page folds -->
 			<FoldToggle

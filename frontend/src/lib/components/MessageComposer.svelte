@@ -7,6 +7,7 @@
 	import { useReview } from '$lib/review/context';
 	import Button from '$lib/ui/Button.svelte';
 	import Chip from '$lib/ui/Chip.svelte';
+	import Field from '$lib/ui/Field.svelte';
 	import AttachedImages from './AttachedImages.svelte';
 	import { FIELD_KEYS, isFieldChord } from './keymap';
 	import MentionPicker from './MentionPicker.svelte';
@@ -27,7 +28,7 @@
 	const composer = review.conversation.composer;
 	const listId = $props.id();
 
-	let field = $state<HTMLTextAreaElement | null>(null);
+	let field = $state<HTMLTextAreaElement>();
 	// What the field says of the last thing pasted that it could not take, until a message is sent
 	let noted = $state<string | null>(null);
 
@@ -148,11 +149,11 @@
 		</div>
 	{/if}
 	<AttachedImages attachments={composer.attachments} disabled={review.conversation.sending} onLost={onImageLost} />
-	<textarea
-		data-testid="panel-input"
-		bind:this={field}
-		class="cr-field cr-comment-body w-full resize-y rounded-field px-3 py-2"
-		rows="2"
+	<Field
+		bind:element={field}
+		holds="message"
+		voice="reader"
+		testId="panel-input"
 		placeholder="Ask about anything, or paste a screenshot…"
 		maxlength={review.limits.max_text_length}
 		aria-label="Message to the agent"
@@ -163,7 +164,7 @@
 		oninput={onInput}
 		onkeydown={onKeydown}
 		onpaste={onPaste}
-	></textarea>
+	/>
 	<div class="mt-2 flex items-center gap-2">
 		<Button tone="quiet" size="xs" testId="mention-thread" onclick={mention}>@ thread or file</Button>
 		<span class="cr-faint hidden text-xs lg:inline">{FIELD_KEYS} sends</span>

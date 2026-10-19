@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { DiffLayout, Theme } from '$lib/types';
 	import { useReview } from '$lib/review/context';
+	import Checkbox from '$lib/ui/Checkbox.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import IconButton from '$lib/ui/IconButton.svelte';
 	import Segment from '$lib/ui/Segment.svelte';
@@ -54,12 +55,10 @@
 
 			<label class="flex items-center justify-between gap-3">
 				<span>Ignore whitespace</span>
-				<input
-					data-testid="ignore-whitespace"
-					type="checkbox"
-					class="checkbox checkbox-xs"
+				<Checkbox
 					checked={review.settings.current.ignore_whitespace}
-					onchange={(event) => review.setIgnoreWhitespace(event.currentTarget.checked)}
+					testId="ignore-whitespace"
+					onToggle={(checked: boolean) => review.setIgnoreWhitespace(checked)}
 				/>
 			</label>
 		{/if}
@@ -84,12 +83,10 @@
 				Tick on a new reply
 				<span class="cr-faint block text-xs">only in a background tab</span>
 			</span>
-			<input
-				data-testid="reply-sound"
-				type="checkbox"
-				class="checkbox checkbox-xs"
+			<Checkbox
 				checked={review.settings.current.sound_on_replies}
-				onchange={(event) => review.settings.change({ sound_on_replies: event.currentTarget.checked })}
+				testId="reply-sound"
+				onToggle={(checked: boolean) => review.settings.change({ sound_on_replies: checked })}
 			/>
 		</label>
 
@@ -99,12 +96,10 @@
 				Stories
 				<span class="cr-faint block text-xs">Each story spends the agent's tokens</span>
 			</span>
-			<input
-				data-testid="stories"
-				type="checkbox"
-				class="checkbox checkbox-xs"
+			<Checkbox
 				checked={review.settings.current.stories}
-				onchange={(event) => (event.currentTarget.checked ? review.turnStoriesOn() : review.turnStoriesOff())}
+				testId="stories"
+				onToggle={(checked: boolean) => (checked ? review.turnStoriesOn() : review.turnStoriesOff())}
 			/>
 		</label>
 	</div>

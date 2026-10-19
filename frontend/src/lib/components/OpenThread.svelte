@@ -5,6 +5,8 @@
 	import Button from '$lib/ui/Button.svelte';
 	import Card from '$lib/ui/Card.svelte';
 	import type { CardHanging, CardTone } from '$lib/ui/card';
+	import type { FieldVoice } from '$lib/ui/field';
+	import FieldButton from '$lib/ui/FieldButton.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import { messageOf } from '$lib/utils/errors';
 	import { AGENT, raisedByAgent } from '$lib/utils/speakers';
@@ -35,6 +37,8 @@
 	const lastWord = $derived(thread.turns.at(-1)?.author ?? thread.raised_by);
 	const askable = $derived(review.canAsk && awaiting.length === 0 && lastWord !== AGENT);
 	const raised = $derived(raisedByAgent(thread));
+	// The field to reply in is edged in the colour of whose thread it is
+	const voice = $derived<FieldVoice>(raised ? 'agent' : 'reader');
 	// What has gone out with a round reads as read by the other side; what is
 	// still unsent keeps the mark colour
 	const sent = $derived(review.threads.sentInRound(thread.id) !== undefined);
@@ -112,16 +116,15 @@
 					onCancel={() => putAway(replying)}
 					severityPicker={false}
 					hangs="in-its-thread"
+					{voice}
 				/>
 			{:else}
-				<button
-					type="button"
-					data-testid="open-reply"
-					class="cr-reply-field"
+				<FieldButton
+					placeholder={PLACEHOLDERS.reply}
+					{voice}
+					testId="open-reply"
 					onclick={() => writing.openReply(thread.id)}
-				>
-					{PLACEHOLDERS.reply}
-				</button>
+				/>
 			{/if}
 		</ThreadTurn>
 	</div>

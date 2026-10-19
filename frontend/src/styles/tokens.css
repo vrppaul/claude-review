@@ -70,11 +70,16 @@
 	--cr-comment-leading: 1.6;
 	/* How wide written words run before they wrap, prose rendered from Markdown as a comment's */
 	--cr-prose-measure: 72ch;
-	/* The tallest a field being written in grows with its text, before it scrolls instead */
+	/*
+	 * A field (lib/ui/field.ts): the tallest one being written in grows with
+	 * its text, before it scrolls instead; the least each stands while
+	 * nothing is written in it, a comment's and a message's; and how tall the
+	 * field a reply is begun in stands, a press until it is begun
+	 */
 	--cr-field-tallest: 30rem;
-	/* The least a field stands while nothing is written in it: a comment's, and the summary a review is sent with */
-	--cr-comment-field-least: 5rem;
-	--cr-summary-field-least: 4rem;
+	--cr-field-comment-least: 5rem;
+	--cr-field-message-least: 4rem;
+	--cr-field-button-height: 2.25rem;
 	/*
 	 * A story's contents: a node on its axis, which an entry's row (lib/ui
 	 * Row) stands before its title; and so how far in what hangs under an
@@ -125,13 +130,11 @@
 	--cr-thread-inset: --spacing(3);
 	/*
 	 * A thread's turns, a row each: the room between rows, the avatar each
-	 * speaker stands by and the gap between it and what was said, and the
-	 * field a reply is begun in, which its avatar stands level with.
+	 * speaker stands by and the gap between it and what was said.
 	 */
 	--cr-thread-row-gap: --spacing(4);
 	--cr-avatar-size: 1.5rem;
 	--cr-turn-gap: --spacing(3);
-	--cr-reply-field-height: 2.25rem;
 
 	/*
 	 * How tall a button stands (lib/ui/button.ts): among words and small
