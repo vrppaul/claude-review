@@ -35,7 +35,7 @@ describe('a thread whatever it hangs on', () => {
 		const [thread] = review.threads.all;
 		if (!thread) throw new Error('No thread was added');
 
-		const { getByTestId } = render(CommentThread, inReview(review, { thread }));
+		const { getByTestId } = render(CommentThread, inReview(review, { thread, hangs: 'line' }));
 
 		expect(getByTestId('stale-quote').textContent).toContain(viewSays.writtenAgainst[0]);
 		expect(getByTestId('comment-suggestion').textContent).toContain(viewSays.replaces[0]);

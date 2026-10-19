@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { anchorShortPlace } from '$lib/anchors/views';
 	import { useReview } from '$lib/review/context';
+	import Card from '$lib/ui/Card.svelte';
 	import EdgeFrame from '$lib/ui/EdgeFrame.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import { READER, THE_REVIEW } from '$lib/utils/speakers';
@@ -160,7 +161,7 @@ claude-review wait --port &lt;port&gt; --until-event</pre>
 						</div>
 					</EdgeFrame>
 				{:else}
-					<div data-testid="panel-answer" class="cr-answer">
+					<Card tone="quiet" testId="panel-answer">
 						<p class="cr-who"><strong>Agent</strong> {clockTime(turn.at)}</p>
 						<MarkdownRenderer text={turn.body} dense />
 						{#if turn.threads && turn.threads.length > 0}
@@ -175,7 +176,7 @@ claude-review wait --port &lt;port&gt; --until-event</pre>
 								{/each}
 							</div>
 						{/if}
-					</div>
+					</Card>
 				{/if}
 			{/each}
 

@@ -3,6 +3,8 @@
 	import type { CommentField } from '$lib/review/comment-field.svelte';
 	import { useReview } from '$lib/review/context';
 	import Button from '$lib/ui/Button.svelte';
+	import Card from '$lib/ui/Card.svelte';
+	import type { CardHanging, CardTone } from '$lib/ui/card';
 	import Icon from '$lib/ui/Icon.svelte';
 	import { messageOf } from '$lib/utils/errors';
 	import { AGENT, raisedByAgent } from '$lib/utils/speakers';
@@ -13,9 +15,11 @@
 
 	interface Props {
 		thread: Thread;
+		/** Where its card hangs: under its line, under a block of the story's words, or at the head of what it lost its place in. */
+		hangs: CardHanging;
 	}
 
-	let { thread }: Props = $props();
+	let { thread, hangs }: Props = $props();
 	const review = useReview();
 	const writing = review.threads.writing;
 
@@ -34,6 +38,13 @@
 	// What has gone out with a round reads as read by the other side; what is
 	// still unsent keeps the mark colour
 	const sent = $derived(review.threads.sentInRound(thread.id) !== undefined);
+	// Its card's edge says where it stands: the agent's colour when the agent raised it, quieter once it went
+	// out with a round, faint once what it was written on is gone, and the reader's mark while in their hands
+	const tone = $derived.by<CardTone>(() => {
+		if (raised) return 'agent';
+		if (sent) return 'quiet';
+		return thread.anchor.outdated ? 'stale' : 'reader';
+	});
 
 	/** Looking at the thread — clicking in it, or moving the keyboard into it — is what makes its answer read. */
 	function markRead() {
@@ -70,51 +81,48 @@
 	}
 </script>
 
-<div
-	data-testid="thread-card"
-	class={['cr-thread-card', thread.anchor.outdated && 'cr-stale', sent && !raised && 'cr-sent', raised && 'cr-raised']}
-	role="presentation"
-	onclick={markRead}
-	onfocusin={markRead}
->
-	<ThreadConversation {thread} />
+<!-- One card, its turns a row each; what is said in a thread the agent raised is said in the agent's colour -->
+<Card {tone} {hangs} testId="thread-card" role="presentation" onclick={markRead} onfocusin={markRead}>
+	<div class={['cr-thread-rows', raised && 'cr-raised']}>
+		<ThreadConversation {thread} />
 
-	{#if askable || failed}
-		<!-- Hands over everything said so far, the comment included: a row of its own under the last of it, in
-			the column of what was said, rather than beside the empty field below; and why it could not be -->
-		<div data-testid="ask-row" class="cr-thread-row cr-thread-aside flex flex-col items-start gap-2">
-			{#if askable}
-				<Button tone="asking" size="xs" testId="ask-now-thread" onclick={() => asking(review.threads.ask(thread.id))}>
-					<Icon name="conversation" size="xs" />
-					{thread.turns.length === 0 ? 'Ask about this' : 'Ask about all this'}
-				</Button>
-			{/if}
-			{#if failed}
-				<p data-testid="ask-error" class="text-xs text-error">{failed}</p>
-			{/if}
-		</div>
-	{/if}
-
-	<!-- The reader's next turn, the last of the thread: a field to begin it in, the field itself once begun -->
-	<ThreadTurn voice="reply" testId="reply-turn">
-		{#if replying}
-			<CommentBox
-				field={replying}
-				onSave={() => reply(replying)}
-				onAsk={review.canAsk ? () => replyAndAsk(replying) : undefined}
-				onCancel={() => putAway(replying)}
-				severityPicker={false}
-				nested
-			/>
-		{:else}
-			<button
-				type="button"
-				data-testid="open-reply"
-				class="cr-reply-field"
-				onclick={() => writing.openReply(thread.id)}
-			>
-				{PLACEHOLDERS.reply}
-			</button>
+		{#if askable || failed}
+			<!-- Hands over everything said so far, the comment included: a row of its own under the last of it, in
+				the column of what was said, rather than beside the empty field below; and why it could not be -->
+			<div data-testid="ask-row" class="cr-thread-row cr-thread-aside flex flex-col items-start gap-2">
+				{#if askable}
+					<Button tone="asking" size="xs" testId="ask-now-thread" onclick={() => asking(review.threads.ask(thread.id))}>
+						<Icon name="conversation" size="xs" />
+						{thread.turns.length === 0 ? 'Ask about this' : 'Ask about all this'}
+					</Button>
+				{/if}
+				{#if failed}
+					<p data-testid="ask-error" class="text-xs text-error">{failed}</p>
+				{/if}
+			</div>
 		{/if}
-	</ThreadTurn>
-</div>
+
+		<!-- The reader's next turn, the last of the thread: a field to begin it in, the field itself once begun -->
+		<ThreadTurn voice="reply" testId="reply-turn">
+			{#if replying}
+				<CommentBox
+					field={replying}
+					onSave={() => reply(replying)}
+					onAsk={review.canAsk ? () => replyAndAsk(replying) : undefined}
+					onCancel={() => putAway(replying)}
+					severityPicker={false}
+					hangs="in-its-thread"
+				/>
+			{:else}
+				<button
+					type="button"
+					data-testid="open-reply"
+					class="cr-reply-field"
+					onclick={() => writing.openReply(thread.id)}
+				>
+					{PLACEHOLDERS.reply}
+				</button>
+			{/if}
+		</ThreadTurn>
+	</div>
+</Card>

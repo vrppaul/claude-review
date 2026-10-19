@@ -227,7 +227,7 @@ const NO_DAISY_BUTTONS = [
 const HANDED_ITS_TEST_ID = 'Hand a part of the library its test id as testId, which it lays on what it draws.';
 // The parts of the library, by the names the page draws them under
 const LIBRARY_PART =
-	'/^(Button|ColumnBar|Dialog|EdgeFrame|Icon|IconButton|Link|Pane|PaneHead|PopoverPanel|Segment|Segmented)$/';
+	'/^(Button|Card|ColumnBar|Dialog|EdgeFrame|Icon|IconButton|Link|Pane|PaneHead|PopoverPanel|Segment|Segmented)$/';
 const NO_BUTTONS_OF_ITS_OWN = [
 	...NO_DAISY_BUTTONS,
 	...inClassLists(LIBRARY_CLASS, DRAWN_BY_THE_LIBRARY),
@@ -236,6 +236,18 @@ const NO_BUTTONS_OF_ITS_OWN = [
 		selector: `SvelteElement[kind='component'][name.name=${LIBRARY_PART}] > SvelteStartTag > SvelteAttribute[key.name='data-testid']`,
 		message: HANDED_ITS_TEST_ID
 	}
+];
+// A card is drawn by the library (Card), and nothing outside it draws one its own way: the page drew a thread's
+// card, the agent's answer and the facts of a story on its way as three boxes of its own, at two corners, on two
+// grounds, with two rooms round what they held, and placed the thread card's tail by a rule reaching into it.
+// Their classes are refused in a class list and in any string a component holds
+const DRAWN_AS_A_CARD = 'Draw a card with lib/ui Card, in its tone and where it hangs, not with classes of its own.';
+// The classes the page drew its cards with
+const A_CARD_OF_ITS_OWN = '/(^|\\s)([^\\s:]+:)*(cr-thread-card|cr-answer|cr-wait-facts)(\\s|$)/';
+const NO_CARDS_OF_ITS_OWN = [
+	...inClassLists(A_CARD_OF_ITS_OWN, DRAWN_AS_A_CARD),
+	{ selector: `Literal[value=${A_CARD_OF_ITS_OWN}]`, message: DRAWN_AS_A_CARD },
+	{ selector: `TemplateElement[value.raw=${A_CARD_OF_ITS_OWN}]`, message: DRAWN_AS_A_CARD }
 ];
 
 // A part of the library takes no look from outside: what the page needs of one is a variant inside it, with its
@@ -397,7 +409,13 @@ export default tseslint.config(
 				'error',
 				{ selector: 'typeParameter', format: ['PascalCase'], custom: { regex: TYPE_NAME, match: true } }
 			],
-			'no-restricted-syntax': ['error', ...NO_NESTED_HELPERS, ...NO_INLINE_STYLING, ...NO_BUTTONS_OF_ITS_OWN],
+			'no-restricted-syntax': [
+				'error',
+				...NO_NESTED_HELPERS,
+				...NO_INLINE_STYLING,
+				...NO_BUTTONS_OF_ITS_OWN,
+				...NO_CARDS_OF_ITS_OWN
+			],
 			// A function an interface asks for is a property: a method's parameters are compared
 			// loosely, so a value that takes only one kind could stand where every kind is passed
 			'@typescript-eslint/method-signature-style': ['error', 'property'],
@@ -443,7 +461,8 @@ export default tseslint.config(
 				...NO_INLINE_STYLING,
 				...NO_PAGE_LOOKUPS,
 				...NO_CHOOSING,
-				...NO_BUTTONS_OF_ITS_OWN
+				...NO_BUTTONS_OF_ITS_OWN,
+				...NO_CARDS_OF_ITS_OWN
 			]
 		}
 	},
@@ -455,7 +474,8 @@ export default tseslint.config(
 				...NO_NESTED_HELPERS,
 				...NO_INLINE_STYLING,
 				...NO_PAGE_LOOKUPS,
-				...NO_BUTTONS_OF_ITS_OWN
+				...NO_BUTTONS_OF_ITS_OWN,
+				...NO_CARDS_OF_ITS_OWN
 			]
 		}
 	},

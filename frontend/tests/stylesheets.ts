@@ -33,11 +33,15 @@ export interface Paint {
 	alpha: number;
 }
 
-/** What of an element is drawn in a colour: its words, or the ground under them. */
-export type Drawn = 'color' | 'background';
+/** What of an element is drawn in a colour: its words, the ground under them, or the edge round it. */
+export type Drawn = 'color' | 'background' | 'border-color';
 
 // The utility that draws each part in a token, and the token it names
-const UTILITIES: Record<Drawn, RegExp> = { color: /^text-\((--[a-z0-9-]+)\)$/, background: /^bg-\((--[a-z0-9-]+)\)$/ };
+const UTILITIES: Record<Drawn, RegExp> = {
+	color: /^text-\((--[a-z0-9-]+)\)$/,
+	background: /^bg-\((--[a-z0-9-]+)\)$/,
+	'border-color': /^border-\((--[a-z0-9-]+)\)$/
+};
 
 /** The declarations of one block of tokens.css. */
 function block(selector: string): Map<string, string> {

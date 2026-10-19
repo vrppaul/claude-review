@@ -3,6 +3,7 @@
 	import { useReview } from '$lib/review/context';
 	import type { StoryWait } from '$lib/review/story-wait';
 	import Button from '$lib/ui/Button.svelte';
+	import Card from '$lib/ui/Card.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import type { IconName } from '$lib/ui/icons';
 	import StorySketch from './StorySketch.svelte';
@@ -79,16 +80,19 @@
 				It reads the whole change and writes the overview and the chapters in one go. A big change takes a few minutes.
 			</p>
 		</div>
-		<ul data-testid="story-wait-facts" class="cr-wait-facts">
-			{#each factsOnTheWay(wait, review.clock) as fact (fact.says)}
-				<li data-testid="story-wait-fact" class={['cr-wait-fact', DRAWN_AS[fact.state].class]}>
-					<span class="cr-wait-mark"><Icon name={DRAWN_AS[fact.state].mark} size="sm" /></span>
-					<span>{fact.says}</span>
-					<!-- A count that moves every second is read when asked for, never read out as it moves -->
-					<span data-testid="story-wait-when" class="cr-wait-when" aria-live="off">{fact.when}</span>
-				</li>
-			{/each}
-		</ul>
+		<!-- The facts of it, on a card: a row each -->
+		<Card tone="quiet" testId="story-wait-facts">
+			<ul class="flex flex-col gap-2.5">
+				{#each factsOnTheWay(wait, review.clock) as fact (fact.says)}
+					<li data-testid="story-wait-fact" class={['cr-wait-fact', DRAWN_AS[fact.state].class]}>
+						<span class="cr-wait-mark"><Icon name={DRAWN_AS[fact.state].mark} size="sm" /></span>
+						<span>{fact.says}</span>
+						<!-- A count that moves every second is read when asked for, never read out as it moves -->
+						<span data-testid="story-wait-when" class="cr-wait-when" aria-live="off">{fact.when}</span>
+					</li>
+				{/each}
+			</ul>
+		</Card>
 		<div class="flex flex-wrap justify-center gap-2.5">
 			{@render readFilesMeanwhile()}
 			{#if wait.kind === 'writing'}

@@ -4,6 +4,8 @@
 	import { isComposingText } from '$lib/dom/keyboard';
 	import { useReview } from '$lib/review/context';
 	import Button from '$lib/ui/Button.svelte';
+	import Card from '$lib/ui/Card.svelte';
+	import type { CardHanging } from '$lib/ui/card';
 	import Segment from '$lib/ui/Segment.svelte';
 	import Segmented from '$lib/ui/Segmented.svelte';
 	import { hasSuggestion, withSuggestion } from '$lib/utils/suggestion';
@@ -40,11 +42,14 @@
 		suggestFrom?: string[] | undefined;
 		/** A reply has no weight of its own: the thread's belongs to the comment. */
 		severityPicker?: boolean;
-		/** Written inside a thread, which already draws the card around it. */
-		nested?: boolean;
+		/**
+		 * Where it is written: as the card it becomes, hanging where that will; or as a reply, inside the thread it
+		 * joins, whose card is drawn round it already.
+		 */
+		hangs: CardHanging | 'in-its-thread';
 	}
 
-	let { field, onSave, onAsk, onCancel, label, suggestFrom, severityPicker = true, nested = false }: Props = $props();
+	let { field, onSave, onAsk, onCancel, label, suggestFrom, severityPicker = true, hangs }: Props = $props();
 	const review = useReview();
 	const fieldId = $props.id();
 
@@ -145,11 +150,20 @@
 
 <!-- A comment being written is drawn as the card it becomes: where the card will stand, as wide, pointing up
 	at what it is about. A reply is written inside the card it joins, and is no card of its own -->
-<div
-	data-testid="comment-box"
-	class={nested ? 'space-y-2' : 'cr-thread-card'}
-	data-tour={field.at.kind === 'new' ? 'comment-field' : undefined}
->
+{#if hangs === 'in-its-thread'}
+	<div data-testid="comment-box" class="space-y-2">
+		{@render writing()}
+	</div>
+{:else}
+	<Card tone="reader" {hangs} testId="comment-box" data-tour={field.at.kind === 'new' ? 'comment-field' : undefined}>
+		<div class="cr-thread-rows">
+			{@render writing()}
+		</div>
+	</Card>
+{/if}
+
+<!-- The field and what goes with it: where it hangs, what it asks for, its images, and what can be done with it -->
+{#snippet writing()}
 	<div class="flex items-center gap-3">
 		{#if label}
 			<label for={fieldId} class="cr-comment-ref font-mono text-xs">{label}</label>
@@ -219,4 +233,4 @@
 			{FIELD_KEYS} to save.
 		{/if}
 	</p>
-</div>
+{/snippet}

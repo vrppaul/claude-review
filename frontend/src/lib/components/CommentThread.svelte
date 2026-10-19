@@ -2,15 +2,18 @@
 	import type { Thread } from '$lib/types';
 	import { anchorLabel, anchorPlace } from '$lib/anchors/views';
 	import { useReview } from '$lib/review/context';
+	import type { CardHanging } from '$lib/ui/card';
 	import CommentBox from './CommentBox.svelte';
 	import FoldedThread from './FoldedThread.svelte';
 	import OpenThread from './OpenThread.svelte';
 
 	interface Props {
 		thread: Thread;
+		/** Where it hangs, open or being rewritten: under its line, under a block of the story's words, or at the head of what it lost its place in. */
+		hangs: CardHanging;
 	}
 
-	let { thread }: Props = $props();
+	let { thread, hangs }: Props = $props();
 	const review = useReview();
 
 	let container: HTMLElement | undefined = $state();
@@ -46,10 +49,11 @@
 			onSave={() => editDone(() => review.threads.say(editing))}
 			onCancel={() => editDone(() => review.threads.writing.discard(editing))}
 			label={anchorLabel(thread.anchor)}
+			{hangs}
 		/>
 	{:else if review.threads.reading.isFolded(thread.id)}
 		<FoldedThread {thread} />
 	{:else}
-		<OpenThread {thread} />
+		<OpenThread {thread} {hangs} />
 	{/if}
 </div>

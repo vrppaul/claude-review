@@ -83,7 +83,7 @@
 <!-- A block of the agent's words the reader may ask about, as a line is commented on: banded while it is
 	pointed at, it offers "Ask about this"; what is asked hangs under it as a thread, as under a line, and
 	outside any frame of the block's own -->
-<div data-testid={testId} class="cr-askable-block">
+<div data-testid={testId}>
 	{#if frame}
 		<EdgeFrame {...frame} testId="askable-frame">
 			{@render band()}
@@ -96,7 +96,7 @@
 			band reaches below the words into the room under them, and the cards begin past it -->
 		<div data-testid="askable-hangs" class="cr-askable-hangs">
 			{#each threads as thread (thread.id)}
-				<CommentThread {thread} />
+				<CommentThread {thread} hangs="block" />
 			{/each}
 			{#if field}
 				<div class="cr-thread-hang">
@@ -106,6 +106,7 @@
 						onAsk={review.canAsk ? () => askComment(review, field) : undefined}
 						onCancel={() => putAway(field)}
 						label={blockLabel(block)}
+						hangs="block"
 					/>
 				</div>
 			{/if}

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { useReview } from '$lib/review/context';
 	import Button from '$lib/ui/Button.svelte';
+	import Card from '$lib/ui/Card.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import { messageOf } from '$lib/utils/errors';
 	import { timeAgo } from '$lib/utils/time';
@@ -37,49 +38,52 @@
 	}
 </script>
 
-<!-- The agent at work: how long for, and what it says it is doing, replaced as it changes -->
-<div data-testid={messageId ? 'panel-working' : 'panel-work'} class="cr-answer flex flex-col gap-2">
-	<div class="flex items-center gap-3">
-		<span class="cr-who"><strong>Agent</strong></span>
-		{#if listening}
-			<TypingIndicator />
+<!-- The agent at work, on a card as its answer will be: how long for, and what it says it is doing, replaced
+	as it changes -->
+<Card tone="quiet" testId={messageId ? 'panel-working' : 'panel-work'}>
+	<div class="flex flex-col gap-2">
+		<div class="flex items-center gap-3">
+			<span class="cr-who"><strong>Agent</strong></span>
+			{#if listening}
+				<TypingIndicator />
+			{/if}
+			<div class="flex-1"></div>
+			<span class="cr-faint text-xs">
+				{listening ? `working ${timeAgo(since, review.clock.now)}` : AGENT_STOPPED_LISTENING}
+			</span>
+			{#if messageId}
+				<Button tone="secondary" size="xs" testId="stop-message" onclick={takeBack}>{TAKE_BACK}</Button>
+			{/if}
+		</div>
+		{#if failed}
+			<p data-testid="stop-error" class="text-xs text-error">{failed}</p>
 		{/if}
-		<div class="flex-1"></div>
-		<span class="cr-faint text-xs">
-			{listening ? `working ${timeAgo(since, review.clock.now)}` : AGENT_STOPPED_LISTENING}
-		</span>
-		{#if messageId}
-			<Button tone="secondary" size="xs" testId="stop-message" onclick={takeBack}>{TAKE_BACK}</Button>
+		{#if work?.text}
+			<p data-testid="panel-progress" class="cr-progress text-sm">{work.text}</p>
+		{/if}
+		{#if work && work.steps.length > 0}
+			<!-- Branches of the same work, drawn hanging off it: known by where they
+				stand, since the agent may name the same step twice -->
+			<ul data-testid="progress-steps" class="cr-branches">
+				{#each work.steps as step, position (position)}
+					<li class={['cr-branch', step.done && 'cr-branch-done']}>
+						{#if step.done}
+							<span class="cr-branch-mark"><Icon name="check" size="xs" /></span>
+						{:else}
+							<span class="cr-branch-mark"><span class="cr-dot"></span></span>
+						{/if}
+						<span>{step.text}</span>
+					</li>
+				{/each}
+			</ul>
+		{/if}
+		{#if work && work.files.length > 0}
+			<div class="flex flex-wrap gap-1">
+				<!-- Known by where they stand, since the agent may name a file twice -->
+				{#each work.files as path, position (position)}
+					<FileChip {path} testId="progress-file" />
+				{/each}
+			</div>
 		{/if}
 	</div>
-	{#if failed}
-		<p data-testid="stop-error" class="text-xs text-error">{failed}</p>
-	{/if}
-	{#if work?.text}
-		<p data-testid="panel-progress" class="cr-progress text-sm">{work.text}</p>
-	{/if}
-	{#if work && work.steps.length > 0}
-		<!-- Branches of the same work, drawn hanging off it: known by where they
-			stand, since the agent may name the same step twice -->
-		<ul data-testid="progress-steps" class="cr-branches">
-			{#each work.steps as step, position (position)}
-				<li class={['cr-branch', step.done && 'cr-branch-done']}>
-					{#if step.done}
-						<span class="cr-branch-mark"><Icon name="check" size="xs" /></span>
-					{:else}
-						<span class="cr-branch-mark"><span class="cr-dot"></span></span>
-					{/if}
-					<span>{step.text}</span>
-				</li>
-			{/each}
-		</ul>
-	{/if}
-	{#if work && work.files.length > 0}
-		<div class="flex flex-wrap gap-1">
-			<!-- Known by where they stand, since the agent may name a file twice -->
-			{#each work.files as path, position (position)}
-				<FileChip {path} testId="progress-file" />
-			{/each}
-		</div>
-	{/if}
-</div>
+</Card>

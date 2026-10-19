@@ -418,9 +418,9 @@ describe('the head of the first turn of a thread', () => {
 		review = openReview({ files: [file] });
 	});
 
-	/** The first turn of the review's first thread, drawn open as the page draws it. */
+	/** The first turn of the review's first thread, drawn open as the page draws it, under its line. */
 	function firstTurn() {
-		const { getByTestId } = render(CommentThread, inReview(review, { thread: review.threads.all[0] }));
+		const { getByTestId } = render(CommentThread, inReview(review, { thread: review.threads.all[0], hangs: 'line' }));
 		return getByTestId('thread-question');
 	}
 
@@ -439,7 +439,10 @@ describe('the head of the first turn of a thread', () => {
 		const id = review.threads.add(onTheAddedLine('Why 3?'));
 		review.threads.addTurn(id, { author: 'reader', body: 'And where did 2 go?', images: [] });
 
-		const { getAllByTestId } = render(CommentThread, inReview(review, { thread: review.threads.all[0] }));
+		const { getAllByTestId } = render(
+			CommentThread,
+			inReview(review, { thread: review.threads.all[0], hangs: 'line' })
+		);
 		const [, second] = getAllByTestId('thread-question');
 
 		expect(within(second).queryByTestId('resolve-comment')).toBeNull();

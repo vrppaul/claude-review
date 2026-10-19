@@ -58,28 +58,37 @@
 	--cr-story-gutter: 1.5rem;
 
 	/*
+	 * A card (lib/ui Card) — a thread, a comment being written, the agent's
+	 * answer and its work in the panel, the facts of a story on its way: how
+	 * far what it holds stands in from its edge, above and below it and at
+	 * either side. And, where it hangs under what it is about, how far in from
+	 * its left edge its tail points up at that: under a line, or under a block
+	 * of a story's words, where the block's heading is.
+	 */
+	--cr-card-room-block: 0.875rem;
+	--cr-card-room-inline: 1rem;
+	--cr-card-tail-under-a-line: 6rem;
+	--cr-card-tail-under-a-block: 2.5rem;
+
+	/*
 	 * A frame with an edge at its start (lib/ui EdgeFrame) — the agent's words
 	 * in a story, a warning, what the reader said in the panel: its edge, how
 	 * far its words stand in from it, and from its other side as far as a
-	 * thread's card stands what it holds in from its own, so a thread folded
-	 * to a frame keeps what stands at its end where it stood; and above and
-	 * below them as far as the band of a block the reader may ask about
-	 * reaches past its words. The band fills the frame to its edge.
+	 * card stands what it holds in from its own, so a thread folded to a
+	 * frame keeps what stands at its end where it stood; and above and below
+	 * them as far as the band of a block the reader may ask about reaches
+	 * past its words. The band fills the frame to its edge.
 	 */
 	--cr-edge-width: 2px;
 	--cr-edge-inset: 1.25rem;
-	--cr-edge-end-room: 1rem;
+	--cr-edge-end-room: var(--cr-card-room-inline);
 	--cr-band-reach: 0.5rem;
 
 	/*
-	 * Where a thread hangs under a line: how far in from each side of the
-	 * line it stands, and how far from the left edge of its card the tail
-	 * points up at the line. One on a block of a story's words stands in as
-	 * far, its tail where the block's heading is (.cr-askable-block says so).
+	 * Where a thread hangs under a line, or under a block of a story's words:
+	 * how far in from each side of it the thread's card stands
 	 */
 	--cr-thread-inset: 0.75rem;
-	--cr-thread-tail-at: 6rem;
-	--cr-block-thread-tail-at: 2.5rem;
 	/*
 	 * A thread's turns, a row each: the room between rows, the avatar each
 	 * speaker stands by and the gap between it and what was said, and the
@@ -153,8 +162,8 @@
 	--cr-shadow-unread-edge: inset 0 0 0 1px var(--cr-unread);
 	/* A line inside the edge of the control the page introduces the agent's way of reading at: Story, while it does */
 	--cr-shadow-introduced-edge: inset 0 0 0 1px var(--cr-agent);
-	/* What lifts a thread's card off what it hangs under */
-	--cr-shadow-thread: 0 8px 24px rgb(0 0 0 / 0.25);
+	/* What lifts a card off what it hangs under: a thread's, or a comment being written */
+	--cr-shadow-hanging: 0 8px 24px rgb(0 0 0 / 0.25);
 	/* The card's ground in a ring round an avatar in a thread, which parts it from the spine behind it */
 	--cr-shadow-avatar-ring: 0 0 0 3px var(--color-base-200);
 
@@ -311,7 +320,11 @@
 	--cr-mark-tint: rgb(91 141 239 / 0.14);
 	/* What the tour lays over everything it is not pointing at */
 	--cr-shade: rgb(6 9 14 / 0.6);
-	--cr-agent: #b39ae6;
+	/*
+	 * The agent's colour reads at 4.5:1 as words on its chip under the pointer on a card — a file named in its
+	 * answer — with a tenth to spare for how a browser rounds the layers
+	 */
+	--cr-agent: #bca6ea;
 	/* The edge of a pane, and of a button that acts on what is read: a step above the lines between surfaces */
 	--cr-pane-edge: #2f3a48;
 	/*
@@ -390,7 +403,8 @@
 	--cr-mark-text: #1b4fa9;
 	--cr-mark-tint: rgb(44 107 217 / 0.12);
 	--cr-shade: rgb(27 36 48 / 0.45);
-	--cr-agent: #6645b2;
+	/* As in the dark theme: words on its chip under the pointer on a card at 4.5:1, a tenth to spare */
+	--cr-agent: #5f40a8;
 	--cr-pane-edge: #c3cdd9;
 	--cr-axis: #d0d8e2;
 	--cr-node-edge: #b3bfcd;

@@ -33,7 +33,7 @@
 
 <!-- What hangs under a line: its threads, and the comments being written there -->
 {#each commenting.threadsUnder(place) as thread (thread.id)}
-	<CommentThread {thread} />
+	<CommentThread {thread} hangs="line" />
 {/each}
 {#each commenting.fieldsUnder(place) as field (field.key)}
 	<div class="cr-thread-hang">
@@ -44,6 +44,7 @@
 			onCancel={() => putAway(field)}
 			label={labelOf(field)}
 			suggestFrom={field.at.quote}
+			hangs="line"
 		/>
 	</div>
 {/each}

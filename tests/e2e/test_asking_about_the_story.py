@@ -18,7 +18,7 @@ from tests.e2e.browsers_loop import in_the_browsers_loop
 from tests.e2e.folds import CHEVRON, CHEVRON_AT_THE_END, POINTING_DOWN, POINTING_UP, TURN
 from tests.e2e.laid_out import SHOWN_WHOLE_ACROSS
 from tests.e2e.painted import light, on_a_probe, painted
-from tests.e2e.thread_card import CARD_INSET, EDGES, MOST_UNDER_ITS_LINE, TAIL_DRAWN
+from tests.e2e.thread_card import CARD_INSET, EDGES, MOST_UNDER_ITS_LINE, TAIL_AT, TAIL_DRAWN
 from tests.helpers import ReviewServers, RunningReview, committed_repository, repository_opening, write_files
 from tests.stories import as_the_agent_writes, planted, step, story_of
 
@@ -271,6 +271,18 @@ async def test_a_comment_written_on_the_storys_words_stands_in_from_them_as_a_ca
     assert (card_left - block_left, block_right - card_right) == (pytest.approx(CARD_INSET), pytest.approx(CARD_INSET))
     assert 0 < card_top - words_end <= MOST_UNDER_ITS_LINE
     assert frame_end - card_end >= CARD_INSET
+
+
+async def test_a_thread_on_the_storys_words_points_up_at_them_from_as_far_in_as_a_tail_under_a_block_stands(
+    review: RunningReview, page: Page
+) -> None:
+    doubt = await _read_as_story(page, review)
+
+    await _ask_about(page, doubt, "Was it needed?")
+
+    assert await doubt.get_by_test_id("thread-card").evaluate(TAIL_AT) == await on_a_probe(
+        page, "left", "var(--cr-card-tail-under-a-block)"
+    )
 
 
 async def test_a_thread_on_a_chapters_own_words_hangs_below_the_frame_they_stand_in(

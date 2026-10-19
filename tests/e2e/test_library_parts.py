@@ -10,12 +10,21 @@ another meaning fails here in either theme.
 from pathlib import Path
 
 import pytest
+from httpx import AsyncClient
 from playwright.async_api import Page
 from pydantic import BaseModel, ConfigDict
 
 from tests.e2e.browsers_loop import in_the_browsers_loop
 from tests.e2e.painted import light, on_a_probe, painted
-from tests.helpers import ReviewServers, RunningReview, committed_repository, repository_opening, write_files
+from tests.helpers import (
+    EVENTS_ROUTE,
+    GLANCE_AT_EVENTS,
+    ReviewServers,
+    RunningReview,
+    committed_repository,
+    repository_opening,
+    write_files,
+)
 
 # One file, changed on a line, so the first line number the keys reach is in it
 CHANGED_FILE = "main.py"
@@ -116,6 +125,49 @@ IN_THE_DELETE_QUESTION = [
 ]
 # A button that is an icon alone, at each size, as a review opens: the tree's, put away, and the settings
 ICONS_ALONE = [("hide-sidebar", XS), ("settings-toggle", SM)]
+# Where the agent says something in the panel, and what it is doing while it does it
+SAY_ROUTE = "/api/say"
+PROGRESS_ROUTE = "/api/progress"
+# How far what an element holds stands in from its edge, above and at its start, and how wide that edge is
+ROOM = """(element) => {
+    const style = getComputedStyle(element);
+    return [style.paddingTop, style.paddingLeft, style.borderTopWidth];
+}"""
+# The edge round a card: a line
+A_LINE = "1px"
+# The shadow a card casts: lifted off what it hangs under, or lying where it is drawn
+HANGING = "var(--cr-shadow-hanging)"
+LYING = "none"
+
+
+class Card(BaseModel):
+    """A card the page draws, by its test id, and the shadow it casts there."""
+
+    model_config = ConfigDict(frozen=True)
+
+    test_id: str
+    lift: str
+
+
+class CardLook(BaseModel):
+    """How a card is drawn: its ground and corner, the room round what it holds and the edge round that, its shadow."""
+
+    model_config = ConfigDict(frozen=True)
+
+    ground: str
+    corner: str
+    room: tuple[str, str, str]
+    lift: str
+
+
+# Every card the page draws, each where a review shows it: a comment being written and the thread it becomes, under
+# their line; the agent's answer in the panel and its work while it does it; the facts of a story on its way
+BEING_WRITTEN = Card(test_id="comment-box", lift=HANGING)
+A_THREAD = Card(test_id="thread-card", lift=HANGING)
+AN_ANSWER = Card(test_id="panel-answer", lift=LYING)
+AT_WORK = Card(test_id="panel-work", lift=LYING)
+ON_ITS_WAY = Card(test_id="story-wait-facts", lift=LYING)
+EVERY_CARD = [BEING_WRITTEN, A_THREAD, AN_ANSWER, AT_WORK, ON_ITS_WAY]
 
 
 @pytest.fixture
@@ -154,6 +206,30 @@ async def _comment_on_the_first_line(page: Page) -> None:
     await page.keyboard.type("Name it after the unit")
     await page.keyboard.press("Control+Enter")
     await page.get_by_test_id("thread-card").wait_for()
+
+
+async def _an_agent_attaches_and_answers(review: RunningReview) -> None:
+    """An agent looks for what the reader handed over, says something in the panel, and says what it is doing."""
+    async with AsyncClient(base_url=review.url) as agent:
+        await agent.post(EVENTS_ROUTE, params=GLANCE_AT_EVENTS)
+        await agent.post(SAY_ROUTE, json={"body": "The greeting is shorter now."})
+        await agent.post(PROGRESS_ROUTE, json={"text": "Reading the tests of the greeting"})
+
+
+async def _wait_for_a_story(page: Page) -> None:
+    """Turn stories on behind the gear, and read the review as its story while the agent writes it."""
+    await page.get_by_test_id("settings-toggle").click()
+    await page.get_by_test_id("stories").check()
+    await page.keyboard.press("Escape")
+    await page.get_by_test_id("read-as-story").click()
+    await page.get_by_test_id(ON_ITS_WAY.test_id).wait_for()
+
+
+async def _look_of(page: Page, card: Card) -> CardLook:
+    """How a card is drawn, as the browser works it out."""
+    drawn = page.get_by_test_id(card.test_id)
+    look = await painted(drawn)
+    return CardLook(ground=look.ground, corner=look.radius, room=tuple(await drawn.evaluate(ROOM)), lift=look.edge)
 
 
 async def _expect_painted_by_its_tokens(page: Page, tone: Tone) -> None:
@@ -260,3 +336,35 @@ async def test_a_columns_grip_under_the_pointer_shows_the_edge_of_the_one_the_re
     await grip.hover()
 
     assert (await painted(grip)).ground == await on_a_probe(page, "backgroundColor", "var(--cr-selected-edge)")
+
+
+@pytest.mark.parametrize("scheme", SCHEMES)
+async def test_every_card_stands_on_one_ground_corner_and_room_inside_a_line_lifted_only_where_it_hangs_under_a_line(
+    review: RunningReview, page: Page, scheme: str
+) -> None:
+    await _open_in(page, review, scheme)
+    await page.keyboard.press("j")
+    await page.keyboard.press("Enter")
+    being_written = await _look_of(page, BEING_WRITTEN)
+    await page.keyboard.type("Name it after the unit")
+    await page.keyboard.press("Control+Enter")
+    await page.get_by_test_id(A_THREAD.test_id).wait_for()
+    await _an_agent_attaches_and_answers(review)
+    await page.get_by_test_id(AT_WORK.test_id).wait_for()
+    in_the_files = [being_written, *[await _look_of(page, card) for card in [A_THREAD, AN_ANSWER, AT_WORK]]]
+
+    await _wait_for_a_story(page)
+
+    looks = [*in_the_files, await _look_of(page, ON_ITS_WAY)]
+    ground = await on_a_probe(page, "backgroundColor", "var(--color-base-200)")
+    corner = await on_a_probe(page, "borderTopLeftRadius", "var(--radius-box)")
+    room = (
+        await on_a_probe(page, "paddingTop", "var(--cr-card-room-block)"),
+        await on_a_probe(page, "paddingLeft", "var(--cr-card-room-inline)"),
+        A_LINE,
+    )
+    every_card = len(EVERY_CARD)
+    assert [look.ground for look in looks] == [ground] * every_card
+    assert [look.corner for look in looks] == [corner] * every_card
+    assert [look.room for look in looks] == [room] * every_card
+    assert [look.lift for look in looks] == [await on_a_probe(page, "boxShadow", card.lift) for card in EVERY_CARD]

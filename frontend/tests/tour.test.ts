@@ -87,7 +87,7 @@ function drawCommentField() {
 	const line = { side: 'new', number: 1 } as const;
 	review.threads.writing.pickLines(FILE.path, { side: 'new', startLine: 1, endLine: 1, opensBelow: line });
 	const [field] = review.threads.writing.onLinesOf(FILE.path);
-	render(CommentBox, inReview(review, { field, onSave: ignore, onCancel: ignore }));
+	render(CommentBox, inReview(review, { field, onSave: ignore, onCancel: ignore, hangs: 'line' }));
 }
 
 /** A thread whose question is with the agent, not answered yet. */
@@ -95,13 +95,13 @@ async function drawAwaitedQuestion() {
 	fakeServer().answer('POST /api/ask', null);
 	const id = review.threads.add(newComment({ file: FILE.path, body: 'Why 3?' }));
 	await review.threads.ask(id);
-	render(CommentThread, inReview(review, { thread: review.threads.all[0] }));
+	render(CommentThread, inReview(review, { thread: review.threads.all[0], hangs: 'line' }));
 }
 
 function drawAnswer() {
 	const id = review.threads.add(newComment({ file: FILE.path, body: 'Why 3?' }));
 	review.threads.receiveReply(id, 'It was 2 before the retry path', null);
-	render(CommentThread, inReview(review, { thread: review.threads.all[0] }));
+	render(CommentThread, inReview(review, { thread: review.threads.all[0], hangs: 'line' }));
 }
 
 function drawAgentPanel() {

@@ -66,6 +66,16 @@ const DRAWN: { said: string; text: string; grounds: string[] }[] = [
 		grounds: ['--color-base-100', '--cr-agent-chip', '--cr-hover']
 	},
 	{
+		said: "an agent's chip, on the card of its answer or its work",
+		text: '--cr-agent',
+		grounds: ['--color-base-200', '--cr-agent-chip']
+	},
+	{
+		said: "an agent's chip on the card of its answer or its work, pointed at",
+		text: '--cr-agent',
+		grounds: ['--color-base-200', '--cr-agent-chip', '--cr-hover']
+	},
+	{
 		said: "a thread chip in the reader's message, pointed at",
 		text: '--cr-mark-text',
 		grounds: ['--color-base-100', '--cr-mark-tint', '--cr-mark-chip', '--cr-hover']

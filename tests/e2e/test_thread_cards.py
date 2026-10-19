@@ -12,7 +12,8 @@ from playwright.async_api import Locator, Page, expect
 
 from tests.e2e.browsers_loop import in_the_browsers_loop
 from tests.e2e.folds import CHEVRON, POINTING_DOWN, POINTING_UP, TURN
-from tests.e2e.thread_card import CARD_INSET, EDGES, MOST_UNDER_ITS_LINE, TAIL_DRAWN
+from tests.e2e.painted import on_a_probe
+from tests.e2e.thread_card import CARD_INSET, EDGES, MOST_UNDER_ITS_LINE, TAIL_AT, TAIL_DRAWN
 from tests.helpers import ReviewServers, RunningReview, committed_repository, repository_opening, write_files
 
 # One file, changed on a line, so the first line number the keys reach is in it
@@ -67,6 +68,16 @@ async def test_a_thread_under_its_line_points_up_at_it(review: RunningReview, pa
     await _comment_on_the_first_line(page, review)
 
     assert await page.get_by_test_id("thread-card").evaluate(TAIL_DRAWN)
+
+
+async def test_a_thread_under_its_line_points_up_at_it_from_as_far_in_as_a_tail_under_a_line_stands(
+    review: RunningReview, page: Page
+) -> None:
+    await _comment_on_the_first_line(page, review)
+
+    assert await page.get_by_test_id("thread-card").evaluate(TAIL_AT) == await on_a_probe(
+        page, "left", "var(--cr-card-tail-under-a-line)"
+    )
 
 
 async def test_a_comment_being_written_stands_where_its_card_will_as_wide_and_pointing_up_at_its_line(

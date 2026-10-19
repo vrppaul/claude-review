@@ -14,6 +14,10 @@ let review: Review;
 
 // The longest text a test's server takes, short enough to type past
 const SHORTEST = 5;
+// Where a comment is written, as the page draws it: on lines, as the card it becomes under them; a reply, inside
+// the thread it joins
+const UNDER_ITS_LINE = 'line';
+const IN_ITS_THREAD = 'in-its-thread';
 
 beforeEach(() => {
 	review = openReview();
@@ -30,7 +34,13 @@ function newField(): CommentField {
 function drawnSaving(field: CommentField, label = 'Line 5') {
 	return render(
 		CommentBox,
-		inReview(review, { field, onSave: () => review.threads.say(field), onCancel: vi.fn(), label })
+		inReview(review, {
+			field,
+			onSave: () => review.threads.say(field),
+			onCancel: vi.fn(),
+			label,
+			hangs: UNDER_ITS_LINE
+		})
 	);
 }
 
@@ -76,7 +86,7 @@ describe('a comment field', () => {
 	it('cannot save an empty comment', () => {
 		const { getByTestId } = render(
 			CommentBox,
-			inReview(review, { field: newField(), onSave: vi.fn(), onCancel: vi.fn() })
+			inReview(review, { field: newField(), onSave: vi.fn(), onCancel: vi.fn(), hangs: UNDER_ITS_LINE })
 		);
 
 		expect((getByTestId('save-comment') as HTMLButtonElement).disabled).toBe(true);
@@ -84,7 +94,10 @@ describe('a comment field', () => {
 
 	it('closes when the reader cancels', async () => {
 		const onCancel = vi.fn();
-		const { getByTestId } = render(CommentBox, inReview(review, { field: newField(), onSave: vi.fn(), onCancel }));
+		const { getByTestId } = render(
+			CommentBox,
+			inReview(review, { field: newField(), onSave: vi.fn(), onCancel, hangs: UNDER_ITS_LINE })
+		);
 
 		await userEvent.click(getByTestId('cancel-comment'));
 
@@ -94,7 +107,13 @@ describe('a comment field', () => {
 	it('says where the comment hangs', () => {
 		const { getByText } = render(
 			CommentBox,
-			inReview(review, { field: newField(), onSave: vi.fn(), onCancel: vi.fn(), label: 'Lines 10-15' })
+			inReview(review, {
+				field: newField(),
+				onSave: vi.fn(),
+				onCancel: vi.fn(),
+				label: 'Lines 10-15',
+				hangs: UNDER_ITS_LINE
+			})
 		);
 
 		expect(getByText('Lines 10-15')).toBeTruthy();
@@ -103,7 +122,12 @@ describe('a comment field', () => {
 	it('reopens with what the comment already says', () => {
 		const { getByTestId } = render(
 			CommentBox,
-			inReview(review, { field: editOf({ body: 'existing text' }), onSave: vi.fn(), onCancel: vi.fn() })
+			inReview(review, {
+				field: editOf({ body: 'existing text' }),
+				onSave: vi.fn(),
+				onCancel: vi.fn(),
+				hangs: UNDER_ITS_LINE
+			})
 		);
 
 		const input = getByTestId('comment-input') as HTMLTextAreaElement;
@@ -144,7 +168,8 @@ describe('suggesting a replacement', () => {
 				onSave: vi.fn(),
 				onCancel: vi.fn(),
 				label: 'Lines 3',
-				suggestFrom: ['    if x:', '        return 1']
+				suggestFrom: ['    if x:', '        return 1'],
+				hangs: UNDER_ITS_LINE
 			})
 		);
 
@@ -163,7 +188,8 @@ describe('suggesting a replacement', () => {
 				onSave: vi.fn(),
 				onCancel: vi.fn(),
 				label: 'Line 3',
-				suggestFrom: ['x = 1']
+				suggestFrom: ['x = 1'],
+				hangs: UNDER_ITS_LINE
 			})
 		);
 
@@ -177,7 +203,13 @@ describe('suggesting a replacement', () => {
 	it('offers nothing to suggest when no lines were given', () => {
 		const { queryByTestId } = render(
 			CommentBox,
-			inReview(review, { field: newField(), onSave: vi.fn(), onCancel: vi.fn(), label: 'Line 3' })
+			inReview(review, {
+				field: newField(),
+				onSave: vi.fn(),
+				onCancel: vi.fn(),
+				label: 'Line 3',
+				hangs: UNDER_ITS_LINE
+			})
 		);
 
 		expect(queryByTestId('suggest-change')).toBeNull();
@@ -192,7 +224,8 @@ describe('suggesting a replacement', () => {
 				onSave: vi.fn(),
 				onCancel: vi.fn(),
 				label: 'Line 3',
-				suggestFrom: ['x = 1']
+				suggestFrom: ['x = 1'],
+				hangs: UNDER_ITS_LINE
 			})
 		);
 
@@ -227,7 +260,13 @@ describe('how a comment is meant', () => {
 	it('reopens for editing with the mark it was saved under', async () => {
 		const { getByTestId } = render(
 			CommentBox,
-			inReview(review, { field: editOf({ severity: 'blocker' }), onSave: vi.fn(), onCancel: vi.fn(), label: 'Line 1' })
+			inReview(review, {
+				field: editOf({ severity: 'blocker' }),
+				onSave: vi.fn(),
+				onCancel: vi.fn(),
+				label: 'Line 1',
+				hangs: UNDER_ITS_LINE
+			})
 		);
 
 		expect(getByTestId('severity-blocker').getAttribute('aria-pressed')).toBe('true');
@@ -258,7 +297,7 @@ describe('a comment field, to whoever cannot see it', () => {
 		const field = newField();
 		const { getByLabelText, getByTestId } = render(
 			CommentBox,
-			inReview(review, { field, onSave: vi.fn(), onCancel: vi.fn(), severityPicker: false, nested: true })
+			inReview(review, { field, onSave: vi.fn(), onCancel: vi.fn(), severityPicker: false, hangs: IN_ITS_THREAD })
 		);
 
 		expect(getByLabelText('Reply')).toBe(getByTestId('comment-input'));
@@ -272,7 +311,13 @@ describe('a comment field, to whoever cannot see it', () => {
 
 		const replying = render(
 			CommentBox,
-			inReview(review, { field: reply, onSave: vi.fn(), onCancel: vi.fn(), severityPicker: false, nested: true })
+			inReview(review, {
+				field: reply,
+				onSave: vi.fn(),
+				onCancel: vi.fn(),
+				severityPicker: false,
+				hangs: IN_ITS_THREAD
+			})
 		);
 		expect(replying.getByTestId('comment-input').getAttribute('placeholder')).toBe('Reply…');
 		replying.unmount();
@@ -286,7 +331,10 @@ describe('putting a comment away', () => {
 	/** A field drawn as the page draws it, with what putting it away does recorded. */
 	function drawnPuttingAway(field: CommentField) {
 		const onCancel = vi.fn();
-		const drawn = render(CommentBox, inReview(review, { field, onSave: vi.fn(), onCancel, label: 'Line 5' }));
+		const drawn = render(
+			CommentBox,
+			inReview(review, { field, onSave: vi.fn(), onCancel, label: 'Line 5', hangs: UNDER_ITS_LINE })
+		);
 		return { ...drawn, onCancel };
 	}
 

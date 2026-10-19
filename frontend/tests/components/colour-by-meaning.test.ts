@@ -12,7 +12,7 @@ import { raisedNote } from '$lib/review/panel-notes';
 import type { Review } from '$lib/review/review.svelte';
 import { work } from '../agent-work';
 import { addedLine, diffFile, hunk } from '../diff';
-import { listeningToThePanel } from '../fake-server';
+import { fakeServer, listeningToThePanel } from '../fake-server';
 import { newComment } from '../new-comment';
 import { inReview, openReview } from '../review';
 import { colourDrawn, type Drawn, paint, THEMES } from '../stylesheets';
@@ -30,6 +30,12 @@ const DONE = '--cr-add-text';
 const NOBODY = '--color-base-300';
 // Quiet, as words that say less than those beside them
 const QUIET = '--cr-muted';
+// The edge of a thread's card, by where the thread stands: in the reader's hands, raised by the agent, its lines
+// gone, and gone out with a round, a line between surfaces like any card's
+const THE_READERS_EDGE = '--cr-mark-line';
+const THE_AGENTS_EDGE = '--cr-agent-line';
+const LOST_ITS_LINES = '--cr-faint';
+const GONE_OUT = '--color-base-300';
 
 /** That a part of an element is drawn in a meaning's colour, in every theme, whatever token stands between. */
 function expectDrawnIn(element: Element | null | undefined, drawn: Drawn, meaning: string): void {
@@ -98,7 +104,7 @@ describe('each thing is drawn in the colour of what it means', () => {
 		const [thread] = review.threads.all;
 		review.threads.receiveReply(thread.id, 'Because the caller retries.', null);
 
-		const inThread = render(CommentThread, inReview(review, { thread: review.threads.all[0] }));
+		const inThread = render(CommentThread, inReview(review, { thread: review.threads.all[0], hangs: 'line' }));
 		const inList = render(RepliesMenu, inReview(review));
 
 		expectDrawnIn(inThread.getByTestId('comment-unread'), 'color', AGENTS);
@@ -173,5 +179,46 @@ describe('each thing is drawn in the colour of what it means', () => {
 		const { container } = render(PresenceDot, inReview(review));
 
 		expectDrawnIn(container.querySelector('span'), 'background', AGENTS);
+	});
+});
+
+describe("a thread's card says by its edge where the thread stands", () => {
+	/** The card of the review's first thread, drawn open under its line. */
+	function cardOfTheThread(review: Review): HTMLElement {
+		const { getByTestId } = render(CommentThread, inReview(review, { thread: review.threads.all[0], hangs: 'line' }));
+		return getByTestId('thread-card');
+	}
+
+	it("is edged in the reader's mark while the thread is in their hands", () => {
+		const review = answeredReview();
+		review.threads.add(newComment({ file: 'src/routes.py', startLine: 2, body: 'Why here?' }));
+
+		expectDrawnIn(cardOfTheThread(review), 'border-color', THE_READERS_EDGE);
+	});
+
+	it("is edged in the agent's colour when the agent raised it", () => {
+		const review = answeredReview();
+		review.threads.raise('raised-1', lineAnchor('src/routes.py', 'new', 2, 2, ['y = 3']), 'On purpose?', 'question');
+
+		expectDrawnIn(cardOfTheThread(review), 'border-color', THE_AGENTS_EDGE);
+	});
+
+	it('is edged faint once what it was written on is gone', () => {
+		const review = answeredReview();
+		review.threads.add({
+			...newComment({ file: 'src/routes.py', startLine: 2, body: 'Why here?' }),
+			anchor: { ...lineAnchor('src/routes.py', 'new', 2, 2, ['y = 3']), outdated: true }
+		});
+
+		expectDrawnIn(cardOfTheThread(review), 'border-color', LOST_ITS_LINES);
+	});
+
+	it('is edged as any card is once it went out with a round, quieter than one still in the reader’s hands', async () => {
+		fakeServer().answer('POST /api/submit', { markdown: '## x', comment_count: 1, round: 1, ended: false });
+		const review = answeredReview();
+		review.threads.add(newComment({ file: 'src/routes.py', startLine: 2, body: 'Why here?' }));
+		await review.submission.submit(false);
+
+		expectDrawnIn(cardOfTheThread(review), 'border-color', GONE_OUT);
 	});
 });
