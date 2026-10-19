@@ -4,10 +4,11 @@
  * (tokens.css) alone. A part takes no look from outside: what the page needs
  * of one is a tone, a size or a variant written here, with the reason a
  * reader needs it. Outside of the library the page draws its own drawings —
- * code rows, a thread's spine, a story's contents and sketch — and takes two
- * classes of this stylesheet for them: the states of whatever can be pressed
- * (cr-pressable), and a comment's reading face (cr-comment-body). No other
- * stylesheet selects a class of this one (stylelint).
+ * code rows, a thread's spine, a story's contents and sketch — and takes
+ * three things of this stylesheet for them: the states of whatever can be
+ * pressed (cr-pressable), a comment's reading face (cr-comment-body), and
+ * what is kept in sight (data-role kept-in-sight). No other stylesheet
+ * selects any of them or a class of this one (stylelint).
  *
  * Outside Tailwind's layers, as the review's own classes are, so they win
  * over any utility on the same element.
@@ -276,6 +277,18 @@
 	font-family: var(--font-sans);
 	font-size: var(--cr-comment-size);
 	line-height: var(--cr-comment-leading);
+}
+
+/*
+ * What is kept in sight at the top of a reading area while what it heads
+ * scrolls under it — a section's bar (Bar), and the page's slot for a
+ * chapter's bar — whatever says so by its role, and nothing else. The page's
+ * own code reads the same role to know which lines and panes stand behind it
+ * (`inSightFrom`, dom/in-sight.ts), so nothing is in sight to the eye that
+ * the page does not know of. Where each stands is its own rule's to say.
+ */
+[data-role='kept-in-sight'] {
+	position: sticky;
 }
 
 /*
@@ -587,18 +600,19 @@
 	border-bottom: var(--cr-line) solid var(--color-base-300);
 	background: var(--color-base-200);
 }
-.cr-ui-bar-page {
+/* The review's and a section's: one room, their controls wrapping onto another row where the line is too short */
+.cr-ui-bar-page,
+.cr-ui-bar-section {
 	flex-wrap: wrap;
 	gap: --spacing(1.5) --spacing(3);
+	padding: --spacing(2) --spacing(3);
+}
+.cr-ui-bar-page {
 	min-height: var(--cr-header-least-height);
-	padding: --spacing(1.5) --spacing(4);
 }
 .cr-ui-bar-section {
 	top: var(--cr-top-room, 0);
 	z-index: var(--cr-layer-over-content);
-	flex-wrap: wrap;
-	gap: --spacing(1) --spacing(3);
-	padding: --spacing(2) --spacing(3);
 }
 .cr-ui-bar-column {
 	gap: --spacing(2);
@@ -1310,6 +1324,7 @@
 }
 /* One cut where its room ends, in a line that holds one line alone */
 .cr-ui-failure-cut {
+	display: block;
 	min-width: 0;
 	overflow: hidden;
 	text-overflow: ellipsis;

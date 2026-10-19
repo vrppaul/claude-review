@@ -250,17 +250,20 @@ const NO_INLINE_STYLING = [
 // said a review could not be opened. A class of any of its components is refused in a class list everywhere, inside
 // the library too; and in any string a component holds, as a constant of classes holds them as much as markup does,
 // where the class is no word of a sentence: `btn`, `kbd` and `badge` alone, as `<svelte:element this="kbd">` would
-// draw a key past the rule on elements below, and any component's variant, `alert-error`, `modal-box`. Tailwind's
-// own `table`, `collapse`, `list-…`, `select-…` and `mask-…` share names with DaisyUI's, so only the forms Tailwind
-// has not are refused: held against every class DaisyUI 5.5 writes and Tailwind 4.2 lists, the rule refuses no
-// class of Tailwind's, and lets through of DaisyUI's only `mask-circle`, which Tailwind has too, the names of its
-// states and sizes inside other rules (`is-*`, `lg`), and the classes of other libraries it styles (`pika-*`)
+// draw a key past the rule on elements below, and any component's variant, `alert-error`, `modal-box`,
+// `toggle-primary`: a component whose name is a word the page's test ids also start with (toggle, step, diff,
+// progress, list) by its variants' own words, its colours, sizes and states. Tailwind's own `table`, `collapse`,
+// `list-…`, `select-…` and `mask-…` share names with DaisyUI's, so only the forms Tailwind has not are refused: held
+// against every class DaisyUI 5.5 writes and Tailwind 4.2 lists, the two rules refuse no class of Tailwind's, and
+// let through of DaisyUI's only `mask-circle`, which Tailwind has too, the names of its states and sizes inside
+// other rules (`is-*`, `lg`), and the classes of other libraries it styles (`pika-*`); in a string, its components'
+// bare names as well, which are words of a sentence
 const DRAWN_BY_A_PART =
 	"Draw it with a part of lib/ui (a Button, a Field, a Checkbox, a Tag, a Key…), not with a class of DaisyUI's components.";
 const DAISY_COMPONENT =
 	'/(^|\\s)([^\\s:]+:)*((alert|avatar|badge|breadcrumbs|btn|cally|card|carousel|chat|checkbox|countdown|diff|divider|dock|drawer|dropdown|fab|fieldset|file-input|floating-label|footer|hero|hover-3d|hover-gallery|image-full|indicator|input|join|kbd|label|link|loading|menu|mockup|modal|navbar|progress|radial-progress|radio|range|rating|skeleton|stack|stat|stats|status|step|steps|swap|tab|tabs|text-rotate|textarea|timeline|toast|toggle|tooltip|validator)(-[a-z0-9-]+)?|collapse-(title|content|arrow|plus|open|close)|filter(-reset)?|list(-row|-col-(grow|wrap))?|mask(-(squircle|heart|hexagon(-2)?|decagon|pentagon|diamond|square|star(-2)?|triangle(-[2-4])?|half-[12]))?|row-hover|select(-(bordered|ghost|primary|secondary|accent|neutral|info|success|warning|error|xs|sm|md|lg|xl))?|table-(zebra|pin-rows|pin-cols|xs|sm|md|lg|xl))(\\s|$)/';
 const DAISY_COMPONENT_IN_A_STRING =
-	'/(^|\\s)((btn|kbd|badge)(-[a-z0-9-]+)?|join-item|(alert|avatar|card|carousel|chat|checkbox|collapse|countdown|divider|dock|drawer|dropdown|fieldset|file-input|hero|indicator|loading|menu|mockup|modal|navbar|radial-progress|radio|rating|skeleton|stat|steps|swap|tabs|textarea|timeline|toast|tooltip|validator)-[a-z0-9-]+)(\\s|$)/';
+	'/(^|\\s)((btn|kbd|badge|file-input|radial-progress)(-[a-z0-9-]+)?|join-item|(alert|avatar|card|carousel|chat|checkbox|collapse|countdown|divider|dock|drawer|dropdown|fieldset|hero|indicator|loading|menu|mockup|modal|navbar|radio|rating|skeleton|stat|steps|swap|tabs|textarea|timeline|toast|tooltip|validator)-[a-z0-9-]+|(diff|fab|footer|input|link|progress|range|select|stack|stats|status|step|tab|toggle)-(primary|secondary|accent|neutral|info|success|warning|error|ghost|xs|sm|md|lg|xl|hover|active|disabled|content|horizontal|vertical|center|title|top|bottom|start|end|close|main-action|flower|item-[12]|resizer|icon)|table-(zebra|pin-rows|pin-cols|xs|sm|md|lg|xl)|list-(row|col-grow|col-wrap)|mask-(squircle|heart|hexagon(-2)?|decagon|pentagon|diamond|square|star(-2)?|triangle(-[2-4])?|half-[12])|filter-reset|floating-label|hover-3d|hover-gallery|image-full|text-rotate|row-hover)(\\s|$)/';
 const NO_DAISY_COMPONENTS = [
 	...inClassLists(DAISY_COMPONENT, DRAWN_BY_A_PART),
 	{ selector: `Literal[value=${DAISY_COMPONENT_IN_A_STRING}]`, message: DRAWN_BY_A_PART },
@@ -563,7 +566,8 @@ const NO_FAILURES_OF_ITS_OWN = [
 // element are refused outside the library
 const DRAWN_AS_A_BAR =
 	'Draw a bar across what it heads with lib/ui Bar, not with a raised ground and a rule of its own.';
-const A_RAISED_GROUND = '/(^|\\s)([^\\s:]+:)*bg-base-200(\\s|$)/';
+// The raised ground, by its utility or its token named: `bg-base-200`, `bg-(--color-base-200)`
+const A_RAISED_GROUND = '/(^|\\s)([^\\s:]+:)*bg-(base-200|\\(--color-base-200\\))(\\s|$)/';
 const A_RULE_ACROSS = '/(^|\\s)([^\\s:]+:)*border-[bty](\\s|$)/';
 const NO_BARS_OF_ITS_OWN = [
 	{
@@ -590,17 +594,31 @@ const DRAWN_BY_THE_LIBRARY_ALONE = [
 ];
 
 // The tour lights a place by the name a component marks it with (lib/guide/tour.ts), which svelte-check holds to the
-// tour's stops only when it is written through tourStop: it reads no value of a data- attribute. So a name written
-// there bare is refused: the words of the attribute, or a string that is its value, either branch of a condition
-// or what stands after an `&&`
+// tour's stops only when it is written through tourStop: it reads no value of a data- attribute. So outside the
+// library a name is written as a tourStop(…) call, or as such a call in a branch of a condition whose other branch is
+// undefined, or after an `&&`; written any other way — words, a string, a constant, a member, a prop typed string —
+// it is refused. Inside the library a part hands on the name it was handed so
 const NAMED_THROUGH_THE_TOUR =
 	"Name a place for the tour with tourStop(…) from lib/guide/tour.ts, which holds the name to the tour's stops.";
 const TOUR_ATTRIBUTE = "SvelteAttribute[key.name='data-tour']";
+const A_TOUR_STOP = "CallExpression[callee.name='tourStop']";
+const NOT_A_TOUR_STOP = `:not(${A_TOUR_STOP})`;
 const NO_UNCHECKED_TOUR_NAMES = [
 	{ selector: `${TOUR_ATTRIBUTE} > SvelteLiteral`, message: NAMED_THROUGH_THE_TOUR },
-	{ selector: `${TOUR_ATTRIBUTE} > SvelteMustacheTag > Literal`, message: NAMED_THROUGH_THE_TOUR },
 	{
-		selector: `${TOUR_ATTRIBUTE} :matches(ConditionalExpression > Literal.consequent, ConditionalExpression > Literal.alternate, LogicalExpression > Literal.right)`,
+		selector: `${TOUR_ATTRIBUTE} > SvelteMustacheTag > :not(${A_TOUR_STOP}, ConditionalExpression, LogicalExpression)`,
+		message: NAMED_THROUGH_THE_TOUR
+	},
+	{
+		selector: `${TOUR_ATTRIBUTE} > SvelteMustacheTag > ConditionalExpression > ${NOT_A_TOUR_STOP}.consequent:not(Identifier[name='undefined'])`,
+		message: NAMED_THROUGH_THE_TOUR
+	},
+	{
+		selector: `${TOUR_ATTRIBUTE} > SvelteMustacheTag > ConditionalExpression > ${NOT_A_TOUR_STOP}.alternate:not(Identifier[name='undefined'])`,
+		message: NAMED_THROUGH_THE_TOUR
+	},
+	{
+		selector: `${TOUR_ATTRIBUTE} > SvelteMustacheTag > LogicalExpression > ${NOT_A_TOUR_STOP}.right`,
 		message: NAMED_THROUGH_THE_TOUR
 	}
 ];
@@ -611,7 +629,7 @@ const NO_UNCHECKED_TOUR_NAMES = [
  * names again all it still refuses; each such list is written here, from the same parts.
  */
 function refusedSyntax(...besides) {
-	return ['error', ...NO_NESTED_HELPERS, ...NO_INLINE_STYLING, ...NO_UNCHECKED_TOUR_NAMES, ...besides.flat()];
+	return ['error', ...NO_NESTED_HELPERS, ...NO_INLINE_STYLING, ...besides.flat()];
 }
 
 // A pane opened from a control is a Popover, which stands by the control; a modal stands over the whole review,
@@ -814,7 +832,11 @@ export default tseslint.config(
 				'error',
 				{ selector: 'typeParameter', format: ['PascalCase'], custom: { regex: TYPE_NAME, match: true } }
 			],
-			'no-restricted-syntax': refusedSyntax(DRAWN_BY_THE_LIBRARY_ALONE, NO_ELEMENTS_HANDED_THEIR_KIND),
+			'no-restricted-syntax': refusedSyntax(
+				DRAWN_BY_THE_LIBRARY_ALONE,
+				NO_ELEMENTS_HANDED_THEIR_KIND,
+				NO_UNCHECKED_TOUR_NAMES
+			),
 			// A function an interface asks for is a property: a method's parameters are compared
 			// loosely, so a value that takes only one kind could stand where every kind is passed
 			'@typescript-eslint/method-signature-style': ['error', 'property'],
@@ -858,14 +880,20 @@ export default tseslint.config(
 				NO_PAGE_LOOKUPS,
 				NO_CHOOSING,
 				DRAWN_BY_THE_LIBRARY_ALONE,
-				NO_ELEMENTS_HANDED_THEIR_KIND
+				NO_ELEMENTS_HANDED_THEIR_KIND,
+				NO_UNCHECKED_TOUR_NAMES
 			)
 		}
 	},
 	{
 		files: CHOOSERS,
 		rules: {
-			'no-restricted-syntax': refusedSyntax(NO_PAGE_LOOKUPS, DRAWN_BY_THE_LIBRARY_ALONE, NO_ELEMENTS_HANDED_THEIR_KIND)
+			'no-restricted-syntax': refusedSyntax(
+				NO_PAGE_LOOKUPS,
+				DRAWN_BY_THE_LIBRARY_ALONE,
+				NO_ELEMENTS_HANDED_THEIR_KIND,
+				NO_UNCHECKED_TOUR_NAMES
+			)
 		}
 	},
 	{

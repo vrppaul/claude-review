@@ -58,10 +58,16 @@ const THE_SCALES_WORDS = {
 // words kept for a screen reader scroll with them and never stretch the page. Its rule, and the reading area's own,
 // say so where they turn this off
 const SCROLLS_DOWN = { '/^overflow(-y)?$/': ['/\\b(auto|scroll)\\b/'] };
-// A class of the library's stylesheet is the library's to draw: its parts' own, and the two the page's drawings and
-// words take from it, the states of what can be pressed and a comment's reading face. A rule of another stylesheet
-// selecting one would lay a look over a part from outside, so none may
-const CLASSES_OF_THE_LIBRARY = ['/\\.cr-(ui-|pressable\\b|comment-body\\b)/'];
+// A class of the library's stylesheet is the library's to draw: its parts' own, and the three the page's drawings
+// and words take from it, the states of what can be pressed, a comment's reading face and what is kept in sight. A
+// rule of another stylesheet selecting one would lay a look over a part from outside, so none may
+const SELECTORS_OF_THE_LIBRARY = [
+	'/\\.cr-(ui-|(pressable|comment-body)(?![\\w-]))/',
+	'/\\[data-role=[\'"]?kept-in-sight/'
+];
+// A comment's reading face is written once, in the library's rule of it (cr-comment-body): another stylesheet naming
+// its size or leading writes it again, as a story's prose and its waiting room did
+const THE_COMMENT_FACE = ['/var\\(--cr-comment-(size|leading)\\)/'];
 
 export default {
 	rules: {
@@ -76,13 +82,14 @@ export default {
 				...THE_STEP_MULTIPLIED,
 				...A_NOTICE_WASH,
 				...THE_COLOUR_OF_FAILING,
+				...THE_COMMENT_FACE,
 				...A_LIBRARY_ROOM
 			],
 			...SCROLLS_DOWN
 		},
 		'no-duplicate-selectors': true,
 		'declaration-no-important': true,
-		'selector-disallowed-list': CLASSES_OF_THE_LIBRARY
+		'selector-disallowed-list': SELECTORS_OF_THE_LIBRARY
 	},
 	overrides: [
 		{

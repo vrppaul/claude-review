@@ -21,9 +21,9 @@
 	};
 
 	/** Whether the reader has finished with what it heads, a file viewed, whose bar steps back: a section's alone. */
-	type Heading = { heads: 'section'; viewed?: boolean } | { heads: Exclude<Heads, 'section'>; viewed?: never };
+	type Headed = { heads: 'section'; viewed?: boolean } | { heads: Exclude<Heads, 'section'>; viewed?: never };
 
-	type Props = Heading & {
+	type Props = Headed & {
 		testId: string;
 		/** What heads it, and its controls. */
 		children: Snippet;

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import type { TurnAuthor } from '$lib/types';
-	import type { TourTarget } from '$lib/guide/tour';
+	import { tourStop, type TourTarget } from '$lib/guide/tour';
 	import Icon from '$lib/ui/Icon.svelte';
 	import type { IconName } from '$lib/ui/icons';
 	import { AGENT, READER } from '$lib/utils/speakers';
@@ -44,7 +44,7 @@
 	said. The row draws its own piece of the spine that joins the avatars down the card -->
 <div
 	data-testid={testId}
-	data-tour={tour}
+	data-tour={tour && tourStop(tour)}
 	class={['cr-thread-row cr-thread-turn', speaker.look, landing && 'cr-answer-new']}
 >
 	<span class="cr-avatar"><Icon name={speaker.icon} size="xs" /></span>

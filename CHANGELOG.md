@@ -207,7 +207,7 @@
   where it stood in five forms at three sizes; a review that cannot be
   opened says so the same way, where DaisyUI's alert said it. A list or a
   view with nothing in it — the replies, the tree, the bases, the diff, a
-  file, the panel — says so in muted words in the middle of its room, at a
+  file, the panel — says so in muted words centred across its room, at a
   list's size in a list and a view's in a view, where it stood in five
   forms. An icon that says something by its colour — a check of something
   done, the bin, the agent's book, a warning, the base in force, the
@@ -218,7 +218,8 @@
 - **The pane a control opens, its question and its note are the
   library's.** Popover, the question asked before something is lost, the
   note put by a control, a fold's toggle and a column's grip moved into
-  `frontend/src/lib/ui/`, which builds on nothing of the page. Every name
+  `frontend/src/lib/ui/`, which builds on nothing of the page but what it
+  does to the document (`frontend/src/lib/dom/`). Every name
   the tour lights a place by is written through `tourStop`, which holds it
   to the tour's stops, or handed to a component whose prop is typed so:
   two of the eleven written were held before, and eslint refuses one
@@ -229,9 +230,10 @@
   the page's own ground, and lying over what is read on a screen too
   narrow to keep it beside; the panel's field to write in stands at its
   foot. The review's header, a file's and a story piece's, and a column's
-  are one bar, at its room for each; a file's bar steps back once the file
-  is viewed. eslint refuses a raised ground ruled off above or below
-  drawn outside the library.
+  are one bar, the review's and a file's at one room; a file's bar steps
+  back once the file is viewed. eslint refuses a raised ground ruled off
+  above or below in markup outside the library. A chapter's bar stays the
+  story's own drawing, as the story's area lays out round its height.
 - **Images, links and a file's letter are the library's.** An image pasted
   into what is said is one thumbnail, uploading, lost or shown, which
   opens at its full size or is taken off by its cross; the news's picture

@@ -93,8 +93,13 @@
 				</button>
 			{:else}
 				<span class="cr-muted flex flex-1 items-center gap-2 px-4">
-					<Icon name="expand" size="xs" />
-					{reading ? 'Reading…' : hiddenLines}
+					{#if reading}
+						<BreathingDots tone="inherited" testId="reading-step-dots" />
+						Reading
+					{:else}
+						<Icon name="expand" size="xs" />
+						{hiddenLines}
+					{/if}
 				</span>
 				{#if stepUp}
 					{@const said = `Show ${sizeOf(stepUp)} more lines, up from the change below`}

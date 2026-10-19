@@ -222,8 +222,11 @@ of it is built yet.
       string and handed to `class={…}`, which no gate of a class list
       reads; a list's or a view's "nothing here" drawn by hand rather than
       with `EmptyNote`, muted words with room round them that no pattern
-      tells from other words. A rule that each look class has one owner is
-      to hold them.
+      tells from other words; a tour's name in a spread of attributes; a
+      bar drawn by a rule of `main.css`, its raised ground and its rule
+      across in one rule, which no stylesheet gate reads as a pair; a
+      DaisyUI component's bare name held in a string, a word of a sentence
+      as often. A rule that each look class has one owner is to hold them.
 - [ ] `feat(ui)`: whether a pane keeps its side while the page scrolls under
       it: one now opens the other way the moment it stops fitting.
 - [ ] `feat(ui)`: whether a notice other than a broken part's announces

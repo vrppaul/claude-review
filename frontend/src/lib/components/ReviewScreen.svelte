@@ -8,6 +8,7 @@
 	import Column from '$lib/ui/Column.svelte';
 	import NoticeBar from '$lib/ui/NoticeBar.svelte';
 	import { COMMENTS, counted } from '$lib/utils/words';
+	import { AGENT_COLUMN } from './agent-column';
 	import AgentPanel from './AgentPanel.svelte';
 	import { reportBroken } from './broken-parts';
 	import DiffNotice from './DiffNotice.svelte';
@@ -106,11 +107,8 @@
 				{#snippet failed(error, retry)}
 					<!-- Where the panel stood, as wide, so the review beside it does not move -->
 					<Column
-						side="right"
+						{...AGENT_COLUMN}
 						width={review.layout.agentPanel}
-						landmark="aside"
-						label="The agent"
-						resizing="Resize the panel"
 						testIds={{ column: 'agent-panel-failed', resize: 'panel-resize' }}
 					>
 						<PartFailed what="The agent panel" {error} {retry} />

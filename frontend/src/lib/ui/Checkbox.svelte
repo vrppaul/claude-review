@@ -27,11 +27,11 @@
 
 <!-- A choice that is on or off: its words and its box in one label, so the words name the box -->
 <!-- The box, seen in a setting's colour, or laid unseen over a chip, which draws its own -->
-{#snippet box(seen: boolean)}
+{#snippet box(drawnAs: string | null)}
 	<input
 		type="checkbox"
 		data-testid={testId}
-		class={[seen && 'cr-ui-checkbox']}
+		class={drawnAs}
 		{checked}
 		onchange={(event) => onToggle(event.currentTarget.checked)}
 	/>
@@ -45,11 +45,11 @@
 				<span class="cr-ui-setting-note">{note}</span>
 			{/if}
 		</span>
-		{@render box(true)}
+		{@render box('cr-ui-checkbox')}
 	</label>
 {:else}
 	<label class="cr-ui-check-chip cr-pressable">
-		{@render box(false)}
+		{@render box(null)}
 		<Icon name={checked ? 'ticked' : 'box'} size="xs" />
 		{@render children()}
 	</label>

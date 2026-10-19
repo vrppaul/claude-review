@@ -322,17 +322,6 @@
 	font-variant-numeric: tabular-nums;
 }
 
-/*
- * What is kept in sight at the top of a reading area while what it heads
- * scrolls under it: whatever says so by its role, and nothing else. The
- * page's own code reads the same role to know which lines and panes stand
- * behind it (`inSightFrom`, dom/in-sight.ts), so nothing is in sight to the
- * eye that the page does not know of. Where each stands is its own rule's to
- * say.
- */
-[data-role='kept-in-sight'] {
-	position: sticky;
-}
 /* A section the reader is taken to lands under what stands over the area too, not behind it */
 .cr-lines-section {
 	scroll-margin-top: var(--cr-top-room, 0);
@@ -740,7 +729,7 @@
 	flex-direction: column;
 	gap: --spacing(6);
 	font-size: var(--text-sm);
-	line-height: var(--cr-comment-leading);
+	line-height: var(--text-sm--line-height);
 }
 /* A fact of a story on its way, a row of its card: a mark, what happened, and when */
 .cr-wait-fact {
@@ -770,7 +759,10 @@
 /*
  * The bar: one row on the ground a file's header stands on, a line under
  * it. It takes no room of the story, which never moves as the bar comes and
- * goes: its foot is drawn back up by its own height, and the slot's with it
+ * goes: its foot is drawn back up by its own height, and the slot's with it.
+ * The story's own drawing, not a Bar of the library: the story's area lays
+ * out round its height (--cr-top-room, below), as a thread does round its
+ * avatar, which the library's rooms keep from the page
  */
 .cr-chapter-bar {
 	height: var(--cr-chapter-bar-height);
