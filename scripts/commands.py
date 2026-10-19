@@ -1,8 +1,7 @@
 """The commands a script starts, and how a script's work is run so that no command outlives it.
 
-`look.py` drives the review through its command line and `break_lines.py`
-the page's tools through pnpm: each runs commands to their end, and the look
-starts one that stays, the review's server. Every command is started here,
+`look.py` drives the review through its command line: it runs commands to
+their end, and starts one that stays, the review's server. Every command is started here,
 so that two things hold of each. A wait has a limit: a command still
 running when its limit runs out is stopped, and said to have failed. And no
 command a script starts outlives it: a script's work is one coroutine

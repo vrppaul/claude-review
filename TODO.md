@@ -349,11 +349,9 @@ of it is built yet.
       moving", and a page that draws no frame for a while after a step,
       whose rest the look counts in frames it draws and not by the clock.
       None of these can be brought about from the look's command line,
-      which is all its tests use. The same holds of
-      `scripts/break_lines.py` where pnpm cannot install for the copy, and
-      where vitest leaves no report; and of `scripts/commands.py`, of a
-      command that runs out of its limit, which neither script's command
-      line can make one do.
+      which is all its tests use. The same holds of `scripts/commands.py`,
+      of a command that runs out of its limit, which the look's command line
+      cannot make one do.
 - [ ] A look serves one change (`scripts/look.py`), so a diff of no file
       cannot be looked at with it, and the review's command line serves no
       such diff either: the page reaches one only when a change is undone
