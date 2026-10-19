@@ -1,8 +1,8 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import { focusWhatRemains } from '$lib/dom/keyboard';
-	import { arrowOffsetTo, type PaneEdge } from '$lib/ui/pane';
-	import PopoverPanel from '$lib/ui/PopoverPanel.svelte';
+	import { arrowOffsetTo, type PaneEdge } from './pane';
+	import PopoverPanel from './PopoverPanel.svelte';
 
 	interface Props {
 		/** The control the note stands under, which the keyboard goes back to as the note goes. */

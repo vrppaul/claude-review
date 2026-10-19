@@ -3,7 +3,7 @@
 	import Button from '$lib/ui/Button.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import IconButton from '$lib/ui/IconButton.svelte';
-	import PassingNote from './PassingNote.svelte';
+	import PassingNote from '$lib/ui/PassingNote.svelte';
 	import { chaptersIn } from './story-words';
 
 	interface Props {

@@ -4,8 +4,8 @@
 	import Button from '$lib/ui/Button.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import { arrowOffsetTo } from '$lib/ui/pane';
+	import PassingNote from '$lib/ui/PassingNote.svelte';
 	import PopoverPanel from '$lib/ui/PopoverPanel.svelte';
-	import PassingNote from './PassingNote.svelte';
 	import StorySketch from './StorySketch.svelte';
 
 	interface Props {

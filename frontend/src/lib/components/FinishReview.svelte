@@ -1,11 +1,13 @@
 <script lang="ts">
 	import type { Anchor, Thread } from '$lib/types';
 	import { anchorPlace, anchorReplaces } from '$lib/anchors/views';
+	import { tourStop } from '$lib/guide/tour';
 	import { useReview } from '$lib/review/context';
 	import BreathingDots from '$lib/ui/BreathingDots.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import Field from '$lib/ui/Field.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
+	import Popover from '$lib/ui/Popover.svelte';
 	import Row from '$lib/ui/Row.svelte';
 	import Tag from '$lib/ui/Tag.svelte';
 	import { raisedByAgent } from '$lib/utils/speakers';
@@ -13,7 +15,6 @@
 	import { COMMENTS, counted, type CountedWords } from '$lib/utils/words';
 	import { finishingTitle } from './finishing';
 	import { FINISH_KEYS } from './keymap';
-	import Popover from './Popover.svelte';
 	import { severityTone } from './severity-tone';
 	import SuggestionDiff from './SuggestionDiff.svelte';
 
@@ -129,7 +130,7 @@
 			tone="primary"
 			size="sm"
 			testId="quick-submit"
-			data-tour="send"
+			data-tour={tourStop('send')}
 			disabled={submission.sending}
 			title={FINISH_KEYS}
 		>

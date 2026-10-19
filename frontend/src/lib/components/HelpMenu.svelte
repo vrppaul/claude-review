@@ -4,9 +4,9 @@
 	import Heading from '$lib/ui/Heading.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import Key from '$lib/ui/Key.svelte';
+	import Popover from '$lib/ui/Popover.svelte';
 	import Row from '$lib/ui/Row.svelte';
 	import { HELP_BUTTON_ROLE, keysOf } from './keymap';
-	import Popover from './Popover.svelte';
 
 	// What the pane is called, said to whoever cannot see it, and what heads it
 	const CALLED = 'Getting around, and the keyboard';

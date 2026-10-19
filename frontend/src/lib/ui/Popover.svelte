@@ -22,9 +22,8 @@
 <script lang="ts">
 	import { tick, untrack, type Snippet } from 'svelte';
 	import { isComposingText } from '$lib/dom/keyboard';
-	import type { TourTarget } from '$lib/guide/tour';
-	import { arrowOffsetTo, type PaneHead, type PaneWidth, type Placement, type TriggerProps } from '$lib/ui/pane';
-	import PopoverPanel from '$lib/ui/PopoverPanel.svelte';
+	import { arrowOffsetTo, type PaneHead, type PaneWidth, type Placement, type TriggerProps } from './pane';
+	import PopoverPanel from './PopoverPanel.svelte';
 
 	interface Props {
 		/** Whether the pane is open: the reader's to change, by the control or by leaving the pane. */
@@ -38,8 +37,8 @@
 		/** What stands beside its heading: a count, an act on all it holds. */
 		aside?: Snippet | undefined;
 		testId: string;
-		/** The name the tour lights it by, where the tour stops at it. */
-		tour?: TourTarget | undefined;
+		/** The name the tour lights it by, where the tour stops at it, written with lib/guide/tour.ts's tourStop. */
+		'data-tour'?: string | undefined;
 		/** A key pressed inside it, for a pane that answers one of its own. */
 		onkeydown?: ((event: KeyboardEvent) => void) | undefined;
 		/** The control that opens it, drawn by whoever uses the popover, carrying the props it is handed. */
@@ -57,7 +56,7 @@
 		heading,
 		aside,
 		testId,
-		tour,
+		'data-tour': tour,
 		onkeydown,
 		trigger,
 		children,

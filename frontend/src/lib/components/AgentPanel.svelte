@@ -1,6 +1,7 @@
 <script lang="ts">
+	import { tourStop } from '$lib/guide/tour';
 	import { useReview } from '$lib/review/context';
-	import EdgeGrip from './EdgeGrip.svelte';
+	import EdgeGrip from '$lib/ui/EdgeGrip.svelte';
 	import MessageComposer from './MessageComposer.svelte';
 	import PanelConversation from './PanelConversation.svelte';
 	import PanelStatus from './PanelStatus.svelte';
@@ -15,7 +16,7 @@
 <!-- The conversation about everything a thread is not: who is answering, what has been said, and what is being written -->
 <aside
 	data-testid="agent-panel"
-	data-tour="agent-panel"
+	data-tour={tourStop('agent-panel')}
 	aria-label="The agent"
 	class="cr-panel flex min-h-0 flex-col border-l border-base-300"
 	style:--cr-panel-width="{review.layout.agentPanel.width}px"

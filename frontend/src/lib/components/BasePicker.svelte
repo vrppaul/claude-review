@@ -1,16 +1,17 @@
 <script lang="ts">
 	import type { ReviewVersion, VersionKind } from '$lib/types';
+	import { tourStop } from '$lib/guide/tour';
 	import { useReview } from '$lib/review/context';
 	import Button from '$lib/ui/Button.svelte';
 	import EmptyNote from '$lib/ui/EmptyNote.svelte';
 	import Failure from '$lib/ui/Failure.svelte';
 	import Filter from '$lib/ui/Filter.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
+	import Popover from '$lib/ui/Popover.svelte';
 	import Row from '$lib/ui/Row.svelte';
 	import { messageOf } from '$lib/utils/errors';
 	import { timeAgo } from '$lib/utils/time';
 	import { counted, FILES } from '$lib/utils/words';
-	import Popover from './Popover.svelte';
 
 	// What the list is called, and headed with
 	const COMPARED_AGAINST = 'Compare the working tree against';
@@ -78,7 +79,7 @@
 	placement="below-start"
 	width="medium"
 	testId="base-list"
-	tour="review-base-list"
+	data-tour={tourStop('review-base-list')}
 >
 	{#snippet trigger(control)}
 		<Button
@@ -86,7 +87,7 @@
 			tone={review.diff.narrowed ? 'marked' : 'quiet'}
 			size="xs"
 			testId="base-picker"
-			data-tour="review-base"
+			data-tour={tourStop('review-base')}
 			title="What the working tree is compared against"
 		>
 			<Icon name="compare" size="xs" />

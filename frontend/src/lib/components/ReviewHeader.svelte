@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { tourStop } from '$lib/guide/tour';
 	import { useReview } from '$lib/review/context';
 	import type { Ending } from '$lib/review/server-link.svelte';
 	import Button from '$lib/ui/Button.svelte';
@@ -106,7 +107,7 @@
 			<RepliesMenu />
 		{/if}
 
-		<span data-testid="comment-count" data-tour="unsent-count" class="cr-muted text-sm">
+		<span data-testid="comment-count" data-tour={tourStop('unsent-count')} class="cr-muted text-sm">
 			{#if inRounds}
 				{review.threads.unsent.length} unsent · {review.threads.count}
 			{:else}
@@ -142,7 +143,7 @@
 			size="xs"
 			testId="toggle-panel"
 			data-role={PANEL_TOGGLE_ROLE}
-			data-tour="agent-panel-toggle"
+			data-tour={tourStop('agent-panel-toggle')}
 			aria-pressed={review.layout.agentPanel.open}
 			title="The agent panel — talk about the review, not one line of it"
 			onclick={() => review.layout.agentPanel.toggle()}

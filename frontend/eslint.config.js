@@ -561,13 +561,29 @@ const DRAWN_BY_THE_LIBRARY_ALONE = [
 	...NO_LAYOUT_ROUND_THE_LIBRARY
 ];
 
+// The tour lights a place by the name a component marks it with (lib/guide/tour.ts), which svelte-check holds to the
+// tour's stops only when it is written through tourStop: it reads no value of a data- attribute. So a name written
+// there bare is refused: the words of the attribute, or a string that is its value, either branch of a condition
+// or what stands after an `&&`
+const NAMED_THROUGH_THE_TOUR =
+	"Name a place for the tour with tourStop(…) from lib/guide/tour.ts, which holds the name to the tour's stops.";
+const TOUR_ATTRIBUTE = "SvelteAttribute[key.name='data-tour']";
+const NO_UNCHECKED_TOUR_NAMES = [
+	{ selector: `${TOUR_ATTRIBUTE} > SvelteLiteral`, message: NAMED_THROUGH_THE_TOUR },
+	{ selector: `${TOUR_ATTRIBUTE} > SvelteMustacheTag > Literal`, message: NAMED_THROUGH_THE_TOUR },
+	{
+		selector: `${TOUR_ATTRIBUTE} :matches(ConditionalExpression > Literal.consequent, ConditionalExpression > Literal.alternate, LogicalExpression > Literal.right)`,
+		message: NAMED_THROUGH_THE_TOUR
+	}
+];
+
 /**
  * The syntax refused in a place: what every file of the page is refused, and the lists that place is refused
  * besides. The rule takes one list for a file, the last a block gives it, so a block for a place inside another
  * names again all it still refuses; each such list is written here, from the same parts.
  */
 function refusedSyntax(...besides) {
-	return ['error', ...NO_NESTED_HELPERS, ...NO_INLINE_STYLING, ...besides.flat()];
+	return ['error', ...NO_NESTED_HELPERS, ...NO_INLINE_STYLING, ...NO_UNCHECKED_TOUR_NAMES, ...besides.flat()];
 }
 
 // A pane opened from a control is a Popover, which stands by the control; a modal stands over the whole review,

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import type { TurnAuthor } from '$lib/types';
+	import type { TourTarget } from '$lib/guide/tour';
 	import Icon from '$lib/ui/Icon.svelte';
 	import type { IconName } from '$lib/ui/icons';
 	import { AGENT, READER } from '$lib/utils/speakers';
@@ -25,7 +26,7 @@
 		voice: Voice;
 		testId: string;
 		/** The name the tour lights it by, where the tour points at it. */
-		tour?: string | undefined;
+		tour?: TourTarget | undefined;
 		/** Whether it has just landed: an answer nobody has looked at yet, which arrives in the agent's colour. */
 		landing?: boolean;
 		/** What its head says after who said it: how long ago, and whatever else it says of the turn. */

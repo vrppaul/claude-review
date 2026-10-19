@@ -4,10 +4,10 @@
 	import Checkbox from '$lib/ui/Checkbox.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import IconButton from '$lib/ui/IconButton.svelte';
+	import Popover from '$lib/ui/Popover.svelte';
 	import Segment from '$lib/ui/Segment.svelte';
 	import Segmented from '$lib/ui/Segmented.svelte';
 	import Setting from '$lib/ui/Setting.svelte';
-	import Popover from './Popover.svelte';
 
 	// What the pane is called, and headed with, and what its control says to whoever cannot see the gear
 	const SETTINGS = 'Settings';

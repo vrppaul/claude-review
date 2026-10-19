@@ -5,14 +5,14 @@
 	import { useReview } from '$lib/review/context';
 	import { OVERVIEW_PART } from '$lib/review/story-keys';
 	import Button from '$lib/ui/Button.svelte';
+	import ConfirmPopover from '$lib/ui/ConfirmPopover.svelte';
+	import FoldToggle from '$lib/ui/FoldToggle.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import IconButton from '$lib/ui/IconButton.svelte';
 	import Tag from '$lib/ui/Tag.svelte';
 	import { placeKey } from '$lib/utils/line-places';
 	import { raisedByAgent } from '$lib/utils/speakers';
 	import { headingOf } from './anchor-headings';
-	import ConfirmPopover from './ConfirmPopover.svelte';
-	import FoldToggle from './FoldToggle.svelte';
 	import NewReplyMark from './NewReplyMark.svelte';
 	import ReopenButton from './ReopenButton.svelte';
 	import { severityTone } from './severity-tone';

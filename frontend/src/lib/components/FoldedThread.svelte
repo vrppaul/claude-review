@@ -3,12 +3,12 @@
 	import { anchorLabel } from '$lib/anchors/views';
 	import { useReview } from '$lib/review/context';
 	import EdgeFrame from '$lib/ui/EdgeFrame.svelte';
+	import FoldToggle from '$lib/ui/FoldToggle.svelte';
 	import type { FrameTone } from '$lib/ui/frame';
 	import Icon from '$lib/ui/Icon.svelte';
 	import { raisedByAgent } from '$lib/utils/speakers';
 	import { plainWords } from '$lib/utils/plain-words';
 	import { counted, type CountedWords } from '$lib/utils/words';
-	import FoldToggle from './FoldToggle.svelte';
 	import NewReplyMark from './NewReplyMark.svelte';
 	import ReopenButton from './ReopenButton.svelte';
 

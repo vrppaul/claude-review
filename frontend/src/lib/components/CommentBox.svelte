@@ -2,10 +2,12 @@
 	import type { CommentSeverity } from '$lib/types';
 	import type { CommentField } from '$lib/review/comment-field.svelte';
 	import { isComposingText } from '$lib/dom/keyboard';
+	import { tourStop } from '$lib/guide/tour';
 	import { useReview } from '$lib/review/context';
 	import Button from '$lib/ui/Button.svelte';
 	import Card from '$lib/ui/Card.svelte';
 	import type { CardHanging } from '$lib/ui/card';
+	import ConfirmPopover from '$lib/ui/ConfirmPopover.svelte';
 	import Failure from '$lib/ui/Failure.svelte';
 	import Field from '$lib/ui/Field.svelte';
 	import Segment from '$lib/ui/Segment.svelte';
@@ -13,7 +15,6 @@
 	import type { Voice } from '$lib/ui/voice';
 	import { hasSuggestion, withSuggestion } from '$lib/utils/suggestion';
 	import AttachedImages from './AttachedImages.svelte';
-	import ConfirmPopover from './ConfirmPopover.svelte';
 	import { FIELD_KEYS, isFieldChord } from './keymap';
 	import { PLACEHOLDERS } from './placeholders';
 
@@ -155,7 +156,12 @@
 		{@render writing()}
 	</div>
 {:else}
-	<Card tone="reader" {hangs} testId="comment-box" data-tour={field.at.kind === 'new' ? 'comment-field' : undefined}>
+	<Card
+		tone="reader"
+		{hangs}
+		testId="comment-box"
+		data-tour={field.at.kind === 'new' ? tourStop('comment-field') : undefined}
+	>
 		<div class="cr-thread-rows">
 			{@render writing()}
 		</div>

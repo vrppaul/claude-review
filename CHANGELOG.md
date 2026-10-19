@@ -215,6 +215,14 @@
   these. eslint refuses a class of any of DaisyUI's components anywhere,
   and the colour of what fails outside the library, as stylelint does in
   every stylesheet but the library's.
+- **The pane a control opens, its question and its note are the
+  library's.** Popover, the question asked before something is lost, the
+  note put by a control, a fold's toggle and a column's grip moved into
+  `frontend/src/lib/ui/`, which builds on nothing of the page. Every name
+  the tour lights a place by is written through `tourStop`, which holds it
+  to the tour's stops, or handed to a component whose prop is typed so:
+  two of the eleven written were held before, and eslint refuses one
+  written bare.
 - **Every size is taken off one scale.** Room between things is one of
   nine steps from 0 to 32 pixels, words one of a few sizes in two weights
   at their size's own leading, a line 1 or 2 pixels, a corner a field's or

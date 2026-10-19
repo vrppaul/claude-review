@@ -8,10 +8,10 @@
 	import Button from '$lib/ui/Button.svelte';
 	import Checkbox from '$lib/ui/Checkbox.svelte';
 	import Failure from '$lib/ui/Failure.svelte';
+	import FoldToggle from '$lib/ui/FoldToggle.svelte';
 	import ContentViewToggle from './ContentViewToggle.svelte';
 	import FileTitle from './FileTitle.svelte';
 	import { type Extent, type FileView, linesView } from './file-drawing.svelte';
-	import FoldToggle from './FoldToggle.svelte';
 	import LinesSection from './LinesSection.svelte';
 	import SectionHeader from './SectionHeader.svelte';
 

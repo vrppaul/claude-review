@@ -1,8 +1,8 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import Button from '$lib/ui/Button.svelte';
-	import type { Placement, TriggerProps } from '$lib/ui/pane';
-	import PaneQuestion from '$lib/ui/PaneQuestion.svelte';
+	import Button from './Button.svelte';
+	import type { Placement, TriggerProps } from './pane';
+	import PaneQuestion from './PaneQuestion.svelte';
 	import Popover from './Popover.svelte';
 
 	interface Props {

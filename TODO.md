@@ -209,9 +209,7 @@ of it is built yet.
 
 - [ ] `refactor(ui)`: the kinds the page still draws outside the library,
       each to become a part of it with its rule (`.claude/rules/page.md`):
-      the pane a control opens and its kin (Popover, ConfirmPopover,
-      PassingNote, FoldToggle, EdgeGrip, still in `lib/components/`); a
-      column beside what is read, drawn two ways (SideColumn, the agent's
+      a column beside what is read, drawn two ways (SideColumn, the agent's
       panel); the bars across the page, a file and the panel (ReviewHeader,
       SectionHeader, PanelStatus); an image's thumbnail (`.cr-image-*`); a
       turn's avatar (`.cr-avatar`); a link in rendered text, drawn by the

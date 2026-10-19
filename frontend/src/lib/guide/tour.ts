@@ -30,6 +30,14 @@ export const TOUR_TARGETS = [
 export type TourTarget = (typeof TOUR_TARGETS)[number];
 
 /**
+ * A place's name for the tour, as a component marks it with `data-tour`: written through this, the compiler holds
+ * it to the tour's stops, which it does not for an attribute's value written bare (eslint refuses one so written).
+ */
+export function tourStop(target: TourTarget): TourTarget {
+	return target;
+}
+
+/**
  * The places the tour has the reader draw: the comment field they open on a
  * line, and the question they ask in it, with its answer. A step lighting one
  * is among the tour's stops before it is drawn — the step before it is what

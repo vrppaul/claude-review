@@ -2,6 +2,7 @@
 	import type { LineSide } from '$lib/types';
 	import { lineInWords } from '$lib/anchors/line-label';
 	import { LINE_NUMBER_ROLE } from '$lib/dom/keyboard';
+	import { tourStop } from '$lib/guide/tour';
 	import type { DrawnLine } from '$lib/utils/drawn-file';
 	import type { LineCommenting, Reach } from './line-commenting.svelte';
 
@@ -45,7 +46,7 @@
 		data-testid={isRowStop ? 'line-gutter' : 'old-line-gutter'}
 		data-role={isRowStop ? LINE_NUMBER_ROLE : undefined}
 		data-place={pointerOnly ? undefined : drawn.key}
-		data-tour={isRowStop ? 'line-number' : undefined}
+		data-tour={isRowStop ? tourStop('line-number') : undefined}
 		class="cr-gutter-button cr-pressable"
 		tabindex={pointerOnly ? -1 : 0}
 		aria-hidden={pointerOnly ? 'true' : undefined}

@@ -6,10 +6,10 @@
 	import Dot from '$lib/ui/Dot.svelte';
 	import EmptyNote from '$lib/ui/EmptyNote.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
+	import Popover from '$lib/ui/Popover.svelte';
 	import Row from '$lib/ui/Row.svelte';
 	import { plainWords } from '$lib/utils/plain-words';
 	import { AGENT } from '$lib/utils/speakers';
-	import Popover from './Popover.svelte';
 
 	// What the pane is called, and headed with
 	const REPLIES = 'Replies';
