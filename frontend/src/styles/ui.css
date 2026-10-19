@@ -428,8 +428,7 @@
  */
 .cr-ui-band {
 	position: relative;
-	margin: calc(-1 * var(--cr-band-reach)) calc(-1 * var(--cr-edge-end-room)) calc(-1 * var(--cr-band-reach))
-		calc(-1 * var(--cr-edge-inset));
+	margin-block: calc(-1 * var(--cr-band-reach));
 	padding: var(--cr-band-reach) var(--cr-edge-end-room) var(--cr-band-reach) var(--cr-edge-inset);
 	border-radius: 0 var(--radius-field) var(--radius-field) 0;
 }
@@ -437,11 +436,15 @@
  * What hangs under a block (Band) hangs under its band, as what hangs under
  * a line hangs under its row: at the foot of the block's own frame where it
  * has one, which the band ends at; where it shares the frame round it, past
- * the band's reach below its words, and as wide as the band, into the
- * frame's room either side
+ * the band's reach below its words, and as wide as the band
  */
 .cr-ui-band + .cr-ui-band-under {
-	margin: var(--cr-band-reach) calc(-1 * var(--cr-edge-end-room)) 0 calc(-1 * var(--cr-edge-inset));
+	margin-top: var(--cr-band-reach);
+}
+/* A band, and what hangs under one that shares the frame round it, reach into the frame's room either side */
+.cr-ui-band,
+.cr-ui-band + .cr-ui-band-under {
+	margin-inline: calc(-1 * var(--cr-edge-inset)) calc(-1 * var(--cr-edge-end-room));
 }
 /*
  * Blocks one under another (Bands): as far apart as the offer over a band
