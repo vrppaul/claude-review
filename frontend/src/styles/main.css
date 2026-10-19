@@ -380,7 +380,6 @@
  * say.
  */
 [data-role='kept-in-sight'] {
-	/* stylelint-disable-next-line declaration-property-value-disallowed-list -- the one rule that keeps a box in sight */
 	position: sticky;
 }
 /*
@@ -541,7 +540,6 @@
  * do. One class, so asking the system for less motion stills it
  */
 .cr-sketch-writing {
-	/* stylelint-disable-next-line no-unknown-animations -- the library's breath, defined in ui.css */
 	animation: cr-breathe var(--cr-breath) ease-in-out infinite;
 }
 
@@ -1294,7 +1292,6 @@
  */
 .cr-scroller {
 	position: relative;
-	/* stylelint-disable-next-line declaration-property-value-disallowed-list -- the scroller, the box of what it holds */
 	overflow-y: auto;
 }
 /*
@@ -1307,7 +1304,6 @@
 	position: relative;
 	flex: 1;
 	min-width: min(var(--cr-diff-least-width), 100% - var(--cr-side-column-rail-width));
-	/* stylelint-disable-next-line declaration-property-value-disallowed-list -- the reading area, the box of what is read */
 	overflow: auto;
 }
 @media (width < theme(--breakpoint-cr-panel-beside)) {

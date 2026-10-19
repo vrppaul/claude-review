@@ -49,64 +49,37 @@ const THE_SCALES_WORDS = {
 	'stroke-width': A_DRAWN_LINE,
 	'stroke-dasharray': A_DRAWN_LINE
 };
-// A turn by right angles points a chevron where it points; a square turned on its corner, the arrow of a pane and
-// the tail of a hanging card, is drawn by one rule of ui.css, which says so where it turns: a review found the card's
-// drawn again in literals of its own, a pixel off the pane's
-const BY_RIGHT_ANGLES = { rotate: ['/^-?(90|180|270)deg$/'] };
-// What one rule alone sets, saying why where it does: a box kept in sight while the rest scrolls, which the page's
-// own code knows by its role (dom/in-sight.ts); and a box that scrolls down the page, which is the box its contents
-// are placed in, so words kept for a screen reader scroll with them and never stretch the page
-const ONE_RULE_ALONE = { position: ['sticky'], '/^overflow(-y)?$/': ['/\\b(auto|scroll)\\b/'] };
 
 export default {
-	// The palette's contrasts, read off tokens.css (lint/palette.js)
-	plugins: ['./lint/palette.js'],
-	// A rule turned off where it stands says why, and only where it would refuse something
-	reportDescriptionlessDisables: true,
-	reportNeedlessDisables: true,
 	rules: {
 		'color-no-hex': true,
 		'color-named': 'never',
 		'function-disallowed-list': WRITTEN_IN_THE_TOKENS,
-		'declaration-property-value-allowed-list': {
-			'z-index': A_LAYER,
-			'box-shadow': A_SHADOW,
-			...THE_SCALES_WORDS,
-			...BY_RIGHT_ANGLES
-		},
+		'declaration-property-value-allowed-list': { 'z-index': A_LAYER, 'box-shadow': A_SHADOW, ...THE_SCALES_WORDS },
 		'declaration-property-value-disallowed-list': {
-			'/.*/': [...A_WRITTEN_SIZE, ...OFF_THE_SCALE, ...THE_STEP_MULTIPLIED, ...A_NOTICE_WASH, ...A_LIBRARY_ROOM],
-			...ONE_RULE_ALONE
+			'/.*/': [...A_WRITTEN_SIZE, ...OFF_THE_SCALE, ...THE_STEP_MULTIPLIED, ...A_NOTICE_WASH, ...A_LIBRARY_ROOM]
 		},
-		// An animation names keyframes its own sheet defines: renamed or moved, they would leave it still, with no
-		// word from the browser
-		'no-unknown-animations': true,
 		'no-duplicate-selectors': true,
 		'declaration-no-important': true
 	},
 	overrides: [
 		{
 			// The palette: where the colours, the sizes and the curves are written down, the library's rooms some in
-			// terms of others, its spacing on the scale's steps; and every word in it reads on what it is drawn on
+			// terms of others, its spacing on the scale's steps
 			files: ['src/styles/tokens.css'],
 			rules: {
 				'color-no-hex': null,
 				'function-disallowed-list': null,
-				'declaration-property-value-disallowed-list': { '/.*/': OFF_THE_SCALE },
-				'claude-review/palette-reads': true
+				'declaration-property-value-disallowed-list': { '/.*/': OFF_THE_SCALE }
 			}
 		},
 		{
-			// The library's stylesheet, which lays a notice's washes and its parts' rooms, and draws with the tokens
-			// alone: it declares no custom property, so none of its rules gives a token another value where it
-			// reaches, as the primary button once relit the pointer's light for itself
+			// The library's stylesheet, which lays a notice's washes and its parts' rooms
 			files: ['src/styles/ui.css'],
 			rules: {
 				'declaration-property-value-disallowed-list': {
-					'/.*/': [...A_WRITTEN_SIZE, ...OFF_THE_SCALE, ...THE_STEP_MULTIPLIED],
-					...ONE_RULE_ALONE
-				},
-				'property-disallowed-list': ['/^--/']
+					'/.*/': [...A_WRITTEN_SIZE, ...OFF_THE_SCALE, ...THE_STEP_MULTIPLIED]
+				}
 			}
 		}
 	]

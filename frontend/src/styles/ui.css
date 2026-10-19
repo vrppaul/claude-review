@@ -357,7 +357,6 @@
 	height: var(--cr-arrow);
 	border: inherit;
 	background: inherit;
-	/* stylelint-disable-next-line declaration-property-value-allowed-list -- the one arrow, a square on its corner */
 	rotate: 45deg;
 }
 /* Pointing up, out of a top edge: from a pane opened below what it stands by, and from a hanging card */
