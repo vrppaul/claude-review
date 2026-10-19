@@ -433,13 +433,10 @@ const ELEMENT_AS_WRITTEN = 'Write the element as it is: one handed its kind can 
 const NO_ELEMENTS_HANDED_THEIR_KIND = [
 	{ selector: "SvelteElement[kind='special'][name.name='svelte:element']", message: ELEMENT_AS_WRITTEN }
 ];
-// The components that still draw a <button> of their own, each with the part that is to take it or why it is the
-// page's: each is let off the rule that refuses one, and nothing else is
-const STILL_PRESSED_BY_HAND = [
-	// A line's number, and the ways to the lines a gap leaves out: controls in the code, drawn with its rows
-	'src/lib/components/LineGutter.svelte',
-	'src/lib/components/HunkGap.svelte'
-];
+// The controls that are the code's own drawing, drawn with its rows as the code's rows and gutter are the page's
+// (page.md): a line's number, which a comment is begun on, and the ways to the lines a gap leaves out, each a
+// <button> laid in the table of the code. They are let off the rule that refuses a button, and nothing else is
+const PRESSED_IN_THE_CODE = ['src/lib/components/LineGutter.svelte', 'src/lib/components/HunkGap.svelte'];
 const BUTTON_IN_THE_LIBRARY = { elements: ['button'], message: PRESSED_IN_THE_LIBRARY };
 // A field is drawn by the library (Field, Filter, Checkbox), and nothing outside it draws one: the page drew its
 // three fields to write in two ways, with DaisyUI's textarea and with utilities of their own, its two filters on
@@ -737,7 +734,7 @@ export default tseslint.config(
 	{
 		// Outside the library a component draws no button, field, image, link or heading of its own either
 		files: ['src/**/*.svelte'],
-		ignores: ['src/lib/ui/**', ...DRAWING_COMPONENTS, ...STILL_PRESSED_BY_HAND],
+		ignores: ['src/lib/ui/**', ...DRAWING_COMPONENTS, ...PRESSED_IN_THE_CODE],
 		rules: {
 			'svelte/no-restricted-html-elements': [
 				'error',
@@ -753,8 +750,8 @@ export default tseslint.config(
 		}
 	},
 	{
-		// A component still pressed by hand draws its button, and no field, image, link or heading of its own
-		files: STILL_PRESSED_BY_HAND,
+		// A control of the code's draws its button, and no field, image, link or heading of its own
+		files: PRESSED_IN_THE_CODE,
 		rules: {
 			'svelte/no-restricted-html-elements': [
 				'error',

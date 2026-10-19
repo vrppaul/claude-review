@@ -207,10 +207,6 @@ of it is built yet.
 
 ## The page's library, what its steps left
 
-- [ ] `refactor(ui)`: two components still draw a `<button>` of their own
-      — the gutter, the hunk gap's ways —
-      named with the part that is to take each in `STILL_PRESSED_BY_HAND`
-      (`frontend/eslint.config.js`); eslint refuses one everywhere else.
 - [ ] `refactor(ui)`: RawView and SplitView size each column twice, on its
       `<col>` and again on every `<td>` in it; under a fixed table layout
       the `<col>` decides. Drop the cells' widths once a browser shows the
