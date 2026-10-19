@@ -40,7 +40,7 @@ dev = [
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
-# The API's schema fuzzed, a minute and more of a run, is left out unless asked for: `-m schema` runs it
+# The API's schema fuzzed, the longest part of a run, is left out unless asked for: `-m schema` runs it
 addopts = "-m 'not schema'"
 markers = ["schema: fuzzes every route against the API's schema; run where a route or a wire model changes"]
 

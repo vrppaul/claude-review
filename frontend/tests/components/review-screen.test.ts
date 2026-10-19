@@ -1,10 +1,10 @@
-import { afterEach, describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/svelte';
-import { flushSync, tick } from 'svelte';
+import { tick } from 'svelte';
 import { userEvent } from '@testing-library/user-event';
 import ReviewScreen from '$lib/components/ReviewScreen.svelte';
 import { REVIEW_TITLE, contextLine, diffFile, diffResponse, hunk } from '../diff';
-import { fakeServer, keepingSettings } from '../fake-server';
+import { fakeServer } from '../fake-server';
 import { newComment } from '../new-comment';
 import { openReview } from '../review';
 import { DRAFT_SHAPE } from '$lib/drafts/draft-shapes';
@@ -104,38 +104,5 @@ describe('a diff with nothing in it', () => {
 		expect(getByTestId('top-bar')).toBeTruthy();
 		expect(getByTestId('quick-submit')).toBeTruthy();
 		expect(getByTestId('agent-panel')).toBeTruthy();
-	});
-});
-
-describe('the tab of a review whose theme changes', () => {
-	// What the frame of the tab's icon is drawn in, in the theme first applied
-	// and in the one chosen after it: jsdom reads no stylesheet, so a test says
-	const FIRST_FRAME = '#8490a0';
-	const CHOSEN_FRAME = '#5d6a7a';
-
-	afterEach(() => {
-		document.documentElement.removeAttribute('style');
-	});
-
-	/** The tab's icon, as the markup it is drawn from. */
-	function tabIcon(): string {
-		return decodeURIComponent(document.querySelector<HTMLLinkElement>('link[rel="icon"]')?.href ?? '');
-	}
-
-	it('is painted again in the colours of the theme the page carries once another is applied', async () => {
-		keepingSettings(fakeServer());
-		const review = openReview({ files });
-		const stopTheming = review.theme.start();
-		document.documentElement.style.setProperty('--cr-faint', FIRST_FRAME);
-		render(ReviewScreen, { props: { review } });
-		flushSync();
-		expect(tabIcon()).toContain(FIRST_FRAME);
-
-		document.documentElement.style.setProperty('--cr-faint', CHOSEN_FRAME);
-		await review.settings.change({ theme: 'light' });
-		flushSync();
-
-		expect(tabIcon()).toContain(CHOSEN_FRAME);
-		stopTheming();
 	});
 });

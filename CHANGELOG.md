@@ -147,6 +147,14 @@
   that id as `said_id`.
 
 ### Changed
+- **Tests hold what someone can name, and run when their part changed.**
+  A test is written for a behaviour — what the command line prints or
+  refuses, what a route answers, what the reader sees or where the keyboard
+  lands — once, at the cheapest level that sees it; never for a look, a
+  declaration or internals (`.claude/rules/tests.md`). About a thousand
+  cases that held none went. `uv run pytest` leaves the API schema's
+  fuzzing out unless asked for with `-m schema`; `scripts/look.py` only
+  serves a long change and its story, for whoever looks at the page.
 - **One set of buttons across the page.** Every button is one of a few
   tones at one of two heights: primary, the one act a pane or a card leads
   to; quiet, an act that must not outweigh the words beside it; secondary,

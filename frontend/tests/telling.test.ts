@@ -1,3 +1,4 @@
+import { isDeepStrictEqual } from 'node:util';
 import { describe, it, expect } from 'vitest';
 import type { Draft } from '$lib/drafts/draft-shapes';
 import { takePush } from '$lib/page/push-handling';
@@ -111,23 +112,31 @@ function reloadedWithAFileDrawn(): Review {
 	return review;
 }
 
+/** Whether a push told at a point of the telling changes what it says something of, on a page reloaded over a draft. */
+function changedWhenTold({ push, read }: FactPush, told: TellingPosition): boolean {
+	const review = reloadedWithAFileDrawn();
+	const asRead = read(review);
+	takePush(review, push, told);
+	return !isDeepStrictEqual(read(review), asRead);
+}
+
+/** Each kind of push that says something of the facts, by whether it changed what it says something of. */
+function changedByKind(told: TellingPosition): Record<string, boolean> {
+	return Object.fromEntries(FACT_PUSHES.map((fact) => [fact.push.type, changedWhenTold(fact, told)]));
+}
+
+/** Every kind of push that says something of the facts, each changing what it says something of or none doing so. */
+function everyKind(changed: boolean): Record<string, boolean> {
+	return Object.fromEntries(FACT_PUSHES.map(({ push }) => [push.type, changed]));
+}
+
 describe('a fact a page opening from a draft is told', () => {
-	it.each(FACT_PUSHES)('is left as its facts say when they hold it already: $push.type', ({ push, read }) => {
-		const review = reloadedWithAFileDrawn();
-		const asRead = read(review);
-
-		takePush(review, push, pushedAt(FACTS_READ_AT));
-
-		expect(read(review)).toEqual(asRead);
+	it('is left as its facts say when they hold it already, whatever its kind', () => {
+		expect(changedByKind(pushedAt(FACTS_READ_AT))).toEqual(everyKind(false));
 	});
 
-	it.each(FACT_PUSHES)('is taken in when it was said after them: $push.type', ({ push, read }) => {
-		const review = reloadedWithAFileDrawn();
-		const asRead = read(review);
-
-		takePush(review, push, pushedAt(FACTS_READ_AT + 1));
-
-		expect(read(review)).not.toEqual(asRead);
+	it('is taken in when it was said after them, whatever its kind', () => {
+		expect(changedByKind(pushedAt(FACTS_READ_AT + 1))).toEqual(everyKind(true));
 	});
 
 	it('follows the threads for a retake its facts hold, and neither takes the diff again nor calls it news', async () => {

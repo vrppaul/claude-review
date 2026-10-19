@@ -48,7 +48,7 @@ cd frontend && pnpm build            # outputs to src/claude_review/static/dist/
 - **Commits**: [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`, etc.) — enforced by pre-commit hook
 - **Python**: type hints on all signatures, async/await for I/O, Pydantic models (not dataclasses), structlog for logging, `StrEnum` with `auto()` for enums
 - **Frontend**: Svelte 5 runes, TypeScript strict mode, no `any`
-- **Tests**: only for a behavior someone can name — what the CLI prints, what a route answers, what the reader sees, where the keyboard lands — written before its code, at the cheapest level that sees it. Never for a look (a color, a size, a pixel): tokens, the linters and your own eyes in the browser hold it. Run the tests of the part you changed, and everything before a release. The full rules: `.claude/rules/tests.md`.
+- **Tests**: only for a behavior someone can name — what the CLI prints, what a route answers, what the reader sees, where the keyboard lands — written before its code, at the cheapest level that sees it. Never for a look (a color, a size, a pixel): tokens, the linters and your own eyes in the browser hold it. Run the tests of the part you changed, and everything before a release or a merge to master. The full rules: `.claude/rules/tests.md`.
 - **Dependencies**: `uv add` for Python, `pnpm add` for JS — never specify versions
 - **No meaningless defaults**: required parameters should be explicit, not silently defaulted
 
