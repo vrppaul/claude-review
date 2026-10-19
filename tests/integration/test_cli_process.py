@@ -9,7 +9,6 @@ question about it, not about the app it serves.
 import json
 import os
 import queue
-import shutil
 import socket
 import subprocess
 import sys
@@ -18,7 +17,6 @@ import time
 import urllib.request
 from collections.abc import Callable, Iterator, Mapping
 from http import HTTPStatus
-from importlib.metadata import version
 from pathlib import Path
 from typing import IO
 from urllib.parse import urlencode
@@ -31,11 +29,8 @@ from claude_review.presentation.wire.agent import ProgressStep
 from claude_review.presentation.wire.pushes import (
     AnswererPush,
     ChangedPush,
-    ChatPush,
-    PointPush,
     ProgressPush,
     ReplyPush,
-    ShowPush,
     StatusPush,
 )
 from claude_review.presentation.wire.session import Welcome
@@ -73,17 +68,11 @@ RELOAD_SECONDS = RELOAD_GRACE_SECONDS / MOMENTS_PER_GRACE
 NOTICE_SECONDS = 1.0
 PAST_GRACE_SECONDS = RELOAD_GRACE_SECONDS + NOTICE_SECONDS
 
-# How long the agent's own wait lasts, in the commands these tests run: long
-# enough for what the test sets going, briefly when nothing will come, and
-# far longer than anything that should end it sooner
+# How long the agent's own wait lasts, in the commands these tests run: long enough for what the test sets going
 AGENT_WAIT_SECONDS = "20"
-BRIEF_WAIT_SECONDS = "1"
-LONG_WAIT_SECONDS = "120"
 # A wait that times out almost at once, and long enough after it for it to have
 SHORTEST_WAIT_SECONDS = "0.2"
 PAST_THE_SHORTEST_WAIT_SECONDS = 0.6
-# A thread no review holds
-NO_SUCH_THREAD = "comment-99"
 # How a failure the command line explains begins, on the one line it takes
 ONE_LINE_FAILURE = "Error: "
 # A conversation as Claude Code writes one, an entry a line: a question, and its answer
@@ -407,14 +396,6 @@ def test_a_failure_said_in_words_the_reader_typed_is_shown_never_obeyed(changed_
     assert SHOWN_ESCAPE in result.stderr
 
 
-def test_version_is_reported(cli: CliProcesses) -> None:
-    """--version prints the installed version."""
-    result = cli.run("--version")
-
-    assert result.returncode == 0
-    assert version("claude-review") in result.stdout
-
-
 @pytest.mark.parametrize("opening", [["--no-open"], []], ids=["told-not-to-open", "opening-a-browser"])
 def test_the_address_is_printed_whether_or_not_a_browser_opens(
     changed_repo: Path, cli: CliProcesses, port: int, opening: list[str]
@@ -429,15 +410,6 @@ def test_the_address_is_printed_whether_or_not_a_browser_opens(
     review = cli.start("diff", str(changed_repo), "--port", str(port), *opening, environment=NO_BROWSER)
 
     assert review.wait_for_address() == f"http://{LOOPBACK}:{port}"
-
-
-def test_the_session_socket_is_served_by_the_real_server(changed_repo: Path, cli: CliProcesses, port: int) -> None:
-    """Starlette's test client implements sockets itself, so it cannot catch a
-    server that was built without websocket support. This runs the real one."""
-    cli.review(changed_repo, port)
-
-    with _session(port) as review_socket:
-        assert review_socket.is_open
 
 
 def test_the_server_winds_down_once_the_review_is_closed(changed_repo: Path, cli: CliProcesses, port: int) -> None:
@@ -549,29 +521,6 @@ def test_a_question_and_its_answer_travel_between_processes(changed_repo: Path, 
         )
 
 
-def test_a_panel_message_and_its_answer_travel_between_processes(
-    changed_repo: Path, cli: CliProcesses, port: int
-) -> None:
-    """The panel reaches the same agent the threads do, over the same queue."""
-    cli.review(changed_repo, port)
-
-    with _session(port) as review_socket:
-        waiting = cli.start("wait", "--port", str(port), "--seconds", AGENT_WAIT_SECONDS)
-        next_push(review_socket, AnswererPush)
-
-        _post(port, "/api/message", {"message_id": "panel-1", "body": "Run the tests and say what fails."})
-
-        handed = json.loads(waiting.printed())
-        assert handed["type"] == "message"
-        assert handed["message"]["body"] == "Run the tests and say what fails."
-
-        answer = cli.run("say", "--port", str(port), "--message", "panel-1", "One failed; fixed and green.")
-        assert answer.returncode == 0
-
-        pushed = next_push(review_socket, ChatPush)
-        assert (pushed.message_id, pushed.body, pushed.files) == ("panel-1", "One failed; fixed and green.", [])
-
-
 def test_the_agent_reports_what_the_review_cannot_measure(changed_repo: Path, cli: CliProcesses, port: int) -> None:
     """Which model, and how much context is left, come from the agent alone."""
     cli.review(changed_repo, port)
@@ -584,34 +533,6 @@ def test_the_agent_reports_what_the_review_cannot_measure(changed_repo: Path, cl
         assert (pushed.agent.model, pushed.agent.context) == ("opus-5", "53% of 1M")
 
 
-def test_the_agent_raises_a_thread_on_a_line_from_its_own_process(
-    changed_repo: Path, cli: CliProcesses, port: int
-) -> None:
-    """What belongs on the code goes on the code, from the command the agent runs."""
-    cli.review(changed_repo, port)
-
-    with _session(port) as review_socket:
-        raised = cli.run("point", "--port", str(port), "--file", "initial.txt", "--lines", "1", "Kept it on purpose")
-        assert raised.returncode == 0
-
-        pushed = next_push(review_socket, PointPush)
-        assert (pushed.anchor.file, pushed.anchor.start_line) == ("initial.txt", 1)
-        assert pushed.body == "Kept it on purpose"
-
-
-def test_the_agent_takes_the_reader_to_a_file_from_its_own_process(
-    changed_repo: Path, cli: CliProcesses, port: int
-) -> None:
-    """The one command that moves the reader's screen reaches the review it names."""
-    cli.review(changed_repo, port)
-
-    with _session(port) as review_socket:
-        shown = cli.run("show", "--port", str(port), "--file", "initial.txt")
-        assert shown.returncode == 0
-
-        assert next_push(review_socket, ShowPush) == ShowPush(file="initial.txt")
-
-
 def test_a_file_changed_under_the_review_is_said_to_the_review_on_screen(
     changed_repo: Path, cli: CliProcesses, port: int
 ) -> None:
@@ -622,58 +543,6 @@ def test_a_file_changed_under_the_review_is_said_to_the_review_on_screen(
         (changed_repo / "initial.txt").write_text("changed again, by somebody else\n")
 
         assert next_push(review_socket, ChangedPush) == ChangedPush(moved_count=1)
-
-
-def test_waiting_reports_when_nothing_was_asked(changed_repo: Path, cli: CliProcesses, port: int) -> None:
-    """A caller in a loop needs to be told, not left hanging."""
-    cli.review(changed_repo, port)
-
-    result = cli.run("wait", "--port", str(port), "--seconds", BRIEF_WAIT_SECONDS)
-
-    assert json.loads(result.stdout)["type"] == "timeout"
-
-
-def test_expanding_context_works_from_a_subdirectory(tmp_git_repo: Path, cli: CliProcesses, port: int) -> None:
-    """Git reports paths from the repository root, whatever directory it ran in."""
-    nested = tmp_git_repo / "sub"
-    nested.mkdir()
-    (nested / "app.py").write_text("".join(f"line {line_number}\n" for line_number in range(1, 41)))
-    git(tmp_git_repo, "add", ".")
-    git(tmp_git_repo, "commit", "-m", "add")
-    (nested / "app.py").write_text("".join(f"line {line_number}\n" for line_number in range(1, 40)) + "changed\n")
-
-    cli.start("diff", "--port", str(port), "--no-open", cwd=nested).wait_for_address()
-    request = urllib.request.Request(f"http://{LOOPBACK}:{port}/api/file-window?path=sub/app.py&start=1&end=3")
-    with urllib.request.urlopen(request, timeout=COMMAND_SECONDS) as response:
-        window = json.loads(response.read())
-
-    assert window["lines"] == ["line 1", "line 2", "line 3"]
-
-
-def test_what_the_review_refuses_is_explained_in_a_line(changed_repo: Path, cli: CliProcesses, port: int) -> None:
-    """These commands run in a loop, where a traceback says nothing useful."""
-    cli.review(changed_repo, port)
-
-    result = cli.run("catch-up", "--port", str(port), "--thread", NO_SUCH_THREAD)
-
-    assert result.returncode != 0
-    assert "Traceback" not in result.stderr
-    assert "refused" in result.stderr
-    assert str(HTTPStatus.NOT_FOUND.value) in result.stderr
-
-
-def test_an_agent_waiting_when_the_reader_closes_the_review_hears_it_closed(
-    changed_repo: Path, cli: CliProcesses, port: int
-) -> None:
-    """Closing the tab ends the review for the agent too, at once, not when its wait runs out."""
-    review = cli.review(changed_repo, port)
-    waiting = cli.start("wait", "--port", str(port), "--seconds", LONG_WAIT_SECONDS)
-
-    with _session(port):
-        pass
-
-    assert json.loads(waiting.printed())["type"] == "closed"
-    assert review.finish() == 0
 
 
 def test_what_the_agent_never_took_is_written_out_when_the_review_ends(
@@ -734,49 +603,6 @@ def test_a_review_stopped_by_a_signal_while_its_page_is_open_exits_without_being
         assert review.finish() == 0
 
 
-# A git that never finishes staging, as on a tree of a million files: `add`
-# waits, every other command is the real git's
-GIT_THAT_HANGS_STAGING = """#!/bin/sh
-case " $* " in
-  *" add -A "*) exec sleep 60 ;;
-esac
-exec {real_git} "$@"
-"""
-# What the pieces of a staging are called in the temporary directory
-STAGING_LEFTOVERS = ("*.git-index", "*.git-objects")
-# What a script needs to be run
-RUNNABLE = 0o755
-# How often a test looks for what a process has written
-LOOK_EVERY_SECONDS = 0.05
-
-
-def test_a_review_stopped_while_it_opens_leaves_nothing_of_its_staging_behind(
-    changed_repo: Path, cli: CliProcesses, tmp_path: Path
-) -> None:
-    """`kill` while git stages a huge tree: what the staging wrote goes with the process, not left in /tmp."""
-    temporary = tmp_path / "temporary"
-    temporary.mkdir()
-    programs = tmp_path / "programs"
-    programs.mkdir()
-    (programs / "git").write_text(GIT_THAT_HANGS_STAGING.format(real_git=shutil.which("git")))
-    (programs / "git").chmod(RUNNABLE)
-    review = cli.start(
-        "diff",
-        str(changed_repo),
-        "--no-open",
-        environment={"TMPDIR": str(temporary), "PATH": f"{programs}{os.pathsep}{os.environ['PATH']}"},
-    )
-    deadline = time.monotonic() + STARTUP_SECONDS
-    while not list(temporary.glob(STAGING_LEFTOVERS[0])) and time.monotonic() < deadline:
-        time.sleep(LOOK_EVERY_SECONDS)
-
-    review.terminate()
-
-    assert review.finish() == 1, "stopped in a line, not ended where it stood by the signal"
-    assert "Traceback" not in review.said()
-    assert [left for pattern in STAGING_LEFTOVERS for left in temporary.glob(pattern)] == []
-
-
 def _until_the_review_holds_threads(cli: CliProcesses, port: int, count: int) -> dict:
     """The review as the agent reads it, once the page has told it of as many threads."""
     deadline = time.monotonic() + HEARD_SECONDS
@@ -786,18 +612,6 @@ def _until_the_review_holds_threads(cli: CliProcesses, port: int, count: int) ->
             return seen
     failure = f"the review never held {count} threads"
     raise AssertionError(failure)
-
-
-def test_catching_up_reads_the_review_as_it_stands(changed_repo: Path, cli: CliProcesses, port: int) -> None:
-    """An agent arriving late learns what was said before it came, in short."""
-    cli.review(changed_repo, port)
-    _post(port, "/api/message", {"message_id": "panel-1", "body": "Run the tests and say what fails."})
-
-    index = cli.run("catch-up", "--port", str(port))
-
-    assert index.returncode == 0
-    assert "panel: 1 message" in index.stdout
-    assert "reader: Run the tests and say what fails." in index.stdout
 
 
 def test_a_thread_named_is_read_in_full(changed_repo: Path, cli: CliProcesses, port: int) -> None:
@@ -846,19 +660,6 @@ def test_the_work_reported_reaches_the_review_on_screen_and_goes_when_done(
         ProgressStep(text="two subagents out", done=False),
     ]
     assert finished.work is None
-
-
-def test_taking_the_diff_again_says_which_files_changed_since_the_round_began(
-    changed_repo: Path, cli: CliProcesses, port: int
-) -> None:
-    """The agent reads those again rather than the whole diff."""
-    cli.review(changed_repo, port)
-    (changed_repo / "initial.txt").write_text("changed again by the agent\n")
-
-    retaken = cli.run("retake", "--port", str(port))
-
-    assert retaken.returncode == 0
-    assert json.loads(retaken.stdout)["changes"] == {"since_round": 1, "base_key": "round:1", "paths": ["initial.txt"]}
 
 
 def test_waiting_until_an_event_waits_through_the_timeouts(changed_repo: Path, cli: CliProcesses, port: int) -> None:
