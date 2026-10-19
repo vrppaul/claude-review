@@ -448,16 +448,21 @@
 }
 
 /*
- * A card (Card, lib/ui/card.ts): on a raised surface, a line round it in its
- * tone's colour, at the box's corner, with one room round what it holds. In
- * the reading face wherever it stands: the diff's table sets a monospace one,
- * which would reach every word and button of a thread hung in it.
+ * A card (Card, lib/ui/card.ts), and code set apart on one (CodeBox): on a
+ * raised surface, a line round it in its tone's colour, at the box's corner
  */
 .cr-ui-card {
-	padding: var(--cr-card-room-block) var(--cr-card-room-inline);
 	border: 1px solid;
 	border-radius: var(--radius-box);
 	background: var(--color-base-200);
+}
+/*
+ * What a card holds, with one room round it, in the reading face wherever it
+ * stands: the diff's table sets a monospace one, which would reach every
+ * word and button of a thread hung in it
+ */
+.cr-ui-card-content {
+	padding: var(--cr-card-room-block) var(--cr-card-room-inline);
 	font-family: var(--font-sans);
 }
 .cr-ui-card-quiet {
@@ -499,6 +504,20 @@
 }
 .cr-ui-card-under-a-block::before {
 	left: var(--cr-card-tail-under-a-block);
+}
+/*
+ * Code set apart to read or copy as written (CodeBox), on a quiet card: in
+ * the code's face, size and leading, quieter than the words round it, closer
+ * inside its edge than a card's words; a line wider than the box scrolls
+ * inside it
+ */
+.cr-ui-code-box {
+	overflow-x: auto;
+	padding: 0.5rem 0.75rem;
+	color: var(--cr-muted);
+	font-family: var(--font-mono);
+	font-size: var(--cr-code-size);
+	line-height: var(--cr-code-leading);
 }
 
 /*

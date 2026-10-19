@@ -5,6 +5,7 @@
  * on its way. Every one on a raised surface, edged by a line in its tone's
  * colour, at the box's corner, with one room round what it holds
  * (styles/ui.css). How what it holds is laid out inside is its holder's.
+ * Code set apart to read or copy (CodeBox) stands on a quiet one.
  *
  * A card that hangs under what it is about is lifted off it, and points up
  * at it with a tail where it hangs: the card places its tail itself, from

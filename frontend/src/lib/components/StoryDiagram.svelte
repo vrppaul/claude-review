@@ -5,6 +5,7 @@
 	import { chapterPartKey } from '$lib/review/story-keys';
 	import type { Diagram } from '$lib/types';
 	import Button from '$lib/ui/Button.svelte';
+	import CodeBox from '$lib/ui/CodeBox.svelte';
 	import Dialog from '$lib/ui/Dialog.svelte';
 	import type { Closing } from '$lib/ui/dialog-closing';
 	import { diagramNotDrawn } from './diagram-words';
@@ -65,9 +66,7 @@
 		<p data-testid="diagram-fault" class="text-sm font-semibold text-warning">
 			{diagramNotDrawn(drawing.fault)}
 		</p>
-		<pre
-			data-testid="diagram-source"
-			class="cr-muted overflow-x-auto rounded-(--radius-box) border border-base-300 bg-base-200 px-3 py-2.5 font-mono text-xs">{source}</pre>
+		<CodeBox code={source} testId="diagram-source" />
 	{/if}
 {/snippet}
 

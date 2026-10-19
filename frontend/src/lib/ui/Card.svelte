@@ -16,6 +16,10 @@
 
 <!-- What it holds boxed apart from what stands round it, edged in its tone's colour (lib/ui/card.ts); where it
 	hangs under what it is about, lifted off that and pointing up at it -->
-<div {...attributes} data-testid={testId} class={['cr-ui-card', CARD_TONES[tone], hangs && CARD_HANGINGS[hangs]]}>
+<div
+	{...attributes}
+	data-testid={testId}
+	class={['cr-ui-card cr-ui-card-content', CARD_TONES[tone], hangs && CARD_HANGINGS[hangs]]}
+>
 	{@render children()}
 </div>

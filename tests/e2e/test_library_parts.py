@@ -25,6 +25,7 @@ from tests.helpers import (
     repository_opening,
     write_files,
 )
+from tests.stories import as_the_agent_writes, planted, step, story_of
 
 # One file, changed on a line, so the first line number the keys reach is in it
 CHANGED_FILE = "main.py"
@@ -169,6 +170,21 @@ AT_WORK = Card(test_id="panel-work", lift=LYING)
 ON_ITS_WAY = Card(test_id="story-wait-facts", lift=LYING)
 EVERY_CARD = [BEING_WRITTEN, A_THREAD, AN_ANSWER, AT_WORK, ON_ITS_WAY]
 
+# Where the agent tells the story of the change
+STORY_ROUTE = "/api/story"
+# A story of the change whose overview draws it in a source mermaid cannot read, which the story shows instead
+NOT_DRAWN = "flowchart LR\n  asked[Asked for] --> --> told[Told]"
+A_STORY_NOT_DRAWN = planted(
+    story_of(step(CHANGED_FILE, 2, 2)), ("overview", "diagram"), {"mermaid": NOT_DRAWN, "caption": None, "links": {}}
+)
+# Code set apart to read or copy as written: the commands to attach an agent by hand, folded in the panel while
+# none is attached; and the source of a story's diagram that did not draw
+ATTACH_COMMANDS = "attach-commands"
+DIAGRAM_SOURCE = "diagram-source"
+EVERY_CODE_BOX = [ATTACH_COMMANDS, DIAGRAM_SOURCE]
+# Open a fold from here: what opens it is its summary, which carries no test id of its own
+UNFOLDED = "(fold) => { fold.open = true; }"
+
 
 @pytest.fixture
 def repository(tmp_path: Path) -> Path:
@@ -214,6 +230,12 @@ async def _an_agent_attaches_and_answers(review: RunningReview) -> None:
         await agent.post(EVENTS_ROUTE, params=GLANCE_AT_EVENTS)
         await agent.post(SAY_ROUTE, json={"body": "The greeting is shorter now."})
         await agent.post(PROGRESS_ROUTE, json={"text": "Reading the tests of the greeting"})
+
+
+async def _the_agent_tells_a_story_not_drawn(review: RunningReview) -> None:
+    """The agent tells a story of the change whose diagram does not draw: from then on it is attached."""
+    async with AsyncClient(base_url=review.url) as agent:
+        await agent.put(STORY_ROUTE, json=as_the_agent_writes(A_STORY_NOT_DRAWN))
 
 
 async def _wait_for_a_story(page: Page) -> None:
@@ -368,3 +390,35 @@ async def test_every_card_stands_on_one_ground_corner_and_room_inside_a_line_lif
     assert [look.corner for look in looks] == [corner] * every_card
     assert [look.room for look in looks] == [room] * every_card
     assert [look.lift for look in looks] == [await on_a_probe(page, "boxShadow", card.lift) for card in EVERY_CARD]
+
+
+@pytest.mark.parametrize("scheme", SCHEMES)
+async def test_code_set_apart_is_one_box_in_the_codes_face_and_size_on_a_cards_ground_edge_and_corner(
+    review: RunningReview, page: Page, scheme: str
+) -> None:
+    await _open_in(page, review, scheme)
+    await page.get_by_test_id("toggle-panel").click()
+    await page.get_by_test_id("panel-attach-by-hand").evaluate(UNFOLDED)
+    commands = page.get_by_test_id(ATTACH_COMMANDS)
+    looks = [await painted(commands)]
+    rooms = [tuple(await commands.evaluate(ROOM))]
+    await _the_agent_tells_a_story_not_drawn(review)
+    # Opened from the note that says it is ready: Story pressed before the story reaches the page asks first
+    await page.get_by_test_id("open-story").click()
+    source = page.get_by_test_id(DIAGRAM_SOURCE)
+    looks.append(await painted(source))
+    rooms.append(tuple(await source.evaluate(ROOM)))
+
+    words = (
+        await on_a_probe(page, "fontSize", "var(--cr-code-size)"),
+        await on_a_probe(page, "fontFamily", "var(--font-mono)"),
+    )
+    box = (
+        await on_a_probe(page, "backgroundColor", "var(--color-base-200)"),
+        await on_a_probe(page, "borderTopColor", "var(--color-base-300)"),
+        await on_a_probe(page, "borderTopLeftRadius", "var(--radius-box)"),
+    )
+    every_box = len(EVERY_CODE_BOX)
+    assert [(look.size, look.face) for look in looks] == [words] * every_box
+    assert [(look.ground, look.border, look.radius) for look in looks] == [box] * every_box
+    assert rooms == [rooms[0]] * every_box

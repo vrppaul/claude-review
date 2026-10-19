@@ -227,7 +227,7 @@ const NO_DAISY_BUTTONS = [
 const HANDED_ITS_TEST_ID = 'Hand a part of the library its test id as testId, which it lays on what it draws.';
 // The parts of the library, by the names the page draws them under
 const LIBRARY_PART =
-	'/^(Button|Card|ColumnBar|Dialog|EdgeFrame|Icon|IconButton|Link|Pane|PaneHead|PopoverPanel|Segment|Segmented)$/';
+	'/^(Button|Card|CodeBox|ColumnBar|Dialog|EdgeFrame|Icon|IconButton|Link|Pane|PaneHead|PopoverPanel|Segment|Segmented)$/';
 const NO_BUTTONS_OF_ITS_OWN = [
 	...NO_DAISY_BUTTONS,
 	...inClassLists(LIBRARY_CLASS, DRAWN_BY_THE_LIBRARY),
@@ -248,6 +248,19 @@ const NO_CARDS_OF_ITS_OWN = [
 	...inClassLists(A_CARD_OF_ITS_OWN, DRAWN_AS_A_CARD),
 	{ selector: `Literal[value=${A_CARD_OF_ITS_OWN}]`, message: DRAWN_AS_A_CARD },
 	{ selector: `TemplateElement[value.raw=${A_CARD_OF_ITS_OWN}]`, message: DRAWN_AS_A_CARD }
+];
+// Code set apart to read or copy is boxed by the library (CodeBox), on a quiet card, and nothing outside it boxes
+// code its own way: the panel's commands and a story's diagram source were two boxes drawn by hand, at 13 and 12
+// px, at two corners. So a `pre` given an edge, a corner or a ground of its own in its class list is refused
+const BOXED_BY_THE_LIBRARY = 'Set code apart with lib/ui CodeBox, not with an edge, a corner or a ground of its own.';
+// A utility that gives an element an edge, a corner or a ground, behind any variants: `border`, `rounded-…`, `bg-…`
+const A_BOX_OF_ITS_OWN = '/(^|\\s)([^\\s:]+:)*(border|rounded|bg)(-\\S*)?(\\s|$)/';
+// The class list of a `pre`, the element that keeps code's lines as they are written
+const CLASS_OF_CODE = "SvelteElement[name.name='pre'] > SvelteStartTag > SvelteAttribute[key.name='class']";
+const NO_CODE_BOXES_OF_ITS_OWN = [
+	{ selector: `${CLASS_OF_CODE} SvelteLiteral[value=${A_BOX_OF_ITS_OWN}]`, message: BOXED_BY_THE_LIBRARY },
+	{ selector: `${CLASS_OF_CODE} Literal[value=${A_BOX_OF_ITS_OWN}]`, message: BOXED_BY_THE_LIBRARY },
+	{ selector: `${CLASS_OF_CODE} TemplateElement[value.raw=${A_BOX_OF_ITS_OWN}]`, message: BOXED_BY_THE_LIBRARY }
 ];
 
 // A part of the library takes no look from outside: what the page needs of one is a variant inside it, with its
@@ -414,7 +427,8 @@ export default tseslint.config(
 				...NO_NESTED_HELPERS,
 				...NO_INLINE_STYLING,
 				...NO_BUTTONS_OF_ITS_OWN,
-				...NO_CARDS_OF_ITS_OWN
+				...NO_CARDS_OF_ITS_OWN,
+				...NO_CODE_BOXES_OF_ITS_OWN
 			],
 			// A function an interface asks for is a property: a method's parameters are compared
 			// loosely, so a value that takes only one kind could stand where every kind is passed
@@ -462,7 +476,8 @@ export default tseslint.config(
 				...NO_PAGE_LOOKUPS,
 				...NO_CHOOSING,
 				...NO_BUTTONS_OF_ITS_OWN,
-				...NO_CARDS_OF_ITS_OWN
+				...NO_CARDS_OF_ITS_OWN,
+				...NO_CODE_BOXES_OF_ITS_OWN
 			]
 		}
 	},
@@ -475,7 +490,8 @@ export default tseslint.config(
 				...NO_INLINE_STYLING,
 				...NO_PAGE_LOOKUPS,
 				...NO_BUTTONS_OF_ITS_OWN,
-				...NO_CARDS_OF_ITS_OWN
+				...NO_CARDS_OF_ITS_OWN,
+				...NO_CODE_BOXES_OF_ITS_OWN
 			]
 		}
 	},

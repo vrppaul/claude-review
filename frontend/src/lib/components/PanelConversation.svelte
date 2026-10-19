@@ -2,6 +2,7 @@
 	import { anchorShortPlace } from '$lib/anchors/views';
 	import { useReview } from '$lib/review/context';
 	import Card from '$lib/ui/Card.svelte';
+	import CodeBox from '$lib/ui/CodeBox.svelte';
 	import EdgeFrame from '$lib/ui/EdgeFrame.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import { READER, THE_REVIEW } from '$lib/utils/speakers';
@@ -13,6 +14,9 @@
 
 	// How near the bottom, in pixels, still counts as reading the newest turn
 	const FOOT_SLACK = 80;
+	// What attaches an agent by hand to a review started in the foreground: the review again in the background,
+	// and its listening half in a loop
+	const ATTACH_BY_HAND = 'claude-review diff --no-open &\nclaude-review wait --port <port> --until-event';
 
 	interface Props {
 		/**
@@ -110,13 +114,13 @@
 				</p>
 				<details data-testid="panel-attach-by-hand" class="w-full text-left">
 					<summary class="cr-faint cursor-pointer text-center text-xs"> Started the review yourself? </summary>
-					<p class="cr-faint mt-2 text-xs leading-relaxed">
-						Nothing answers a review run in the foreground. Start it in the background and keep the listening half in a
-						loop:
-					</p>
-					<pre
-						class="cr-code cr-muted mt-2 w-full overflow-x-auto rounded border border-base-300 bg-base-200 px-3 py-2">claude-review diff --no-open &
-claude-review wait --port &lt;port&gt; --until-event</pre>
+					<div class="mt-2 flex flex-col gap-2">
+						<p class="cr-faint text-xs leading-relaxed">
+							Nothing answers a review run in the foreground. Start it in the background and keep the listening half in
+							a loop:
+						</p>
+						<CodeBox code={ATTACH_BY_HAND} testId="attach-commands" />
+					</div>
 				</details>
 			</div>
 		{/if}
