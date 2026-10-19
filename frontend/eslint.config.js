@@ -194,17 +194,18 @@ const SCROLLING_UTILITY = `/${UTILITY_START}overflow-(y-)?(auto|scroll)${UTILITY
 const ON_THE_SCALE =
 	'Take the size off the scale (tokens.css): a spacing step it has, a size and weight of its words, or a token by name.';
 // A utility of room or of where a thing stands at a step off the scale or a hairline, behind any variants and its
-// sign: `gap-2.5`, `md:pl-3.5`, `-mt-5`, `top-5`, `-translate-y-2.5`, `scroll-mt-5`, `p-px`
-const ROOM_OFF_THE_SCALE = `/${UTILITY_START}(p[xytblrse]?|m[xytblrse]?|gap(-[xy])?|space-[xy]|inset(-[xy])?|top|right|bottom|left|start|end|translate-[xy]|scroll-[mp][xytblrse]?)-((?!(0|0\\.5|1|1\\.5|2|3|4|6|8)${UTILITY_END})[0-9]|px${UTILITY_END})/`;
+// sign: `gap-2.5`, `md:pl-3.5`, `-mt-5`, `top-5`, `-translate-y-2.5`, `scroll-mt-5`, `indent-5`, `p-px`; a share
+// of what it stands in, `left-1/2`, is a place, no size
+const ROOM_OFF_THE_SCALE = `/${UTILITY_START}(p[xytblrse]?|m[xytblrse]?|gap(-[xy])?|space-[xy]|inset(-[xy])?|top|right|bottom|left|start|end|translate-[xy]|scroll-[mp][xytblrse]?|indent)-((?!(0|0\\.5|1|1\\.5|2|3|4|6|8|[0-9]+\\/[0-9]+)${UTILITY_END})[0-9]|px${UTILITY_END})/`;
 // A value written in place: `grid-cols-[4rem_1fr]`, `w-[26rem]`, `text-[13px]`
 const ARBITRARY_VALUE = `/${UTILITY_START}[a-z0-9-]+-\\[/`;
-// Words at a size off the scale, with a leading of their own beside their size's, or in a weight off it:
-// `text-base`, `text-2xl`, `text-sm/6`, `leading-relaxed`, `font-medium`; a colour at a strength, `text-primary/80`,
-// is no size of words
-const WORDS_OFF_THE_SCALE = `/${UTILITY_START}(text-(base|[2-9]xl)(${UTILITY_END}|\\/)|text-(2xs|xs|sm|lg|xl)\\/|leading-|font-(thin|extralight|light|medium|bold|extrabold|black)${UTILITY_END})/`;
+// Words at a size off the scale, with a leading or a spacing of their own beside their size's, or in a weight off
+// it: `text-base`, `text-2xl`, `text-sm/6`, `leading-relaxed`, `tracking-wide`, `font-medium`; a colour at a
+// strength, `text-primary/80`, is no size of words
+const WORDS_OFF_THE_SCALE = `/${UTILITY_START}(text-(base|[2-9]xl)(${UTILITY_END}|\\/)|text-(2xs|xs|sm|lg|xl)\\/|leading-|tracking-|font-(thin|extralight|light|medium|bold|extrabold|black)${UTILITY_END})/`;
 // A corner, a line, a ring, a strength or a time at a step of Tailwind's own beside the scale's: `rounded`,
-// `rounded-sm`, `rounded-t-lg`, `border-4`, `ring-2`, `outline-offset-2`, `opacity-50`, `duration-300`
-const MEASURE_OFF_THE_SCALE = `/${UTILITY_START}(rounded(-(t|r|b|l|s|e|tl|tr|bl|br|ss|se|es|ee))?(-(none|xs|sm|md|lg|xl|[2-4]xl))?${UTILITY_END}|border(-[xytblrse])?-(?!0${UTILITY_END})[0-9]|(ring|outline)(-offset)?-[0-9]|opacity-(?!(0|100)${UTILITY_END})[0-9]|(duration|delay)-[0-9])/`;
+// `rounded-sm`, `rounded-t-lg`, `border-4`, `divide-y-2`, `ring-2`, `outline-offset-2`, `opacity-50`, `duration-300`
+const MEASURE_OFF_THE_SCALE = `/${UTILITY_START}(rounded(-(t|r|b|l|s|e|tl|tr|bl|br|ss|se|es|ee))?(-(none|xs|sm|md|lg|xl|[2-4]xl))?${UTILITY_END}|(border(-[xytblrse])?|divide-[xy])-(?!0${UTILITY_END})[0-9]|(ring|outline)(-offset)?-[0-9]|opacity-(?!(0|100)${UTILITY_END})[0-9]|(duration|delay)-[0-9])/`;
 
 /** Selectors for every way a class list is written in markup, holding a pattern. */
 function inClassLists(pattern, message) {

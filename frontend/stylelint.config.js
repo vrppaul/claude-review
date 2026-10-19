@@ -28,11 +28,12 @@ const WRITTEN_IN_THE_TOKENS = [
 	'color-mix',
 	'cubic-bezier'
 ];
-// Every size is taken off one scale, which tokens.css sets out: a length or a time written as a number, either way
-// up and in any case, is named there once and named everywhere else. Nothing is no size in any unit
-const A_WRITTEN_SIZE = [
-	'/(?<![\\w.-])-?(?!0[a-z]+\\b)\\d*\\.?\\d+(px|rem|em|ex|ch|lh|vh|vw|vmin|vmax|dvh|svh|lvh|ms|s)\\b/i'
-];
+// Every size is taken off one scale, which tokens.css sets out: a number with a unit, either way up and in any
+// case, is named there once and named everywhere else — every unit but those of a turn and of a grid's share,
+// which are no size. Nothing is no size in any unit
+const A_WRITTEN_SIZE = ['/(?<![\\w.-])-?(?!0[a-z]+\\b)\\d*\\.?\\d+(?!(deg|grad|rad|turn|fr)\\b)[a-z]+\\b/i'];
+// And a line of a drawing, which takes its length as a bare number
+const A_DRAWN_LINE = ['/^var\\(--cr-[a-z-]+\\)$/'];
 // What stands apart, stands in or is set in stands one of the scale's steps of Tailwind's spacing, written as the
 // step, never as the step's length multiplied out
 const OFF_THE_SCALE = ['/--spacing\\((?!(0|0\\.5|1|1\\.5|2|3|4|6|8)\\))/'];
@@ -44,7 +45,9 @@ const THE_SCALES_WORDS = {
 	'line-height': ['/^var\\(--(text-(2xs|xs|sm|lg|xl)--line-height|cr-(code|comment)-leading)\\)$/'],
 	'font-weight': ['/^var\\(--font-weight-(normal|semibold)\\)$/'],
 	font: ['inherit'],
-	opacity: ['0', '1', '/^var\\(--cr-[a-z-]+-(faint|strength)\\)$/']
+	opacity: ['0', '1', '/^var\\(--cr-[a-z-]+-(faint|strength)\\)$/'],
+	'stroke-width': A_DRAWN_LINE,
+	'stroke-dasharray': A_DRAWN_LINE
 };
 
 export default {

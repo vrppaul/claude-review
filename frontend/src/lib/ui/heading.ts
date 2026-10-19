@@ -15,7 +15,9 @@
  *   number, where it has one, beside its title, which wraps beside it.
  * - pane: a pane, a column beside what is read, the question a pane asks, a
  *   step of the tour — one size for all of them.
- * - list: a list inside one of those, at the size of its words.
+ * - list: a small head over what stands under it inside one of those — a
+ *   list of the overview, a line of it, a chapter's warning — at the size
+ *   of its words.
  * - piece: a piece of code, by its file's name or by a step's number, in the
  *   code's face, a name broken anywhere rather than run past its column.
  */

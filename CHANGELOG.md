@@ -173,8 +173,8 @@
   size, 12 pixels, where it was 13, and what was said stands 4 pixels under
   it, where it stood 3; the field to reply in has the corner of the field
   it opens, 4 pixels, where it had 6. In the panel: the agent's branches of
-  work are listed at 12 pixels, where they were 13, on a 1 pixel rail,
-  where it was 1.5; the line of what it is doing stands 20 pixels tall,
+  work are listed at 12 pixels, where they were 13, a pixel further apart,
+  on a 1 pixel rail a pixel further in, where it was 1.5; the line of what it is doing stands 20 pixels tall,
   where it stood 21; an answer stays marked 2 seconds as it lands, where it
   stayed 1.8; an image still uploading says so at 11 pixels, where it said
   it at 10; the words of an empty panel take 20 pixels a line, where they
@@ -182,7 +182,9 @@
   contents, where they stood 10, their numbers at 11 pixels, where they
   were 10; what it leaves out is headed at a chapter's size, 18 pixels,
   where it was 16; the overview's Task and Done are headed in bold, as its
-  lists are; Story's question stands its parts 12 pixels apart, where they
+  lists are, and all three heads sit on the line of their words, 6 pixels
+  lower than they stood; Story's introduction takes 20 pixels a line,
+  where it took 22.75; Story's question stands its parts 12 pixels apart, where they
   stood 14, and its buttons 8, where they stood 10; its introduction, the
   facts and buttons of its waiting room and a diagram stand theirs 8
   pixels apart, where they stood 10, and the waiting room its column 24,
