@@ -734,3 +734,18 @@ async def test_the_guides_welcome_and_its_tour_are_headed_at_the_size_of_every_p
     sizes.append(await _heading_size(page.get_by_test_id("guide-tour").get_by_role("heading")))
     pane_heading = (await on_a_probe(page, "fontSize", "var(--text-sm)"), BOLD)
     assert sizes == [pane_heading, pane_heading]
+
+
+# Where an element's left edge stands in the window, in pixels
+LEFT_EDGE = "(element) => element.getBoundingClientRect().left"
+
+
+async def test_the_guides_welcome_stands_what_it_holds_as_far_in_as_its_heading(
+    review: RunningReview, reader_files: ReaderFiles, page: Page
+) -> None:
+    reader_files.guide.unlink()
+
+    await page.goto(review.url)
+
+    heading = await page.get_by_test_id("guide-welcome-heading").evaluate(LEFT_EDGE)
+    assert await page.get_by_test_id("guide-start").evaluate(LEFT_EDGE) == heading

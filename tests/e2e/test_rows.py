@@ -355,6 +355,8 @@ THE_LIBRARYS_DOT = "presence-dot"
 NOTES_CHANGED_AGAIN = {HOUSEKEEPING_FILE: "a third note\n"}
 CHANGED_MARK = "file-changed-mark"
 OVERVIEWS_DOT = "overview-dot"
+# What the mark of a file changed since round 1 says under the pointer
+CHANGED_SINCE_ROUND_ONE = "Changed since round 1"
 # How a dot is drawn: how wide and tall, and how round
 DOT_LOOK = """(dot) => {
     const box = dot.getBoundingClientRect();
@@ -362,14 +364,29 @@ DOT_LOOK = """(dot) => {
 }"""
 
 
-async def test_every_dot_a_row_draws_is_drawn_as_the_librarys_dot_is(
-    repository: Path, review: RunningReview, page: Page
-) -> None:
+async def _open_as_the_notes_change_again(page: Page, repository: Path, review: RunningReview) -> None:
+    """Open the review, and change the notes again and take the diff again while the reader has it open."""
     await page.goto(review.url)
     await page.get_by_test_id("sidebar").wait_for()
     write_files(repository, NOTES_CHANGED_AGAIN)
     async with AsyncClient(base_url=review.url) as agent:
         await agent.post(RETAKE_ROUTE, json={})
+
+
+async def test_the_mark_of_a_file_changed_since_the_round_says_so_under_the_pointer(
+    repository: Path, review: RunningReview, page: Page
+) -> None:
+    await _open_as_the_notes_change_again(page, repository, review)
+
+    changed = page.get_by_test_id(FILE).filter(has_text=HOUSEKEEPING_FILE).get_by_test_id(CHANGED_MARK)
+
+    await expect(changed).to_have_attribute("title", CHANGED_SINCE_ROUND_ONE)
+
+
+async def test_every_dot_a_row_draws_is_drawn_as_the_librarys_dot_is(
+    repository: Path, review: RunningReview, page: Page
+) -> None:
+    await _open_as_the_notes_change_again(page, repository, review)
     library = await page.get_by_test_id(THE_LIBRARYS_DOT).first.evaluate(DOT_LOOK)
     changed = await page.get_by_test_id(CHANGED_MARK).first.evaluate(DOT_LOOK)
 

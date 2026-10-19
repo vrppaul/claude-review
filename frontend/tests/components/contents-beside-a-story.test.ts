@@ -85,6 +85,13 @@ describe('the contents beside a story', () => {
 		expect(contents.getByRole('button', { name: 'Chapter 2: The end, 2 threads' })).toBeTruthy();
 	});
 
+	it("leaves the count of a part's threads unsaid to a screen reader, as its entry's name says it", () => {
+		review.threads.add(storyComment({ at: 'overview', text: 'task' }, 'on the task'));
+		flushSync();
+
+		expect(screen.getByTestId('part-threads').getAttribute('aria-hidden')).toBe('true');
+	});
+
 	it('names each entry in full to whoever cannot see its node', () => {
 		const contents = within(screen.getByTestId('contents'));
 
