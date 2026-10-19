@@ -14,8 +14,9 @@ paths:
 - It is written before its code and seen failing. A refactor gets no new test: the old ones pass unchanged.
 - No test for a look (a colour, size, weight, face, corner, room, pixel): tokens, the gates and a reviewer's eye hold it.
 - No test for a declaration (a field's bound, a click option, a status code), a library's own behaviour, internals (listeners, timers, an inner structure) or a test helper.
-- A line nothing holds is no finding unless it carries a behaviour.
+- "No test holds X" is no finding and no TODO item unless X is a behaviour someone can name.
 - A rule about how code is written is a gate in pre-commit, never a test.
+- A test deleted leaves no debt: nothing is written in its place. A gate of our own code, a plugin or a script, is built only on the owner's word; a line of a tool's config needs none.
 
 ## At which level
 

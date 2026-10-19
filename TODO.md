@@ -100,15 +100,9 @@ tests. Remove items when done — don't check them off.
 - [ ] `fix(cli)`: `story` says "0 lines not in the story (docs/logo.png)" of
       a file the change shows no line of — binary, too large, only moved.
       Say such a file apart from lines left out.
-- [ ] `test(cli)`: `render_story_taken` has no unit test of its own: it is
-      reached only through the command.
 - [ ] `docs(story)`: `PlacedFile.left_out` takes runs that share no row —
       the story's checks refuse a line told twice before it is asked — and
       does not say so.
-- [ ] `test(wire)`: nothing holds the anchors of `LINES_WRITTEN`. The review
-      reads lines with `fullmatch`, so only the API's schema needs them,
-      which reads a pattern as found anywhere in a text: with either anchor
-      gone, every unit and integration test passes.
 - [ ] `test(story)`: the test that a story is told off the event loop waits
       three turns of the loop and then looks. That the telling runs in
       another thread is the fact, and a test of that needs no count.
@@ -238,8 +232,6 @@ of it is built yet.
 - [ ] `feat(ui)`: whether a notice other than a broken part's announces
       itself (`role="status"`), and whether the end of a review, a notice
       like any other since `8fae66a`, should stand out more.
-- [ ] No test holds a chapter's warning heads' colour, a chip out of reach's
-      dashed edge, the tour's waiting dot, or a running branch's breath.
 
 ## Infrastructure
 
@@ -266,9 +258,7 @@ of it is built yet.
 - [ ] A file of instructions the reader may not open ends the
       instruction-files gate in an exception, `PermissionError`, where one
       that is a directory, a link to nothing or not UTF-8 is a fault said
-      by name (`_read`, `scripts/check_instruction_files.py`). And no test
-      holds the gate to stopping at a pattern's first match: with every
-      path listed first, as it was, all its tests pass.
+      by name (`_read`, `scripts/check_instruction_files.py`).
 - [ ] A script stopped while Python is still loading it ends by the signal,
       143 to a shell, where its docstring promises 130 from its own first
       line on: measured of a look, SIGTERM 0.03 s and 0.08 s after its
@@ -333,25 +323,6 @@ of it is built yet.
       lease in it when counted, which `nothing_left_running`
       (`tests/e2e/conftest.py`) cannot see, for it sees tasks. A lease left
       there fires only if browser tests are still running ten minutes on.
-- [ ] No test holds what a look says of the page against its window,
-      `page: taller=0 scrolled=0` (`scripts/look.py`): with either read
-      replaced by 0 every test passes. A page that holds its place shows
-      both as 0 whatever is done to it from the look's command line, and a
-      page that scrolls would have to be a second page, made for the test.
-- [ ] No test holds what `scripts/look.py` says when it cannot begin or
-      cannot settle: a review that does not start or does not say where it
-      is, a story or a wait of its agent's that the review refuses, before
-      the page opens or as a step, a page that shows neither the view it
-      was asked for nor the question before a story as it opens (seen once
-      in a copy of the look whose name for the question was wrong: "open
-      could not be taken", exit 1), git failing to make the repository,
-      a page still moving after five seconds, whose step is marked "still
-      moving", and a page that draws no frame for a while after a step,
-      whose rest the look counts in frames it draws and not by the clock.
-      None of these can be brought about from the look's command line,
-      which is all its tests use. The same holds of `scripts/commands.py`,
-      of a command that runs out of its limit, which the look's command line
-      cannot make one do.
 - [ ] A look serves one change (`scripts/look.py`), so a diff of no file
       cannot be looked at with it, and the review's command line serves no
       such diff either: the page reaches one only when a change is undone
@@ -373,22 +344,9 @@ of it is built yet.
       tests of `]` and `[`, were put right; one spy is left, in
       `frontend/tests/push-handling.test.ts`, and the rest of the page's
       tests were not searched for the first.
-- [ ] Lines of the page that can be broken with every test passing, found
-      by an independent review: the classes `cr-file-frame` and
-      `cr-file-placeholder` in a section (`LinesSection.svelte`: what is
-      left undrawn off screen, and the room a section holds before its
-      rows are built); going to a thread already drawn ending the wait for
-      a section (`dom/file-sections.ts`, `goToThread`); `rowOf`'s "past
-      the last row" (`anchors/placement.ts`); `chapterNamed` as any one
-      chapter (`components/story-words.ts`); the guard for a review
-      compared against nothing in `ReviewDiff.showWholeReview`.
 - [ ] eslint's rule for a utility that makes a box scroll down reads the
       named values alone: one written in place, `overflow-y-[auto]` or
       `[overflow-y:auto]`, is let through. The page writes neither.
-- [ ] Nothing holds the mention list's own list and the panel's
-      conversation to being `cr-scroller`s: with the class taken off either
-      every browser test passes, since neither has a list longer than its
-      box. Every pane's body is the library's scroller.
 - [ ] `RequestPart.QUERY` and `RequestPart.PATH`
       (`src/claude_review/presentation/wire/refusal.py`) are named by a
       test alone, `tests/unit/test_refused_fields.py`: the package matches
@@ -396,9 +354,6 @@ of it is built yet.
 - [ ] Older tests make a variant of a model with `model_copy(update=…)`,
       its fields named in text: seven in `tests/unit/test_cli_rendering.py`,
       two in `tests/integration/test_session_socket.py`.
-- [ ] No test holds what the button of the list of threads a narrower base
-      cannot draw says of several, "List them" and "Hide them"
-      (`NarrowedNotice.svelte`): `diff-notice.test.ts` holds it of one.
 - [ ] Five test modules write `STORY_ROUTE` themselves, and
       `tests/integration/test_story.py` the routes a story is asked for and
       stopped at, where `tests/helpers.py` names all three; and the change
