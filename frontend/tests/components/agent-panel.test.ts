@@ -108,6 +108,20 @@ describe('the agent panel', () => {
 		expect(getByTestId('attach-commands')).toBeTruthy();
 	});
 
+	it('folds the commands for attaching by hand away again once an agent has come and gone', async () => {
+		const user = userEvent.setup();
+		review.answerer.setAttached(false);
+		const { getByTestId, queryByTestId } = render(AgentPanel, inReview(review));
+		await user.click(getByTestId('panel-attach-by-hand'));
+
+		review.answerer.setAttached(true);
+		flushSync();
+		review.answerer.setAttached(false);
+		flushSync();
+
+		expect(queryByTestId('attach-commands')).toBeNull();
+	});
+
 	it('takes no longer a message than the server takes', async () => {
 		review = answeredReview({ limits: { ...SEND_LIMITS, max_text_length: SHORTEST } });
 		const { getByTestId } = render(AgentPanel, inReview(review));

@@ -14,7 +14,7 @@
 
 <!-- The conversation about everything a thread is not: who is answering, what has been said, and what is being
 	written. It takes the right edge and what is read keeps the rest, as what is discussed has to stay on screen -->
-<AgentColumn testId="agent-panel">
+<AgentColumn testId="agent-panel" tour="agent-panel">
 	<PanelStatus />
 	<PanelConversation bind:atFoot />
 	{#snippet foot()}

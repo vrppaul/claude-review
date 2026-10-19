@@ -79,7 +79,7 @@
 <script lang="ts">
 	interface Props {
 		text: string;
-		/** Inside a thread, where the reading face and measure are already set. */
+		/** Inside a thread or the panel: set in a comment's reading face (lib/ui Prose). */
 		dense?: boolean;
 	}
 

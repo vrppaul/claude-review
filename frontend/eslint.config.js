@@ -250,20 +250,327 @@ const NO_INLINE_STYLING = [
 // said a review could not be opened. A class of any of its components is refused in a class list everywhere, inside
 // the library too; and in any string a component holds, as a constant of classes holds them as much as markup does,
 // where the class is no word of a sentence: `btn`, `kbd` and `badge` alone, as `<svelte:element this="kbd">` would
-// draw a key past the rule on elements below, and any component's variant, `alert-error`, `modal-box`,
-// `toggle-primary`: a component whose name is a word the page's test ids also start with (toggle, step, diff,
-// progress, list) by its own variants as DaisyUI writes them, so `step-number` is no class of its. Tailwind's own `table`, `collapse`,
-// `list-…`, `select-…` and `mask-…` share names with DaisyUI's, so only the forms Tailwind has not are refused: held
-// against every class DaisyUI 5.5 writes and Tailwind 4.2 lists, the two rules refuse no class of Tailwind's, and
-// let through of DaisyUI's only `mask-circle`, which Tailwind has too, the names of its states and sizes inside
-// other rules (`is-*`, `lg`), and the classes of other libraries it styles (`pika-*`); in a string, its components'
-// bare names as well, which are words of a sentence
+// draw a key past the rule on elements below, and every component's variant by the variants DaisyUI writes of it
+// (DAISY_VARIANTS), so a test id that starts with a component's name, `modal-submit` or `step-number`, is no class
+// of its. Tailwind's own `table`, `collapse`, `list-…`, `select-…` and `mask-…` share names with DaisyUI's, so only
+// the forms Tailwind has not are refused: held against every class DaisyUI 5.5 writes and Tailwind 4.2 lists, the
+// two rules refuse no class of Tailwind's, and let through of DaisyUI's only `mask-circle`, which Tailwind has too,
+// the names of its states and sizes inside other rules (`is-*`, `lg`), and the classes of other libraries it styles
+// (`pika-*`); in a string, its components' bare names as well, which are words of a sentence
 const DRAWN_BY_A_PART =
 	"Draw it with a part of lib/ui (a Button, a Field, a Checkbox, a Tag, a Key…), not with a class of DaisyUI's components.";
 const DAISY_COMPONENT =
-	'/(^|\\s)([^\\s:]+:)*((alert|avatar|badge|breadcrumbs|btn|cally|card|carousel|chat|checkbox|countdown|diff|divider|dock|drawer|dropdown|fab|fieldset|file-input|floating-label|footer|hero|hover-3d|hover-gallery|image-full|indicator|input|join|kbd|label|link|loading|menu|mockup|modal|navbar|progress|radial-progress|radio|range|rating|skeleton|stack|stat|stats|status|step|steps|swap|tab|tabs|text-rotate|textarea|timeline|toast|toggle|tooltip|validator)(-[a-z0-9-]+)?|collapse-(title|content|arrow|plus|open|close)|filter(-reset)?|list(-row|-col-(grow|wrap))?|mask(-(squircle|heart|hexagon(-2)?|decagon|pentagon|diamond|square|star(-2)?|triangle(-[2-4])?|half-[12]))?|row-hover|select(-(bordered|ghost|primary|secondary|accent|neutral|info|success|warning|error|xs|sm|md|lg|xl))?|table-(zebra|pin-rows|pin-cols|xs|sm|md|lg|xl))(\\s|$)/';
-const DAISY_COMPONENT_IN_A_STRING =
-	'/(^|\\s)((btn|kbd|badge|file-input|radial-progress)(-[a-z0-9-]+)?|join-item|(alert|avatar|card|carousel|chat|checkbox|collapse|countdown|divider|dock|drawer|dropdown|fieldset|hero|indicator|loading|menu|mockup|modal|navbar|radio|rating|skeleton|stat|steps|swap|tabs|textarea|timeline|toast|tooltip|validator)-[a-z0-9-]+|diff-(item-1|item-2|resizer)|fab-(close|flower|main-action)|footer-(center|horizontal|title|vertical)|input-(accent|error|ghost|info|lg|md|neutral|primary|secondary|sm|success|warning|xl|xs)|link-(accent|error|hover|info|neutral|primary|secondary|success|warning)|progress-(accent|error|info|neutral|primary|secondary|success|warning)|range-(accent|error|info|lg|md|neutral|primary|secondary|sm|success|warning|xl|xs)|select-(accent|error|ghost|info|lg|md|neutral|primary|secondary|sm|success|warning|xl|xs)|stack-(bottom|end|start|top)|stats-(horizontal|vertical)|status-(accent|error|info|lg|md|neutral|primary|secondary|sm|success|warning|xl|xs)|step-(accent|error|icon|info|neutral|primary|secondary|success|warning)|tab-(active|content|disabled)|toggle-(accent|error|info|lg|md|neutral|primary|secondary|sm|success|warning|xl|xs)|table-(zebra|pin-rows|pin-cols|xs|sm|md|lg|xl)|list-(row|col-grow|col-wrap)|mask-(squircle|heart|hexagon(-2)?|decagon|pentagon|diamond|square|star(-2)?|triangle(-[2-4])?|half-[12])|filter-reset|floating-label|hover-3d|hover-gallery|image-full|text-rotate|row-hover)(\\s|$)/';
+	'/(^|\\s)([^\\s:]+:)*((alert|avatar|badge|breadcrumbs|btn|cally|glass|card|carousel|chat|checkbox|countdown|diff|divider|dock|drawer|dropdown|fab|fieldset|file-input|floating-label|footer|hero|hover-3d|hover-gallery|image-full|indicator|input|join|kbd|label|link|loading|menu|mockup|modal|navbar|progress|radial-progress|radio|range|rating|skeleton|stack|stat|stats|status|step|steps|swap|tab|tabs|text-rotate|textarea|timeline|toast|toggle|tooltip|validator)(-[a-z0-9-]+)?|collapse-(title|content|arrow|plus|open|close)|filter(-reset)?|list(-row|-col-(grow|wrap))?|mask(-(squircle|heart|hexagon(-2)?|decagon|pentagon|diamond|square|star(-2)?|triangle(-[2-4])?|half-[12]))?|row-hover|select(-(bordered|ghost|primary|secondary|accent|neutral|info|success|warning|error|xs|sm|md|lg|xl))?|table-(zebra|pin-rows|pin-cols|xs|sm|md|lg|xl))(\\s|$)/';
+// The variants DaisyUI 5.5 writes of each of its components, as its class list has them (a variant Tailwind has too,
+// `table-row`, left out)
+const DAISY_VARIANTS = {
+	alert: ['dash', 'error', 'horizontal', 'info', 'outline', 'soft', 'success', 'vertical', 'warning'],
+	avatar: ['group', 'offline', 'online', 'placeholder'],
+	badge: [
+		'accent',
+		'dash',
+		'error',
+		'ghost',
+		'info',
+		'lg',
+		'md',
+		'neutral',
+		'outline',
+		'primary',
+		'secondary',
+		'sm',
+		'soft',
+		'success',
+		'warning',
+		'xl',
+		'xs'
+	],
+	btn: [
+		'accent',
+		'active',
+		'block',
+		'circle',
+		'dash',
+		'disabled',
+		'error',
+		'ghost',
+		'info',
+		'lg',
+		'link',
+		'md',
+		'neutral',
+		'outline',
+		'primary',
+		'secondary',
+		'sm',
+		'soft',
+		'square',
+		'success',
+		'warning',
+		'wide',
+		'xl',
+		'xs'
+	],
+	card: ['actions', 'body', 'border', 'dash', 'lg', 'md', 'side', 'sm', 'title', 'xl', 'xs'],
+	carousel: ['center', 'end', 'horizontal', 'item', 'start', 'vertical'],
+	chat: [
+		'bubble',
+		'bubble-accent',
+		'bubble-error',
+		'bubble-info',
+		'bubble-neutral',
+		'bubble-primary',
+		'bubble-secondary',
+		'bubble-success',
+		'bubble-warning',
+		'end',
+		'footer',
+		'header',
+		'image',
+		'start'
+	],
+	checkbox: [
+		'accent',
+		'error',
+		'info',
+		'lg',
+		'md',
+		'neutral',
+		'primary',
+		'secondary',
+		'sm',
+		'success',
+		'warning',
+		'xl',
+		'xs'
+	],
+	collapse: ['arrow', 'close', 'content', 'open', 'plus', 'title'],
+	diff: ['item-1', 'item-2', 'resizer'],
+	divider: [
+		'accent',
+		'end',
+		'error',
+		'horizontal',
+		'info',
+		'neutral',
+		'primary',
+		'secondary',
+		'start',
+		'success',
+		'vertical',
+		'warning'
+	],
+	dock: ['active', 'label', 'lg', 'md', 'sm', 'xl', 'xs'],
+	drawer: ['button', 'content', 'end', 'open', 'overlay', 'side', 'toggle'],
+	dropdown: ['bottom', 'center', 'close', 'content', 'end', 'hover', 'left', 'open', 'right', 'start', 'top'],
+	fab: ['close', 'flower', 'main-action'],
+	fieldset: ['label', 'legend'],
+	'file-input': [
+		'accent',
+		'error',
+		'ghost',
+		'info',
+		'lg',
+		'md',
+		'neutral',
+		'primary',
+		'secondary',
+		'sm',
+		'success',
+		'warning',
+		'xl',
+		'xs'
+	],
+	footer: ['center', 'horizontal', 'title', 'vertical'],
+	hero: ['content', 'overlay'],
+	indicator: ['bottom', 'center', 'end', 'item', 'middle', 'start', 'top'],
+	input: [
+		'accent',
+		'error',
+		'ghost',
+		'info',
+		'lg',
+		'md',
+		'neutral',
+		'primary',
+		'secondary',
+		'sm',
+		'success',
+		'warning',
+		'xl',
+		'xs'
+	],
+	join: ['item', 'horizontal', 'vertical'],
+	kbd: ['lg', 'md', 'sm', 'xl', 'xs'],
+	link: ['accent', 'error', 'hover', 'info', 'neutral', 'primary', 'secondary', 'success', 'warning'],
+	list: ['row', 'col-grow', 'col-wrap'],
+	loading: ['ball', 'bars', 'dots', 'infinity', 'lg', 'md', 'ring', 'sm', 'spinner', 'xl', 'xs'],
+	mask: [
+		'squircle',
+		'heart',
+		'hexagon',
+		'hexagon-2',
+		'decagon',
+		'pentagon',
+		'diamond',
+		'square',
+		'star',
+		'star-2',
+		'triangle',
+		'triangle-2',
+		'triangle-3',
+		'triangle-4',
+		'half-1',
+		'half-2'
+	],
+	menu: [
+		'active',
+		'disabled',
+		'dropdown',
+		'dropdown-show',
+		'dropdown-toggle',
+		'focus',
+		'horizontal',
+		'lg',
+		'md',
+		'sm',
+		'title',
+		'vertical',
+		'xl',
+		'xs'
+	],
+	mockup: ['browser', 'browser-toolbar', 'code', 'phone', 'phone-camera', 'phone-display', 'window'],
+	modal: ['action', 'backdrop', 'bottom', 'box', 'end', 'middle', 'open', 'start', 'toggle', 'top'],
+	navbar: ['center', 'end', 'start'],
+	progress: ['accent', 'error', 'info', 'neutral', 'primary', 'secondary', 'success', 'warning'],
+	radio: [
+		'accent',
+		'error',
+		'info',
+		'lg',
+		'md',
+		'neutral',
+		'primary',
+		'secondary',
+		'sm',
+		'success',
+		'warning',
+		'xl',
+		'xs'
+	],
+	range: [
+		'accent',
+		'error',
+		'info',
+		'lg',
+		'md',
+		'neutral',
+		'primary',
+		'secondary',
+		'sm',
+		'success',
+		'warning',
+		'xl',
+		'xs'
+	],
+	rating: ['half', 'hidden', 'lg', 'md', 'sm', 'xl', 'xs'],
+	select: [
+		'accent',
+		'error',
+		'ghost',
+		'info',
+		'lg',
+		'md',
+		'neutral',
+		'primary',
+		'secondary',
+		'sm',
+		'success',
+		'warning',
+		'xl',
+		'xs'
+	],
+	skeleton: ['text'],
+	stack: ['bottom', 'end', 'start', 'top'],
+	stat: ['actions', 'desc', 'figure', 'title', 'value'],
+	stats: ['horizontal', 'vertical'],
+	status: [
+		'accent',
+		'error',
+		'info',
+		'lg',
+		'md',
+		'neutral',
+		'primary',
+		'secondary',
+		'sm',
+		'success',
+		'warning',
+		'xl',
+		'xs'
+	],
+	step: ['accent', 'error', 'icon', 'info', 'neutral', 'primary', 'secondary', 'success', 'warning'],
+	steps: ['horizontal', 'vertical'],
+	swap: ['active', 'flip', 'indeterminate', 'off', 'on', 'rotate'],
+	tab: ['active', 'content', 'disabled'],
+	table: ['lg', 'md', 'pin-cols', 'pin-rows', 'sm', 'xl', 'xs', 'zebra'],
+	tabs: ['border', 'bottom', 'box', 'lg', 'lift', 'md', 'sm', 'top', 'xl', 'xs'],
+	textarea: [
+		'accent',
+		'error',
+		'ghost',
+		'info',
+		'lg',
+		'md',
+		'neutral',
+		'primary',
+		'secondary',
+		'sm',
+		'success',
+		'warning',
+		'xl',
+		'xs'
+	],
+	timeline: ['box', 'compact', 'end', 'horizontal', 'middle', 'snap-icon', 'start', 'vertical'],
+	toast: ['bottom', 'center', 'end', 'middle', 'start', 'top'],
+	toggle: [
+		'accent',
+		'error',
+		'info',
+		'lg',
+		'md',
+		'neutral',
+		'primary',
+		'secondary',
+		'sm',
+		'success',
+		'warning',
+		'xl',
+		'xs'
+	],
+	tooltip: [
+		'accent',
+		'bottom',
+		'content',
+		'error',
+		'info',
+		'left',
+		'open',
+		'primary',
+		'right',
+		'secondary',
+		'success',
+		'top',
+		'warning'
+	],
+	validator: ['hint']
+};
+// Every variant of the table, as one alternative of a pattern: `alert-(dash|error|…)|avatar-(group|…)`
+const EVERY_DAISY_VARIANT = Object.entries(DAISY_VARIANTS)
+	.map(([component, variants]) => `${component}-(${variants.join('|')})`)
+	.join('|');
+// Besides, its components' names that are no words of a sentence, and its own forms that are no component's variant
+const DAISY_COMPONENT_IN_A_STRING = `/(^|\\s)(btn|kbd|badge|glass|file-input|radial-progress|${EVERY_DAISY_VARIANT}|filter-reset|floating-label|hover-3d|hover-gallery|image-full|text-rotate|row-hover)(\\s|$)/`;
 const NO_DAISY_COMPONENTS = [
 	...inClassLists(DAISY_COMPONENT, DRAWN_BY_A_PART),
 	{ selector: `Literal[value=${DAISY_COMPONENT_IN_A_STRING}]`, message: DRAWN_BY_A_PART },
@@ -437,10 +744,10 @@ const ELEMENT_AS_WRITTEN = 'Write the element as it is: one handed its kind can 
 const NO_ELEMENTS_HANDED_THEIR_KIND = [
 	{ selector: "SvelteElement[kind='special'][name.name='svelte:element']", message: ELEMENT_AS_WRITTEN }
 ];
-// The controls that are the code's own drawing, as the code's rows, the gaps between its pieces and its gutter are
-// the page's drawings (ui.css's head): a line's number, a <button> in its row's gutter cell, which a comment is begun
-// on; and the ways to the lines a gap leaves out, <button>s in the gap's row between two pieces of the code, in the
-// code's face on the gap's ground. They are let off the rule that refuses a button, and nothing else is
+// The controls that are the code's own drawing, as the code's rows, the gaps round its pieces and the controls in
+// them are the page's drawings (ui.css's head): a line's number, a <button> in its row's gutter cell, which a comment
+// is begun on; and the ways to the lines a gap leaves out, <button>s in the gap's row above, between or below the
+// pieces of the code, in the code's face on the gap's ground. They are let off the rule that refuses a button, and nothing else is
 const PRESSED_IN_THE_CODE = ['src/lib/components/LineGutter.svelte', 'src/lib/components/HunkGap.svelte'];
 const BUTTON_IN_THE_LIBRARY = { elements: ['button'], message: PRESSED_IN_THE_LIBRARY };
 // A field is drawn by the library (Field, Filter, Checkbox), and nothing outside it draws one: the page drew its

@@ -235,8 +235,8 @@
   above or below in markup outside the library. A chapter's bar stays the
   story's own drawing, as the story's area lays out round its height.
 - **Images, links and a file's letter are the library's.** An image pasted
-  into what is said is one thumbnail, uploading, lost or shown, which
-  opens at its full size or is taken off by its cross; the news's picture
+  into what is said is one thumbnail, uploading, lost or shown, a shown one
+  opening at its full size or taken off by its cross; the news's picture
   is a picture of the library's. A link in words written in Markdown takes
   the library's link: the reader's control colour at the weight of its
   line, underlined under the pointer, where the typography plugin drew it

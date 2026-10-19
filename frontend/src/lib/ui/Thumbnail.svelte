@@ -7,7 +7,7 @@
 	 * What can be done with an image shown: open it at its full size in a tab of its own, by a link known by its
 	 * test id; or take it off what is being written, by a cross over its corner.
 	 */
-	type Reach = { opensAs: string; removing?: never } | { opensAs?: never; removing: Removing };
+	type Reach = { opens: { testId: string }; removing?: never } | { opens?: never; removing: Removing };
 
 	interface Removing {
 		/** What the cross does, said to whoever cannot see it and under the pointer. */
@@ -37,17 +37,24 @@
 
 <!-- An image pasted into what is said, shrunk to a square of one size at a field's corner -->
 {#if props.shows === 'image'}
-	{#snippet image(src: string, alt: string, onLost: () => void)}
-		<img data-testid={props.testId} {src} {alt} class="cr-ui-thumbnail" loading="lazy" onerror={onLost} />
+	{#snippet image()}
+		<img
+			data-testid={props.testId}
+			src={props.src}
+			alt={props.alt}
+			class="cr-ui-thumbnail"
+			loading="lazy"
+			onerror={props.onLost}
+		/>
 	{/snippet}
-	{#if props.opensAs}
+	{#if props.opens}
 		<!-- Opened at its full size in a tab of its own: what it stands in is too narrow to read a screenshot in -->
-		<a data-testid={props.opensAs} href={props.src} target="_blank" rel="noopener noreferrer">
-			{@render image(props.src, props.alt, props.onLost)}
+		<a data-testid={props.opens.testId} href={props.src} target="_blank" rel="noopener noreferrer">
+			{@render image()}
 		</a>
-	{:else if props.removing}
+	{:else}
 		<span class="cr-ui-thumbnail-removable">
-			{@render image(props.src, props.alt, props.onLost)}
+			{@render image()}
 			<span class="cr-ui-thumbnail-remove">
 				<IconButton
 					tone="secondary"

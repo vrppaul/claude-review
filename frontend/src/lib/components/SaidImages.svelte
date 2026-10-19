@@ -30,7 +30,7 @@
 					src={imageUrl(imageId)}
 					alt="Sent with this message"
 					onLost={() => lost.add(imageId)}
-					opensAs="said-image"
+					opens={{ testId: 'said-image' }}
 					testId="said-image-picture"
 				/>
 			{/if}

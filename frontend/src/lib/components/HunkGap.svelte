@@ -63,10 +63,6 @@
 	}
 </script>
 
-<!-- The jump and what it says are one thing: with nothing hidden above this
-	hunk the code runs on unbroken, and a marker saying otherwise is a line of
-	punctuation in the middle of a sentence. What is drawn here is counted
-	before it is drawn, by `roomOf`: a change to what is drawn changes it too. -->
 <!-- What the gap says of the lines it leaves out: that they are being read, while they are, or how many it hides -->
 {#snippet readingOr(said: string)}
 	{#if reading}
@@ -78,6 +74,10 @@
 	{/if}
 {/snippet}
 
+<!-- The jump and what it says are one thing: with nothing hidden above this
+	hunk the code runs on unbroken, and a marker saying otherwise is a line of
+	punctuation in the middle of a sentence. What is drawn here is counted
+	before it is drawn, by `roomOf`: a change to what is drawn changes it too. -->
 {#if drawn}
 	{#if header}
 		<div data-testid="hunk-header" class="cr-hunk-header cr-muted bg-base-200 font-mono text-xs">{header}</div>

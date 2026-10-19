@@ -4,13 +4,13 @@
  * (tokens.css) alone. A part takes no look from outside: what the page needs
  * of one is a tone, a size or a variant written here, with the reason a
  * reader needs it. Outside of the library the page draws its own drawings —
- * code rows, the gaps between pieces of code and the controls in its rows
- * and gaps, a thread's spine and avatars, a story's contents, sketch and
- * chapter bar — and takes
- * three things of this stylesheet for them: the states of whatever can be
- * pressed (cr-pressable), a comment's reading face (cr-comment-body), and
- * what is kept in sight (data-role kept-in-sight). No other stylesheet
- * selects any of them or a class of this one (stylelint).
+ * code rows, the gaps above, between and below pieces of code, the controls
+ * in those rows and gaps, a thread's spine and avatars, a story's contents,
+ * sketch and chapter bar — and takes three things of this stylesheet for
+ * them: the states of whatever can be pressed (cr-pressable), a comment's
+ * reading face (cr-comment-body), and what is kept in sight (data-role
+ * kept-in-sight). No other stylesheet selects any of them or a class of this
+ * one (stylelint).
  *
  * Outside Tailwind's layers, as the review's own classes are, so they win
  * over any utility on the same element.
@@ -1072,6 +1072,8 @@
 .cr-ui-row {
 	display: block;
 	width: 100%;
+	/* Beside something in a line of its own, it gives up width to it, its path cut where the row ends */
+	min-width: 0;
 	min-height: var(--cr-list-row-height);
 	padding-block: calc((var(--cr-list-row-height) - var(--cr-one-line)) / 2);
 	padding-inline: calc(var(--cr-depth) * var(--cr-list-row-indent) + var(--cr-list-row-room)) var(--cr-list-row-room);

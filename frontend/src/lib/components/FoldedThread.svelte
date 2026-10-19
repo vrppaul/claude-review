@@ -70,19 +70,17 @@
 	up again by Reopen after the row, which gives up its width to it -->
 <EdgeFrame tone={drawnAs.tone} ground="tint" testId={drawnAs.testId}>
 	<div class={['flex items-center gap-3', folded === 'raised' && 'cr-raised']}>
-		<div data-testid="folded-row" class="min-w-0 flex-1">
-			<Row
-				names="path"
-				folded
-				testId="unfold-thread"
-				data-role={FOLD_TOGGLE_ROLE}
-				leading={thread.resolved ? settled : undefined}
-				label={hangsOn}
-				said={firstWords}
-				trailing={replies}
-				onclick={unfold}
-			/>
-		</div>
+		<Row
+			names="path"
+			folded
+			testId="unfold-thread"
+			data-role={FOLD_TOGGLE_ROLE}
+			leading={thread.resolved ? settled : undefined}
+			label={hangsOn}
+			said={firstWords}
+			trailing={replies}
+			onclick={unfold}
+		/>
 		{#if thread.resolved}
 			<ReopenButton {thread} />
 		{/if}
