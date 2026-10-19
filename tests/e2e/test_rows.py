@@ -250,7 +250,7 @@ async def test_the_rows_of_help_and_of_the_base_picker_stand_one_height_and_are_
 
 
 @pytest.mark.parametrize("scheme", SCHEMES)
-async def test_a_comment_in_the_finish_pane_is_one_row_lit_whole_from_its_words_and_faint_once_sent_with_a_round(
+async def test_a_comment_in_the_finish_pane_is_one_row_its_words_regular_lit_whole_from_them_and_faint_once_sent_with_a_round(
     review: RunningReview, page: Page, scheme: str
 ) -> None:
     await _open_in(page, review, scheme)
@@ -262,6 +262,8 @@ async def test_a_comment_in_the_finish_pane_is_one_row_lit_whole_from_its_words_
     await words.hover()
 
     assert (await painted(comment)).laid == await light(page, "--cr-hover")
+    # Under the row's strong line, the comment's words are read as they were written: in the regular weight
+    assert (await painted(words)).weight == REGULAR
     await page.keyboard.press("Escape")
     await _send_the_round(page)
     await page.get_by_test_id("quick-submit").click()
