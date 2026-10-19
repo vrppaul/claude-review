@@ -119,7 +119,10 @@
   answered says so in words, once.
 - **Words being typed and a thread are never dropped without asking.**
   Escape or Cancel on a comment that holds something, and Delete on a
-  thread, ask first.
+  thread, ask first, in a small pane by the control that asked — over
+  Cancel, under the bin — with the safe answer holding the keyboard. The
+  rest of the page stays to be pressed, and a press anywhere else puts the
+  question away.
 - **A moved file says where it was** — "old → new" in the tree and over the
   file — and a file that became a link says "file → link".
 - **A question asked in a thread can be taken back**, as a panel message
@@ -259,7 +262,16 @@
   the keyboard; Escape closes it and gives the keyboard back to its button;
   a press anywhere else closes it and still lands where it was aimed. The
   pane the review is finished from no longer lays an invisible layer over
-  the page that swallowed the click closing it.
+  the page that swallowed the click closing it. Every pane — these, Help,
+  Story's introduction and the notes under the switch, the modals and the
+  guide's card — stands on one ground, edge, corner and lift, at one of
+  four widths, and one with a name is headed alike: the name at one size,
+  the way to put it away at the far end. A pane stands whole where the
+  reader sees it: moved in from the window's edges, never under a file's
+  header or a chapter's bar kept in sight over what is read, nor past the
+  foot of the area it is drawn in, where it opens the other way; what it
+  holds scrolls inside it, the finish pane keeping Send at its foot. It
+  takes the keyboard without moving what is read.
 - **Help is a pane under its button, as Settings is**: headed "Help", with
   the tour, the news and the list of keys, the keyboard in it while it is
   open and the review's keys its own. Escape, a press outside, its ×, or
@@ -449,6 +461,46 @@
 - **A request found wrong is refused field by field**, without what was
   sent echoed back; the page knows the longest text the server takes, and
   its fields stop there.
+- **The columns beside what is read keep their heads in sight.** The tree
+  of files and a story's contents are headed by one bar with the agent
+  panel's, as tall: their name and the way to put the column away stay
+  where they are as what is under them scrolls, where the tree's heading
+  scrolled away with its files.
+- **Words set apart by an edge are framed one way**: the agent's voice in
+  a story and its broken edge where it read the change out of the code, a
+  warning, what the reader said in the panel, a thread folded away and the
+  lines a thread lost. One edge and one corner, the words 20 pixels in from
+  the edge, 16 from the far side and 8 above and below. A chapter's
+  "Changed after it was told" and its Doubt are both warnings, headed
+  alike, and what a story costs is said in one. A block of the story
+  pointed at is banded inside its frame's edge; one a thread of the
+  reader's hangs under stands on their tint with their edge beside the
+  frame's, so a doubt still shows the warning's yellow. The light theme's
+  warning is a shade darker, to read on that tint.
+- **A thread, the agent's answer and its work, and a story on its way
+  stand on one kind of card**: on the raised ground, edged in the colour
+  of whose it is, at one corner — 6 pixels, where a thread's was 8 — with
+  one room round what it holds. Code set apart, the commands to attach an
+  agent and the source of a diagram that did not draw, stands on a quiet
+  card at the code's size. A hanging card points up at what it is about
+  with the arrow a pane points with. The agent's violet moves a shade,
+  lighter in the dark theme and darker in the light, so its chip reads at
+  4.5:1 on a card, under the pointer too.
+- **Every notice is one bar**: the code moved on, the diff taken again,
+  what was not sent brought back, the review out of reach or over, a part
+  that could not be drawn, a file's notes. Each is as tall as one with a
+  button, its words at one size and as far in from its edges, and says
+  what it is by its ground and its mark. The bar saying the review is over
+  is no longer larger, bolder and centred.
+- **A tag and a count stand in one box**, 18 pixels tall wherever they
+  stand — a thread, the panel, a file's header, the list a round is sent
+  from, a story — at a field's corner, never as a pill. A tag shows its
+  words as written, so a measure says "1M", not "1m". What a question the
+  agent raised asks for is in the agent's colour in the finish list too,
+  and a count of threads stands on the reader's mark.
+- **Every icon is drawn at one of four sizes**, as tall as the words it
+  stands beside: the smallest marks grow from 10 to 12 pixels, and Help's
+  plus is as large as the compass above it.
 
 ### Fixed
 - **What the pointer is on is seen in the dark theme too.** A row of the
