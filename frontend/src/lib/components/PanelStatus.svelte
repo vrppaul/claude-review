@@ -5,6 +5,7 @@
 	import ColumnBar from '$lib/ui/ColumnBar.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import IconButton from '$lib/ui/IconButton.svelte';
+	import Tag from '$lib/ui/Tag.svelte';
 	import { AGENT } from '$lib/utils/speakers';
 	import { timeAgo } from '$lib/utils/time';
 	import { PANEL_TOGGLE_ROLE } from './keymap';
@@ -63,12 +64,12 @@
 
 <!-- Two numbers, told apart: one this side measures, one the agent reports -->
 <div class="flex shrink-0 flex-wrap items-center gap-2 border-b border-base-300 px-3 py-1.5">
-	<span data-testid="review-weight" class="cr-pill" title="What handing this review over costs">
+	<Tag tone="quiet" testId="review-weight" title="What handing this review over costs">
 		review {formatWeight(review.weight)} tokens
-	</span>
+	</Tag>
 	{#if review.answerer.status.context}
-		<span data-testid="agent-context" class="cr-pill">
+		<Tag tone="quiet" testId="agent-context">
 			context {review.answerer.status.context} · as reported {reportedAgo(review.answerer.status.at)}
-		</span>
+		</Tag>
 	{/if}
 </div>

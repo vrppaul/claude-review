@@ -603,3 +603,52 @@
 	background: var(--color-base-200);
 	color: var(--cr-muted);
 }
+
+/*
+ * A tag and a count (Tag, Count, lib/ui/tag.ts): a mark standing in a line
+ * of words, in one box for both, as tall whatever line it stands in — small
+ * words at a leading of their own, room either side, an edge, a field's
+ * corner
+ */
+.cr-ui-tag,
+.cr-ui-count {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.25rem;
+	padding: 0 0.375rem;
+	border: 1px solid transparent;
+	border-radius: var(--radius-field);
+	font-family: var(--font-sans);
+	font-size: 0.6875rem;
+	line-height: 1rem;
+}
+/* A tag is edged in the colour its words are said in */
+.cr-ui-tag {
+	border-color: currentColor;
+}
+.cr-ui-tag-quiet {
+	color: var(--cr-muted);
+}
+.cr-ui-tag-reader {
+	color: var(--cr-mark-text);
+}
+.cr-ui-tag-agent {
+	color: var(--cr-agent);
+}
+.cr-ui-tag-warning {
+	color: var(--color-warning);
+}
+/* What has to be dealt with: on the warning's own fill, its edge the fill's, in bold */
+.cr-ui-tag-blocking {
+	border-color: transparent;
+	background-color: var(--color-warning);
+	color: var(--color-warning-content);
+	font-weight: 600;
+}
+/* How many of the reader's threads: on their mark, in bold figures as wide as one another */
+.cr-ui-count {
+	background-color: var(--cr-mark);
+	color: var(--color-primary-content);
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+}

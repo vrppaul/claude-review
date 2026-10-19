@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import type { DiffFile } from '$lib/types';
+	import Count from '$lib/ui/Count.svelte';
 	import { fileStats } from '$lib/utils/file-stats';
 	import ChangedLines from './ChangedLines.svelte';
 	import FilePath from './FilePath.svelte';
@@ -33,5 +34,5 @@
 	<ChangedLines changed={fileStats(file)} />
 {/if}
 {#if threads > 0}
-	<span data-testid="section-comment-count" class="badge badge-sm badge-primary">{threads}</span>
+	<Count count={threads} testId="section-comment-count" />
 {/if}

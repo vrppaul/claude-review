@@ -14,6 +14,7 @@ from httpx import AsyncClient
 from playwright.async_api import Page
 from pydantic import BaseModel, ConfigDict
 
+from claude_review.domain.models import CommentSeverity
 from tests.e2e.browsers_loop import in_the_browsers_loop
 from tests.e2e.painted import light, on_a_probe, painted
 from tests.helpers import (
@@ -22,6 +23,7 @@ from tests.helpers import (
     ReviewServers,
     RunningReview,
     committed_repository,
+    line_on_the_wire,
     repository_opening,
     write_files,
 )
@@ -541,3 +543,62 @@ async def test_every_notice_is_as_tall_as_one_with_a_button_its_words_alike_on_i
         for notice in EVERY_NOTICE
     ]
     assert marks == [await on_a_probe(page, "color", colour) for colour in MARKS]
+
+
+# Where the agent raises a thread on a line, and the line of the changed file it raises them on
+POINT_ROUTE = "/api/point"
+CHANGED_LINE = 2
+# Every tag and count a review draws once the agent raised a question on a line, each where it stands: what the
+# thread asks for and that it is the agent's, on its card; how many threads hang on the file, on its header; what
+# handing the review over costs, in the panel; and what the thread asks for, in the list a round is sent from
+EVERY_TAG_AND_COUNT = [
+    "comment-severity",
+    "comment-raised",
+    "section-comment-count",
+    "review-weight",
+    "finish-severity",
+]
+
+
+class MarkBox(BaseModel):
+    """How a mark standing in a line is boxed: how tall, at what corner, in words of what size."""
+
+    model_config = ConfigDict(frozen=True)
+
+    height: float
+    corner: str
+    size: str
+
+
+async def _the_agent_raises_a_question(review: RunningReview) -> None:
+    """The agent raises a question on the changed line."""
+    raised = {
+        "anchor": line_on_the_wire(CHANGED_FILE, CHANGED_LINE),
+        "body": "Is the short greeting on purpose?",
+        "severity": CommentSeverity.QUESTION,
+    }
+    async with AsyncClient(base_url=review.url) as agent:
+        (await agent.post(POINT_ROUTE, json=raised)).raise_for_status()
+
+
+async def _box_of(page: Page, test_id: str) -> MarkBox:
+    """How the first mark of a test id is boxed, as the browser works it out."""
+    look = await painted(page.get_by_test_id(test_id).first)
+    return MarkBox(height=look.height, corner=look.radius, size=look.size)
+
+
+@pytest.mark.parametrize("scheme", SCHEMES)
+async def test_every_tag_and_count_stands_in_one_box_at_a_fields_corner_whatever_line_it_stands_in(
+    review: RunningReview, page: Page, scheme: str
+) -> None:
+    await _open_in(page, review, scheme)
+    await page.get_by_test_id("toggle-panel").click()
+    await _the_agent_raises_a_question(review)
+    await page.get_by_test_id("comment-severity").wait_for()
+    await page.get_by_test_id("quick-submit").click()
+    await page.get_by_test_id("finish-severity").wait_for()
+
+    boxes = [await _box_of(page, test_id) for test_id in EVERY_TAG_AND_COUNT]
+
+    corner = await on_a_probe(page, "borderTopLeftRadius", "var(--radius-field)")
+    assert boxes == [MarkBox(height=boxes[0].height, corner=corner, size=boxes[0].size)] * len(EVERY_TAG_AND_COUNT)

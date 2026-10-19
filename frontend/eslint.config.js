@@ -227,7 +227,7 @@ const NO_DAISY_BUTTONS = [
 const HANDED_ITS_TEST_ID = 'Hand a part of the library its test id as testId, which it lays on what it draws.';
 // The parts of the library, by the names the page draws them under
 const LIBRARY_PART =
-	'/^(Button|Card|CodeBox|ColumnBar|Dialog|EdgeFrame|Icon|IconButton|Link|NoticeBar|Pane|PaneHead|PopoverPanel|Segment|Segmented)$/';
+	'/^(Button|Card|CodeBox|ColumnBar|Count|Dialog|EdgeFrame|Icon|IconButton|Link|NoticeBar|Pane|PaneHead|PopoverPanel|Segment|Segmented|Tag)$/';
 const NO_BUTTONS_OF_ITS_OWN = [
 	...NO_DAISY_BUTTONS,
 	...inClassLists(LIBRARY_CLASS, DRAWN_BY_THE_LIBRARY),
@@ -279,6 +279,21 @@ const NO_NOTICES_OF_THEIR_OWN = [
 	{ selector: `SvelteDirective[kind='Class'][key.name.name=${A_NOTICE_OF_ITS_OWN}]`, message: DRAWN_AS_A_NOTICE },
 	{ selector: `Literal[value=${A_NOTICE_OF_ITS_OWN}]`, message: DRAWN_AS_A_NOTICE },
 	{ selector: `TemplateElement[value.raw=${A_NOTICE_OF_ITS_OWN}]`, message: DRAWN_AS_A_NOTICE }
+];
+
+// A mark standing in a line of words is drawn by the library — a tag or a count (Tag, Count) — and nothing
+// outside it draws one its own way: the page drew a tag two ways, an edged word its class lowercased and a filled
+// pill, at three heights by the line each stood in, and counted threads with DaisyUI's badges at two sizes, at the
+// box's corner where a tag had the field's. The classes it drew them with are refused in a class list and in any
+// string a component holds. DaisyUI's `badge` joins them once the rows of the tree and of a story's contents count
+// with Count too
+const DRAWN_AS_A_MARK = 'Draw a tag or a count with lib/ui (Tag, Count), not with classes of its own.';
+// The classes the page drew its marks with
+const A_MARK_OF_ITS_OWN = '/(^|\\s)([^\\s:]+:)*(cr-tag|cr-pill|cr-severity-[a-z]*|cr-raised-tag)(\\s|$)/';
+const NO_MARKS_OF_ITS_OWN = [
+	...inClassLists(A_MARK_OF_ITS_OWN, DRAWN_AS_A_MARK),
+	{ selector: `Literal[value=${A_MARK_OF_ITS_OWN}]`, message: DRAWN_AS_A_MARK },
+	{ selector: `TemplateElement[value.raw=${A_MARK_OF_ITS_OWN}]`, message: DRAWN_AS_A_MARK }
 ];
 
 // A part of the library takes no look from outside: what the page needs of one is a variant inside it, with its
@@ -447,7 +462,8 @@ export default tseslint.config(
 				...NO_BUTTONS_OF_ITS_OWN,
 				...NO_CARDS_OF_ITS_OWN,
 				...NO_CODE_BOXES_OF_ITS_OWN,
-				...NO_NOTICES_OF_THEIR_OWN
+				...NO_NOTICES_OF_THEIR_OWN,
+				...NO_MARKS_OF_ITS_OWN
 			],
 			// A function an interface asks for is a property: a method's parameters are compared
 			// loosely, so a value that takes only one kind could stand where every kind is passed
@@ -497,7 +513,8 @@ export default tseslint.config(
 				...NO_BUTTONS_OF_ITS_OWN,
 				...NO_CARDS_OF_ITS_OWN,
 				...NO_CODE_BOXES_OF_ITS_OWN,
-				...NO_NOTICES_OF_THEIR_OWN
+				...NO_NOTICES_OF_THEIR_OWN,
+				...NO_MARKS_OF_ITS_OWN
 			]
 		}
 	},
@@ -512,7 +529,8 @@ export default tseslint.config(
 				...NO_BUTTONS_OF_ITS_OWN,
 				...NO_CARDS_OF_ITS_OWN,
 				...NO_CODE_BOXES_OF_ITS_OWN,
-				...NO_NOTICES_OF_THEIR_OWN
+				...NO_NOTICES_OF_THEIR_OWN,
+				...NO_MARKS_OF_ITS_OWN
 			]
 		}
 	},

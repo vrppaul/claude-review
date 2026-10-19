@@ -121,10 +121,17 @@ export function customPropertiesOf(rule: StyleRule): string[] {
 	return [...rule.declarations.matchAll(DECLARED)].map(([, name]) => name);
 }
 
+// The properties that set each part's colour: a ground by its shorthand or by its own
+const DECLARED_BY: Record<Drawn, string> = {
+	color: 'color',
+	background: 'background(?:-color)?',
+	'border-color': 'border-color'
+};
+
 /** Every rule of the stylesheets that sets a part's colour by a token, for a selector of one class alone: the class and the token, in the file's order. */
 function classRules(drawn: Drawn): { className: string; token: string }[] {
 	return styleRules().flatMap(({ selectors, declarations }) => {
-		const token = new RegExp(`(?:^|[;\\s])${drawn}:\\s*var\\((--[a-z0-9-]+)\\)`).exec(declarations)?.[1];
+		const token = new RegExp(`(?:^|[;\\s])${DECLARED_BY[drawn]}:\\s*var\\((--[a-z0-9-]+)\\)`).exec(declarations)?.[1];
 		if (token === undefined) return [];
 		return selectors
 			.split(',')

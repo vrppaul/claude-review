@@ -16,6 +16,8 @@ import Pane from '$lib/ui/Pane.svelte';
 import PopoverPanel from '$lib/ui/PopoverPanel.svelte';
 import Segment from '$lib/ui/Segment.svelte';
 import Segmented from '$lib/ui/Segmented.svelte';
+import Count from '$lib/ui/Count.svelte';
+import Tag from '$lib/ui/Tag.svelte';
 
 // What a test hands the library's parts to draw inside them, and what it finds each by
 const WORDS = 'Show the whole diff';
@@ -24,6 +26,8 @@ const TEST_ID = 'drawn';
 // A look someone might try to lay over a part of the library from outside, which the library takes no part of
 const FROM_OUTSIDE = 'from-outside';
 const RELEASE = 'https://github.com/pavelparanin/claude-review/releases';
+// How many threads a count says hang on what it stands beside
+const THREADS = 3;
 
 /** A part of the library, drawn with what every one of them is drawn with, and a class handed to it besides. */
 const WITH_A_CLASS_FROM_OUTSIDE = [
@@ -131,6 +135,14 @@ const WITH_A_CLASS_FROM_OUTSIDE = [
 	{
 		part: 'a segmented control',
 		render: () => render(Segmented, { label: WORDS, testId: TEST_ID, children: drawn, class: FROM_OUTSIDE } as never)
+	},
+	{
+		part: 'a tag',
+		render: () => render(Tag, { tone: 'quiet', testId: TEST_ID, children: drawn, class: FROM_OUTSIDE } as never)
+	},
+	{
+		part: 'a count',
+		render: () => render(Count, { count: THREADS, testId: TEST_ID, class: FROM_OUTSIDE } as never)
 	}
 ];
 
@@ -202,5 +214,17 @@ describe('the component library', () => {
 
 		expect(getByTestId(TEST_ID).getAttribute('role')).toBe('group');
 		expect(getByTestId(TEST_ID).getAttribute('aria-label')).toBe(WORDS);
+	});
+
+	it('draws a tag with the words it is handed, as they are written', () => {
+		const { getByTestId } = render(Tag, { tone: 'agent', testId: TEST_ID, children: drawn });
+
+		expect(getByTestId(TEST_ID).textContent).toBe(WORDS);
+	});
+
+	it('says how many in a count', () => {
+		const { getByTestId } = render(Count, { count: THREADS, testId: TEST_ID });
+
+		expect(getByTestId(TEST_ID).textContent).toBe(String(THREADS));
 	});
 });

@@ -151,7 +151,9 @@ const DRAWN: { said: string; text: string; grounds: string[] }[] = [
 		said: "the guide's release, on its card",
 		text: '--cr-control-text',
 		grounds: ['--color-base-200', '--cr-control-tint']
-	}
+	},
+	{ said: "a blocker's tag, on the warning's fill", text: '--color-warning-content', grounds: ['--color-warning'] },
+	{ said: "a count of the reader's threads, on their mark", text: '--color-primary-content', grounds: ['--cr-mark'] }
 ];
 
 // Every colour words are drawn in, by what they say in it

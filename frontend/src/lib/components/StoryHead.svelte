@@ -3,6 +3,7 @@
 	import type { StoryHeld } from '$lib/types';
 	import EdgeFrame from '$lib/ui/EdgeFrame.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
+	import Tag from '$lib/ui/Tag.svelte';
 	import { AGENTS_READING } from './story-frames';
 	import { CODE_CURRENT, codeMovedOnIn } from './story-words';
 
@@ -27,20 +28,17 @@
 	</h1>
 	<!-- The round the story was told in, tagged as the page tags a thing: in the agent's colour while its
 		code is current; in the warning's, saying when, once a later round moved the code on under it -->
-	<span
-		data-testid="story-round"
-		class={['cr-tag inline-flex items-center gap-1', held.moved_on === null ? 'text-(--cr-agent)' : 'text-warning']}
-	>
+	<Tag tone={held.moved_on === null ? 'agent' : 'warning'} testId="story-round">
 		<Icon name="round" size="xs" />
-		Round {held.round}
+		round {held.round}
 		{#if held.moved_on === null}
 			<span class="cr-muted">{CODE_CURRENT}</span>
 		{:else}
 			<span>{codeMovedOnIn(held.moved_on.round)}</span>
 		{/if}
-	</span>
+	</Tag>
 	{#if reconstructed}
-		<span data-testid="story-reconstructed" class="cr-tag text-(--cr-agent)">reconstructed</span>
+		<Tag tone="agent" testId="story-reconstructed">reconstructed</Tag>
 	{/if}
 </header>
 

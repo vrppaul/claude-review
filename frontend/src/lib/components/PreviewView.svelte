@@ -3,6 +3,7 @@
 	import { assembleText } from '$lib/utils/renderable';
 	import { COMMENTS, counted } from '$lib/utils/words';
 	import { useReview } from '$lib/review/context';
+	import Tag from '$lib/ui/Tag.svelte';
 	import MarkdownRenderer from './MarkdownRenderer.svelte';
 
 	interface Props {
@@ -20,10 +21,9 @@
 
 <div data-testid="preview-view" class="p-4">
 	{#if commentCount > 0}
-		<div data-testid="preview-comment-badge" class="mb-3">
-			<span class="badge badge-warning badge-sm">
-				{commentNote}
-			</span>
+		<!-- A warning: the threads on this file are not drawn in its preview -->
+		<div class="mb-3">
+			<Tag tone="warning" testId="preview-comment-badge">{commentNote}</Tag>
 		</div>
 	{/if}
 

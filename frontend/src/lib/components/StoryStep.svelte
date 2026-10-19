@@ -2,6 +2,7 @@
 	import { askableReason, stepReason } from '$lib/anchors/story';
 	import type { StepListed } from '$lib/review/story-contents';
 	import EdgeFrame from '$lib/ui/EdgeFrame.svelte';
+	import Tag from '$lib/ui/Tag.svelte';
 	import AskableBlock from './AskableBlock.svelte';
 	import { reportBroken } from './broken-parts';
 	import PartFailed from './PartFailed.svelte';
@@ -101,7 +102,7 @@
 			{#snippet atFarEnd()}
 				{#if shown.fileListed.alsoIn.length > 0}
 					<!-- One file, several chapters: where else the agent tells of it, in the agent's colour -->
-					<span data-testid="also-in" class="cr-tag text-(--cr-agent)">{alsoInChapters(shown.fileListed.alsoIn)}</span>
+					<Tag tone="agent" testId="also-in">{alsoInChapters(shown.fileListed.alsoIn)}</Tag>
 				{/if}
 			{/snippet}
 		</StoryPiece>

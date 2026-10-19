@@ -4,12 +4,14 @@
 	import { useReview } from '$lib/review/context';
 	import Button from '$lib/ui/Button.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
+	import Tag from '$lib/ui/Tag.svelte';
 	import { raisedByAgent } from '$lib/utils/speakers';
 	import { splitSuggestions } from '$lib/utils/suggestion';
 	import { COMMENTS, counted } from '$lib/utils/words';
 	import { finishingTitle } from './finishing';
 	import { FINISH_KEYS } from './keymap';
 	import Popover from './Popover.svelte';
+	import { severityTone } from './severity-tone';
 	import SuggestionDiff from './SuggestionDiff.svelte';
 
 	const review = useReview();
@@ -173,13 +175,13 @@
 									{anchorPlace(thread.anchor)}
 								</span>
 								{#if thread.severity !== 'note'}
-									<span class="cr-tag cr-severity-{thread.severity}">{thread.severity}</span>
+									<Tag tone={severityTone(thread)} testId="finish-severity">{thread.severity}</Tag>
 								{/if}
 								{#if raisedByAgent(thread)}
-									<span class="cr-tag cr-raised-tag">agent</span>
+									<Tag tone="agent" testId="finish-raised">agent</Tag>
 								{/if}
 								{#if thread.resolved}
-									<span class="cr-tag cr-muted">resolved</span>
+									<Tag tone="quiet" testId="finish-resolved">resolved</Tag>
 								{/if}
 								<span class="flex-1"></span>
 								{#if sent !== undefined}

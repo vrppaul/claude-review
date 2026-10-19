@@ -7,6 +7,7 @@
 	import Button from '$lib/ui/Button.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import IconButton from '$lib/ui/IconButton.svelte';
+	import Tag from '$lib/ui/Tag.svelte';
 	import { placeKey } from '$lib/utils/line-places';
 	import { raisedByAgent } from '$lib/utils/speakers';
 	import { headingOf } from './anchor-headings';
@@ -14,6 +15,7 @@
 	import FoldToggle from './FoldToggle.svelte';
 	import NewReplyMark from './NewReplyMark.svelte';
 	import ReopenButton from './ReopenButton.svelte';
+	import { severityTone } from './severity-tone';
 
 	// What is asked before a thread is deleted, and its two answers; the first also names the button, drawn as
 	// a bin, that asks it
@@ -80,20 +82,20 @@
 	what state it is in, then, at the far end, what can be done to it -->
 <AnchorHeading anchor={thread.anchor} />
 {#if thread.severity !== 'note'}
-	<span data-testid="comment-severity" class="cr-tag cr-severity-{thread.severity}">{thread.severity}</span>
+	<Tag tone={severityTone(thread)} testId="comment-severity">{thread.severity}</Tag>
 {/if}
 {#if thread.anchor.outdated}
-	<span data-testid="comment-outdated" class="cr-tag cr-muted">outdated</span>
+	<Tag tone="quiet" testId="comment-outdated">outdated</Tag>
 {/if}
 {#if thread.resolved}
-	<span data-testid="comment-resolved" class="cr-tag cr-muted">resolved</span>
+	<Tag tone="quiet" testId="comment-resolved">resolved</Tag>
 {/if}
 {#if unread}
 	<NewReplyMark />
 {/if}
 <span class="flex-1"></span>
 {#if raised}
-	<span data-testid="comment-raised" class="cr-tag cr-raised-tag">from the agent</span>
+	<Tag tone="agent" testId="comment-raised">from the agent</Tag>
 {:else if sentIn !== undefined}
 	<span data-testid="comment-sent">sent · round {sentIn}</span>
 {/if}

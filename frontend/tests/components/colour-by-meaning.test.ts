@@ -3,6 +3,8 @@ import { render } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import AgentPanel from '$lib/components/AgentPanel.svelte';
 import CommentThread from '$lib/components/CommentThread.svelte';
+import FileSection from '$lib/components/FileSection.svelte';
+import FinishReview from '$lib/components/FinishReview.svelte';
 import HelpMenu from '$lib/components/HelpMenu.svelte';
 import PresenceDot from '$lib/components/PresenceDot.svelte';
 import RepliesMenu from '$lib/components/RepliesMenu.svelte';
@@ -25,11 +27,14 @@ import { chatPush } from '../pushes';
 // done
 const AGENTS = '--cr-agent';
 const READERS_WORDS = '--cr-mark-text';
+const READERS_MARK = '--cr-mark';
 const DONE = '--cr-add-text';
 // And nothing in particular: the quiet ground of a dot saying nobody is there
 const NOBODY = '--color-base-300';
 // Quiet, as words that say less than those beside them
 const QUIET = '--cr-muted';
+// What has to be dealt with
+const A_WARNING = '--color-warning';
 // The edge of a thread's card, by where the thread stands: in the reader's hands, raised by the agent, its lines
 // gone, and gone out with a round, a line between surfaces like any card's
 const THE_READERS_EDGE = '--cr-mark-line';
@@ -179,6 +184,78 @@ describe('each thing is drawn in the colour of what it means', () => {
 		const { container } = render(PresenceDot, inReview(review));
 
 		expectDrawnIn(container.querySelector('span'), 'background', AGENTS);
+	});
+});
+
+// What a thread asks for, by whoever wrote it: a question of the reader's, a question the agent raised, and a
+// blocker, which has to be dealt with whoever raised it
+const ASKED = [
+	{
+		asked: "a question of the reader's",
+		writes: (review: Review) =>
+			review.threads.add(newComment({ file: 'src/routes.py', startLine: 2, severity: 'question' })),
+		drawn: 'color' as const,
+		meaning: READERS_WORDS
+	},
+	{
+		asked: 'a question the agent raised',
+		writes: (review: Review) =>
+			review.threads.raise('raised-1', lineAnchor('src/routes.py', 'new', 2, 2, ['y = 3']), 'On purpose?', 'question'),
+		drawn: 'color' as const,
+		meaning: AGENTS
+	},
+	{
+		asked: 'a blocker',
+		writes: (review: Review) =>
+			review.threads.raise('raised-1', lineAnchor('src/routes.py', 'new', 2, 2, ['y = 3']), 'Breaks it', 'blocker'),
+		drawn: 'background' as const,
+		meaning: A_WARNING
+	}
+];
+
+describe('what a thread asks for is said in the colour of whoever asks it', () => {
+	it.each(ASKED)('on its card: $asked', ({ writes, drawn, meaning }) => {
+		const review = answeredReview();
+		writes(review);
+
+		const { getByTestId } = render(CommentThread, inReview(review, { thread: review.threads.all[0], hangs: 'line' }));
+
+		expectDrawnIn(getByTestId('comment-severity'), drawn, meaning);
+	});
+
+	it.each(ASKED)('in the list a round is sent from: $asked', ({ writes, drawn, meaning }) => {
+		const review = answeredReview();
+		writes(review);
+		review.submission.setFinishing(true);
+
+		const { getByTestId } = render(FinishReview, inReview(review));
+
+		expectDrawnIn(getByTestId('finish-severity'), drawn, meaning);
+	});
+});
+
+describe('a thread whose lines are gone', () => {
+	it('says so on its card in quiet words, stepping back', () => {
+		const review = answeredReview();
+		review.threads.add({
+			...newComment({ file: 'src/routes.py', startLine: 2, body: 'Why here?' }),
+			anchor: { ...lineAnchor('src/routes.py', 'new', 2, 2, ['y = 3']), outdated: true }
+		});
+
+		const { getByTestId } = render(CommentThread, inReview(review, { thread: review.threads.all[0], hangs: 'line' }));
+
+		expectDrawnIn(getByTestId('comment-outdated'), 'color', QUIET);
+	});
+});
+
+describe("a count of the reader's threads", () => {
+	it('stands on their mark, on the header of the file they hang on', () => {
+		const review = answeredReview();
+		review.threads.add(newComment({ file: 'src/routes.py', startLine: 2, body: 'Why here?' }));
+
+		const { getByTestId } = render(FileSection, inReview(review, { file }));
+
+		expectDrawnIn(getByTestId('section-comment-count'), 'background', READERS_MARK);
 	});
 });
 

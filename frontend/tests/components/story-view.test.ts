@@ -13,6 +13,7 @@ import { handOverNext } from '../pushes';
 import { openReview } from '../review';
 import { areasWatching, scriptTheScroll, scrollTo } from '../scripted-scroll';
 import { settled } from '../settled';
+import { colourDrawn, paint, THEMES } from '../stylesheets';
 import {
 	ASKED,
 	changedStep,
@@ -53,6 +54,9 @@ const TOLD = storyHeld({
 });
 // What a story told from commits says of itself, by how it begins
 const NOT_THE_AGENTS_OWN_CHANGE = /^The agent did not make this change\./;
+// The colours a story's round is tagged in: the agent's, and a warning's
+const AGENTS = '--cr-agent';
+const A_WARNING = '--color-warning';
 
 let review: Review;
 
@@ -108,7 +112,7 @@ describe('a review read as its story', () => {
 		render(ReviewScreen, { props: { review } });
 
 		expect(screen.getByTestId('story-title').textContent).toBe('Lines for a.py and b.py');
-		expect(said(screen.getByTestId('story-round'))).toBe('Round 1 current');
+		expect(said(screen.getByTestId('story-round'))).toBe('round 1 current');
 	});
 
 	it('says the round it was told in where that was a later one', () => {
@@ -116,7 +120,7 @@ describe('a review read as its story', () => {
 		review.views.choose('story');
 		render(ReviewScreen, { props: { review } });
 
-		expect(said(screen.getByTestId('story-round'))).toBe('Round 3 current');
+		expect(said(screen.getByTestId('story-round'))).toBe('round 3 current');
 	});
 
 	it('says the round it was told in, and the round a later one moved the code on in', () => {
@@ -124,7 +128,25 @@ describe('a review read as its story', () => {
 		review.views.choose('story');
 		render(ReviewScreen, { props: { review } });
 
-		expect(said(screen.getByTestId('story-round'))).toBe('Round 1 the code moved on in round 2');
+		expect(said(screen.getByTestId('story-round'))).toBe('round 1 the code moved on in round 2');
+	});
+
+	it('tags the round in the agent’s colour while the story’s code is current', () => {
+		render(ReviewScreen, { props: { review } });
+
+		for (const theme of THEMES) {
+			expect(colourDrawn(screen.getByTestId('story-round'), 'color', theme)).toEqual(paint(AGENTS, theme));
+		}
+	});
+
+	it('tags the round in the warning’s colour once a later round moved the code on', () => {
+		review = openReview({ files, story: storyHeld(TOLD.story, { moved_on: codeMovedOn() }) });
+		review.views.choose('story');
+		render(ReviewScreen, { props: { review } });
+
+		for (const theme of THEMES) {
+			expect(colourDrawn(screen.getByTestId('story-round'), 'color', theme)).toEqual(paint(A_WARNING, theme));
+		}
 	});
 
 	it('says what was asked and what was done, and nothing to doubt where the agent named nothing', () => {
