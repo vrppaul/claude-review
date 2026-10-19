@@ -70,7 +70,7 @@ indent-style = "space"
 docstring-code-format = true
 
 [tool.ruff.lint]
-# The tests are held to formatting alone: no rule of the linter reads them
+# No rule of the linter reads the tests (.claude/rules/tests.md)
 exclude = ["tests/**"]
 select = [
     "E",        # pycodestyle errors
@@ -254,14 +254,14 @@ ignore_names = [
 DEP002 = ["wsproto"]
 
 [tool.typos.files]
-# The tests are held to formatting alone: their spelling is not checked
+# The tests' spelling is not checked (.claude/rules/tests.md)
 extend-exclude = ["tests/", "frontend/tests/"]
 
 [tool.ty.environment]
 python-version = "3.14"
 
 [tool.ty.src]
-# The tests are held to formatting alone: no type check reads them
+# No type check reads the tests (.claude/rules/tests.md)
 exclude = ["tests"]
 
 [tool.ty.terminal]

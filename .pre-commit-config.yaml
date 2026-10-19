@@ -30,19 +30,20 @@ repos:
         exclude: ^tests/
 
       # A test checks what an act did, never how the page looks
-      # (.claude/rules/tests.md): a browser test reads no box, no size, no
-      # style and no class, and takes no picture of the page.
-      # tests/e2e/placing.py puts a control where the reader would have
-      # scrolled it before a test acts, and is let alone for that
+      # (.claude/rules/tests.md): a browser test reads no box or size, no
+      # computed style or opacity, no class or style attribute, and takes no
+      # screenshot. tests/e2e/placing.py puts a control where the reader
+      # would have scrolled it before a test acts, and is let alone for that
       - id: no-look-in-browser-tests
-        name: no browser test reads a box, a size or a style
-        entry: 'bounding_box\(|getBoundingClientRect|getClientRects|getComputedStyle|computedStyleMap|opacity|elements?FromPoint|to_have_css|to_have_class|get_attribute\(.(class|style).|screenshot|scroll(Height|Width)|client(Height|Width)|inner(Height|Width)|offset(Top|Left|Height|Width)'
+        name: no browser test reads how the page looks
+        entry: 'bounding_box\(|getBoundingClientRect|getClientRects|getComputedStyle|computedStyleMap|\.opacity|elements?FromPoint|to_have_css|to_have_class|(get_attribute|to_have_attribute|getAttribute)\(.(class|style).|\.screenshot\(|to_have_screenshot|scroll(Height|Width)|client(Height|Width)|inner(Height|Width)|offset(Top|Left|Height|Width)'
         language: pygrep
         files: ^tests/e2e/.*\.py$
         exclude: ^tests/e2e/placing\.py$
 
-      # The page's tests hand jsdom the boxes it cannot lay out, touch no
-      # element's class list, and read no style and no class back
+      # The page's tests hand jsdom the boxes it cannot lay out; they touch no
+      # element's class list, and read back no computed style, style
+      # property, class name, or class or style attribute
       - id: no-look-in-page-tests
         name: no page test reads a style or a class back
         entry: 'getComputedStyle|getPropertyValue|toHaveStyle|toHaveClass|classList|className|(getAttribute|toHaveAttribute)\(.(class|style).'

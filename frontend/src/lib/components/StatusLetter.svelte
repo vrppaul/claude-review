@@ -15,7 +15,7 @@
 	for whoever cannot see the letter or tell its colour -->
 <span
 	aria-hidden="true"
-	class={['w-(--cr-row-mark-slot) shrink-0 text-center font-mono text-xs font-semibold', said.colour]}
+	class={['w-(--cr-list-row-mark-slot) shrink-0 text-center font-mono text-xs font-semibold', said.colour]}
 >
 	{said.letter}
 </span>

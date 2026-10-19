@@ -39,7 +39,7 @@ paths:
 - Data with a shape is a typed model, never a raw `dict` or `Mapping`, in tests too.
 - Wire JSON is written out by hand only where a test speaks as the browser or the agent and its neighbours already do.
 - The tests are held to formatting, `ruff format` and Prettier: no linter, type checker or spelling check reads them. vulture and knip read them for what of the package and the page they use.
-- And two hooks read them for a look alone: a browser test may read no box, size or style, a page test no style or class (`.pre-commit-config.yaml`); `tests/e2e/placing.py` is the one setup let alone.
+- Two hooks read them for a look alone, each naming the reads it refuses (`.pre-commit-config.yaml`); `tests/e2e/placing.py` is the one setup let alone.
 - A test acts on an element by its `data-testid`, and never asserts one. `getByText` and `text=` only assert words the user sees. Never a CSS class selector.
 
 ## The browser

@@ -157,8 +157,8 @@
 	 * words stand in line with every other row's: a dot, and a small mark (a
 	 * file's status letter, the check of the base in force)
 	 */
-	--cr-row-dot-slot: 0.5rem;
-	--cr-row-mark-slot: 0.75rem;
+	--cr-list-row-dot-slot: 0.5rem;
+	--cr-list-row-mark-slot: 0.75rem;
 
 	/*
 	 * How wide a pane is drawn (lib/ui/pane.ts): one of rows — controls,
@@ -187,8 +187,6 @@
 	--cr-chapter-bar-height: calc(var(--cr-button-sm) + --spacing(4) + var(--cr-line));
 	/* The review's header at its least: one row of its controls, which wraps onto more on a narrow screen */
 	--cr-header-least-height: 3rem;
-	/* How wide the page says, alone on it, that the review could not open */
-	--cr-failure-width: 28rem;
 
 	/*
 	 * Whatever breathes while the agent works on it — a dot (lib/ui Dot), a
@@ -345,6 +343,8 @@
 	--cr-image-thumb: 4rem;
 	/* What the reader waits on while a story is written: one narrow column */
 	--cr-story-waiting-width: 28.75rem;
+	/* How wide the page says, alone on it, that the review could not open */
+	--cr-failure-width: 28rem;
 	/*
 	 * The guide's card: its tour's progress, a tick for each step; and the news's
 	 * drawing of an image pasted into the panel — its thumbnail, a line of code

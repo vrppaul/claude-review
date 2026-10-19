@@ -560,7 +560,7 @@ const OWN_REQUESTS = 'Ask the server through lib/api/request.ts, which holds eve
 const REQUEST_CALLERS = ['fetch', 'XMLHttpRequest'].map((name) => ({ name, message: OWN_REQUESTS }));
 
 export default tseslint.config(
-	// Generated from the server by `pnpm api:types`; and the tests, held to formatting alone
+	// Generated from the server by `pnpm api:types`; and the tests, which no linter reads (.claude/rules/tests.md)
 	{ ignores: ['src/lib/types/generated/', 'tests/'] },
 	eslint.configs.recommended,
 	...tseslint.configs.strictTypeChecked,
