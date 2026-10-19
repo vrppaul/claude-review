@@ -212,17 +212,20 @@ describe('the pane the review is sent from', () => {
 		expect(screen.getByTestId('comment-input')).toBeTruthy();
 	});
 
-	it('goes on Escape, and hands the keyboard back to the button that opened it', async () => {
+	it('goes on Escape, hands the keyboard back to the button that opened it, and keeps the summary written in it', async () => {
 		const user = userEvent.setup();
 		const review = openReview({ files: [file] });
 		onScreen(review);
 		await user.click(screen.getByTestId('quick-submit'));
 		expect(document.activeElement).toBe(screen.getByTestId('review-body'));
+		await user.type(screen.getByTestId('review-body'), 'Draft feedback');
 
 		await user.keyboard('{Escape}');
 
 		expect(screen.queryByTestId('finish-review')).toBeNull();
 		expect(document.activeElement).toBe(screen.getByTestId('quick-submit'));
+		await user.click(screen.getByTestId('quick-submit'));
+		expect((screen.getByTestId('review-body') as HTMLTextAreaElement).value).toBe('Draft feedback');
 	});
 
 	it('takes the reader, keyboard and all, to the thread a row of the pane names, though a field opened it', async () => {

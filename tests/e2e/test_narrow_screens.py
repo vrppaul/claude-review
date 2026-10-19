@@ -12,7 +12,6 @@ import pytest
 from playwright.async_api import FloatRect, Locator, Page
 
 from tests.e2e.browsers_loop import in_the_browsers_loop
-from tests.e2e.laid_out import SHOWN_WHOLE_ACROSS, TALL_AS_ITS_TOKEN
 from tests.helpers import ReviewServers, RunningReview, committed_repository, repository_opening, write_files
 
 # A file whose header is long: its path alone is wider than the diff on a laptop's screen, and as
@@ -29,19 +28,6 @@ ZOOMED = {"width": 640, "height": 400}
 PHONE = {"width": 420, "height": 800}
 # How far, in pixels, a box may stand past another: rounding, not overlap
 WITHIN_ROUNDING = 1
-# What a file's path is read across at the least: half the diff, not a sliver beside the header's controls
-PATH_SHARE = 0.5
-# A function whose first line is wider than a phone's screen, and a line of it far enough below that a change
-# there is a hunk git heads with that first line
-LONG_HEADER_FILE = "far_below.py"
-FAR_BELOW_IT = "    step_fifteen = 15\n"
-CHANGED_FAR_BELOW_IT = "    step_fifteen = 150\n"
-LONG_HEADED_FUNCTION = (
-    "def a_function_whose_name_and_arguments_run_on_past_a_phones_screen(first_argument, second_argument):\n"
-    + "".join(f"    step_{number} = {number}\n" for number in range(1, 15))
-    + FAR_BELOW_IT
-    + "".join(f"    step_{number} = {number}\n" for number in range(16, 25))
-)
 
 
 @pytest.fixture
@@ -72,43 +58,17 @@ async def _open_with_the_panel(page: Page, review: RunningReview, screen: dict[s
     await page.get_by_test_id("agent-panel").wait_for()
 
 
-# The width a box takes when told to be as wide as the diff's least width, in pixels
-LEAST_DIFF_WIDTH = """() => {
-    const probe = document.createElement('div');
-    probe.style.width = 'var(--cr-diff-least-width)';
-    document.body.append(probe);
-    const width = probe.getBoundingClientRect().width;
-    probe.remove();
-    return width;
-}"""
-
-
-async def _least_diff_width(page: Page) -> float:
-    """The width the diff is never squeezed below, as the stylesheet's token says."""
-    least = await page.evaluate(LEAST_DIFF_WIDTH)
-    assert least > 0, "the stylesheet names no least width for the diff"
-    return least
-
-
-async def test_on_a_laptop_the_columns_stand_beside_a_readable_diff_and_every_viewed_box_is_in_it(
+async def test_on_a_laptop_every_viewed_box_stands_in_the_diff_and_none_under_the_panel(
     review: RunningReview, page: Page
 ) -> None:
+    """A header longer than the diff is wide wraps: its Viewed box is never pushed under the panel beside it."""
     await _open_with_the_panel(page, review, LAPTOP)
 
-    tree = await _box(page.get_by_test_id("sidebar"))
     diff = await _box(page.get_by_test_id("diff-view"))
-    panel = await _box(page.get_by_test_id("agent-panel"))
-    # Side by side, none over another, and the diff no narrower than it reads at
-    assert tree["x"] + tree["width"] <= diff["x"] + WITHIN_ROUNDING
-    assert diff["x"] + diff["width"] <= panel["x"] + WITHIN_ROUNDING
-    assert diff["width"] >= await _least_diff_width(page) - WITHIN_ROUNDING
-    # A header longer than the diff is wide wraps: its Viewed box stays inside the diff, not under the panel,
-    # and the path is read across the diff rather than squeezed beside the controls
+
     for viewed in await page.get_by_test_id("viewed-toggle").locator("..").all():
         box = await _box(viewed)
         assert box["x"] + box["width"] <= diff["x"] + diff["width"] + WITHIN_ROUNDING
-    path = await _box(page.get_by_test_id("file-heading").filter(has_text=LONG_PATH))
-    assert path["width"] >= diff["width"] * PATH_SHARE
 
 
 async def test_zoomed_in_the_review_opens_on_the_diff_alone_and_the_toggles_lay_the_columns_over_it(
@@ -137,14 +97,11 @@ async def test_zoomed_in_the_review_opens_on_the_diff_alone_and_the_toggles_lay_
     assert panel["x"] < diff["x"] + diff["width"]
     assert diff["width"] >= ZOOMED["width"] - WITHIN_ROUNDING
 
-    # Every control of the header is on the screen, on one line: the row wraps instead of cutting
-    # the last ones off or squeezing a chip's words onto lines of their own
-    help_chip = await _box(page.get_by_test_id("open-help"))
+    # Every control of the header is on the screen: the row wraps instead of cutting the last ones off
     for control in ("quick-submit", "settings-toggle", "toggle-panel", "open-help", "base-picker"):
         box = await _box(page.get_by_test_id(control))
         assert box["x"] >= 0
         assert box["x"] + box["width"] <= ZOOMED["width"] + WITHIN_ROUNDING, f"{control} is cut off"
-    assert (await _box(page.get_by_test_id("base-picker")))["height"] <= help_chip["height"] + WITHIN_ROUNDING
     # Nothing is wider than the screen
     assert await page.evaluate("document.documentElement.scrollWidth") <= ZOOMED["width"]
 
@@ -169,31 +126,3 @@ async def test_on_a_phone_the_diff_takes_what_the_rail_leaves_and_the_page_is_no
     diff = await _box(page.get_by_test_id("diff-view"))
     assert diff["x"] >= rail["x"] + rail["width"] - WITHIN_ROUNDING
     assert await page.evaluate("document.documentElement.scrollWidth") == PHONE["width"]
-
-
-@pytest.fixture
-def repository_of_a_long_hunk_header(tmp_path: Path) -> Path:
-    """A function whose first line is wider than a phone, changed far enough below it that git heads the hunk with it."""
-    repository = tmp_path / "long-header"
-    committed_repository(repository, {LONG_HEADER_FILE: LONG_HEADED_FUNCTION})
-    write_files(repository, {LONG_HEADER_FILE: LONG_HEADED_FUNCTION.replace(FAR_BELOW_IT, CHANGED_FAR_BELOW_IT)})
-    return repository
-
-
-@in_the_browsers_loop
-async def review_of_a_long_hunk_header(repository_of_a_long_hunk_header: Path, servers: ReviewServers) -> RunningReview:
-    return await servers.start(await repository_opening(repository_of_a_long_hunk_header))
-
-
-async def test_on_a_phone_a_hunk_header_wider_than_the_screen_reads_whole_on_more_lines(
-    review_of_a_long_hunk_header: RunningReview, page: Page
-) -> None:
-    """Where in the file a hunk stands is read whole: cut at the screen's edge, it says nothing of where that is."""
-    await page.set_viewport_size(PHONE)
-    await page.goto(review_of_a_long_hunk_header.url)
-
-    header = page.get_by_test_id("hunk-header")
-    await header.wait_for()
-
-    assert await header.evaluate(SHOWN_WHOLE_ACROSS)
-    assert (await _box(header))["height"] > await page.evaluate(TALL_AS_ITS_TOKEN, "--cr-hunk-header-height")

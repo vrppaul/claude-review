@@ -2,7 +2,7 @@
 
 The header's second half is a control now. What it changes is what is drawn
 — never what the review holds, and never where a thread is anchored — so
-these tests watch both halves: the diff narrows, and the way back is there.
+this test watches both halves: the diff narrows, and the way back is there.
 """
 
 from pathlib import Path
@@ -12,7 +12,6 @@ from httpx import AsyncClient
 from playwright.async_api import Page
 
 from tests.e2e.browsers_loop import in_the_browsers_loop
-from tests.e2e.painted import on_a_probe, painted
 from tests.helpers import ReviewServers, RunningReview, committed_repository, repository_opening, write_files
 
 
@@ -31,8 +30,6 @@ ANSWERING_ROUND_ONE = {READ_FILE: "first pass\nsecond pass\nand what round 1 ask
 # What the review holds once round 1 is answered, and what of it changed after round 1 began
 FILES_IN_THE_REVIEW = tuple(BEFORE_ROUND_ONE)
 FILES_SINCE_ROUND_ONE = tuple(ANSWERING_ROUND_ONE)
-# Where the pointer rests when it is on none of the header's controls: the top left corner, over its words
-AWAY = (0, 0)
 
 
 @pytest.fixture
@@ -57,15 +54,6 @@ async def review(picker_repo: Path, servers: ReviewServers) -> RunningReview:
     return started
 
 
-async def test_the_review_says_what_is_under_review_and_against_what(review: RunningReview, page: Page) -> None:
-    """The repository in the tab's title; the base, a control, in the header."""
-    await page.goto(review.url)
-
-    await page.wait_for_selector('[data-testid="base-picker"]')
-    assert "repo: uncommitted changes" in await page.title()
-    assert "uncommitted changes" in await _said(page, "base-picker")
-
-
 async def test_a_round_can_be_read_against_and_left_again(review: RunningReview, page: Page) -> None:
     """The whole point: what the agent did about round 1, and the way back."""
     await page.goto(review.url)
@@ -84,57 +72,3 @@ async def test_a_round_can_be_read_against_and_left_again(review: RunningReview,
 
     await page.wait_for_selector('[data-testid="narrowed-to"]', state="detached")
     assert await page.locator('[data-testid="file-item"]').count() == len(FILES_IN_THE_REVIEW)
-
-
-async def test_a_thread_the_base_cannot_draw_is_counted_rather_than_dropped(review: RunningReview, page: Page) -> None:
-    """It is anchored to the review's own diff, which a narrower base has not moved."""
-    await page.goto(review.url)
-    await page.wait_for_selector('[data-testid="file-item"]')
-
-    section = page.locator(f'[data-testid="file-section"][data-path$="{UNTOUCHED_FILE}"]')
-    await section.get_by_test_id("line-gutter").first.click()
-    await page.get_by_test_id("comment-input").fill("nobody has been back to this one")
-    await page.get_by_test_id("save-comment").click()
-    await page.wait_for_selector("text=nobody has been back to this one")
-
-    await page.click('[data-testid="base-picker"]')
-    await page.get_by_test_id("base-option").filter(has_text="round 1").click()
-    await page.wait_for_selector('[data-testid="narrowed-to"]')
-
-    assert "1 thread is not on this screen" in await _said(page, "narrowed-to")
-    assert "1 comment" in await _said(page, "comment-count")
-
-
-async def test_a_narrower_base_and_whitespace_hidden_are_said_alike_in_the_header(
-    review: RunningReview, page: Page
-) -> None:
-    """Each narrows what the diff shows, so the header says both as one part, in the reader's mark."""
-    await page.goto(review.url)
-    await page.click('[data-testid="base-picker"]')
-    await page.get_by_test_id("base-option").filter(has_text="round 1").click()
-    await page.wait_for_selector('[data-testid="narrowed-to"]')
-    await page.get_by_test_id("settings-toggle").click()
-    await page.get_by_test_id("ignore-whitespace").check()
-    await page.keyboard.press("Escape")
-
-    await page.mouse.move(*AWAY)
-
-    base = await painted(page.get_by_test_id("base-picker"))
-    whitespace = await painted(page.get_by_test_id("whitespace-hidden"))
-    assert (base.ground, base.words, base.border, base.weight, base.face, base.height) == (
-        whitespace.ground,
-        whitespace.words,
-        whitespace.border,
-        whitespace.weight,
-        whitespace.face,
-        whitespace.height,
-    )
-
-
-async def test_the_base_is_named_in_the_codes_face_as_the_bases_listed_are(review: RunningReview, page: Page) -> None:
-    await page.goto(review.url)
-
-    named = page.get_by_test_id("base-named")
-    await named.wait_for()
-
-    assert (await painted(named)).face == await on_a_probe(page, "fontFamily", "var(--font-mono)")

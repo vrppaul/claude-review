@@ -94,6 +94,17 @@ describe('the file tree', () => {
 		expect(getAllByTestId('file-viewed-mark')).toHaveLength(1);
 	});
 
+	it('marks a file a round changed, and says since which round to whoever points at the mark', () => {
+		const review = openReview({ files: diffFiles });
+		review.noteRetake({ followed: 0, outdated: 0 }, { since_round: 1, base_key: 'round:1', paths: ['src/utils.ts'] });
+
+		const { getAllByTestId } = render(FileList, inReview(review));
+		const [untouched, changed] = getAllByTestId('file-item');
+
+		expect(within(untouched).queryByTestId('file-changed-mark')).toBeNull();
+		expect(within(changed).getByTestId('file-changed-mark').getAttribute('title')).toBe('Changed since round 1');
+	});
+
 	it('says a file is viewed to whoever reads the tree aloud', () => {
 		const review = openReview({ files: diffFiles });
 		review.reading.setViewed('src/handler.ts', true);

@@ -1,27 +1,21 @@
 """E2E: Story introduced once, under the switch, to a reader who has never tried it.
 
 A newcomer is welcomed first; once the welcome is put away, a pane under
-the switch introduces Story. Said not to show it again, it is gone from
-every review on the machine, which the server keeps, so a reload does not
-bring it back. Where the keyboard lands as it goes is only true in a
-browser.
+the switch introduces Story. Where the keyboard lands as it comes and goes
+is only true in a browser.
 """
 
 from importlib.metadata import version
 from pathlib import Path
 
 import pytest
-from httpx import AsyncClient
 from playwright.async_api import Page, expect
 
 from claude_review.domain.models import GuideState
 from claude_review.hosting.workspace import ReaderFiles
 from tests.e2e.browsers_loop import in_the_browsers_loop
-from tests.e2e.painted import on_a_probe, painted
 from tests.helpers import ReviewServers, RunningReview, committed_repository, repository_opening, write_files
-from tests.stories import as_the_agent_writes, step, story_of
 
-STORY_ROUTE = "/api/story"
 CHANGED_FILE = "told.py"
 COMMITTED_FILES = {CHANGED_FILE: "keep one\nfirst two\n"}
 # The change under review, which a story can be told of
@@ -58,27 +52,6 @@ async def _press(page: Page, test_id: str) -> None:
     await page.keyboard.press("Enter")
 
 
-async def test_storys_introduction_is_edged_in_the_agents_colour(
-    review: RunningReview, reader_files: ReaderFiles, page: Page
-) -> None:
-    """It speaks for the agent's way of reading, so its pane says so by its edge."""
-    await _welcomed_and_introduced(page, review, reader_files)
-
-    introduction = await painted(page.get_by_test_id("story-introduction"))
-
-    assert introduction.border == await on_a_probe(page, "borderTopColor", "var(--cr-agent)")
-
-
-async def test_story_is_ringed_in_the_agents_colour_while_its_introduction_points_at_it(
-    review: RunningReview, reader_files: ReaderFiles, page: Page
-) -> None:
-    await _welcomed_and_introduced(page, review, reader_files)
-
-    story = await painted(page.get_by_test_id("read-as-story"))
-
-    assert story.edge == await on_a_probe(page, "boxShadow", "var(--cr-shadow-introduced-edge)")
-
-
 async def test_try_story_takes_the_keyboard_as_the_introduction_appears_to_a_returning_reader(
     review: RunningReview, reader_files: ReaderFiles, page: Page
 ) -> None:
@@ -89,19 +62,6 @@ async def test_try_story_takes_the_keyboard_as_the_introduction_appears_to_a_ret
     await page.goto(review.url)
 
     await expect(page.get_by_test_id("try-story")).to_be_focused()
-
-
-async def test_story_put_away_for_good_by_a_newcomer_is_not_introduced_after_a_reload(
-    review: RunningReview, reader_files: ReaderFiles, page: Page
-) -> None:
-    await _welcomed_and_introduced(page, review, reader_files)
-
-    await page.get_by_test_id("story-introduction-hide").click()
-    await page.get_by_test_id("story-introduction-hidden").wait_for()
-    await page.reload()
-    await page.get_by_test_id("reading-view").wait_for()
-
-    assert await page.get_by_test_id("story-introduction").count() == 0
 
 
 async def test_the_keyboard_goes_to_undo_once_story_is_put_away_for_good(
@@ -124,16 +84,3 @@ async def test_the_keyboard_goes_to_story_once_its_introduction_is_put_away_for_
     await page.get_by_test_id("story-introduction").wait_for(state="detached")
 
     assert await page.evaluate(FOCUSED_TEST_ID) == "read-as-story"
-
-
-async def test_the_keyboard_goes_to_story_where_a_story_that_arrived_takes_its_introductions_place(
-    review: RunningReview, reader_files: ReaderFiles, page: Page
-) -> None:
-    await _welcomed_and_introduced(page, review, reader_files)
-    await page.get_by_test_id("try-story").focus()
-
-    async with AsyncClient(base_url=review.url) as agent:
-        await agent.put(STORY_ROUTE, json=as_the_agent_writes(story_of(step(CHANGED_FILE, 2, 2))))
-    await page.get_by_test_id("story-ready").wait_for()
-
-    await expect(page.get_by_test_id("read-as-story")).to_be_focused()

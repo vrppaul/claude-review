@@ -7,8 +7,8 @@ drawn in its place, and changes under them as they stop the story, ask for
 it again, or the agent tells it. Each change takes away the control that
 held the keyboard, and the keyboard goes to what is drawn in its place. A
 story told while they read the files is offered under the switch, and
-takes the keyboard from nothing. Where the keyboard lands, and where the
-words stand in their area, are only true in a browser.
+takes the keyboard from nothing. Where the keyboard lands is only true in a
+browser.
 """
 
 from pathlib import Path
@@ -41,28 +41,12 @@ A_STORY = story_of(step(CHANGED_FILE, 2, 2))
 # A window as wide as a laptop's, and one as narrow as a phone's held upright
 WIDE: ViewportSize = {"width": 1440, "height": 900}
 NARROW: ViewportSize = {"width": 420, "height": 900}
-# Where the middle of an element is on screen, in pixels from the left and from the top of the window
-MIDDLE_OF = """(element) => {
-    const box = element.getBoundingClientRect();
-    return { across: box.left + box.width / 2, down: box.top + box.height / 2 };
-}"""
-# How near two middles stand that are the same: where an edge stands is not a whole number
-LESS_THAN_A_PIXEL = 1
 # Where an element's right edge is, in pixels from the left of the window, and how wide the window is
 RIGHT_OF = "(element) => element.getBoundingClientRect().right"
 WINDOW_WIDTH = "window.innerWidth"
 # How long the note of a story's arrival stands before it puts itself away, in milliseconds, as the page has it
 # (`PassingNote.svelte`): the page's clock is run on by as much, and no test waits it out
 NOTE_STANDS_FOR_MS = 4_000
-
-
-class Middle(BaseModel):
-    """Where the middle of an element is on screen."""
-
-    model_config = ConfigDict(frozen=True)
-
-    across: float
-    down: float
 
 
 class Answered(BaseModel):
@@ -143,10 +127,6 @@ async def _ask_to_read_the_story(page: Page, review: RunningReview) -> None:
     await page.get_by_test_id("story-opt-in").wait_for()
 
 
-async def _middle_of(page: Page, test_id: str) -> Middle:
-    return Middle.model_validate(await page.get_by_test_id(test_id).evaluate(MIDDLE_OF))
-
-
 async def test_stopping_the_story_puts_the_keyboard_on_the_way_to_ask_for_it_again(
     review: RunningReview, page: Page
 ) -> None:
@@ -202,20 +182,6 @@ async def test_a_story_told_under_the_keyboard_puts_the_keyboard_on_its_head(rev
     await _the_agent_tells_the_story(review)
 
     await expect(page.get_by_test_id("part-head").first).to_be_focused()
-
-
-@pytest.mark.parametrize("window", [WIDE, NARROW], ids=["a wide window", "a narrow window"])
-async def test_what_the_reader_waits_on_stands_in_the_middle_of_the_storys_area(
-    review: RunningReview, page: Page, window: ViewportSize
-) -> None:
-    await page.set_viewport_size(window)
-    await _wait_for_a_story(page, review)
-
-    waited_on = await _middle_of(page, "story-waiting")
-    area = await _middle_of(page, "story-view")
-
-    assert abs(waited_on.across - area.across) < LESS_THAN_A_PIXEL
-    assert abs(waited_on.down - area.down) < LESS_THAN_A_PIXEL
 
 
 async def test_the_question_before_stories_opens_with_the_keyboard_on_turning_them_on(

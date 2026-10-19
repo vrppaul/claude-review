@@ -213,6 +213,21 @@ describe("the story's other blocks", () => {
 		]);
 	});
 
+	it('keep the lists of the overview open while a thread hangs in them, though their heading is pressed', async () => {
+		const user = userEvent.setup();
+		render(ReviewScreen, { props: { review } });
+		const toggle = screen.getByTestId('story-more-toggle');
+		await user.click(toggle);
+		await user.click(within(screen.getAllByTestId('overview-item')[0]).getByTestId('ask-about-this'));
+		await user.type(screen.getByTestId('comment-input'), 'Why on disk?');
+		await user.click(screen.getByTestId('save-comment'));
+
+		await user.click(toggle);
+
+		expect(toggle.getAttribute('aria-expanded')).toBe('true');
+		expect(screen.getAllByTestId('comment-thread')).toHaveLength(1);
+	});
+
 	it('offer nothing on the reason of a step of a file no thread can name', () => {
 		const unnamable = { ...toldStep('a.py', 1, 'The first line comes first.'), commentable: false };
 		review = openReview({ files, story: storyHeld({ chapters: [toldChapter('ch-1', [unnamable])] }) });

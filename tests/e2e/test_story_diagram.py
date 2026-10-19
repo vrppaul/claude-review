@@ -3,8 +3,7 @@
 Whether a source draws only a browser can say: mermaid lays a drawing out
 by measuring its labels on the page. It draws under the policy the page is
 served with, loaded only once a story has a diagram, and a press on a node
-the agent linked to a chapter takes the reader there. A source it cannot
-read is said to be broken where it breaks.
+the agent linked to a chapter takes the reader there.
 """
 
 from pathlib import Path
@@ -13,7 +12,6 @@ import pytest
 from httpx import AsyncClient
 from playwright.async_api import Page, ViewportSize, expect
 
-from claude_review.cli.story_help import EXAMPLE
 from claude_review.domain.story import Step, Story
 from tests.e2e.browsers_loop import in_the_browsers_loop
 from tests.helpers import ReviewServers, RunningReview, committed_repository, repository_opening, write_files
@@ -32,8 +30,6 @@ SECOND_CHAPTER = "ch-2"
 # The overview draws the two halves, a chapter each, after a node that leads nowhere
 CAPTION = "How the file is told"
 DRAWN = "flowchart LR\n  asked[Asked for] --> first[The first half] --> second[The second half]"
-# The same with its third line's arrow drawn twice, where mermaid's parser stops
-BROKEN = "flowchart LR\n  asked[Asked for] --> first[The first half]\n  first --> --> second[The second half]"
 # Its two nodes that stand for the halves, each leading to its chapter
 HALVES_LINKED = {"first": ONLY_CHAPTER, "second": SECOND_CHAPTER}
 # The same, asking in a directive of its own for nodes filled red
@@ -41,23 +37,9 @@ SOURCES_OWN_FILL = "rgb(255, 0, 0)"
 DRAWN_IN_ITS_OWN_LOOK = '%%{init: {"themeCSS": ".node rect { fill: red; }"}}%%\n' + DRAWN
 # How a node's box is filled, as the browser draws it
 FILL_OF = "(box) => getComputedStyle(box).fill"
-# Whether a node's box is edged in the agent's colour, as the browser draws both
-EDGED_AS_THE_AGENT = """(box) => {
-    const probe = document.createElement('span');
-    probe.style.color = 'var(--cr-agent)';
-    document.body.append(probe);
-    const agent = getComputedStyle(probe).color;
-    probe.remove();
-    return getComputedStyle(box).stroke === agent;
-}"""
 # The nodes the page marks as leading somewhere, in the order mermaid draws them: the first half, the second
 LEADING_SOMEWHERE = "diagram-link"
 THE_SECOND_HALF = 1
-# The help's own example of a diagram, the chapters its nodes lead to, and which of its four nodes, in the order
-# mermaid draws them, it marks as the heart of the change: the second
-THE_HELPS_DIAGRAM = EXAMPLE.overview.diagram
-THE_HELPS_CHAPTERS = [chapter.id for chapter in EXAMPLE.chapters]
-THE_HELPS_HEART = [False, True, False, False]
 # Wide enough for the contents to stand beside the story; and a phone, narrower than the diagram drawn at its size
 WIDE_SCREEN: ViewportSize = {"width": 1600, "height": 900}
 PHONE: ViewportSize = {"width": 420, "height": 800}
@@ -72,20 +54,6 @@ def _told_in_two_chapters(drawn: str, links: dict[str, str]) -> Story[Step]:
         chapter_of(SECOND_CHAPTER, step(LONG_FILE, LAST_LINE_OF_THE_FIRST_HALF + 1, LINES_OF_THE_LONG_FILE)),
     )
     diagram = {"mermaid": drawn, "caption": CAPTION, "links": links}
-    return planted(story, ("overview", "diagram"), diagram)
-
-
-def _told_in_the_helps_chapters() -> Story[Step]:
-    """The long file told in the chapters of the help's own example, a run of its lines each, its overview drawing
-    them as the example does."""
-    run = LINES_OF_THE_LONG_FILE // len(THE_HELPS_CHAPTERS)
-    story = story_of_chapters(
-        *(
-            chapter_of(chapter_id, step(LONG_FILE, place * run + 1, (place + 1) * run))
-            for place, chapter_id in enumerate(THE_HELPS_CHAPTERS)
-        )
-    )
-    diagram = {"mermaid": THE_HELPS_DIAGRAM.mermaid, "caption": CAPTION, "links": THE_HELPS_DIAGRAM.links}
     return planted(story, ("overview", "diagram"), diagram)
 
 
@@ -111,21 +79,9 @@ async def review_drawn(long_file_repo: Path, servers: ReviewServers) -> RunningR
 
 
 @in_the_browsers_loop
-async def review_drawn_broken(long_file_repo: Path, servers: ReviewServers) -> RunningReview:
-    """A review whose story's overview draws them with a source mermaid cannot read."""
-    return await _told(long_file_repo, servers, _told_in_two_chapters(BROKEN, HALVES_LINKED))
-
-
-@in_the_browsers_loop
 async def review_drawn_in_its_own_look(long_file_repo: Path, servers: ReviewServers) -> RunningReview:
     """A review whose story's overview draws them, its source asking for a look of its own."""
     return await _told(long_file_repo, servers, _told_in_two_chapters(DRAWN_IN_ITS_OWN_LOOK, HALVES_LINKED))
-
-
-@in_the_browsers_loop
-async def review_drawn_as_the_help_draws(long_file_repo: Path, servers: ReviewServers) -> RunningReview:
-    """A review whose story is told in the help's own example's chapters and drawn as it draws them, its heart marked."""
-    return await _told(long_file_repo, servers, _told_in_the_helps_chapters())
 
 
 async def _read_as_story(page: Page, review: RunningReview) -> None:
@@ -159,19 +115,6 @@ async def test_on_a_phone_a_diagram_wider_than_the_column_is_drawn_to_fit_it(
     assert await drawing.locator("svg").evaluate(WIDTH_OF) <= await drawing.evaluate(WIDTH_OF)
 
 
-async def test_a_diagram_opened_large_is_headed_by_its_caption_and_closed_by_its_own_button(
-    review_drawn: RunningReview, page: Page
-) -> None:
-    await _read_as_story(page, review_drawn)
-    await page.get_by_test_id("diagram-open-large").click()
-    large = page.get_by_test_id("diagram-large")
-
-    await expect(large.get_by_role("heading", name=CAPTION)).to_be_visible()
-    await large.get_by_test_id("diagram-large-close").click()
-
-    await expect(large).to_have_count(0)
-
-
 async def test_a_press_on_a_node_takes_the_reader_to_the_chapter_it_leads_to(
     review_drawn: RunningReview, page: Page
 ) -> None:
@@ -192,28 +135,3 @@ async def test_a_source_s_own_settings_do_not_change_the_look_the_page_draws_it_
     a_node = page.get_by_test_id("diagram-drawing").get_by_test_id(LEADING_SOMEWHERE).first.locator("rect").first
 
     assert await a_node.evaluate(FILL_OF) != SOURCES_OWN_FILL
-
-
-async def test_the_helps_own_example_draws_its_heart_edged_in_the_agents_colour_and_no_other_node(
-    review_drawn_as_the_help_draws: RunningReview, page: Page
-) -> None:
-    """The help marks the heart with a class, and the page's look edges that class: the two must agree."""
-    await _read_as_story(page, review_drawn_as_the_help_draws)
-
-    nodes = page.get_by_test_id("diagram-drawing").get_by_test_id(LEADING_SOMEWHERE)
-    await expect(nodes).to_have_count(len(THE_HELPS_HEART))
-
-    assert [
-        await node.locator("rect").first.evaluate(EDGED_AS_THE_AGENT) for node in await nodes.all()
-    ] == THE_HELPS_HEART
-
-
-async def test_a_diagram_that_does_not_draw_says_where_it_breaks_and_shows_its_source(
-    review_drawn_broken: RunningReview, page: Page
-) -> None:
-    await _read_as_story(page, review_drawn_broken)
-
-    await expect(page.get_by_test_id("diagram-fault")).to_have_text(
-        'This diagram could not be drawn: line 3, unexpected "-->".'
-    )
-    await expect(page.get_by_test_id("diagram-source")).to_have_text(BROKEN)

@@ -74,8 +74,8 @@ globalThis.ResizeObserver = SilentResizeObserver as unknown as typeof ResizeObse
  * - the keyboard given back, on closing, to what had it before;
  * - Escape, which a browser answers by cancelling and closing the dialog;
  * - the keyboard held inside, and the page under it inert.
- * The browser tests hold those: tests/e2e/test_keys_and_focus.py and the
- * keys list's tests in tests/e2e/test_review_flow.py.
+ * The browser tests of the question asked before stories are turned on hold
+ * those: tests/e2e/test_story_waiting.py.
  */
 HTMLDialogElement.prototype.showModal ??= function showModal(this: HTMLDialogElement) {
 	this.open = true;

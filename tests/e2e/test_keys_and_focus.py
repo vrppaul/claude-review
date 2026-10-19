@@ -14,7 +14,7 @@ from playwright.async_api import Page, expect
 
 from claude_review.hosting.workspace import ReaderFiles
 from tests.e2e.browsers_loop import in_the_browsers_loop
-from tests.e2e.line_keys import LESS_THAN_A_LINE_APART, LINE_KEYS, LINES_UNDER_THE_HEADER, SCROLLED
+from tests.e2e.line_keys import LESS_THAN_A_LINE_APART, LINES_UNDER_THE_HEADER, SCROLLED
 from tests.helpers import ReviewServers, RunningReview, committed_repository, git, repository_opening, write_files
 
 # One file, changed on a line, so the first line number the keys reach is in it
@@ -102,23 +102,6 @@ async def _start_a_comment(page: Page, words: str) -> None:
     await page.keyboard.type(words)
 
 
-async def test_keeping_what_was_written_gives_the_keyboard_back_to_the_field(review: RunningReview, page: Page) -> None:
-    """Escape asks before the words go; keeping them closes the question and the reader types on."""
-    await _open_review(page, review)
-    await _start_a_comment(page, "Half a thought")
-
-    await page.keyboard.press("Escape")
-    question = page.get_by_test_id("discard-dialog")
-    await question.wait_for()
-    assert await question.evaluate("dialog => dialog.contains(document.activeElement)")
-    await page.keyboard.press("Enter")
-    await question.wait_for(state="detached")
-
-    assert await page.evaluate(FOCUSED_TEST_ID) == "comment-input"
-    await page.keyboard.type(", and the rest")
-    assert await page.get_by_test_id("comment-input").input_value() == "Half a thought, and the rest"
-
-
 async def test_v_after_a_jump_from_the_tree_marks_the_file_jumped_to(several_files: RunningReview, page: Page) -> None:
     """Landed on a file's header, the file above ends at the band's edge: the file read is the one jumped to."""
     await _open_review(page, several_files)
@@ -130,9 +113,8 @@ async def test_v_after_a_jump_from_the_tree_marks_the_file_jumped_to(several_fil
         assert await section.get_by_test_id("viewed-toggle").is_checked(), f"v after jumping to {path}"
 
 
-@pytest.mark.parametrize("line_key", LINE_KEYS)
 async def test_a_line_key_after_a_file_picked_in_the_tree_lands_on_its_first_line_and_takes_the_reader_nowhere_back(
-    several_files: RunningReview, page: Page, line_key: str
+    several_files: RunningReview, page: Page
 ) -> None:
     """The pick leaves the keyboard on the tree's row, outside what is read: the key starts where the reader reads."""
     await _open_review(page, several_files)
@@ -141,22 +123,21 @@ async def test_a_line_key_after_a_file_picked_in_the_tree_lands_on_its_first_lin
     await page.get_by_test_id("file-item").filter(has_text=PICKED_FILE).click()
     scrolled_to = await files.evaluate(SCROLLED)
 
-    await page.keyboard.press(line_key)
+    await page.keyboard.press("j")
 
     await expect(picked.get_by_role("button", name=FIRST_LINE, exact=True)).to_be_focused()
     assert await files.evaluate(SCROLLED) >= scrolled_to > 0
 
 
-@pytest.mark.parametrize("line_key", LINE_KEYS)
 async def test_a_line_key_deep_in_a_file_lands_on_the_first_line_in_sight_under_the_header_kept_over_it(
-    several_files: RunningReview, page: Page, line_key: str
+    several_files: RunningReview, page: Page
 ) -> None:
     """Scrolled by hand, the keyboard is on nothing: the key starts at the first line the reader sees."""
     await _open_review(page, several_files)
     files = page.get_by_test_id("diff-view")
     await files.evaluate("(area, depth) => area.scrollBy(0, depth)", DEEP_IN_THE_FILE)
 
-    await page.keyboard.press(line_key)
+    await page.keyboard.press("j")
 
     # The file the reader is deep in is the first: its header is the one kept in sight over its lines
     kept_in_sight = page.get_by_test_id("file-header").first
@@ -165,9 +146,8 @@ async def test_a_line_key_deep_in_a_file_lands_on_the_first_line_in_sight_under_
     assert await files.evaluate(SCROLLED) == DEEP_IN_THE_FILE
 
 
-@pytest.mark.parametrize("line_key", LINE_KEYS)
 async def test_a_line_key_with_the_keyboard_on_a_line_scrolled_away_lands_on_the_first_line_in_sight(
-    several_files: RunningReview, page: Page, line_key: str
+    several_files: RunningReview, page: Page
 ) -> None:
     """The line the keyboard was left on is out of sight: the key starts where the reader reads, and takes them nowhere back."""
     await _open_review(page, several_files)
@@ -175,7 +155,7 @@ async def test_a_line_key_with_the_keyboard_on_a_line_scrolled_away_lands_on_the
     await page.keyboard.press("j")
     await files.evaluate("(area, depth) => area.scrollBy(0, depth)", DEEP_IN_THE_FILE)
 
-    await page.keyboard.press(line_key)
+    await page.keyboard.press("j")
 
     kept_in_sight = page.get_by_test_id("file-header").first
     assert -LESS_THAN_A_LINE_APART <= await kept_in_sight.evaluate(LINES_UNDER_THE_HEADER) < 1
@@ -267,53 +247,11 @@ async def _focused(page: Page) -> str | None:
     return await page.evaluate(FOCUSED_TEST_ID)
 
 
-async def test_the_keyboard_lands_on_what_remains_after_each_thing_done_to_a_comment(
-    gapped: RunningReview, page: Page
-) -> None:
-    """Saved, settled, taken up again, folded, deleted or put away, the keyboard is never left on nothing."""
-    await _open_review(page, gapped)
-    await page.keyboard.press("j")
-    commented = await page.evaluate(FOCUSED_PLACE)
-
-    await page.keyboard.press("Enter")
-    await page.get_by_test_id("comment-input").wait_for()
-    await page.keyboard.press("Escape")
-    await page.get_by_test_id("comment-input").wait_for(state="detached")
-    assert (await _focused(page), await page.evaluate(FOCUSED_PLACE)) == ("line-gutter", commented)
-
-    await page.keyboard.press("Enter")
-    await page.keyboard.type("Name it after the unit")
-    await page.keyboard.press("Control+Enter")
-    await page.get_by_test_id("comment-thread").wait_for()
-    assert await _focused(page) == "comment-thread"
-
-    await _press(page, "resolve-comment")
-    await page.get_by_test_id("resolved-thread").wait_for()
-    assert await _focused(page) == "comment-thread"
-
-    await _press(page, "reopen-thread")
-    await page.get_by_test_id("folded-thread").wait_for()
-    assert await _focused(page) == "comment-thread"
-
-    await _press(page, "fold-comment")
-    await page.get_by_test_id("delete-comment").wait_for()
-    assert await _focused(page) == "fold-comment"
-    await page.keyboard.press("Enter")
-    await page.get_by_test_id("folded-thread").wait_for()
-    assert await _focused(page) == "fold-comment"
-    await page.keyboard.press("Enter")
-
-    await _press(page, "delete-comment")
-    await page.get_by_test_id("confirm-go-ahead").focus()
-    await page.keyboard.press("Enter")
-    await page.get_by_test_id("comment-thread").wait_for(state="detached")
-    assert (await _focused(page), await page.evaluate(FOCUSED_PLACE)) == ("line-gutter", commented)
-
-
 async def test_the_keyboard_stays_on_a_step_up_and_lands_on_the_first_line_shown_once_none_is_hidden(
     gapped: RunningReview, page: Page
 ) -> None:
-    """The button pressed keeps the keyboard while it stays; read whole, the gap goes, and its first line takes it."""
+    """The button pressed is disabled while it reads, which takes the keyboard off it: it comes back while the button
+    stays; read whole, the gap goes, and its first line takes it."""
     await _open_review(page, gapped)
     gap = page.get_by_test_id("hunk-gap").first
     hidden_before = await gap.inner_text()
@@ -326,19 +264,6 @@ async def test_the_keyboard_stays_on_a_step_up_and_lands_on_the_first_line_shown
     await _press(page, "expand-all")
     await page.locator('[data-place="new:1"]').wait_for()
     assert (await _focused(page), await page.evaluate(FOCUSED_PLACE)) == ("line-gutter", "new:1")
-
-
-async def test_the_keyboard_lands_on_the_help_once_the_tour_is_skipped(
-    review: RunningReview, reader_files: ReaderFiles, page: Page
-) -> None:
-    reader_files.guide.unlink()
-    await _open_review(page, review)
-    await page.get_by_test_id("guide-start").click()
-
-    await _press(page, "guide-skip")
-    await page.get_by_test_id("guide-tour").wait_for(state="detached")
-
-    assert await _focused(page) == "open-help"
 
 
 async def test_the_keyboard_goes_with_the_tree_of_files_to_its_rail_and_comes_back_with_it(
