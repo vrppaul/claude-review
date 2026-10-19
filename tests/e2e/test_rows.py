@@ -1,14 +1,16 @@
 """E2E: every row of the page is the library's Row, drawn one way wherever it stands, in a real browser.
 
-A row is one line of a list the reader goes down: a file or a folder of the
+A row is one item of a list the reader goes down: a file or a folder of the
 tree, a part of a story in its contents and what hangs under it, a fold, an
 entry of Help, an option of a pane, a thread the screen on it cannot draw.
-Every one stands as tall as the others, is lit under the pointer by the
-pointer's light, stands on the selected tint with its edge at its start while
-it is the one of its list the reader is at, and steps back into faint words
-once they have finished with it. How tall a row stands and how it is lit are
-the stylesheet's, worked out by the browser: jsdom applies none. Each look is
-read against its token, painted on a probe in the same theme.
+Every row of one line stands as tall as the others, and a title longer than
+its row is wide wraps onto more lines, whole. Every one is lit under the
+pointer by the pointer's light, stands on the selected tint with its edge
+at its start while it is the one of its list the reader is at, and steps
+back into faint words once they have finished with it. How tall a row
+stands and how it is lit are the stylesheet's, worked out by the browser:
+jsdom applies none. Each look is read against its token, painted on a
+probe in the same theme.
 """
 
 from pathlib import Path
@@ -307,3 +309,40 @@ async def test_the_rows_of_a_story_stand_as_the_trees_do_and_a_part_scrolled_pas
     assert await _heights(rows) == [ROW_HEIGHT] * len(rows)
     lit = await _lit_under_the_pointer(await _rows_not_in_view(page, IN_THE_STORY))
     assert lit == [await light(page, "--cr-hover")] * (len(rows) - THE_FILE_IN_VIEW)
+
+
+# A chapter's title longer than a story's contents are wide, as long as a chapter's title may be
+LONG_TITLE = "Every greeting is shorter, and so are the tests reading them"
+A_STORY_OF_A_LONG_TITLE = planted(A_STORY, ("chapters", 0, "title"), LONG_TITLE)
+# What of an element is cut where it ends: each element in it whose words reach past its edge
+CUT = """(element) => [...element.querySelectorAll('*')].filter(
+    (inside) => inside.scrollWidth > inside.clientWidth
+).length"""
+# Where an element's middle stands down the window, and where its top does, in pixels
+MIDDLE = "(element) => { const box = element.getBoundingClientRect(); return box.top + box.height / 2; }"
+TOP = "(element) => element.getBoundingClientRect().top"
+
+
+@in_the_browsers_loop
+async def review_of_a_long_title(repository: Path, servers: ReviewServers) -> RunningReview:
+    """A review of the change as round 1's work leaves it, whose story names its chapter by a long title."""
+    write_files(repository, ANSWERING_ROUND_ONE)
+    started = await servers.start(await repository_opening(repository))
+    async with AsyncClient(base_url=started.url) as agent:
+        await agent.put(STORY_ROUTE, json=as_the_agent_writes(A_STORY_OF_A_LONG_TITLE))
+    return started
+
+
+async def test_a_chapter_whose_title_is_longer_than_the_contents_are_wide_wraps_onto_more_lines_and_reads_whole(
+    review_of_a_long_title: RunningReview, page: Page
+) -> None:
+    await page.goto(review_of_a_long_title.url)
+    await page.get_by_test_id("read-as-story").click()
+
+    chapter = page.get_by_test_id("go-to-part").filter(has_text=LONG_TITLE)
+
+    assert (await painted(chapter)).height > ROW_HEIGHT
+    assert await chapter.evaluate(CUT) == 0
+    # Its node stands level with its first line, as in a row of one line, so the axis through the nodes meets it
+    node_middle = await chapter.get_by_test_id("part-node").evaluate(MIDDLE)
+    assert node_middle - await chapter.evaluate(TOP) == ROW_HEIGHT / 2

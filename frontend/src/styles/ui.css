@@ -729,18 +729,22 @@
 }
 
 /*
- * A row (Row): one line of a list the reader goes down — a file or a folder
+ * A row (Row): one item of a list the reader goes down — a file or a folder
  * of the tree, a part of a story in its contents, a fold, an option of a
- * pane — as tall as every other, its words small and strong, a path in the
- * code's face; set in as far as its folder stands deep in the tree. The
- * pointer lights it as it lights whatever can be pressed.
+ * pane — its words small and strong, a path in the code's face; set in as
+ * far as its folder stands deep in the tree. One line of words stands in the
+ * middle of a row's height, the least a row stands; a title of more lines
+ * keeps that room above and below them, and what stands before and after it
+ * stays level with its first line. The pointer lights it as it lights
+ * whatever can be pressed.
  */
 .cr-ui-row {
 	display: flex;
-	align-items: center;
+	align-items: flex-start;
 	gap: var(--cr-list-row-gap);
 	width: 100%;
-	height: var(--cr-list-row-height);
+	min-height: var(--cr-list-row-height);
+	padding-block: calc((var(--cr-list-row-height) - 1lh) / 2);
 	padding-inline: calc(var(--cr-depth) * var(--cr-list-row-indent) + var(--cr-list-row-room)) var(--cr-list-row-room);
 	border-radius: var(--radius-field);
 	color: var(--color-base-content);
@@ -748,27 +752,36 @@
 	font-weight: 600;
 	line-height: var(--text-xs--line-height);
 	text-align: left;
-	white-space: nowrap;
 }
-/* What stands before its label, and at its end, never squeezed: its end at the row's far side */
+/* What stands before its label and at its end: never squeezed, level with its first line, its end at the far side */
 .cr-ui-row-leading,
 .cr-ui-row-end {
 	display: flex;
 	flex-shrink: 0;
 	align-items: center;
 	gap: var(--cr-list-row-gap);
+	height: 1lh;
 }
 .cr-ui-row-end {
 	margin-inline-start: auto;
 }
-/* What it is called, cut where the row ends */
+/* A title, wrapped onto as many lines as it takes and read whole, a word longer than the row broken where it ends */
 .cr-ui-row-label {
 	min-width: 0;
-	overflow: hidden;
-	text-overflow: ellipsis;
+	overflow-wrap: anywhere;
+}
+/*
+ * A path stays one line, cut where the row ends: broken onto more, it would
+ * break inside a name, at a slash or a dot, and the tree reads as a tree
+ * only while each of its rows is one line under the folder it stands in
+ */
+.cr-ui-row-path {
+	white-space: nowrap;
 }
 .cr-ui-row-path .cr-ui-row-label {
+	overflow: hidden;
 	font-family: var(--font-mono);
+	text-overflow: ellipsis;
 }
 /* What it says of what it names, after its label in quieter words: in the room the label leaves, and cut first */
 .cr-ui-row-said {

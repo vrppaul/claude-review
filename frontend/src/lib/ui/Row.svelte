@@ -4,9 +4,11 @@
 	import FoldChevron from './FoldChevron.svelte';
 
 	/**
-	 * What a row's label names, which sets the face it is drawn in:
-	 * - path: a place in what is reviewed — a file, a folder, the line a thread hangs on, a base — in the code's face
-	 * - title: what is called by words — a part of a story, what a fold holds, the tour — in the page's own face
+	 * What a row's label names, which sets the face it is drawn in and whether it may take more than a line:
+	 * - path: a place in what is reviewed — a file, a folder, the line a thread hangs on, a base — in the code's
+	 *   face, on one line, cut where the row ends
+	 * - title: what is called by words — a part of a story, what a fold holds, the tour — in the page's own face,
+	 *   wrapped onto as many lines as it takes and read whole
 	 */
 	type Names = 'path' | 'title';
 
@@ -26,7 +28,7 @@
 		viewed?: boolean;
 		/** What stands before its label: a file's letter, a part's node, a check, a dot, an icon. */
 		leading?: Snippet | undefined;
-		/** What it is called, cut where the row ends. */
+		/** What it is called: a path cut where the row ends, a title whole. */
 		label: Snippet;
 		/** What it says of what it names, after its label in quieter words: a thread's, after the line it hangs on. */
 		said?: Snippet;

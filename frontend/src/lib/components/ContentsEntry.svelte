@@ -37,6 +37,7 @@
 {#snippet onTheAxis()}
 	<span
 		aria-hidden="true"
+		data-testid="part-node"
 		class={[
 			'cr-contents-node',
 			checked && 'cr-contents-node-read',
@@ -64,14 +65,13 @@
 	the tree's are. A part above the one being read steps back, in faint words as a file the reader has finished
 	with does, a check in its node and its stretch of the axis in the colour of what is done. A chapter a round
 	changed code of after it was told rings its number in the warning's colour in place of the check, scrolled
-	past or not. The node is for the eye; the entry's name says whether the part is scrolled past in words, and
-	its title says itself in full where the row cuts it -->
+	past or not. The node is for the eye; the entry's name says whether the part is scrolled past in words. A title
+	longer than the row is wide wraps onto more lines and reads whole -->
 <li data-testid="contents-entry" class={['cr-contents-entry', read && 'cr-contents-entry-read']}>
 	<Row
 		names="title"
 		testId="go-to-part"
 		viewed={read}
-		{title}
 		aria-label={threads > 0 ? calledWithThreads(called, threads) : called}
 		aria-current={beingRead ? 'location' : undefined}
 		onclick={() => review.parts.goTo(part)}
