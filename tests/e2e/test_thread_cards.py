@@ -24,6 +24,13 @@ CHANGED = {CHANGED_FILE: "def hello():\n    return 'hi'\n"}
 ROW_EDGES = "(gutter) => { const row = gutter.closest('tr').getBoundingClientRect(); return [row.left, row.bottom, row.right]; }"
 # How far apart two things may stand that differ by the edge round one of them, in pixels
 AN_EDGE_APART = 1
+# The themes the reader's system may ask for, which a review follows until the reader picks one
+SCHEMES = ["light", "dark"]
+# What a line a thread is folded to stands on, and the colour of the mark down its start
+GROUND_AND_EDGE = """(line) => {
+    const style = getComputedStyle(line);
+    return [style.backgroundColor, style.borderLeftColor];
+}"""
 
 
 @pytest.fixture
@@ -114,4 +121,21 @@ async def test_a_thread_folded_away_is_as_wide_as_its_card_and_its_fold_stays_wh
     assert (unfold_left, unfold_right) == (
         pytest.approx(fold_left, abs=AN_EDGE_APART),
         pytest.approx(fold_right, abs=AN_EDGE_APART),
+    )
+
+
+@pytest.mark.parametrize("scheme", SCHEMES)
+async def test_a_thread_of_the_readers_folded_away_stands_on_the_raised_surface_edged_in_their_mark_not_as_where_they_are(
+    review: RunningReview, page: Page, scheme: str
+) -> None:
+    await page.emulate_media(color_scheme=scheme)
+    await _comment_on_the_first_line(page, review)
+
+    await page.get_by_test_id("fold-comment").click()
+
+    folded = page.get_by_test_id("folded-thread")
+    ground, edge = await folded.evaluate(GROUND_AND_EDGE)
+    assert (ground, edge) == (
+        await on_a_probe(page, "backgroundColor", "var(--color-base-200)"),
+        await on_a_probe(page, "borderLeftColor", "var(--cr-mark)"),
     )

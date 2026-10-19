@@ -7,12 +7,16 @@
  */
 
 /**
- * Whose or what the framed words are:
- * - reader: what the reader wrote, or a thread of theirs folded away
- * - agent: what the agent says, in a story or in a thread it raised
- * - warning: what the review warns about, where to doubt it, what it costs
- * - quiet: something settled, stepping back
- * - stale: a copy of lines a thread has lost
+ * Whose or what the framed words are, and the ground the tone lays:
+ * - reader: a thread of the reader's folded away; on the raised surface, as
+ *   their mark's own wash is the tint of the one they are at
+ * - agent: what the agent says, in a story or in a thread it raised; on its
+ *   wash
+ * - warning: what the review warns about, where to doubt it, what it costs;
+ *   on its wash
+ * - quiet: something settled, stepping back; on the raised surface
+ * - stale: a copy of lines a thread has lost; on the page's own ground,
+ *   inside the card
  */
 export type FrameTone = 'reader' | 'agent' | 'warning' | 'quiet' | 'stale';
 

@@ -408,9 +408,6 @@
 .cr-ui-frame-reader {
 	border-left-color: var(--cr-mark);
 }
-.cr-ui-frame-reader.cr-ui-frame-tinted {
-	background: var(--cr-mark-tint);
-}
 .cr-ui-frame-agent {
 	border-left-color: var(--cr-agent);
 }
@@ -423,10 +420,16 @@
 .cr-ui-frame-warning.cr-ui-frame-tinted {
 	background: var(--cr-warning-tint);
 }
-/* Something settled: on a raised surface, its edge a line between surfaces */
+/* Something settled, its edge a line between surfaces */
 .cr-ui-frame-quiet {
 	border-left-color: var(--color-base-300);
 }
+/*
+ * The reader's words and something settled lay the raised surface: the
+ * reader's mark's own wash is the tint of the one they are at
+ * (--cr-selected), and a frame of theirs on it would read as where they are
+ */
+.cr-ui-frame-reader.cr-ui-frame-tinted,
 .cr-ui-frame-quiet.cr-ui-frame-tinted {
 	background: var(--color-base-200);
 }

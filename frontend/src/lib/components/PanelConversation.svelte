@@ -5,7 +5,6 @@
 	import Chip from '$lib/ui/Chip.svelte';
 	import type { ChipVoice } from '$lib/ui/chip';
 	import CodeBox from '$lib/ui/CodeBox.svelte';
-	import EdgeFrame from '$lib/ui/EdgeFrame.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import { READER, THE_REVIEW } from '$lib/utils/speakers';
 	import { clockTime } from '$lib/utils/time';
@@ -139,7 +138,8 @@
 						<span></span>
 					</div>
 				{:else if turn.author === READER}
-					<EdgeFrame tone="reader" ground="tint" testId="panel-said">
+					<!-- What the reader asked, on a card as the answer is, edged in their colour -->
+					<Card tone="reader" testId="panel-said">
 						<div class={[turn.cancelled && 'cr-faint']}>
 							<p class="cr-who"><strong>You</strong> {clockTime(turn.at)}</p>
 							{#if turn.body}
@@ -155,7 +155,7 @@
 								</p>
 							{/if}
 						</div>
-					</EdgeFrame>
+					</Card>
 				{:else}
 					<Card tone="quiet" testId="panel-answer">
 						<p class="cr-who"><strong>Agent</strong> {clockTime(turn.at)}</p>

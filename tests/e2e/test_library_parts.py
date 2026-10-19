@@ -681,3 +681,34 @@ async def test_every_key_the_help_shows_stands_in_one_box_in_the_codes_regular_f
     corner = await on_a_probe(page, "borderTopLeftRadius", "var(--radius-field)")
     one_box = KeyLook(height=keys[0].height, corner=corner, size=keys[0].size, weight=REGULAR, face=face)
     assert keys == [one_box] * len(EVERY_KEY)
+
+
+# Every turn of the panel once the agent answered, said what it is doing, and the reader asked it something: its
+# answer, its work on what was asked, and what the reader asked
+EVERY_TURN = ["panel-answer", "panel-working", "panel-said"]
+# How far a turn's words stand in from its outer edge, above them and at their start, its edge included, and how
+# round its corners are
+TURN_INSET = """(turn) => {
+    const style = getComputedStyle(turn);
+    return [
+        parseFloat(style.borderTopWidth) + parseFloat(style.paddingTop),
+        parseFloat(style.borderLeftWidth) + parseFloat(style.paddingLeft),
+        style.borderTopLeftRadius,
+        style.borderTopRightRadius,
+    ];
+}"""
+
+
+async def test_every_turn_of_the_panel_stands_its_words_as_far_in_from_its_edge_at_one_corner(
+    review: RunningReview, page: Page
+) -> None:
+    await page.goto(review.url)
+    await page.get_by_test_id("toggle-panel").click()
+    await _an_agent_attaches_and_answers(review)
+    await page.get_by_test_id("panel-input").fill("Why is it shorter?")
+    await page.get_by_test_id("send-message").click()
+    await page.get_by_test_id("panel-said").wait_for()
+
+    insets = [await page.get_by_test_id(test_id).evaluate(TURN_INSET) for test_id in EVERY_TURN]
+
+    assert insets == [insets[0]] * len(EVERY_TURN)

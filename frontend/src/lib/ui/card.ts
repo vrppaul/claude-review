@@ -1,10 +1,11 @@
 /**
  * A card (Card): what it holds boxed apart from what stands round it — a
- * thread, a comment being written as the card it becomes, the agent's
- * answer in the panel and its work while it does it, the facts of a story
- * on its way. Every one on a raised surface, edged by a line in its tone's
- * colour, at the box's corner, with one room round what it holds
- * (styles/ui.css). How what it holds is laid out inside is its holder's.
+ * thread, a comment being written as the card it becomes, every turn of the
+ * panel (what the reader asks, the agent's answer and its work while it does
+ * it), the facts of a story on its way. Every one on a raised surface,
+ * edged by a line in its tone's colour, at the box's corner, with one room
+ * round what it holds (styles/ui.css), so cards in one column line their
+ * words up. How what it holds is laid out inside is its holder's.
  * Code set apart to read or copy (CodeBox) stands on a quiet one.
  *
  * A card that hangs under what it is about is lifted off it, and points up
@@ -16,7 +17,8 @@
  * Whose the card is, or where what it holds stands, said by its edge:
  * - quiet: a line between surfaces, saying nothing more; a thread that went
  *   out with a round, quieter than one still in the reader's hands
- * - reader: a thread in the reader's hands, a comment they are writing
+ * - reader: a thread in the reader's hands, a comment they are writing,
+ *   what they asked in the panel
  * - agent: a thread the agent raised
  * - stale: a thread whose lines are gone
  */
