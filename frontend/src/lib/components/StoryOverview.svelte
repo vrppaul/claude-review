@@ -84,7 +84,7 @@
 
 	<section>
 		<h2 class="sr-only">The change in short</h2>
-		<EdgeFrame {...AGENTS_VOICE} testId="story-in-short">
+		<EdgeFrame {...AGENTS_VOICE} holds="bands" testId="story-in-short">
 			<div class="cr-askable-stack">
 				{@render line(overviewLine('task'), overview.task, 'overview-task')}
 				{@render line(overviewLine('done'), overview.done, 'overview-done')}
@@ -108,12 +108,12 @@
 				{/snippet}
 			</Row>
 			{#if listsOpen}
-				<EdgeFrame {...AGENTS_VOICE} testId="overview-lists">
+				<EdgeFrame {...AGENTS_VOICE} holds="bands" testId="overview-lists">
 					<div class="flex flex-col gap-4">
 						{#each OVERVIEW_LISTS_IN_ORDER as list (list)}
 							{#if overview[list].length > 0}
 								<section>
-									<h3 class="cr-muted text-xs font-semibold">{LIST_HEADINGS[list]}</h3>
+									<h3 class="cr-voice-inset cr-muted text-xs font-semibold">{LIST_HEADINGS[list]}</h3>
 									<!-- Each thing listed may be asked about, as the overview's lines may -->
 									<ul class="cr-askable-stack mt-2">
 										{#each overview[list] as item, itemPlace (itemPlace)}

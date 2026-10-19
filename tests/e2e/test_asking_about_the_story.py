@@ -12,6 +12,7 @@ from pathlib import Path
 import pytest
 from httpx import AsyncClient
 from playwright.async_api import Locator, Page, expect
+from pydantic import BaseModel, ConfigDict
 
 from claude_review.domain.story import Step, Story
 from tests.e2e.browsers_loop import in_the_browsers_loop
@@ -68,6 +69,42 @@ DRAWN_STRENGTH = """(element) => {
 }"""
 FULLY_DRAWN = 1
 NOT_DRAWN = 0
+# How far a band stands in from the inside of the edge of the frame it fills, and short of the frame's far side, in
+# pixels: by none, so the frame's edge is seen beside the band, and the band reaches the frame's far side
+BAND_IN_ITS_FRAME = """(band, frame) => {
+    const box = frame.getBoundingClientRect();
+    const inside = box.left + parseFloat(getComputedStyle(frame).borderLeftWidth);
+    return [band.getBoundingClientRect().left - inside, box.right - band.getBoundingClientRect().right];
+}"""
+# How far an element's left edge stands right of another's, in pixels
+LEFT_OF_ANOTHER = "(element, other) => element.getBoundingClientRect().left - other.getBoundingClientRect().left"
+# How far a frame stands its words in from its outer left edge: past its edge, by its inset; and what the browser
+# writes after a length in pixels
+WORDS_IN_FROM_THE_EDGE = "calc(var(--cr-edge-width) + var(--cr-edge-inset))"
+PIXELS = "px"
+# Whether the reader sees a frame at the middle of its edge, level with the middle of a band in it, or what lies over
+# its edge there
+EDGE_SEEN_BESIDE = """(frame, band) => {
+    const edge = frame.getBoundingClientRect().left + parseFloat(getComputedStyle(frame).borderLeftWidth) / 2;
+    const box = band.getBoundingClientRect();
+    return document.elementFromPoint(edge, (box.top + box.bottom) / 2) === frame;
+}"""
+
+
+class Framed(BaseModel):
+    """A block of a chapter that stands in a frame of its own, and its words, by their test ids."""
+
+    model_config = ConfigDict(frozen=True)
+
+    block: str
+    words: str
+
+
+# The chapter's blocks in frames of their own: why its changes belong together, and where to doubt them
+IN_FRAMES_OF_THEIR_OWN = [
+    Framed(block="chapter-why-block", words="chapter-why"),
+    Framed(block="chapter-doubt-block", words="chapter-doubt"),
+]
 
 
 @pytest.fixture
@@ -197,6 +234,46 @@ async def test_a_chapters_doubt_a_thread_hangs_under_is_drawn_as_the_one_the_rea
     assert (await painted(doubt.get_by_test_id("askable-frame"))).ground == await on_a_probe(
         page, "backgroundColor", "var(--cr-warning-tint)"
     )
+
+
+async def test_a_chapters_doubt_a_thread_hangs_under_shows_the_warnings_edge_beside_its_own(
+    review: RunningReview, page: Page
+) -> None:
+    await _read_as_story(page, review)
+    doubt = page.get_by_test_id("chapter-doubt-block")
+    await _ask_about(page, doubt, "Was it needed?")
+
+    await page.get_by_test_id("overview-task").get_by_test_id("block-words").click()
+
+    band = doubt.get_by_test_id("askable-band")
+    assert await doubt.get_by_test_id("askable-frame").evaluate(EDGE_SEEN_BESIDE, await band.element_handle())
+
+
+@pytest.mark.parametrize("framed", IN_FRAMES_OF_THEIR_OWN, ids=[framed.block for framed in IN_FRAMES_OF_THEIR_OWN])
+async def test_a_chapters_block_bands_its_own_frame_inside_its_edge_to_its_far_side_its_words_where_a_frame_stands_them(
+    review: RunningReview, page: Page, framed: Framed
+) -> None:
+    await _read_as_story(page, review)
+    block = page.get_by_test_id(framed.block)
+    frame = await block.get_by_test_id("askable-frame").element_handle()
+
+    in_its_frame = await block.get_by_test_id("askable-band").evaluate(BAND_IN_ITS_FRAME, frame)
+    words_in = await block.get_by_test_id(framed.words).evaluate(LEFT_OF_ANOTHER, frame)
+
+    in_from_the_edge = await on_a_probe(page, "paddingLeft", WORDS_IN_FROM_THE_EDGE)
+    assert in_its_frame == [pytest.approx(0), pytest.approx(0)]
+    assert words_in == pytest.approx(float(in_from_the_edge.removesuffix(PIXELS)))
+
+
+async def test_a_line_of_the_overview_bands_the_frame_it_shares_inside_its_edge_to_its_far_side(
+    review: RunningReview, page: Page
+) -> None:
+    doubt = await _read_as_story(page, review)
+    frame = await page.get_by_test_id("story-in-short").element_handle()
+
+    in_its_frame = await doubt.get_by_test_id("askable-band").evaluate(BAND_IN_ITS_FRAME, frame)
+
+    assert in_its_frame == [pytest.approx(0), pytest.approx(0)]
 
 
 @pytest.mark.parametrize("width", READING_WIDTHS)

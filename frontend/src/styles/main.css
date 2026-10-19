@@ -748,25 +748,24 @@
 /*
  * A block of the agent's words in a story the reader may ask about.
  * Pointed at, or holding the keyboard, it is banded whole — its heading and
- * its words — across the frame it stands in (an EdgeFrame, of its own or
- * of the blocks round it) and over the frame's edge, in the pointer's
- * light, and offers "Ask about this" over its top right edge. While a
- * thread hangs open under it, or a comment being written, it is the one
- * the reader is at: on their mark's tint, its edge at its start over the
- * frame's, as the pointer leaves it, the frame's wash showing through;
- * folded away, a thread leaves it as it was. Its room is the same either
- * way, and so is the place of every word in it: only the band and the
- * button come and go. The band reaches as far past its words as the frame
- * stands round them, and takes no room for it: a block stands where its
- * words would without it.
+ * its words — across the frame of bands it stands in (an EdgeFrame, of its
+ * own or of the blocks round it), from inside the frame's edge to its far
+ * side, in the pointer's light, and offers "Ask about this" over its top
+ * right edge. While a thread hangs open under it, or a comment being
+ * written, it is the one the reader is at: on their mark's tint, its edge
+ * at its start beside the frame's, as the pointer leaves it, the frame's
+ * wash showing through; folded away, a thread leaves it as it was. Its room
+ * is the same either way, and so is the place of every word in it: only
+ * the band and the button come and go. Its words stand in from the frame's
+ * edge and far side as a frame's words do; the band reaches above and
+ * below them, and takes no room for it: a block stands where its words
+ * would without it. At the frame's far side its corners are the frame's.
  */
 .cr-askable {
 	position: relative;
-	margin: calc(-1 * var(--cr-band-reach)) calc(-1 * var(--cr-edge-end-room)) calc(-1 * var(--cr-band-reach))
-		calc(-1 * (var(--cr-edge-width) + var(--cr-edge-inset)));
-	padding: var(--cr-band-reach) var(--cr-edge-end-room) var(--cr-band-reach)
-		calc(var(--cr-edge-width) + var(--cr-edge-inset));
-	border-radius: 0 var(--radius-box) var(--radius-box) 0;
+	margin-block: calc(-1 * var(--cr-band-reach));
+	padding: var(--cr-band-reach) var(--cr-edge-end-room) var(--cr-band-reach) var(--cr-edge-inset);
+	border-radius: 0 var(--radius-field) var(--radius-field) 0;
 }
 .cr-askable:not(.cr-askable-written-under):is(:hover, :focus-within) {
 	background-image: linear-gradient(var(--cr-hover), var(--cr-hover));

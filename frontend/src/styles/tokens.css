@@ -73,14 +73,19 @@
 	 * in a story, a warning, a thread folded to a line: its edge, how
 	 * far its words stand in from it, and from its other side as far as a
 	 * card stands what it holds in from its own, so a thread folded to a
-	 * frame keeps what stands at its end where it stood; and above and below
-	 * them as far as the band of a block the reader may ask about reaches
-	 * past its words. The band fills the frame to its edge.
+	 * frame keeps what stands at its end where it stood; and the room it
+	 * keeps above and below what it holds.
 	 */
 	--cr-edge-width: 2px;
 	--cr-edge-inset: 1.25rem;
 	--cr-edge-end-room: var(--cr-card-room-inline);
-	--cr-band-reach: 0.5rem;
+	--cr-edge-block-room: 0.5rem;
+	/*
+	 * How far the band of a block the reader may ask about reaches above and
+	 * below its words: into the room a frame of bands keeps there, so a band
+	 * fills its frame
+	 */
+	--cr-band-reach: var(--cr-edge-block-room);
 
 	/*
 	 * Where a thread hangs under a line, or under a block of a story's words:

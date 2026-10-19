@@ -85,7 +85,7 @@
 	outside any frame of the block's own -->
 <div data-testid={testId}>
 	{#if frame}
-		<EdgeFrame {...frame} testId="askable-frame">
+		<EdgeFrame {...frame} holds="bands" testId="askable-frame">
 			{@render band()}
 		</EdgeFrame>
 	{:else}

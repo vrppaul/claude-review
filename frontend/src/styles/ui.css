@@ -394,14 +394,23 @@
 
 /*
  * A frame with an edge at its start (EdgeFrame, lib/ui/frame.ts): the edge
- * in its tone's colour, round at its other corners, the words standing in
- * from the edge and as far above and below them as a band reaches past a
- * block's words; on its tone's ground where it lays one
+ * in its tone's colour, round at its other corners, on its tone's ground
+ * where it lays one
  */
 .cr-ui-edge-frame {
-	padding: var(--cr-band-reach) var(--cr-edge-end-room) var(--cr-band-reach) var(--cr-edge-inset);
 	border-left: var(--cr-edge-width) solid;
 	border-radius: 0 var(--radius-field) var(--radius-field) 0;
+}
+/* Its words stand in from its edge and its far side, and above and below them */
+.cr-ui-frame-holds-words {
+	padding: var(--cr-edge-block-room) var(--cr-edge-end-room) var(--cr-edge-block-room) var(--cr-edge-inset);
+}
+/*
+ * Bands stand from inside its edge to its far side, and take that room
+ * inside them; it keeps the room above and below, which they reach into
+ */
+.cr-ui-frame-holds-bands {
+	padding-block: var(--cr-edge-block-room);
 }
 .cr-ui-frame-dashed {
 	border-left-style: dashed;
