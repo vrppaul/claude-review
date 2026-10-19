@@ -468,8 +468,7 @@
   scrolled away with its files.
 - **Words set apart by an edge are framed one way**: the agent's voice in
   a story and its broken edge where it read the change out of the code, a
-  warning, what the reader said in the panel, a thread folded away and the
-  lines a thread lost. One edge and one corner, the words 20 pixels in from
+  warning, a thread folded away and the lines a thread lost. One edge and one corner, the words 20 pixels in from
   the edge, 16 from the far side and 8 above and below. A chapter's
   "Changed after it was told" and its Doubt are both warnings, headed
   alike, and what a story costs is said in one. A block of the story
@@ -477,10 +476,11 @@
   reader's hangs under stands on their tint with their edge beside the
   frame's, so a doubt still shows the warning's yellow. The light theme's
   warning is a shade darker, to read on that tint.
-- **A thread, the agent's answer and its work, and a story on its way
-  stand on one kind of card**: on the raised ground, edged in the colour
-  of whose it is, at one corner — 6 pixels, where a thread's was 8 — with
-  one room round what it holds. Code set apart, the commands to attach an
+- **A thread, every turn of the panel — what the reader asks, the agent's
+  answer and its work — and a story on its way stand on one kind of
+  card**: on the raised ground, edged in the colour of whose it is, at one
+  corner — 6 pixels, where a thread's was 8 — with one room round what it
+  holds, so the panel's turns line their words up. Code set apart, the commands to attach an
   agent and the source of a diagram that did not draw, stands on a quiet
   card at the code's size. A hanging card points up at what it is about
   with the arrow a pane points with. The agent's violet moves a shade,
