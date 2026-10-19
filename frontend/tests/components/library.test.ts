@@ -9,6 +9,7 @@ import ColumnBar from '$lib/ui/ColumnBar.svelte';
 import ColumnRail from '$lib/ui/ColumnRail.svelte';
 import Dialog from '$lib/ui/Dialog.svelte';
 import EdgeFrame from '$lib/ui/EdgeFrame.svelte';
+import Heading from '$lib/ui/Heading.svelte';
 import Icon from '$lib/ui/Icon.svelte';
 import IconButton from '$lib/ui/IconButton.svelte';
 import Link from '$lib/ui/Link.svelte';
@@ -185,6 +186,11 @@ const WITH_A_CLASS_FROM_OUTSIDE = [
 		render: () => render(PaneQuestion, { question: WORDS, testId: TEST_ID, class: FROM_OUTSIDE } as never)
 	},
 	{
+		part: 'a heading',
+		render: () =>
+			render(Heading, { tag: 'h2', heads: 'pane', testId: TEST_ID, children: drawn, class: FROM_OUTSIDE } as never)
+	},
+	{
 		part: 'blocks one under another the reader may ask about',
 		render: () => render(Bands, { testId: TEST_ID, children: drawn, class: FROM_OUTSIDE } as never)
 	}
@@ -329,6 +335,19 @@ describe('the component library', () => {
 
 		expect(getByTestId(TEST_ID).tagName).toBe('KBD');
 		expect(getByTestId(TEST_ID).textContent).toBe(CHORD);
+	});
+
+	it('draws a heading at the level it is told, to whoever goes through the page by its headings', () => {
+		const { getByRole } = render(Heading, { tag: 'h3', heads: 'list', children: drawn });
+
+		expect(getByRole('heading', { level: 3 }).textContent).toBe(WORDS);
+	});
+
+	it('draws what is told to stand as plain words as words, where something else heads its part', () => {
+		const { queryByRole, getByText } = render(Heading, { tag: 'p', heads: 'piece', children: drawn });
+
+		expect(queryByRole('heading')).toBeNull();
+		expect(getByText(WORDS)).toBeDefined();
 	});
 });
 

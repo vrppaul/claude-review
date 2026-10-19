@@ -2,6 +2,7 @@
 	import { askableReason, stepReason } from '$lib/anchors/story';
 	import type { StepListed } from '$lib/review/story-contents';
 	import EdgeFrame from '$lib/ui/EdgeFrame.svelte';
+	import Heading from '$lib/ui/Heading.svelte';
 	import Tag from '$lib/ui/Tag.svelte';
 	import AskableBlock from './AskableBlock.svelte';
 	import { reportBroken } from './broken-parts';
@@ -34,13 +35,9 @@
 	A step a round changed after it was told shows the code as it now stands under a number and reason
 	that step back, and is named so -->
 {#snippet stepNumber()}
-	<h3
-		data-testid="step-number"
-		aria-label={named}
-		class={['font-mono text-sm font-semibold', changed ? 'cr-step-changed' : 'text-(--cr-agent)']}
-	>
+	<Heading tag="h3" heads="piece" tone={changed ? 'faint' : 'agent'} testId="step-number" aria-label={named}>
 		{number}
-	</h3>
+	</Heading>
 {/snippet}
 
 {#snippet reasonAbove()}

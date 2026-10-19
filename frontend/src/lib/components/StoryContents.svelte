@@ -9,6 +9,7 @@
 		threadsOnThePiece
 	} from '$lib/review/story-reading';
 	import Dot from '$lib/ui/Dot.svelte';
+	import Heading from '$lib/ui/Heading.svelte';
 	import Row from '$lib/ui/Row.svelte';
 	import { fileStats } from '$lib/utils/file-stats';
 	import { fileName } from '$lib/utils/paths';
@@ -64,9 +65,9 @@
 		}}
 	>
 		{#snippet heading()}
-			<h2 data-testid="contents-count" class="text-sm font-semibold">
+			<Heading tag="h2" heads="pane" testId="contents-count">
 				{chaptersCounted(contents.chapters.length, chaptersRead)}
-			</h2>
+			</Heading>
 		{/snippet}
 
 		<ol data-testid="contents-parts">

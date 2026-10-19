@@ -412,8 +412,6 @@ const NO_ELEMENTS_HANDED_THEIR_KIND = [
 	{ selector: "SvelteElement[kind='special'][name.name='svelte:element']", message: ELEMENT_AS_WRITTEN }
 ];
 const HANDED_THEIR_ELEMENT = [
-	// A file's name: a heading at the level of where it stands, or plain words where something else heads it
-	'src/lib/components/FileTitle.svelte',
 	// A column beside what is read: the landmark it is, the tree's aside or a story's contents' nav
 	'src/lib/components/SideColumn.svelte'
 ];
@@ -429,6 +427,11 @@ const STILL_PRESSED_BY_HAND = [
 	'src/lib/components/HunkGap.svelte'
 ];
 const BUTTON_IN_THE_LIBRARY = { elements: ['button'], message: PRESSED_IN_THE_LIBRARY };
+// A heading is drawn by the library (lib/ui Heading), as what it heads says, and nothing outside it draws one: the
+// tour's step title and a pane's heading named the same type tokens in two rules, a file's name was a heading drawn
+// by a component handed its element, and the story's headings each took their size from utilities of their own
+const DRAWN_AS_A_HEADING = 'Draw a heading with lib/ui Heading, as what it heads, not as an element of its own.';
+const HEADING_IN_THE_LIBRARY = { elements: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'], message: DRAWN_AS_A_HEADING };
 
 // A block of the story the reader may ask about is banded by the library (Band, stacked by Bands), and nothing
 // outside it bands one its own way: the page's band reached back over its frame's room and edge by margins built
@@ -622,18 +625,43 @@ export default tseslint.config(
 		rules: { 'svelte/no-restricted-html-elements': ['error', SVG_IN_ITS_COMPONENT] }
 	},
 	{
-		// Outside the library a component draws no button of its own either, but those still pressed by hand
+		// Outside the library a component draws no button or heading of its own either
 		files: ['src/**/*.svelte'],
 		ignores: ['src/lib/ui/**', ...DRAWING_COMPONENTS, ...STILL_PRESSED_BY_HAND],
 		rules: {
-			'svelte/no-restricted-html-elements': ['error', SVG_IN_ITS_COMPONENT, KBD_IN_ITS_COMPONENT, BUTTON_IN_THE_LIBRARY]
+			'svelte/no-restricted-html-elements': [
+				'error',
+				SVG_IN_ITS_COMPONENT,
+				KBD_IN_ITS_COMPONENT,
+				BUTTON_IN_THE_LIBRARY,
+				HEADING_IN_THE_LIBRARY
+			]
 		}
 	},
 	{
-		// A component of the page that draws a drawing draws no button of its own
+		// A component still pressed by hand draws its button, and no heading of its own
+		files: STILL_PRESSED_BY_HAND,
+		rules: {
+			'svelte/no-restricted-html-elements': [
+				'error',
+				SVG_IN_ITS_COMPONENT,
+				KBD_IN_ITS_COMPONENT,
+				HEADING_IN_THE_LIBRARY
+			]
+		}
+	},
+	{
+		// A component of the page that draws a drawing draws no button or heading of its own
 		files: DRAWING_COMPONENTS,
 		ignores: ['src/lib/ui/**'],
-		rules: { 'svelte/no-restricted-html-elements': ['error', KBD_IN_ITS_COMPONENT, BUTTON_IN_THE_LIBRARY] }
+		rules: {
+			'svelte/no-restricted-html-elements': [
+				'error',
+				KBD_IN_ITS_COMPONENT,
+				BUTTON_IN_THE_LIBRARY,
+				HEADING_IN_THE_LIBRARY
+			]
+		}
 	},
 	{
 		// The core rule takes a rune's `let` for a plain one; the svelte one knows them

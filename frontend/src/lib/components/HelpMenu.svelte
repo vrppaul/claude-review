@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { useReview } from '$lib/review/context';
 	import Button from '$lib/ui/Button.svelte';
+	import Heading from '$lib/ui/Heading.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import Key from '$lib/ui/Key.svelte';
 	import Row from '$lib/ui/Row.svelte';
@@ -88,23 +89,25 @@
 				</Row>
 			{/if}
 		</div>
-		<h3 class="mb-3 text-xs font-semibold">Keyboard</h3>
-		<dl data-testid="shortcuts-list" class="space-y-2">
-			{#each keysOf(review) as row (row.does)}
+		<section class="flex flex-col gap-3">
+			<Heading tag="h3" heads="list">Keyboard</Heading>
+			<dl data-testid="shortcuts-list" class="space-y-2">
+				{#each keysOf(review) as row (row.does)}
+					<div class="flex items-baseline gap-4">
+						<dt class="cr-muted w-32 shrink-0 text-xs">
+							{#each row.keys as key, position (key)}
+								{#if position > 0}{OPPOSITES_APART}{/if}<Key keys={key} testId="shortcut-key" />
+							{/each}
+						</dt>
+						<dd class="text-sm">{row.does}</dd>
+					</div>
+				{/each}
+				<!-- The list's own key, and every open pane's: not one the review answers -->
 				<div class="flex items-baseline gap-4">
-					<dt class="cr-muted w-32 shrink-0 text-xs">
-						{#each row.keys as key, position (key)}
-							{#if position > 0}{OPPOSITES_APART}{/if}<Key keys={key} testId="shortcut-key" />
-						{/each}
-					</dt>
-					<dd class="text-sm">{row.does}</dd>
+					<dt class="w-32 shrink-0 text-xs"><Key keys="Esc" testId="shortcut-key" /></dt>
+					<dd class="text-sm">Close it</dd>
 				</div>
-			{/each}
-			<!-- The list's own key, and every open pane's: not one the review answers -->
-			<div class="flex items-baseline gap-4">
-				<dt class="w-32 shrink-0 text-xs"><Key keys="Esc" testId="shortcut-key" /></dt>
-				<dd class="text-sm">Close it</dd>
-			</div>
-		</dl>
+			</dl>
+		</section>
 	</div>
 </Popover>

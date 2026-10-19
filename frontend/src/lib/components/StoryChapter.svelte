@@ -4,6 +4,7 @@
 	import type { ChapterListed } from '$lib/review/story-contents';
 	import Bands from '$lib/ui/Bands.svelte';
 	import EdgeFrame from '$lib/ui/EdgeFrame.svelte';
+	import Heading from '$lib/ui/Heading.svelte';
 	import AskableBlock from './AskableBlock.svelte';
 	import { A_WARNING, AGENTS_VOICE } from './story-frames';
 	import {
@@ -39,10 +40,10 @@
 	{#snippet head(heading)}
 		<!-- Where the title runs long, what the chapter tells goes onto a line of its own, never squeezed -->
 		<header class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-			<h2 {...heading} data-testid="part-head" class="flex min-w-0 items-baseline gap-3 text-lg font-semibold">
+			<Heading {...heading} tag="h2" heads="part" testId="part-head">
 				<span class="cr-chapter-number text-sm">{chapterNumber(chapter.place)}</span>
 				<span data-testid="chapter-title">{told.title}</span>
-			</h2>
+			</Heading>
 			<span data-testid="chapter-counts" class="cr-faint ml-auto text-xs whitespace-nowrap"
 				>{filesAndSteps(chapter.files.length, chapter.steps.length)}</span
 			>

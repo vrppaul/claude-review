@@ -233,9 +233,6 @@ of it is built yet.
       out in `main.css` from Row's tokens; utilities held in a script's
       string and handed to `class={…}`, which no gate of a class list
       reads. A rule that each look class has one owner is to hold them.
-- [ ] `refactor(ui)`: a heading is written twice: the tour's step title and
-      a pane's head name the same type tokens in two rules, until a
-      Heading part draws both.
 - [ ] `feat(ui)`: whether a pane keeps its side while the page scrolls under
       it: one now opens the other way the moment it stops fitting.
 - [ ] `feat(ui)`: whether a notice other than a broken part's announces

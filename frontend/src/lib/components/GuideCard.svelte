@@ -4,6 +4,7 @@
 	import { useReview } from '$lib/review/context';
 	import Button from '$lib/ui/Button.svelte';
 	import Dot from '$lib/ui/Dot.svelte';
+	import Heading from '$lib/ui/Heading.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import Key from '$lib/ui/Key.svelte';
 	import Link from '$lib/ui/Link.svelte';
@@ -29,7 +30,7 @@
 	// any other it says Got it, and has introduced Story all the same
 	const offersStory = $derived(news?.introducesStory === true && review.story.canBeTold);
 
-	let title = $state<HTMLElement | null>(null);
+	let title = $state<HTMLElement>();
 	let firstAction = $state<HTMLButtonElement>();
 
 	// A card that appears offers its first button, unless the reader is busy:
@@ -95,7 +96,9 @@
 				</div>
 				<!-- What a screen reader is told at each step: the words, not the controls -->
 				<div class="flex flex-col gap-3" aria-live="polite">
-					<h2 bind:this={title} class="cr-guide-title" tabindex="-1">{step.title}</h2>
+					<!-- The step's title heads the card as a pane's heading does, but is the step's own, said anew as the
+						step changes and given the keyboard when nothing else holds it, so no head of a pane draws it -->
+					<Heading tag="h2" heads="pane" bind:element={title} tabindex={-1}>{step.title}</Heading>
 					<p class="cr-guide-body">{step.body}</p>
 				</div>
 				{#if step.fork}

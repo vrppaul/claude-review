@@ -2,6 +2,7 @@
 	import type { HTMLAttributes } from 'svelte/elements';
 	import type { StoryHeld } from '$lib/types';
 	import EdgeFrame from '$lib/ui/EdgeFrame.svelte';
+	import Heading from '$lib/ui/Heading.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import Tag from '$lib/ui/Tag.svelte';
 	import { AGENTS_READING } from './story-frames';
@@ -11,7 +12,7 @@
 		/** The story as the review holds it: the round it was told in, and whether a later one moved its code on. */
 		held: StoryHeld;
 		/** What the story's title carries as the heading of the part it begins: the overview has no heading but this. */
-		heading: HTMLAttributes<HTMLHeadingElement>;
+		heading: HTMLAttributes<HTMLElement>;
 	}
 
 	let { held, heading }: Props = $props();
@@ -23,9 +24,9 @@
 <!-- What the change is called, the round its story was told in, and whether the story is the memory of
 	whoever made the change or a reading of it -->
 <header class="flex flex-wrap items-baseline gap-3">
-	<h1 {...heading} data-testid="part-head" class="text-xl font-semibold">
+	<Heading {...heading} tag="h1" heads="story" testId="part-head">
 		<span data-testid="story-title">{held.story.title}</span>
-	</h1>
+	</Heading>
 	<!-- The round the story was told in, tagged as the page tags a thing: in the agent's colour while its
 		code is current; in the warning's, saying when, once a later round moved the code on under it -->
 	<Tag tone={held.moved_on === null ? 'agent' : 'warning'} testId="story-round">

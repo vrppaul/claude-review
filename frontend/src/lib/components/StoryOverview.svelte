@@ -13,6 +13,7 @@
 	import type { OverviewList, OverviewText, StoryHeld } from '$lib/types';
 	import Bands from '$lib/ui/Bands.svelte';
 	import EdgeFrame from '$lib/ui/EdgeFrame.svelte';
+	import Heading from '$lib/ui/Heading.svelte';
 	import Row from '$lib/ui/Row.svelte';
 	import AskableBlock from './AskableBlock.svelte';
 	import StoryDiagram from './StoryDiagram.svelte';
@@ -84,7 +85,7 @@
 	{/snippet}
 
 	<section>
-		<h2 class="sr-only">The change in short</h2>
+		<Heading tag="h2" heads="part" seen={false}>The change in short</Heading>
 		<EdgeFrame {...AGENTS_VOICE} testId="story-in-short">
 			<Bands testId="overview-lines">
 				{@render line(overviewLine('task'), overview.task, 'overview-task')}
@@ -114,7 +115,7 @@
 						{#each OVERVIEW_LISTS_IN_ORDER as list (list)}
 							{#if overview[list].length > 0}
 								<section class="flex flex-col gap-2">
-									<h3 class="cr-muted text-xs font-semibold">{LIST_HEADINGS[list]}</h3>
+									<Heading tag="h3" heads="list" tone="quiet">{LIST_HEADINGS[list]}</Heading>
 									<!-- Each thing listed may be asked about, as the overview's lines may -->
 									<Bands listed testId="overview-list">
 										{#each overview[list] as item, itemPlace (itemPlace)}

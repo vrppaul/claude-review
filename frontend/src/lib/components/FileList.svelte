@@ -8,6 +8,7 @@
 	import { useReview } from '$lib/review/context';
 	import { fileSectionKey } from '$lib/review/reading-view';
 	import Dot from '$lib/ui/Dot.svelte';
+	import Heading from '$lib/ui/Heading.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import Row from '$lib/ui/Row.svelte';
 	import ChangedLines from './ChangedLines.svelte';
@@ -146,7 +147,7 @@
 	}}
 >
 	{#snippet heading()}
-		<h2 data-testid="sidebar-heading" class="text-sm font-semibold">{headedBy}</h2>
+		<Heading tag="h2" heads="pane" testId="sidebar-heading">{headedBy}</Heading>
 	{/snippet}
 
 	<input

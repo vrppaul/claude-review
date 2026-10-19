@@ -1085,18 +1085,6 @@
 	transition-duration: var(--cr-guide-glide);
 	transition-timing-function: var(--cr-glide-easing);
 }
-/*
- * A step's title, which heads the tour's card: at the size and weight a
- * pane's heading has (lib/ui PaneHead), as the welcome's and the news's
- * heads have them. It is the step's own, said with its words as the step
- * changes and given the keyboard when nothing else holds it, so no head
- * of a pane draws it
- */
-.cr-guide-title {
-	font-size: var(--text-sm);
-	line-height: var(--text-sm--line-height);
-	font-weight: var(--font-weight-semibold);
-}
 .cr-guide-compass {
 	color: var(--cr-control);
 }

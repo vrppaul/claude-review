@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Heading from './Heading.svelte';
 	import Icon from './Icon.svelte';
 	import IconButton from './IconButton.svelte';
 	import type { PaneHead } from './pane';
@@ -15,7 +16,7 @@
 <!-- What heads a pane, the same in every pane that has a head: what it is called, at the one size a pane's
 	heading has, what stands beside that, and at the far end the way to put the pane away -->
 <header class="cr-ui-pane-head">
-	<h2 data-testid="{testId}-heading" class="cr-ui-pane-heading">{head.heading}</h2>
+	<Heading tag="h2" heads="pane" testId="{testId}-heading">{head.heading}</Heading>
 	{@render head.aside?.()}
 	<IconButton
 		tone="quiet"

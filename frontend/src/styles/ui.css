@@ -153,6 +153,56 @@
 }
 
 /*
+ * A heading (Heading, lib/ui/heading.ts): in bold, at the size of what it
+ * heads and that size's leading, in the tone it is said in where it names
+ * one
+ */
+.cr-ui-heading {
+	font-weight: var(--font-weight-semibold);
+}
+.cr-ui-heading-story {
+	font-size: var(--text-xl);
+	line-height: var(--text-xl--line-height);
+}
+/* A part's: its number, where it has one, beside its title, which wraps beside the number rather than under it */
+.cr-ui-heading-part {
+	display: flex;
+	align-items: baseline;
+	gap: --spacing(3);
+	min-width: 0;
+	font-size: var(--text-lg);
+	line-height: var(--text-lg--line-height);
+}
+.cr-ui-heading-pane {
+	font-size: var(--text-sm);
+	line-height: var(--text-sm--line-height);
+}
+.cr-ui-heading-list {
+	font-size: var(--text-xs);
+	line-height: var(--text-xs--line-height);
+}
+/* A piece's: a name in the code's face at a pane heading's size, broken anywhere rather than run past its column */
+.cr-ui-heading-piece {
+	min-width: 0;
+	font-family: var(--font-mono);
+	font-size: var(--text-sm);
+	line-height: var(--text-sm--line-height);
+	overflow-wrap: anywhere;
+}
+.cr-ui-heading-agent {
+	color: var(--cr-agent);
+}
+.cr-ui-heading-warning {
+	color: var(--color-warning);
+}
+.cr-ui-heading-quiet {
+	color: var(--cr-muted);
+}
+.cr-ui-heading-faint {
+	color: var(--cr-faint);
+}
+
+/*
  * A segmented control (Segmented, Segment). It picks a way of reading, it
  * does not act, so it reads as a track with the one picked marked on it, as
  * whatever is picked is marked, rather than as a row of buttons. A
@@ -247,16 +297,10 @@
 	padding: --spacing(2) --spacing(3);
 	border-bottom: var(--cr-line) solid var(--color-base-300);
 }
-.cr-ui-pane-heading {
+/* Its heading takes the room what stands beside it leaves */
+.cr-ui-pane-head > .cr-ui-heading {
 	flex: 1;
 	min-width: 0;
-}
-/* A pane's heading, and the question that heads a pane with no head (PaneQuestion), at one size */
-.cr-ui-pane-heading,
-.cr-ui-pane-question {
-	font-size: var(--text-sm);
-	line-height: var(--text-sm--line-height);
-	font-weight: var(--font-weight-semibold);
 }
 /* What a pane holds, scrolling inside it once it is as tall as the window leaves it room for */
 .cr-ui-pane-body {

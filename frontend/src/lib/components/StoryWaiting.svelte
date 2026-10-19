@@ -4,6 +4,7 @@
 	import type { StoryWait } from '$lib/review/story-wait';
 	import Button from '$lib/ui/Button.svelte';
 	import Card from '$lib/ui/Card.svelte';
+	import Heading from '$lib/ui/Heading.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import type { IconName } from '$lib/ui/icons';
 	import StorySketch from './StorySketch.svelte';
@@ -75,7 +76,7 @@
 		<!-- What is left is a story on its way: its request not landed yet, or being written -->
 		<StorySketch waiting />
 		<div class="flex flex-col gap-2 text-center">
-			<h1 class="text-xl font-semibold">The agent is writing the story</h1>
+			<Heading tag="h1" heads="story">The agent is writing the story</Heading>
 			<p class="cr-muted">
 				It reads the whole change and writes the overview and the chapters in one go. A big change takes a few minutes.
 			</p>
