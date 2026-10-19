@@ -49,6 +49,10 @@ const THE_SCALES_WORDS = {
 	'stroke-width': A_DRAWN_LINE,
 	'stroke-dasharray': A_DRAWN_LINE
 };
+// What scrolls down the page is a cr-scroller (page.md): the box its contents are placed in, so words kept for a
+// screen reader scroll with them and never stretch the page. Its rule, and the reading area's own, say so where they
+// turn this off
+const SCROLLS_DOWN = { '/^overflow(-y)?$/': ['/\\b(auto|scroll)\\b/'] };
 
 export default {
 	rules: {
@@ -57,7 +61,8 @@ export default {
 		'function-disallowed-list': WRITTEN_IN_THE_TOKENS,
 		'declaration-property-value-allowed-list': { 'z-index': A_LAYER, 'box-shadow': A_SHADOW, ...THE_SCALES_WORDS },
 		'declaration-property-value-disallowed-list': {
-			'/.*/': [...A_WRITTEN_SIZE, ...OFF_THE_SCALE, ...THE_STEP_MULTIPLIED, ...A_NOTICE_WASH, ...A_LIBRARY_ROOM]
+			'/.*/': [...A_WRITTEN_SIZE, ...OFF_THE_SCALE, ...THE_STEP_MULTIPLIED, ...A_NOTICE_WASH, ...A_LIBRARY_ROOM],
+			...SCROLLS_DOWN
 		},
 		'no-duplicate-selectors': true,
 		'declaration-no-important': true
@@ -78,7 +83,8 @@ export default {
 			files: ['src/styles/ui.css'],
 			rules: {
 				'declaration-property-value-disallowed-list': {
-					'/.*/': [...A_WRITTEN_SIZE, ...OFF_THE_SCALE, ...THE_STEP_MULTIPLIED]
+					'/.*/': [...A_WRITTEN_SIZE, ...OFF_THE_SCALE, ...THE_STEP_MULTIPLIED],
+					...SCROLLS_DOWN
 				}
 			}
 		}
