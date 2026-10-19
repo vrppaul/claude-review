@@ -33,12 +33,15 @@ What no gate sees, and you hold:
   neighbours, its frame, the row it sits in).
 
 In the browser, with `uv run python scripts/look.py` (its docstring says its steps; its servers live and die in a
-directory of its own): light and dark, 1440, 768 and 420 pixels wide, a window of 1366×560 for panes; the page
+directory of its own): in each theme and width the change can differ in, a window of 1366×560 for panes; the page
 itself never scrolls; every pane inside the window; keyboard only — the ring on every stop, the keyboard never on
-nothing. Say what each shot shows, with numbers read off the page.
+nothing. Say what each shot shows, with numbers read off the page. What you measure goes in the report, never into
+a test.
 
-Tests: which new test cannot fail; what the change made that no test holds — break a line in a scratch copy
-(`scripts/break_lines.py`), all breaks in one run, and say what failed.
+Tests, by `.claude/rules/tests.md`: a test to delete — one that reads a look back, restates the code, repeats
+another test or a gate, runs once per theme, or cannot fail; and a behaviour the change added that someone can name
+and no test holds, for the cheapest suite that can show it. A line of a stylesheet, a token or markup alone is never
+such a behaviour. Run no whole suite: read the run the author made at the chunk's end.
 
 Report, as your final message: a verdict line each for cleaner, more readable, more modular, architecture more
 fitting, then "only better in every part it touches: yes or no"; findings most severe first, each with file:line,

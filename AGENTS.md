@@ -24,9 +24,9 @@ cd frontend && pnpm format           # Prettier; the hook only checks
 
 - **Small chunks.** One logical piece at a time, presented for review. Never a run through a plan of several phases.
 - **Understand before writing.** No code without full understanding of what exists and where the change belongs.
-- **Tests first.** Write the test before the code: it states a requirement, not how the code meets it.
+- **Tests hold behaviour.** A behaviour someone can name gets a test first, at the cheapest level; a look, a refactor or a declaration gets none.
 - **Review before presenting.** Read every changed file: the right layer? redundant work? the non-obvious commented? every line needed?
-- **Test runs follow the change.** Iterating, run tests of the code in hand. At a chunk's end each part changed runs its own: the page vitest and `tests/e2e`, the rest all of pytest.
+- **Test runs follow the change.** Which tests run when: `.claude/rules/tests.md`.
 - **Speed is measured.** Say with each piece how long it took and what its slowest step was. A tool we write does its whole job in one process start; one that takes over half a minute is made fast or not used.
 - **Ask first** before adding a dependency, changing the architecture, or changing a domain model.
 - Never commit secrets or credentials.
@@ -58,7 +58,7 @@ Every change leaves the repository better than it found it: cleaner, easier to r
 - **Root cause first.** Before a fix, say why the fault can happen and change that construction. A flag, guard or filter hiding a wrong value is a symptom fix: it needs a reason.
 - **Show it with facts, not adjectives.** Say what a reader can check: what was written several times and is now written once, which state has one owner now, which rule a tool now holds. Say as plainly what did not get better.
 - **The verdict is somebody else's.** A chunk is done when an independent reviewer has measured its whole diff against this rule and listed every place that got worse. Its author never calls it better.
-- **A regression found becomes a gate.** What a review catches turns into a rule a tool enforces. A form a checker refused is never answered with a form it cannot see.
+- **A regression found becomes a gate.** What a review catches turns into a rule a tool enforces at the commit, not a test. A form a checker refused is never answered with a form it cannot see.
 - **What you can name as worse is not committed.** Fix it, or stop and ask.
 
 ## Rules by area

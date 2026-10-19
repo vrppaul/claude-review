@@ -67,8 +67,8 @@ repos:
         types: [python]
         pass_filenames: false
         stages: [pre-commit]
-      # Every test module loads, though a commit runs only the tests of its own code: a change elsewhere can
-      # leave one that no longer imports, unseen until the whole suite runs. Loading all of them takes seconds
+      # Every test module loads, though a commit runs no test: a change elsewhere can leave one that no longer
+      # imports, unseen until its suite runs. Loading all of them takes seconds
       - id: tests-collect
         name: pytest (every test module loads)
         entry: uv run pytest tests --collect-only -q

@@ -26,7 +26,7 @@ How a part of the page is built is said at the top of its module; what eslint an
 - A selector that cannot be avoided reads a `data-role`, or one of two attributes that say which of many an element stands for: `data-place`, the line a line number is, and `data-tour`, the name the tour lights a place by.
 - Every new button, input, textarea and container gets a `data-testid`, for the tests to act on.
 - Markup a library draws (mermaid's `g.node`) is read by the library's names in the module that calls it, and gets its test ids there by `setAttribute`.
-- A change to what the reader sees is looked at in a browser before it is called done: light, dark and narrow, the page never scrolled. `scripts/look.py` is that look.
+- A change to what the reader sees is looked at in a browser, in each theme and width it can differ in, before it is called done: in the report, never in a test.
 
 ## Styling
 

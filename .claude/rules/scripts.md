@@ -14,4 +14,4 @@ What the project runs on itself: its gates, and its looks at its own work. How e
 - One that changes files changes a copy, never the working tree: `scripts/break_lines.py`.
 - A command a script starts is started through `scripts/commands.py` alone: `scripts/check_code_rules.py` refuses one started anywhere else under `scripts/`. A browser is Playwright's to start and stop.
 - A script that starts a command ends through `exit_code_of` of that module, so one stopped from outside stops what it started and exits 130.
-- Its test runs it as it is run: as a process, in a repository of its own where it reads one (`tests/scripts/test_instruction_files.py`).
+- A gate's test runs it as it is run: as a process, in a repository of its own where it reads one (`tests/scripts/test_instruction_files.py`). A script that only serves or looks has a smoke test at most.
