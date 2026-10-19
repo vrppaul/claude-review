@@ -40,6 +40,16 @@ starting a process (`os.fork`, `os.posix_spawn`, `pty.spawn`,
 `multiprocessing`), are past what either sees. Nor is what a library
 starts a script's to start here: Playwright starts the browser of a look.
 
+A command of the command line takes every value by name, after `*`: click
+hands its values over by name, and nothing calls a command with a bare
+value in its place. A function is taken for a command by a decorator that
+calls `command` or `group`, of click or of a group.
+
+Every kind of refusal is kept in `claude_review/domain/exceptions.py`,
+where the table that answers each kind with its status reads them. A class
+built on anything the file imports from that module, by its name or asked
+of the module, is a kind kept elsewhere.
+
 Run on files or directories, in the project's own environment. The
 pre-commit hook hands it every Python file outside `tests/`, and CI runs
 the hook:
@@ -88,6 +98,17 @@ RUNS_COMMANDS = "commands.py"
 STARTED_BY_A_SCRIPT = (
     "`{name}` starts a process: a script starts one through `scripts/commands.py`, which stops what it starts"
 )
+# The decorators that make a function a command of the command line, called on click or on a group, and what is
+# said of one that takes a value by position
+COMMAND_DECORATORS = frozenset({"command", "group"})
+BY_POSITION = "`{name}` is a command that takes a value by position: click hands every value over by name, after `*`"
+# The module every kind of refusal is kept in, by its full name and its last, and what is said of a kind kept elsewhere
+REFUSALS_MODULE = "claude_review.domain.exceptions"
+REFUSALS_MODULE_NAME = "exceptions"
+REFUSALS_PACKAGE = "claude_review.domain"
+REFUSAL_ELSEWHERE = (
+    "`{name}` is a kind of refusal kept outside `claude_review/domain/exceptions.py`, which keeps them all"
+)
 # What the process exits with
 ALL_KEPT = 0
 RULE_BROKEN = 1
@@ -112,6 +133,9 @@ class CheckedFile(BaseModel):
     copy_module_names: frozenset[str]
     # Whether it may start a process itself: any file but a script, and of the scripts the one that runs commands
     may_start_processes: bool
+    # Every name the file's imports bring in from the module of refusals, and every name they give that module
+    refusal_names: frozenset[str]
+    refusals_module_names: frozenset[str]
 
 
 class Said(BaseModel):
@@ -144,9 +168,40 @@ def breaches_in(path: Path) -> list[Breach]:
         path=path,
         copy_module_names=_names_of_the_copy_module(tree),
         may_start_processes=_may_start_processes(path),
+        refusal_names=_names_imported(tree, REFUSALS_MODULE),
+        refusals_module_names=_names_given_to_the_refusals_module(tree),
     )
     _look_inside(tree, file, inside_function=False, found=found)
     return found
+
+
+def _names_imported(tree: ast.AST, module: str) -> frozenset[str]:
+    """Every name a file's imports bring in from a module, as the file calls it."""
+    return frozenset(
+        imported.asname or imported.name
+        for node in ast.walk(tree)
+        if isinstance(node, ast.ImportFrom) and node.module == module
+        for imported in node.names
+    )
+
+
+def _names_given_to_the_refusals_module(tree: ast.AST) -> frozenset[str]:
+    """Every name a file's imports give the module of refusals: imported from its package, or by its full name."""
+    from_its_package = frozenset(
+        imported.asname or imported.name
+        for node in ast.walk(tree)
+        if isinstance(node, ast.ImportFrom) and node.module == REFUSALS_PACKAGE
+        for imported in node.names
+        if imported.name == REFUSALS_MODULE_NAME
+    )
+    by_its_full_name = frozenset(
+        imported.asname or imported.name
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Import)
+        for imported in node.names
+        if imported.name == REFUSALS_MODULE
+    )
+    return from_its_package | by_its_full_name
 
 
 def _may_start_processes(path: Path) -> bool:
@@ -175,6 +230,8 @@ def _look_inside(node: ast.AST, file: CheckedFile, *, inside_function: bool, fou
             *_said_of_a_short_name(child),
             *_said_of_fields_by_name(child, file.copy_module_names),
             *_said_of_a_process_started(child, may_start_processes=file.may_start_processes),
+            *_said_of_a_command_by_position(child),
+            *_said_of_a_refusal_elsewhere(child, file),
         ]
         found.extend(Breach(path=file.path, line=one.line, says=one.says) for one in said)
         _look_inside(child, file, inside_function=inside_function or isinstance(child, FUNCTIONS), found=found)
@@ -226,6 +283,47 @@ def _said_of_a_process_started(node: ast.AST, *, may_start_processes: bool) -> l
             return [Said(line=node.lineno, says=STARTED_BY_A_SCRIPT.format(name=name))]
         case _:
             return []
+
+
+def _said_of_a_command_by_position(node: ast.AST) -> list[Said]:
+    """What is said of a command of the command line that takes a value by position: nothing of any other node."""
+    match node:
+        case ast.FunctionDef(name=name, args=arguments) | ast.AsyncFunctionDef(name=name, args=arguments) if (
+            _is_a_command(node) and [*arguments.posonlyargs, *arguments.args]
+        ):
+            return [Said(line=node.lineno, says=BY_POSITION.format(name=name))]
+        case _:
+            return []
+
+
+def _is_a_command(function: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+    """Whether a decorator of a function calls `command` or `group`, of click or of a group."""
+    return any(
+        isinstance(decorator, ast.Call)
+        and isinstance(decorator.func, ast.Attribute)
+        and decorator.func.attr in COMMAND_DECORATORS
+        for decorator in function.decorator_list
+    )
+
+
+def _said_of_a_refusal_elsewhere(node: ast.AST, file: CheckedFile) -> list[Said]:
+    """What is said of a class built on a kind of refusal, in a file other than the module that keeps them."""
+    match node:
+        case ast.ClassDef(name=name, bases=bases) if any(_is_a_refusal(base, file) for base in bases):
+            return [Said(line=node.lineno, says=REFUSAL_ELSEWHERE.format(name=name))]
+        case _:
+            return []
+
+
+def _is_a_refusal(base: ast.expr, file: CheckedFile) -> bool:
+    """Whether a class's base is something the file brings in from the module of refusals."""
+    match base:
+        case ast.Name(id=name):
+            return name in file.refusal_names
+        case ast.Attribute(value=ast.Name(id=module)):
+            return module in file.refusals_module_names
+        case _:
+            return False
 
 
 def _name_among(imported: list[ast.alias], name: str) -> bool:

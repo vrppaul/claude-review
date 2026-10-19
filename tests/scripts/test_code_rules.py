@@ -231,6 +231,37 @@ REPLACES_OF_ANOTHER_KIND = """
 """
 
 
+# A command of the command line taking a value by position, and one taking every value by name
+COMMANDS = """
+    import click
+
+
+    @click.command()
+    def by_position(port: int) -> None:
+        print(port)
+
+
+    @click.command()
+    def by_name(*, port: int) -> None:
+        print(port)
+"""
+
+# Kinds of refusal kept outside the review's own module of them: one under the name the module gives it, one asked
+# of the module
+REFUSALS_ELSEWHERE = """
+    from claude_review.domain import exceptions
+    from claude_review.domain.exceptions import NotFoundError
+
+
+    class GoneError(NotFoundError):
+        pass
+
+
+    class LostError(exceptions.RefusedError):
+        pass
+"""
+
+
 def _check(tmp_path: Path, source: str) -> subprocess.CompletedProcess[str]:
     return _check_as(tmp_path, "checked.py", source)
 
@@ -316,3 +347,23 @@ def test_a_replace_that_is_not_the_module_copys_passes(tmp_path: Path) -> None:
     checked = _check(tmp_path, REPLACES_OF_ANOTHER_KIND)
 
     assert (checked.returncode, checked.stdout) == (ALL_KEPT, "")
+
+
+def test_a_command_that_takes_a_value_by_position_is_named_and_one_that_takes_every_value_by_name_passes(
+    tmp_path: Path,
+) -> None:
+    """Click hands every value over by name, and nothing calls a command with a bare value in its place."""
+    checked = _check(tmp_path, COMMANDS)
+
+    assert checked.returncode == RULE_BROKEN
+    assert "checked.py:6: `by_position` is a command that takes a value by position" in checked.stdout
+    assert "`by_name`" not in checked.stdout
+
+
+def test_a_kind_of_refusal_kept_outside_the_reviews_refusals_is_named_where_it_is(tmp_path: Path) -> None:
+    """The review answers every kind with a status from one table, which reads the kinds kept in one module."""
+    checked = _check(tmp_path, REFUSALS_ELSEWHERE)
+
+    assert checked.returncode == RULE_BROKEN
+    assert "checked.py:6: `GoneError` is a kind of refusal kept outside" in checked.stdout
+    assert "checked.py:10: `LostError` is a kind of refusal kept outside" in checked.stdout
