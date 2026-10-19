@@ -449,6 +449,17 @@ const BUTTON_IN_THE_LIBRARY = { elements: ['button'], message: PRESSED_IN_THE_LI
 // chip of main.css
 const DRAWN_AS_A_FIELD = 'Draw a field with lib/ui (Field, Filter, Checkbox), not with an element of its own.';
 const FIELD_IN_THE_LIBRARY = { elements: ['input', 'textarea', 'select'], message: DRAWN_AS_A_FIELD };
+// An image and a link are drawn by the library too: an image pasted into what is said as a Thumbnail, which opens
+// it at its full size where it does; a picture of what is new as a Picture; a link as a Link. The page drew its
+// thumbnails, the link round one and the news's picture as elements of its own, styled by main.css
+const IMAGE_IN_THE_LIBRARY = {
+	elements: ['img'],
+	message: 'Draw an image with lib/ui Thumbnail or Picture, not with an element of its own.'
+};
+const LINK_IN_THE_LIBRARY = {
+	elements: ['a'],
+	message: 'Draw a link with lib/ui Link, or a Thumbnail that opens its image, not with an element of its own.'
+};
 // Nor an element given the part of a field by its role, or made a field by being editable, as a field drawn on a
 // <div> would be
 const A_FIELD_PART = '/^(textbox|searchbox|combobox|spinbutton|slider)$/';
@@ -720,7 +731,7 @@ export default tseslint.config(
 		rules: { 'svelte/no-restricted-html-elements': ['error', SVG_IN_ITS_COMPONENT] }
 	},
 	{
-		// Outside the library a component draws no button, field or heading of its own either
+		// Outside the library a component draws no button, field, image, link or heading of its own either
 		files: ['src/**/*.svelte'],
 		ignores: ['src/lib/ui/**', ...DRAWING_COMPONENTS, ...STILL_PRESSED_BY_HAND],
 		rules: {
@@ -730,12 +741,14 @@ export default tseslint.config(
 				KBD_IN_ITS_COMPONENT,
 				BUTTON_IN_THE_LIBRARY,
 				FIELD_IN_THE_LIBRARY,
+				IMAGE_IN_THE_LIBRARY,
+				LINK_IN_THE_LIBRARY,
 				HEADING_IN_THE_LIBRARY
 			]
 		}
 	},
 	{
-		// A component still pressed by hand draws its button, and no field or heading of its own
+		// A component still pressed by hand draws its button, and no field, image, link or heading of its own
 		files: STILL_PRESSED_BY_HAND,
 		rules: {
 			'svelte/no-restricted-html-elements': [
@@ -743,12 +756,14 @@ export default tseslint.config(
 				SVG_IN_ITS_COMPONENT,
 				KBD_IN_ITS_COMPONENT,
 				FIELD_IN_THE_LIBRARY,
+				IMAGE_IN_THE_LIBRARY,
+				LINK_IN_THE_LIBRARY,
 				HEADING_IN_THE_LIBRARY
 			]
 		}
 	},
 	{
-		// A component of the page that draws a drawing draws no button, field or heading of its own
+		// A component of the page that draws a drawing draws no button, field, image, link or heading of its own
 		files: DRAWING_COMPONENTS,
 		ignores: ['src/lib/ui/**'],
 		rules: {
@@ -757,6 +772,8 @@ export default tseslint.config(
 				KBD_IN_ITS_COMPONENT,
 				BUTTON_IN_THE_LIBRARY,
 				FIELD_IN_THE_LIBRARY,
+				IMAGE_IN_THE_LIBRARY,
+				LINK_IN_THE_LIBRARY,
 				HEADING_IN_THE_LIBRARY
 			]
 		}

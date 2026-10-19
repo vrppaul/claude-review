@@ -142,16 +142,31 @@
 }
 
 /*
- * Words that lead somewhere or do something (Link), in the colour of the
- * reader's controls as words, at the size of the line they stand in;
- * underlined under the pointer, as a link is
+ * Words that lead somewhere or do something (Link), and a link of words
+ * written in Markdown (Prose): in the colour of the reader's controls as
+ * words, at the size and weight of the line they stand in; underlined under
+ * the pointer, as a link is
  */
-.cr-ui-link {
+.cr-ui-link,
+.cr-ui-prose a {
 	color: var(--cr-control-text);
+	font-weight: inherit;
+	text-decoration-line: none;
 	text-underline-offset: var(--cr-underline-offset);
 }
-.cr-ui-link:hover {
+.cr-ui-link:hover,
+.cr-ui-prose a:hover {
 	text-decoration-line: underline;
+}
+
+/* Words written in Markdown (Prose): at a comment's measure, as they are written as one is */
+.cr-ui-prose {
+	max-width: var(--cr-prose-measure);
+}
+/* A quotation is set off by its rule; quotation marks added around it would read as the writer's own */
+.cr-ui-prose blockquote p::before,
+.cr-ui-prose blockquote p::after {
+	content: none;
 }
 
 /*
@@ -1214,6 +1229,77 @@
 	display: inline-flex;
 	align-items: center;
 	gap: --spacing(1);
+}
+
+/*
+ * An image pasted into what is said (Thumbnail): a square of one size at a
+ * field's corner, edged as a surface is, the image cut to fill it; while it
+ * is on its way, or once it can no longer be shown, the square holds what
+ * says so. Its cross, where it can be taken off, stands over its top right
+ * corner
+ */
+.cr-ui-thumbnail {
+	width: var(--cr-image-thumb);
+	height: var(--cr-image-thumb);
+	object-fit: cover;
+	border: var(--cr-line) solid var(--color-base-300);
+	border-radius: var(--radius-field);
+}
+.cr-ui-thumbnail-filled {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+}
+/* Gone from the server, said in words rather than a broken icon */
+.cr-ui-thumbnail-lost {
+	padding: --spacing(1);
+	color: var(--cr-faint);
+	font-size: var(--text-2xs);
+	line-height: var(--text-2xs--line-height);
+	text-align: center;
+}
+.cr-ui-thumbnail-removable {
+	position: relative;
+	display: inline-flex;
+}
+.cr-ui-thumbnail-remove {
+	position: absolute;
+	top: calc(-1 * --spacing(2));
+	right: calc(-1 * --spacing(2));
+}
+/*
+ * What became of a file (StatusLetter, lib/ui/status-letter.ts): a letter in
+ * the code's face and bold, in the room a row keeps for its mark, so the
+ * names beside the letters stand in one line
+ */
+.cr-ui-status-letter {
+	flex-shrink: 0;
+	width: var(--cr-list-row-mark-slot);
+	font-family: var(--font-mono);
+	font-size: var(--text-xs);
+	font-weight: var(--font-weight-semibold);
+	line-height: var(--text-xs--line-height);
+	text-align: center;
+}
+.cr-ui-status-changed {
+	color: var(--cr-status-modified);
+}
+.cr-ui-status-added {
+	color: var(--cr-add-text);
+}
+.cr-ui-status-deleted {
+	color: var(--cr-del-text);
+}
+.cr-ui-status-moved {
+	color: var(--cr-muted);
+}
+
+/* A picture of something (Picture): as wide as what it stands in, at a box's corner, edged as a surface is */
+.cr-ui-picture {
+	display: block;
+	width: 100%;
+	border: var(--cr-line) solid var(--color-base-300);
+	border-radius: var(--radius-box);
 }
 
 /* Why something the reader did could not be done (Failure): in the colour of what fails, in small words */

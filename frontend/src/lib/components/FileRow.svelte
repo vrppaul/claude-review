@@ -3,7 +3,8 @@
 	import type { FileStatus } from '$lib/types';
 	import Count from '$lib/ui/Count.svelte';
 	import Row from '$lib/ui/Row.svelte';
-	import StatusLetter from './StatusLetter.svelte';
+	import StatusLetter from '$lib/ui/StatusLetter.svelte';
+	import { STATUS_LETTERS } from './status-letters';
 
 	interface Props {
 		testId: string;
@@ -44,6 +45,10 @@
 		marks,
 		end
 	}: Props = $props();
+
+	// What became of the file, as its letter says it and its word for whoever cannot see the letter; none where the
+	// review does not say
+	const became = $derived(status === null ? null : { ...STATUS_LETTERS[status], said: status });
 </script>
 
 <!-- Its marks, its threads, and how much it changes, at its end -->
@@ -76,13 +81,13 @@
 <!-- A file in a column beside what is read, the tree of files or a story's contents: what became of it, where
 	the review says, its name, its threads and how much it changes. One press to where it is drawn -->
 <li>
-	{#if status === null}
+	{#if became === null}
 		{@render row(undefined)}
 	{:else}
 		<!-- Held as it is here, where it is known, for the letter drawn from it -->
-		{@const became = status}
+		{@const drawn = became}
 		{#snippet letter()}
-			<StatusLetter status={became} />
+			<StatusLetter letter={drawn.letter} became={drawn.became} said={drawn.said} />
 		{/snippet}
 		{@render row(letter)}
 	{/if}

@@ -295,15 +295,6 @@
 	outline-offset: --spacing(2);
 }
 
-/* Rendered prose gets the same measure as a comment: it is prose too */
-.cr-prose {
-	max-width: var(--cr-prose-measure);
-}
-/* A quotation is set off by its rule; quotation marks added around it would read as the writer's own */
-.cr-prose blockquote p::before,
-.cr-prose blockquote p::after {
-	content: none;
-}
 /* An image named in words, in the line it stands in: said quietly, as what is not shown */
 .cr-image-named {
 	color: var(--cr-muted);
@@ -540,40 +531,6 @@
 	background: var(--cr-add-tint);
 	border-left-color: var(--cr-add-edge);
 	color: var(--cr-add-text);
-}
-
-/* An image in the panel, a square of the thumbnail's size */
-.cr-image-thumb {
-	width: var(--cr-image-thumb);
-	height: var(--cr-image-thumb);
-	object-fit: cover;
-	border-radius: var(--radius-field);
-	border: var(--cr-line) solid var(--color-base-300);
-}
-.cr-image-attached {
-	position: relative;
-	display: inline-flex;
-}
-/* Where the button that takes an image off stands: over its top right corner */
-.cr-image-detach {
-	position: absolute;
-	top: calc(-1 * --spacing(2));
-	right: calc(-1 * --spacing(2));
-}
-.cr-image-pending {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-}
-/* An image the server no longer has, said in words rather than a broken icon */
-.cr-image-lost {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	padding: --spacing(1);
-	font-size: var(--text-2xs);
-	line-height: var(--text-2xs--line-height);
-	text-align: center;
 }
 
 /* Who said a turn in the panel, and when: once per turn, a caption quieter than what was said */
@@ -982,13 +939,7 @@
 .cr-guide-plus {
 	color: var(--cr-muted);
 }
-/* What is new, shown rather than told: a file, or a drawing in the theme */
-.cr-news-image {
-	display: block;
-	width: 100%;
-	border-radius: var(--radius-box);
-	border: var(--cr-line) solid var(--color-base-300);
-}
+/* What is new, shown rather than told: a picture (lib/ui Picture), or a drawing in the theme */
 .cr-illustration {
 	display: flex;
 	flex-direction: column;

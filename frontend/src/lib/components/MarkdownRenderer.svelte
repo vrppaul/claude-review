@@ -3,6 +3,7 @@
 	import { markedHighlight } from 'marked-highlight';
 	import { hljs } from '$lib/utils/highlight';
 	import { escapeMarkup, isAbsoluteDestination } from '$lib/utils/safe-markup';
+	import Prose from '$lib/ui/Prose.svelte';
 
 	// Where a link opens: a tab of its own, which learns nothing of the review
 	// that opened it — followed in the review's own tab, it would end the review
@@ -88,6 +89,6 @@
 	const html = $derived(marked.parse(text, { async: false }));
 </script>
 
-<div data-testid="markdown-content" class={['cr-prose prose prose-sm', dense && 'cr-comment-body']}>
+<Prose {dense} testId="markdown-content">
 	{@html html}
-</div>
+</Prose>

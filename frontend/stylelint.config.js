@@ -42,12 +42,13 @@ const A_DRAWN_LINE = ['/^var\\(--cr-[a-z-]+\\)$/'];
 // step, never as the step's length multiplied out
 const OFF_THE_SCALE = ['/--spacing\\((?!(0|0\\.5|1|1\\.5|2|3|4|6|8)\\))/'];
 const THE_STEP_MULTIPLIED = ['/var\\(--spacing\\)/'];
-// Words at one of the scale's sizes, at that size's leading, in one of its two weights, never all three at once in
-// a shorthand; and a thing seen whole, gone, or at a strength tokens.css names as one
+// Words at one of the scale's sizes, at that size's leading, in one of its two weights or the weight of the words
+// round them, never all three at once in a shorthand; and a thing seen whole, gone, or at a strength tokens.css
+// names as one
 const THE_SCALES_WORDS = {
 	'font-size': ['/^var\\(--(text-(2xs|xs|sm|lg|xl)|cr-(code|comment)-size)\\)$/'],
 	'line-height': ['/^var\\(--(text-(2xs|xs|sm|lg|xl)--line-height|cr-(code|comment)-leading)\\)$/'],
-	'font-weight': ['/^var\\(--font-weight-(normal|semibold)\\)$/'],
+	'font-weight': ['/^var\\(--font-weight-(normal|semibold)\\)$/', 'inherit'],
 	font: ['inherit'],
 	opacity: ['0', '1', '/^var\\(--cr-[a-z-]+-(faint|strength)\\)$/'],
 	'stroke-width': A_DRAWN_LINE,

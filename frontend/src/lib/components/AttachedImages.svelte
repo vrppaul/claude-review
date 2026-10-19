@@ -1,9 +1,7 @@
 <script lang="ts">
 	import type { ImageAttachments } from '$lib/review/image-attachments.svelte';
 	import { imageUrl } from '$lib/api/review-api';
-	import BreathingDots from '$lib/ui/BreathingDots.svelte';
-	import Icon from '$lib/ui/Icon.svelte';
-	import IconButton from '$lib/ui/IconButton.svelte';
+	import Thumbnail from '$lib/ui/Thumbnail.svelte';
 
 	interface Props {
 		attachments: ImageAttachments;
@@ -20,32 +18,22 @@
 {#if attachments.images.length > 0 || attachments.uploading > 0}
 	<div data-testid="attached-images" class="mb-2 flex flex-wrap gap-2">
 		{#each attachments.images as imageId (imageId)}
-			<span class="cr-image-attached">
-				<img
-					data-testid="attached-image"
-					src={imageUrl(imageId)}
-					alt="Attached to what is being written"
-					class="cr-image-thumb"
-					onerror={() => onLost(imageId)}
-				/>
-				<span class="cr-image-detach">
-					<IconButton
-						tone="secondary"
-						size="xs"
-						label="Remove this image"
-						testId="detach-image"
-						{disabled}
-						onclick={() => attachments.detach(imageId)}
-					>
-						<Icon name="cross" size="xs" />
-					</IconButton>
-				</span>
-			</span>
+			<Thumbnail
+				shows="image"
+				src={imageUrl(imageId)}
+				alt="Attached to what is being written"
+				onLost={() => onLost(imageId)}
+				removing={{
+					label: 'Remove this image',
+					disabled,
+					onRemove: () => attachments.detach(imageId),
+					testId: 'detach-image'
+				}}
+				testId="attached-image"
+			/>
 		{/each}
 		{#if attachments.uploading > 0}
-			<span data-testid="image-uploading" class="cr-image-thumb cr-image-pending">
-				<BreathingDots tone="quiet" testId="uploading-dots" />
-			</span>
+			<Thumbnail shows="uploading" testId="image-uploading" />
 		{/if}
 	</div>
 {/if}

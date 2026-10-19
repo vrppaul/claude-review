@@ -1,6 +1,10 @@
 <script lang="ts">
 	import { SvelteSet } from 'svelte/reactivity';
 	import { imageUrl } from '$lib/api/review-api';
+	import Thumbnail from '$lib/ui/Thumbnail.svelte';
+
+	// What stands where an image was that the review no longer has
+	const NO_LONGER_SHOWN = 'can no longer be shown';
 
 	interface Props {
 		images: string[];
@@ -19,18 +23,16 @@
 	<div class="mt-2 flex flex-wrap gap-2">
 		{#each images as imageId (imageId)}
 			{#if lost.has(imageId)}
-				<span data-testid="lost-image" class="cr-image-thumb cr-image-lost cr-faint"> can no longer be shown </span>
+				<Thumbnail shows="lost" said={NO_LONGER_SHOWN} testId="lost-image" />
 			{:else}
-				<a data-testid="said-image" href={imageUrl(imageId)} target="_blank" rel="noopener noreferrer">
-					<img
-						data-testid="said-image-picture"
-						src={imageUrl(imageId)}
-						alt="Sent with this message"
-						class="cr-image-thumb"
-						loading="lazy"
-						onerror={() => lost.add(imageId)}
-					/>
-				</a>
+				<Thumbnail
+					shows="image"
+					src={imageUrl(imageId)}
+					alt="Sent with this message"
+					onLost={() => lost.add(imageId)}
+					opens={{ href: imageUrl(imageId), testId: 'said-image' }}
+					testId="said-image-picture"
+				/>
 			{/if}
 		{/each}
 	</div>

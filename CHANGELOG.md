@@ -232,6 +232,16 @@
   are one bar, at its room for each; a file's bar steps back once the file
   is viewed. eslint refuses a raised ground ruled off above or below
   drawn outside the library.
+- **Images, links and a file's letter are the library's.** An image pasted
+  into what is said is one thumbnail, uploading, lost or shown, which
+  opens at its full size or is taken off by its cross; the news's picture
+  is a picture of the library's. A link in words written in Markdown takes
+  the library's link: the reader's control colour at the weight of its
+  line, underlined under the pointer, where the typography plugin drew it
+  underlined and heavier. What became of a file is its letter of the
+  library's. eslint refuses an `<img>` or an `<a>` drawn outside it. A
+  turn's avatar stays the thread's own drawing: the turn and the thread's
+  spine are laid out from its size.
 - **Every size is taken off one scale.** Room between things is one of
   nine steps from 0 to 32 pixels, words one of a few sizes in two weights
   at their size's own leading, a line 1 or 2 pixels, a corner a field's or

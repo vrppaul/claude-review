@@ -209,11 +209,7 @@ of it is built yet.
 
 - [ ] `refactor(ui)`: the kinds the page still draws outside the library,
       each to become a part of it with its rule (`.claude/rules/page.md`):
-      an image's thumbnail (`.cr-image-*`); a file's status letter
-      (StatusLetter, a mark drawn with utilities); a
-      turn's avatar (`.cr-avatar`); a link in rendered text, drawn by the
-      typography plugin; and the folds, a `<details>` and a folded thread's
-      line.
+      the folds, a `<details>` and a folded thread's line.
 - [ ] `refactor(ui)`: three components still draw a `<button>` of their own
       — the gutter, the hunk gap's ways, the folded line —
       named with the part that is to take each in `STILL_PRESSED_BY_HAND`
