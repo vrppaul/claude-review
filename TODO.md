@@ -194,7 +194,8 @@ The owner's list of 2026-10-15, after the story's UI round ("потом"): none
 of it is built yet.
 
 - [ ] `feat(ui)`: a new look for the agent's progress in its panel.
-- [ ] `feat(ui)`: a new look for a folded thread's line.
+- [ ] `feat(ui)`: a new look for a folded thread's line (its words are in
+      the code's face today).
 - [ ] `feat(ui)`: a new look for the rows of the tree of files, and a new
       design of the tree itself.
 - [ ] `feat(ui)`: a new look for the buttons under a comment being written
@@ -207,14 +208,37 @@ of it is built yet.
 - [ ] `feat(ui)`: a new look for the arrows.
 - [ ] `feat(ui)`: every chip, looked at again.
 - [ ] `feat(ui)`: animations.
-- [ ] `refactor(ui)`: the buttons still drawn outside the library
-      (`frontend/src/lib/ui/`): the tree's and the contents' rows, the
-      gutter, the hunk gap's ways, a thread's chips and the × of a chip
-      naming one in a message, the reply field, the folded line and the
-      rail. Until Row, Chip and Field take them, no gate refuses a
-      `<button>` drawn outside the library.
 - [ ] `refactor(ui)`: one kind of dialog everywhere, the agent's panel
       included.
+
+## The page's library, what its steps left
+
+- [ ] `refactor(ui)`: four components still draw a `<button>` of their own
+      — the gutter, the hunk gap's ways, the reply field, the folded line —
+      named with the part that is to take each in `STILL_PRESSED_BY_HAND`
+      (`frontend/eslint.config.js`); eslint refuses one everywhere else.
+- [ ] `refactor(ui)`: sizes are still numbers in `frontend/src/styles/ui.css`
+      (gaps, rooms, words, widths): the scale's tokens (spacing, type,
+      corner, line) are to hold them, and stylelint to refuse a number
+      outside `tokens.css`. A card's room, 14 px, moves to the scale's 16.
+- [ ] `refactor(ui)`: gates that refuse old names only: a tag or a card
+      drawn anew with utilities, a quiet or done notice bar on base-200,
+      an opacity form such as `bg-warning/10` (a colour `tokens.css` never
+      wrote), and the stylesheet's round drawings (avatars, a story's
+      nodes) pass. A rule that each look class has one owner is to hold
+      them.
+- [ ] `refactor(ui)`: a heading is written twice: the tour's step title and
+      a pane's head name the same type tokens in two rules, until a
+      Heading part draws both.
+- [ ] `refactor(ui)`: `EdgeFrame`'s `holds` defaults to `'words'`; every
+      caller is to say what its frame holds.
+- [ ] `feat(ui)`: whether a pane keeps its side while the page scrolls under
+      it: one now opens the other way the moment it stops fitting.
+- [ ] `feat(ui)`: whether a notice other than a broken part's announces
+      itself (`role="status"`), and whether the end of a review, a notice
+      like any other since `8fae66a`, should stand out more.
+- [ ] No test holds a chapter's warning heads' colour, a chip out of reach's
+      dashed edge, the tour's waiting dot, or a running branch's breath.
 
 ## Infrastructure
 
