@@ -834,46 +834,6 @@
 }
 
 /*
- * Something the review has to say about itself, across the top of the
- * reading area. The warning's colour while the code on screen is out of
- * date, and the mark's own once it has been brought up to date — the first
- * is the tree moving, the second is the reader's doing.
- */
-.cr-notice {
-	color: var(--color-base-content);
-}
-/*
- * The code moving on under the reader, a part of the page that could not be
- * drawn, and a kept draft that could not be read: warnings all
- */
-.cr-notice-moved,
-.cr-notice-broken,
-.cr-notice-set-aside {
-	background: var(--cr-warning-tint);
-}
-/* The mark a notice stands by, in the colour of what it says */
-.cr-notice-moved .cr-notice-mark,
-.cr-notice-broken .cr-notice-mark,
-.cr-notice-set-aside .cr-notice-mark {
-	color: var(--color-warning);
-}
-.cr-notice-taken {
-	background: var(--cr-mark-soft);
-}
-.cr-notice-taken .cr-notice-mark {
-	color: var(--cr-mark);
-}
-
-/*
- * A review the page cannot send anything to — it cannot be reached now, or
- * it ended under the reader — with what they had not sent waiting for them:
- * the warning's colour, not the mark's of a review sent.
- */
-.cr-warning-bar {
-	background: var(--cr-warning-tint);
-}
-
-/*
  * A story's diagram under its overview, fitted to the column: mermaid draws
  * it at its own size, and it is scaled down to the width it has, never up.
  * Opened large, it is drawn at its own size.

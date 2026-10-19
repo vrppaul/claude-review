@@ -555,3 +555,51 @@
 .cr-ui-icon-right {
 	rotate: -90deg;
 }
+
+/*
+ * A notice (NoticeBar, lib/ui/notice.ts): a bar across what it is about,
+ * ruled off from what is under it, its mark, its words and what can be done
+ * about it in one row. What it holds is as tall as a small button at the
+ * least, the room and the rule outside that, so a bar with nothing to be
+ * done about it stands as tall as one with a button in it; its words wrap
+ * before what stands at its far end is squeezed.
+ */
+.cr-ui-notice {
+	display: flex;
+	flex-shrink: 0;
+	align-items: center;
+	gap: 0.75rem;
+	box-sizing: content-box;
+	min-height: var(--cr-button-xs);
+	padding: var(--cr-notice-room-block) var(--cr-notice-room-inline);
+	border-bottom: 1px solid var(--color-base-300);
+	color: var(--color-base-content);
+	font-size: var(--text-xs);
+	line-height: var(--text-xs--line-height);
+}
+.cr-ui-notice-words {
+	flex: 1;
+	min-width: 0;
+}
+.cr-ui-notice-reader {
+	background: var(--cr-mark-soft);
+}
+.cr-ui-notice-reader .cr-ui-notice-mark {
+	color: var(--cr-mark);
+}
+.cr-ui-notice-warning {
+	background: var(--cr-warning-tint);
+}
+.cr-ui-notice-warning .cr-ui-notice-mark {
+	color: var(--color-warning);
+}
+.cr-ui-notice-done {
+	background: var(--color-base-200);
+}
+.cr-ui-notice-done .cr-ui-notice-mark {
+	color: var(--cr-done);
+}
+.cr-ui-notice-quiet {
+	background: var(--color-base-200);
+	color: var(--cr-muted);
+}

@@ -213,6 +213,22 @@ const LINE_NUMBERS = NUMBERED_ROWS.flatMap(({ row, text, tints }) =>
 	}))
 );
 
+// The grounds of a notice that are washes, over the page's: a warning's, and one of the reader's own doing. On each
+// stand its words and what can be done about it, a quiet button in the same words, at rest and under the pointer;
+// and why doing it failed, in the error's words, which nothing lights
+const NOTICE_WASHES = [
+	{ said: "a warning's notice", grounds: ['--color-base-100', '--cr-warning-tint'] },
+	{ said: "a notice of the reader's own doing", grounds: ['--color-base-100', '--cr-mark-soft'] }
+];
+const ON_A_NOTICE = NOTICE_WASHES.flatMap(({ said: on, grounds }) => [
+	...AT_REST_OR_POINTED_AT.map(({ said: state, fills }) => ({
+		said: `the words of ${on} and of a quiet button on it, ${state}`,
+		text: '--color-base-content',
+		grounds: [...grounds, ...fills]
+	})),
+	{ said: `why doing something about ${on} failed`, text: '--color-error', grounds }
+]);
+
 // Every colour code is highlighted in, by what it colours
 const SYNTAX = ['keyword', 'string', 'comment', 'number', 'type', 'function', 'variable', 'meta'];
 // Every ground code is drawn on, by the tints laid over the page under it: a
@@ -266,7 +282,14 @@ function laid(grounds: string[], theme: Theme): Channels {
 
 describe('the palette', () => {
 	for (const theme of THEMES) {
-		for (const pair of [...DRAWN, ...WORDS_IN_EVERY_STATE, ...ON_A_TRACK, ...LINE_NUMBERS, ...CODE_DRAWN]) {
+		for (const pair of [
+			...DRAWN,
+			...WORDS_IN_EVERY_STATE,
+			...ON_A_TRACK,
+			...LINE_NUMBERS,
+			...CODE_DRAWN,
+			...ON_A_NOTICE
+		]) {
 			it(`reads at ${SMALL_TEXT}:1 in the ${theme} theme: ${pair.said}`, () => {
 				expect(contrast(paint(pair.text, theme).channels, laid(pair.grounds, theme))).toBeGreaterThanOrEqual(
 					SMALL_TEXT
@@ -323,5 +346,15 @@ describe('the states of whatever can be pressed', () => {
 			expect(contrast(selected, wash)).toBeGreaterThanOrEqual(LIT);
 			expect(Math.min(contrast(edge, selected), contrast(edge, wash))).toBeGreaterThanOrEqual(NEEDED);
 		});
+
+		for (const { said: on, grounds } of NOTICE_WASHES) {
+			it(`what the pointer is on stands off ${on} at ${LIT}:1 in the ${theme} theme`, () => {
+				expect(contrast(laid([...grounds, '--cr-hover'], theme), laid(grounds, theme))).toBeGreaterThanOrEqual(LIT);
+			});
+
+			it(`the ring round what holds the keyboard reads at ${NEEDED}:1 on ${on}, in the ${theme} theme`, () => {
+				expect(contrast(paint('--cr-focus-ring', theme).channels, laid(grounds, theme))).toBeGreaterThanOrEqual(NEEDED);
+			});
+		}
 	}
 });

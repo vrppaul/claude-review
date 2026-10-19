@@ -4,9 +4,9 @@
 	import { useReview } from '$lib/review/context';
 	import { threadsNotDrawnIn } from '$lib/review/reading-view';
 	import Button from '$lib/ui/Button.svelte';
+	import NoticeBar from '$lib/ui/NoticeBar.svelte';
 	import { plainWords } from '$lib/utils/plain-words';
 	import { counted, FILES, wordsFor } from '$lib/utils/words';
-	import NoticeBar from './NoticeBar.svelte';
 
 	const review = useReview();
 
@@ -27,7 +27,7 @@
 <!-- A state, not news: no Dismiss, because dismissing it would leave the
 	reader looking at part of the review with nothing saying so. The way
 	out is the only other thing here. -->
-<NoticeBar testId="narrowed-to" kind="cr-notice-taken" icon="compare">
+<NoticeBar tone="reader" icon="compare" testId="narrowed-to">
 	{#if review.diff.files.length === 0}
 		Nothing has changed — {review.diff.phrase}.
 	{:else}

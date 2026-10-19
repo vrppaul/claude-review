@@ -422,3 +422,122 @@ async def test_code_set_apart_is_one_box_in_the_codes_face_and_size_on_a_cards_g
     assert [(look.size, look.face) for look in looks] == [words] * every_box
     assert [(look.ground, look.border, look.radius) for look in looks] == [box] * every_box
     assert rooms == [rooms[0]] * every_box
+
+
+# A script made runnable, its lines the same: a change of its mode alone, which its file's notes say
+RUNNABLE_SCRIPT = "run.sh"
+RUNNABLE = 0o755
+WITH_A_SCRIPT = {**COMMITTED, RUNNABLE_SCRIPT: "#!/bin/sh\necho hello\n"}
+# Where the agent takes the diff again, as it does after a round; and a file written after that, which moves the
+# tree on under the diff
+RETAKE_ROUTE = "/api/retake"
+MOVED_ON = {"later.py": "LATER = True\n"}
+# How far a notice's words stand in from its edge, above them and at its start
+NOTICE_ROOM = """(element) => {
+    const style = getComputedStyle(element);
+    return [style.paddingTop, style.paddingLeft];
+}"""
+
+
+class Notice(BaseModel):
+    """A notice the page draws, by its test id, and the tokens of its tone: the ground under it and its words."""
+
+    model_config = ConfigDict(frozen=True)
+
+    test_id: str
+    ground: str
+    words: str
+
+
+class NoticeLook(BaseModel):
+    """How a notice is drawn: how tall it stands, the room round its words, their size, its ground and their colour."""
+
+    model_config = ConfigDict(frozen=True)
+
+    height: float
+    room: tuple[str, str]
+    size: str
+    ground: str
+    words: str
+
+
+# A notice of each tone, in the order a review shows them: the code moving on under the reader, a warning; a fact
+# of a file its lines cannot show, quiet; the comments the reader had not sent, brought back, their own doing; and
+# the review sent, done
+MOVED = Notice(test_id="tree-moved", ground="var(--cr-warning-tint)", words="var(--color-base-content)")
+MODE_CHANGED = Notice(test_id="mode-change-note", ground="var(--color-base-200)", words="var(--cr-muted)")
+RESTORED = Notice(test_id="restored-notice", ground="var(--cr-mark-soft)", words="var(--color-base-content)")
+SENT = Notice(test_id="submitted-banner", ground="var(--color-base-200)", words="var(--color-base-content)")
+EVERY_NOTICE = [MOVED, MODE_CHANGED, RESTORED, SENT]
+# The colour of the mark each notice that is news stands by, in the same order; a fact of a file is no news
+MARKS = ["var(--color-warning)", "var(--cr-mark)", "var(--cr-done)"]
+
+
+@pytest.fixture
+def repository_with_a_script(tmp_path: Path) -> Path:
+    """A repository with one file changed and a script made runnable, neither committed."""
+    committed_repository(tmp_path, WITH_A_SCRIPT)
+    write_files(tmp_path, CHANGED)
+    (tmp_path / RUNNABLE_SCRIPT).chmod(RUNNABLE)
+    return tmp_path
+
+
+@in_the_browsers_loop
+async def review_moved_on(repository_with_a_script: Path, servers: ReviewServers) -> RunningReview:
+    """A review whose diff the agent took again, after which the tree moved on under it."""
+    review = await servers.start(await repository_opening(repository_with_a_script))
+    async with AsyncClient(base_url=review.url) as agent:
+        await agent.post(RETAKE_ROUTE, json={})
+    write_files(repository_with_a_script, MOVED_ON)
+    return review
+
+
+def _pixels(value: str) -> float:
+    """A length as the browser works it out, in pixels."""
+    return float(value.removesuffix("px"))
+
+
+async def _look_of_a_notice(page: Page, notice: Notice) -> NoticeLook:
+    """How a notice is drawn, once it is, as the browser works it out."""
+    drawn = page.get_by_test_id(notice.test_id)
+    await drawn.wait_for()
+    look = await painted(drawn)
+    room_block, room_inline = await drawn.evaluate(NOTICE_ROOM)
+    return NoticeLook(
+        height=look.height, room=(room_block, room_inline), size=look.size, ground=look.ground, words=look.words
+    )
+
+
+async def _mark_of(page: Page, notice: Notice) -> str:
+    """The colour of the mark a notice stands by."""
+    return (await painted(page.get_by_test_id(f"{notice.test_id}-mark"))).words
+
+
+@pytest.mark.parametrize("scheme", SCHEMES)
+async def test_every_notice_is_as_tall_as_one_with_a_button_its_words_alike_on_its_tones_ground_marked_in_its_colour(
+    review_moved_on: RunningReview, page: Page, scheme: str
+) -> None:
+    await _open_in(page, review_moved_on, scheme)
+    looks = [await _look_of_a_notice(page, notice) for notice in [MOVED, MODE_CHANGED]]
+    marks = [await _mark_of(page, MOVED)]
+    await _comment_on_the_first_line(page)
+    await page.reload()
+    looks.append(await _look_of_a_notice(page, RESTORED))
+    marks.append(await _mark_of(page, RESTORED))
+
+    await page.get_by_test_id("quick-submit").click()
+    await page.get_by_test_id("modal-submit").click()
+
+    looks.append(await _look_of_a_notice(page, SENT))
+    marks.append(await _mark_of(page, SENT))
+    room_block = await on_a_probe(page, "paddingTop", "var(--cr-notice-room-block)")
+    room_inline = await on_a_probe(page, "paddingLeft", "var(--cr-notice-room-inline)")
+    words = await on_a_probe(page, "fontSize", "var(--text-xs)")
+    every_notice = len(EVERY_NOTICE)
+    assert [look.height for look in looks] == [XS + 2 * _pixels(room_block) + _pixels(A_LINE)] * every_notice
+    assert [(look.room, look.size) for look in looks] == [((room_block, room_inline), words)] * every_notice
+    assert [(look.ground, look.words) for look in looks] == [
+        (await on_a_probe(page, "backgroundColor", notice.ground), await on_a_probe(page, "color", notice.words))
+        for notice in EVERY_NOTICE
+    ]
+    assert marks == [await on_a_probe(page, "color", colour) for colour in MARKS]

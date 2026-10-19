@@ -58,6 +58,12 @@ describe('a part of the review that breaks', () => {
 		expect(getByTestId('agent-panel')).toBeTruthy();
 	});
 
+	it('says it could not be drawn aloud at once, to whoever cannot see it', () => {
+		const { getByRole } = reviewOnScreen();
+
+		expect(getByRole('alert').textContent).toContain(`${breaking.section} could not be drawn`);
+	});
+
 	it('is a step of a story that still says its number and reason, over where its piece could not be drawn', () => {
 		const why = 'Why the file changed.';
 		const story = storyHeld({ chapters: [toldChapter('ch-1', [toldStep(breaking.section, 1, why)])] });

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { DiffFile, Thread, Unshown } from '$lib/types';
 	import { useReview } from '$lib/review/context';
+	import NoticeBar from '$lib/ui/NoticeBar.svelte';
 	import { modeChangeOf } from '$lib/utils/file-modes';
 	import { wholeMegabytes } from '$lib/utils/sizes';
 	import { FILE_NOT_COMMENTABLE } from './line-commenting.svelte';
@@ -41,15 +42,14 @@
 
 <!-- What the lines cannot show, above whichever way the lines are drawn -->
 {#if !file.commentable}
-	<div data-testid="not-commentable-note" class="cr-muted border-b border-base-300 bg-base-200 px-4 py-2 text-xs">
-		{FILE_NOT_COMMENTABLE}
-	</div>
+	<NoticeBar tone="quiet" testId="not-commentable-note">{FILE_NOT_COMMENTABLE}</NoticeBar>
 {/if}
 
 {#if modeChange}
-	<div data-testid="mode-change-note" class="cr-muted border-b border-base-300 bg-base-200 px-4 py-2 font-mono text-xs">
-		{modeChange.what} changed: {modeChange.from} → {modeChange.to}
-	</div>
+	<!-- The modes as git writes them, in the code's face -->
+	<NoticeBar tone="quiet" testId="mode-change-note">
+		{modeChange.what} changed: <span class="font-mono">{modeChange.from} → {modeChange.to}</span>
+	</NoticeBar>
 {/if}
 
 <UnplacedThreads threads={unplaced} why={OFF_THEIR_LINES} />

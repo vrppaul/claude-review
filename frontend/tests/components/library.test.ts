@@ -11,6 +11,7 @@ import EdgeFrame from '$lib/ui/EdgeFrame.svelte';
 import Icon from '$lib/ui/Icon.svelte';
 import IconButton from '$lib/ui/IconButton.svelte';
 import Link from '$lib/ui/Link.svelte';
+import NoticeBar from '$lib/ui/NoticeBar.svelte';
 import Pane from '$lib/ui/Pane.svelte';
 import PopoverPanel from '$lib/ui/PopoverPanel.svelte';
 import Segment from '$lib/ui/Segment.svelte';
@@ -111,6 +112,17 @@ const WITH_A_CLASS_FROM_OUTSIDE = [
 	{
 		part: 'a link',
 		render: () => render(Link, { href: RELEASE, testId: TEST_ID, children: drawn, class: FROM_OUTSIDE } as never)
+	},
+	{
+		part: 'a notice',
+		render: () =>
+			render(NoticeBar, {
+				tone: 'warning',
+				icon: 'notice',
+				testId: TEST_ID,
+				children: drawn,
+				class: FROM_OUTSIDE
+			} as never)
 	},
 	{
 		part: 'a segment',

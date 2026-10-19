@@ -227,7 +227,7 @@ const NO_DAISY_BUTTONS = [
 const HANDED_ITS_TEST_ID = 'Hand a part of the library its test id as testId, which it lays on what it draws.';
 // The parts of the library, by the names the page draws them under
 const LIBRARY_PART =
-	'/^(Button|Card|CodeBox|ColumnBar|Dialog|EdgeFrame|Icon|IconButton|Link|Pane|PaneHead|PopoverPanel|Segment|Segmented)$/';
+	'/^(Button|Card|CodeBox|ColumnBar|Dialog|EdgeFrame|Icon|IconButton|Link|NoticeBar|Pane|PaneHead|PopoverPanel|Segment|Segmented)$/';
 const NO_BUTTONS_OF_ITS_OWN = [
 	...NO_DAISY_BUTTONS,
 	...inClassLists(LIBRARY_CLASS, DRAWN_BY_THE_LIBRARY),
@@ -261,6 +261,24 @@ const NO_CODE_BOXES_OF_ITS_OWN = [
 	{ selector: `${CLASS_OF_CODE} SvelteLiteral[value=${A_BOX_OF_ITS_OWN}]`, message: BOXED_BY_THE_LIBRARY },
 	{ selector: `${CLASS_OF_CODE} Literal[value=${A_BOX_OF_ITS_OWN}]`, message: BOXED_BY_THE_LIBRARY },
 	{ selector: `${CLASS_OF_CODE} TemplateElement[value.raw=${A_BOX_OF_ITS_OWN}]`, message: BOXED_BY_THE_LIBRARY }
+];
+// A notice is drawn by the library (NoticeBar), in its tone, and nothing outside it draws one its own way: beside
+// it the page drew by hand the bar saying the review cannot be reached, the one saying it is over, the one in place
+// of a part that could not be drawn and a file's notes, from 29 to 48 px tall, their words at two sizes, one of them
+// centred. A notice is words on its tone's ground: the grounds of its tones that are washes of a colour — the
+// warning's, the reader's softest — are laid by the library alone, so one named in markup or in any string is
+// refused, as are the classes the page drew its notices with; stylelint holds every stylesheet but the library's
+// to the same. A quiet or a done notice stands on the raised surface every header of the page stands on, which no
+// rule here tells from a header's
+const DRAWN_AS_A_NOTICE = 'Draw a notice with lib/ui NoticeBar, in its tone, not on a wash or with classes of its own.';
+// The washes a notice's tones stand on, and the classes the page drew its notices with, behind any variants
+const A_NOTICE_OF_ITS_OWN =
+	'/--cr-(warning-tint|mark-soft)\\b|(^|\\s)([^\\s:]+:)*(cr-notice(-[a-z]+)*|cr-warning-bar)(\\s|$)/';
+const NO_NOTICES_OF_THEIR_OWN = [
+	{ selector: `SvelteLiteral[value=${A_NOTICE_OF_ITS_OWN}]`, message: DRAWN_AS_A_NOTICE },
+	{ selector: `SvelteDirective[kind='Class'][key.name.name=${A_NOTICE_OF_ITS_OWN}]`, message: DRAWN_AS_A_NOTICE },
+	{ selector: `Literal[value=${A_NOTICE_OF_ITS_OWN}]`, message: DRAWN_AS_A_NOTICE },
+	{ selector: `TemplateElement[value.raw=${A_NOTICE_OF_ITS_OWN}]`, message: DRAWN_AS_A_NOTICE }
 ];
 
 // A part of the library takes no look from outside: what the page needs of one is a variant inside it, with its
@@ -428,7 +446,8 @@ export default tseslint.config(
 				...NO_INLINE_STYLING,
 				...NO_BUTTONS_OF_ITS_OWN,
 				...NO_CARDS_OF_ITS_OWN,
-				...NO_CODE_BOXES_OF_ITS_OWN
+				...NO_CODE_BOXES_OF_ITS_OWN,
+				...NO_NOTICES_OF_THEIR_OWN
 			],
 			// A function an interface asks for is a property: a method's parameters are compared
 			// loosely, so a value that takes only one kind could stand where every kind is passed
@@ -477,7 +496,8 @@ export default tseslint.config(
 				...NO_CHOOSING,
 				...NO_BUTTONS_OF_ITS_OWN,
 				...NO_CARDS_OF_ITS_OWN,
-				...NO_CODE_BOXES_OF_ITS_OWN
+				...NO_CODE_BOXES_OF_ITS_OWN,
+				...NO_NOTICES_OF_THEIR_OWN
 			]
 		}
 	},
@@ -491,7 +511,8 @@ export default tseslint.config(
 				...NO_PAGE_LOOKUPS,
 				...NO_BUTTONS_OF_ITS_OWN,
 				...NO_CARDS_OF_ITS_OWN,
-				...NO_CODE_BOXES_OF_ITS_OWN
+				...NO_CODE_BOXES_OF_ITS_OWN,
+				...NO_NOTICES_OF_THEIR_OWN
 			]
 		}
 	},

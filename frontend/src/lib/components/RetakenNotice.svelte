@@ -3,9 +3,9 @@
 	import { useReview } from '$lib/review/context';
 	import { followWords, PHRASE_BREAK } from '$lib/review/follow-words';
 	import Button from '$lib/ui/Button.svelte';
+	import NoticeBar from '$lib/ui/NoticeBar.svelte';
 	import { counted, FILES_HAVING, wordsFor } from '$lib/utils/words';
 	import { Attempt } from './attempt.svelte';
-	import NoticeBar from './NoticeBar.svelte';
 
 	interface Props {
 		/** What following the threads onto the diff taken again did to them. */
@@ -46,7 +46,7 @@
 
 <!-- Says what happened to the threads, because that is what the reader
 	stands to lose in a retake -->
-<NoticeBar testId="diff-retaken" kind="cr-notice-taken" icon="check">
+<NoticeBar tone="reader" icon="check" testId="diff-retaken">
 	{[whatChanged(), ...followWords(retaken)].join(PHRASE_BREAK)}
 	{#snippet actions()}
 		{#if showing.failed}

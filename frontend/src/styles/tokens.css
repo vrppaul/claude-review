@@ -125,6 +125,14 @@
 	--cr-chapter-bar-height: calc(var(--cr-button-sm) + 1rem + 1px);
 
 	/*
+	 * A notice (lib/ui NoticeBar): how far its words stand in from its edges,
+	 * above and below them and at either end, as far as the review's header
+	 * stands what it holds in from the window's edge
+	 */
+	--cr-notice-room-block: 0.375rem;
+	--cr-notice-room-inline: 1rem;
+
+	/*
 	 * What lies over what, lowest first: a file's sticky header and a
 	 * column's grip over what scrolls under them, a chapter's bar over the
 	 * headers that slide away under it, the side column or the panel lying

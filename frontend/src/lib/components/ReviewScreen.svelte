@@ -5,6 +5,7 @@
 	import { provideReview } from '$lib/review/context';
 	import { markTab } from '$lib/dom/tab';
 	import Button from '$lib/ui/Button.svelte';
+	import NoticeBar from '$lib/ui/NoticeBar.svelte';
 	import { COMMENTS, counted } from '$lib/utils/words';
 	import AgentPanel from './AgentPanel.svelte';
 	import { reportBroken } from './broken-parts';
@@ -13,7 +14,6 @@
 	import FileList from './FileList.svelte';
 	import Guide from './Guide.svelte';
 	import { pressKey } from './keymap';
-	import NoticeBar from './NoticeBar.svelte';
 	import ReviewHeader from './ReviewHeader.svelte';
 	import StoryContents from './StoryContents.svelte';
 	import StoryNotice from './StoryNotice.svelte';
@@ -66,7 +66,7 @@
 	{#if review.restoredCount > 0}
 		<!-- Under the header, with the other news about the review: what the
 			draft brought back, counted as the header counts what is unsent -->
-		<NoticeBar testId="restored-notice" kind="cr-notice-taken" icon="check">
+		<NoticeBar tone="reader" icon="check" testId="restored-notice">
 			Picked up {counted(review.restoredCount, COMMENTS)} you had not sent yet.
 			{#snippet actions()}
 				<Button tone="quiet" size="xs" testId="dismiss-restored" onclick={() => review.dismissRestored()}>
@@ -78,7 +78,7 @@
 	{#if review.draftSetAside}
 		<!-- With the other news about the review: why unsent work it may have
 			left here is not on screen, and that it is kept rather than lost -->
-		<NoticeBar testId="draft-set-aside" kind="cr-notice-set-aside" icon="notice">
+		<NoticeBar tone="warning" icon="notice" testId="draft-set-aside">
 			A kept draft could not be read; it is set aside.
 			{#snippet actions()}
 				<Button tone="quiet" size="xs" testId="dismiss-set-aside" onclick={() => review.dismissSetAside()}>

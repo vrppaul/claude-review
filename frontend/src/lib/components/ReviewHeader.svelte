@@ -4,6 +4,9 @@
 	import Button from '$lib/ui/Button.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import IconButton from '$lib/ui/IconButton.svelte';
+	import type { IconName } from '$lib/ui/icons';
+	import type { NoticeTone } from '$lib/ui/notice';
+	import NoticeBar from '$lib/ui/NoticeBar.svelte';
 	import { COMMENTS, counted } from '$lib/utils/words';
 	import BasePicker from './BasePicker.svelte';
 	import FinishReview from './FinishReview.svelte';
@@ -14,26 +17,29 @@
 	import SettingsMenu from './SettingsMenu.svelte';
 	import ViewSwitch from './ViewSwitch.svelte';
 
-	/** What the header says in place of everything else once the review is over. */
+	/** What the header says in place of everything else once the review is over, and the notice it says it in. */
 	interface Over {
 		testId: string;
 		said: string;
-		/** Whether it ended under the reader, with their unsent work waiting for them: a warning, not a done deal. */
-		underTheReader: boolean;
+		/** Done once it was sent; a warning where it ended under the reader, their unsent work waiting for them. */
+		tone: NoticeTone;
+		icon: IconName;
 	}
 
 	// By how the review ended
 	const OVER: Record<Ending, Over> = {
-		finished: { testId: 'submitted-banner', said: 'Review sent. You can close this tab.', underTheReader: false },
+		finished: { testId: 'submitted-banner', said: 'Review sent. You can close this tab.', tone: 'done', icon: 'check' },
 		stopped: {
 			testId: 'review-stopped',
 			said: 'The review has stopped. What you had not sent is kept, and comes back when you open it again.',
-			underTheReader: true
+			tone: 'warning',
+			icon: 'notice'
 		},
 		replaced: {
 			testId: 'review-replaced',
 			said: 'This review is over: another review is running here now. What you had not sent is kept for when you open this one again.',
-			underTheReader: true
+			tone: 'warning',
+			icon: 'notice'
 		}
 	};
 
@@ -48,20 +54,7 @@
 </script>
 
 {#if over}
-	<div
-		data-testid={over.testId}
-		class={[
-			'flex min-h-12 shrink-0 items-center justify-center gap-3 border-b border-base-300 px-4 py-2 text-center',
-			over.underTheReader ? 'cr-warning-bar' : 'bg-base-200'
-		]}
-	>
-		{#if over.underTheReader}
-			<span class="text-warning"><Icon name="notice" size="base" /></span>
-		{:else}
-			<span class="text-(--cr-done)"><Icon name="check" size="base" /></span>
-		{/if}
-		<p class="font-semibold">{over.said}</p>
-	</div>
+	<NoticeBar tone={over.tone} icon={over.icon} testId={over.testId}>{over.said}</NoticeBar>
 {:else}
 	<!-- One row while it fits; on a narrow screen the controls wrap onto another, none cut off -->
 	<header
@@ -167,14 +160,8 @@
 	</header>
 	{#if review.link.state === 'reconnecting'}
 		<!-- Not over until the review says so: the page tries again, and holds every send meanwhile -->
-		<div
-			data-testid="connection-lost"
-			class="cr-warning-bar flex shrink-0 items-center gap-3 border-b border-base-300 px-4 py-1.5 text-xs"
-		>
-			<span class="text-warning"><Icon name="notice" size="xs" /></span>
-			<span>
-				The review cannot be reached — trying again. What you write is kept. Nothing is sent until it is back.
-			</span>
-		</div>
+		<NoticeBar tone="warning" icon="notice" testId="connection-lost">
+			The review cannot be reached — trying again. What you write is kept. Nothing is sent until it is back.
+		</NoticeBar>
 	{/if}
 {/if}

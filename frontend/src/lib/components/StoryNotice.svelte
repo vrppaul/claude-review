@@ -2,8 +2,8 @@
 	import { useReview } from '$lib/review/context';
 	import { threadsNotDrawnIn } from '$lib/review/reading-view';
 	import Button from '$lib/ui/Button.svelte';
+	import NoticeBar from '$lib/ui/NoticeBar.svelte';
 	import { counted, type CountedWords } from '$lib/utils/words';
-	import NoticeBar from './NoticeBar.svelte';
 
 	// What the comments a story does not draw are called where they are counted, with where they are said to be
 	const COMMENTS_BEING: CountedWords = { one: 'comment is', many: 'comments are' };
@@ -20,7 +20,7 @@
 	the keyboard on it. With no story held there is nothing for anything to be off. A state, not news:
 	the story shows part of the change, and the threads it does not draw are still in the review -->
 {#if review.story.held !== null && firstNotDrawn}
-	<NoticeBar testId="threads-off-the-story" kind="cr-notice-taken" icon="story">
+	<NoticeBar tone="reader" icon="story" testId="threads-off-the-story">
 		{counted(notDrawn.length, COMMENTS_BEING)} on lines the story does not show.
 		{#snippet actions()}
 			<Button tone="quiet" size="xs" testId="show-in-files" onclick={() => review.navigator.reveal(firstNotDrawn)}>

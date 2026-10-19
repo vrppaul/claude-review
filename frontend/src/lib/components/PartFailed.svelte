@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Button from '$lib/ui/Button.svelte';
-	import Icon from '$lib/ui/Icon.svelte';
+	import NoticeBar from '$lib/ui/NoticeBar.svelte';
 	import { messageOf } from '$lib/utils/errors';
 
 	interface Props {
@@ -16,14 +16,9 @@
 </script>
 
 <!-- In place of a part that could not be drawn: what it was, why, and that the rest still works -->
-<div
-	data-testid="part-failed"
-	role="alert"
-	class="cr-notice cr-notice-broken flex items-center gap-3 border-b border-base-300 px-4 py-2 text-xs"
->
-	<span class="cr-notice-mark"><Icon name="notice" size="xs" /></span>
-	<span class="min-w-0 flex-1">
-		{what} could not be drawn: {messageOf(error)}. The rest of the review still works.
-	</span>
-	<Button tone="quiet" size="xs" testId="redraw-part" onclick={retry}>Try again</Button>
-</div>
+<NoticeBar tone="warning" icon="notice" testId="part-failed" role="alert">
+	{what} could not be drawn: {messageOf(error)}. The rest of the review still works.
+	{#snippet actions()}
+		<Button tone="quiet" size="xs" testId="redraw-part" onclick={retry}>Try again</Button>
+	{/snippet}
+</NoticeBar>
