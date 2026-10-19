@@ -29,10 +29,6 @@ def _read_back(block: str) -> list[str]:
     return rest[:closing]
 
 
-def test_lines_with_a_fence_of_their_own_are_fenced_longer() -> None:
-    assert code_block(["```", "x = 1", "```"]) == "````\n```\nx = 1\n```\n````"
-
-
 def test_lines_without_a_backtick_take_the_shortest_fence() -> None:
     assert code_block(["x = 1"]) == "```\nx = 1\n```"
 

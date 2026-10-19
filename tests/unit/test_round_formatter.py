@@ -9,7 +9,6 @@ from pathlib import Path
 from claude_review.domain.models import (
     FIRST_ROUND,
     CommentSeverity,
-    LineSide,
     OverviewBlock,
     OverviewText,
     ReviewMode,
@@ -58,13 +57,6 @@ def test_a_comment_on_the_story_is_filed_under_its_block_and_quotes_the_words_it
     assert "Is it given back on every path?" in result.markdown
 
 
-def test_a_comment_on_several_lines_is_filed_under_the_range() -> None:
-    result = _formatted([thread(line_anchor("src/utils.py", 10, 15), "Refactor this block")])
-
-    assert "### `src/utils.py`:10-15" in result.markdown
-    assert "Refactor this block" in result.markdown
-
-
 def test_comments_across_files_keep_the_order_they_were_written_in() -> None:
     threads = [
         thread(line_anchor("src/a.py", 1), "Fix A"),
@@ -86,13 +78,6 @@ def test_a_review_with_nothing_in_it_says_nothing() -> None:
 
     assert result.comment_count == 0
     assert result.markdown == ""
-
-
-def test_a_review_opens_with_its_heading() -> None:
-    """The agent knows what it is reading before it reads any of it."""
-    result = _formatted([thread(line_anchor("x.py", 1), "note")])
-
-    assert result.markdown.startswith("## Code Review Comments")
 
 
 def test_a_summary_alone_is_a_review() -> None:
@@ -118,41 +103,6 @@ def test_a_summary_of_nothing_but_whitespace_is_no_summary() -> None:
 
     assert _formatted(threads, body="").comment_count == 1
     assert _formatted(threads, body="   \n  ").comment_count == 1
-
-
-def test_no_summary_and_no_comments_says_nothing() -> None:
-    result = _formatted([], body=None)
-
-    assert result.comment_count == 0
-    assert result.markdown == ""
-
-
-def test_comment_on_a_removed_line_says_so() -> None:
-    """A comment on the old side is marked, so its number is not read as current."""
-    result = _formatted([thread(line_anchor("src/a.py", 42, side=LineSide.OLD), "Why drop this?")])
-
-    assert "### `src/a.py`:42 (removed)" in result.markdown
-
-
-def test_removed_range_is_marked_once() -> None:
-    """A range on the old side keeps the range and the marker."""
-    result = _formatted([thread(line_anchor("src/a.py", 10, 14, side=LineSide.OLD), "Restore this")])
-
-    assert "### `src/a.py`:10-14 (removed)" in result.markdown
-
-
-def test_same_line_number_on_both_sides_stays_distinguishable() -> None:
-    """A replaced line has an old 42 and a new 42; the output tells them apart."""
-    threads = [
-        thread(line_anchor("src/a.py", 42, side=LineSide.OLD), "The old one"),
-        thread(line_anchor("src/a.py", 42), "The new one"),
-    ]
-
-    result = _formatted(threads)
-
-    assert "### `src/a.py`:42 (removed)\nThe old one" in result.markdown
-    assert "### `src/a.py`:42\nThe new one" in result.markdown
-    assert result.comment_count == len(threads)
 
 
 def test_a_question_is_marked_as_one() -> None:

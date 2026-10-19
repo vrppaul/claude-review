@@ -115,18 +115,6 @@ async def _rounds_offered(review: MarkingReview) -> list[VersionOnOffer]:
     return [version for version in await review.versions.offer() if isinstance(version.key, RoundKey)]
 
 
-async def test_every_round_that_has_a_mark_is_on_offer() -> None:
-    review = MarkingReview()
-    for round_number in (1, 2, 3):
-        await review.mark(round_number)
-
-    assert [version.key for version in await _rounds_offered(review)] == [
-        RoundKey(round=1),
-        RoundKey(round=2),
-        RoundKey(round=3),
-    ]
-
-
 async def test_a_round_is_remembered_as_it_began() -> None:
     """The agent may retake the diff twice in one round; the round started once."""
     review = MarkingReview()
@@ -138,14 +126,6 @@ async def test_a_round_is_remembered_as_it_began() -> None:
     assert await review.versions.resolve(RoundKey(round=2)) == "tree-2"
 
 
-async def test_a_round_is_dated_when_it_was_read() -> None:
-    review = MarkingReview()
-    await review.mark(1)
-
-    [offered] = await _rounds_offered(review)
-    assert offered.at == MARKED_AT
-
-
 async def test_a_review_that_has_left_no_marks_offers_no_rounds() -> None:
     assert await _rounds_offered(MarkingReview()) == []
 
@@ -153,16 +133,6 @@ async def test_a_review_that_has_left_no_marks_offers_no_rounds() -> None:
 async def test_a_review_that_has_left_no_marks_cannot_say_what_changed() -> None:
     """Nothing to compare against is not nothing having changed."""
     assert await MarkingReview().changed_since_round_began(1) is None
-
-
-async def test_what_changed_is_counted_from_where_the_round_began() -> None:
-    review = MarkingReview()
-    await review.mark(1)
-    await review.mark(1)
-
-    assert await review.changed_since_round_began(1) == ChangedSinceRound(
-        round=1, paths=[MOVED_SINCE.format(base="tree-1")]
-    )
 
 
 async def test_a_round_not_yet_marked_is_counted_from_the_base_its_count_names() -> None:

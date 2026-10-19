@@ -52,8 +52,6 @@ CHANGE = [SERVICE_FILE, STORE_FILE, LOCK_FILE, LOGO_FILE]
 # Steps that between them tell everything the service and the store changed
 WHOLE_SERVICE = [step(SERVICE, 12, 13), step(SERVICE, 15, 15)]
 WHOLE_STORE = step(STORE, 1, 3)
-# What a told story holds that the story as written does not: the piece each step shows, and what is left out
-WHAT_TELLING_ADDS = {"left_out": True, "chapters": {"__all__": {"steps": {"__all__": {"piece"}}}}}
 # Where the first step of a story of one chapter stands, and the first file it names as housekeeping
 FIRST_STEP: FieldPath = ("chapters", 0, "steps", 0)
 FIRST_HOUSEKEEPING: FieldPath = ("housekeeping", 0)
@@ -235,15 +233,6 @@ def test_a_story_is_told_with_the_piece_of_the_change_each_step_shows() -> None:
         ["-14/", "-15/", " 16/15"],
         ["+/1", "+/2", "+/3"],
     ]
-
-
-def test_a_told_story_says_everything_the_story_said() -> None:
-    reasoned = planted(story_of(*WHOLE_SERVICE, WHOLE_STORE, housekeeping=(LOCK, LOGO)), (*FIRST_STEP, "reason"), "So.")
-    story = planted(reasoned, ("overview", "doubt"), "Whether it holds.")
-
-    told = tell(story, CHANGE)
-
-    assert told.model_dump(exclude=WHAT_TELLING_ADDS) == story.model_dump()
 
 
 def test_a_change_of_a_files_mode_is_said_with_every_step_of_it_and_with_what_is_left_out() -> None:

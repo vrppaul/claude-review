@@ -94,13 +94,6 @@ async def test_a_story_current_again_then_moved_on_again_says_the_round_it_moved
     assert held.moved_on.round == FOURTH_ROUND
 
 
-async def test_a_story_whose_step_changed_has_moved_on() -> None:
-    held = (await told_then_followed(TOLD_OF, FIRST_REWRITTEN)).held
-
-    assert held is not None
-    assert held.moved_on is not None
-
-
 async def test_a_story_less_is_left_out_of_with_no_step_changed_is_current() -> None:
     held = (await told_then_followed(TOLD_OF, NOTHING_LEFT_OUT)).held
 

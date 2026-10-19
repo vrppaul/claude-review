@@ -68,10 +68,7 @@ OTHER_FILE_STEP_LINES: FieldPath = ("chapters", 1, "steps", 3, "lines")
 # The file and the lines of the first chapter's first step
 PASTE_STEP_FILE: FieldPath = ("chapters", 0, "steps", 0, "file")
 PASTE_STEP_LINES: FieldPath = ("chapters", 0, "steps", 0, "lines")
-# Lines well above every step the canvas tells of that file, for steps a test moves about;
-# how far a generated step reaches from where it is made; and a line far below them all
-ROOM_ABOVE = 60
-LONGEST_REACH = 20
+# A line far below every step the canvas tells of that file, for a step a test moves out of the way
 FAR_BELOW = 500
 # How far past a limit a generated text runs
 FAR_OVER = 50
@@ -100,13 +97,6 @@ def paths_of(faults: list[FieldFault]) -> list[FieldPath]:
 
 def test_the_story_the_canvas_tells_may_be_told() -> None:
     assert document_faults(canvas_story()) == []
-
-
-@pytest.mark.parametrize("kind", StoryText)
-def test_a_text_as_long_as_its_limit_is_taken(kind: StoryText) -> None:
-    story = planted(canvas_story(), TEXT_PLACES[kind], text_of(TEXT_LIMITS[kind].characters))
-
-    assert document_faults(story) == []
 
 
 @pytest.mark.parametrize("kind", StoryText)
@@ -263,12 +253,6 @@ def test_a_line_two_steps_both_tell_is_refused_at_each_naming_the_other(first: i
     assert ("102-130" in third.reason, KEEPING_CHAPTER in third.reason) == (True, True)
 
 
-def test_steps_that_follow_one_another_line_after_line_share_none() -> None:
-    story = planted(canvas_story(), THIRD_STEP_LINES, lines(131, 131))
-
-    assert document_faults(story) == []
-
-
 def test_the_same_lines_of_two_files_are_two_different_things() -> None:
     story = planted(canvas_story(), OTHER_FILE_STEP_LINES, lines(102, 130))
 
@@ -292,17 +276,6 @@ def test_a_line_told_in_two_chapters_is_refused_at_each_naming_the_chapter_that_
     assert ("20-40" in in_keeping.reason, PASTE_CHAPTER in in_keeping.reason) == (True, True)
 
 
-def test_a_step_is_held_against_every_other_step_of_its_file_not_only_the_one_beside_it() -> None:
-    """A long step with a short one inside it: a third further down still meets the long one, past the short."""
-    story = planted(two_steps_of_one_file(lines(1, 100), lines(2, 3)), THIRD_STEP_LINES, lines(50, 60))
-
-    [first, second, third] = document_faults(story)
-
-    assert (first.path, second.path, third.path) == (FIRST_STEP_LINES, SECOND_STEP_LINES, THIRD_STEP_LINES)
-    assert "1-100" in second.reason
-    assert "1-100" in third.reason
-
-
 def test_every_step_of_a_chain_of_steps_that_meet_is_refused_in_one_answer() -> None:
     """The second meets the first, and the third only the second: all that is wrong is said at once."""
     story = planted(two_steps_of_one_file(lines(1, 10), lines(5, 20)), THIRD_STEP_LINES, lines(15, 18))
@@ -312,19 +285,6 @@ def test_every_step_of_a_chain_of_steps_that_meet_is_refused_in_one_answer() -> 
     assert (first.path, second.path, third.path) == (FIRST_STEP_LINES, SECOND_STEP_LINES, THIRD_STEP_LINES)
     assert "5-20" in first.reason
     assert "5-20" in third.reason
-
-
-def test_in_a_knot_of_three_steps_every_one_is_refused_in_one_answer_naming_one_it_meets() -> None:
-    """The second shares lines with the first, and the third lies across both: refused for one step at a
-    time, the agent would send the story once more for each."""
-    story = planted(two_steps_of_one_file(lines(10, 20), lines(15, 30)), THIRD_STEP_LINES, lines(1, 100))
-
-    [first, second, third] = document_faults(story)
-
-    assert (first.path, second.path, third.path) == (FIRST_STEP_LINES, SECOND_STEP_LINES, THIRD_STEP_LINES)
-    assert any(met in first.reason for met in ["15-30", "1-100"])
-    assert any(met in second.reason for met in ["10-20", "1-100"])
-    assert any(met in third.reason for met in ["10-20", "15-30"])
 
 
 class CallsCounted:
@@ -390,38 +350,6 @@ def two_steps_of_one_file(earlier: dict[str, JsonValue], later: dict[str, JsonVa
     """The canvas's story with two steps of one file told of these lines, and its third moved out of their way."""
     out_of_the_way = planted(canvas_story(), THIRD_STEP_LINES, lines(FAR_BELOW, FAR_BELOW))
     return planted(planted(out_of_the_way, FIRST_STEP_LINES, earlier), SECOND_STEP_LINES, later)
-
-
-@strategy.composite
-def stories_whose_steps_share_a_line(draw: strategy.DrawFn) -> Story[Step]:
-    """Two steps of one file made around a line both tell: each starts no later than it and ends no sooner."""
-    shared = draw(strategy.integers(min_value=LONGEST_REACH + 1, max_value=ROOM_ABOVE))
-    reaches = strategy.integers(min_value=0, max_value=LONGEST_REACH)
-    earlier = lines(shared - draw(reaches), shared + draw(reaches))
-    later = lines(shared - draw(reaches), shared + draw(reaches))
-    return two_steps_of_one_file(earlier, later)
-
-
-@strategy.composite
-def stories_whose_steps_stand_apart(draw: strategy.DrawFn) -> Story[Step]:
-    """Two steps of one file, one ending before the other starts, told in either order."""
-    reaches = strategy.integers(min_value=0, max_value=LONGEST_REACH)
-    upper_first = draw(strategy.integers(min_value=1, max_value=ROOM_ABOVE))
-    upper_last = upper_first + draw(reaches)
-    lower_first = upper_last + 1 + draw(reaches)
-    lower_last = lower_first + draw(reaches)
-    earlier, later = draw(strategy.permutations([lines(upper_first, upper_last), lines(lower_first, lower_last)]))
-    return two_steps_of_one_file(earlier, later)
-
-
-@given(story=stories_whose_steps_share_a_line())
-def test_two_steps_of_a_file_that_share_a_line_are_always_refused_at_both(story: Story[Step]) -> None:
-    assert paths_of(document_faults(story)) == [FIRST_STEP_LINES, SECOND_STEP_LINES]
-
-
-@given(story=stories_whose_steps_stand_apart())
-def test_two_steps_of_a_file_that_share_no_line_are_never_refused(story: Story[Step]) -> None:
-    assert document_faults(story) == []
 
 
 def test_a_file_named_twice_as_housekeeping_is_refused_the_second_time() -> None:

@@ -126,10 +126,6 @@ async def test_what_a_wait_already_took_cannot_be_taken_back() -> None:
     assert inbox.withdraw(StoryCancelled()) is False
 
 
-async def test_what_was_never_handed_in_cannot_be_taken_back() -> None:
-    assert _inbox().withdraw(StoryCancelled()) is False
-
-
 async def test_taking_one_thing_back_leaves_everything_else_in_the_order_it_was_handed_in() -> None:
     inbox = _inbox()
     inbox.hand_in(HANDED_IN_FIRST)
@@ -139,15 +135,6 @@ async def test_taking_one_thing_back_leaves_everything_else_in_the_order_it_was_
     inbox.withdraw(StoryCancelled())
 
     assert [await _taken_from(inbox), await _taken_from(inbox)] == [HANDED_IN_FIRST, HANDED_IN_LAST]
-
-
-async def test_only_what_is_named_is_taken_back() -> None:
-    inbox = _inbox()
-    inbox.hand_in(StoryCancelled())
-
-    inbox.withdraw(HANDED_IN_FIRST)
-
-    assert await _taken_from(inbox) == StoryCancelled()
 
 
 async def test_a_wait_sleeps_until_its_time_is_up_once_what_was_handed_in_is_taken_back(

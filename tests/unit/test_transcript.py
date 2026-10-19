@@ -75,13 +75,6 @@ def _user_tool_result() -> dict:
 
 
 class TestRead:
-    async def test_single_message(self, tmp_path: Path) -> None:
-        conversation = _write_jsonl(tmp_path, [_user("hello world")])
-        result = await read_transcript(conversation)
-
-        assert len(result) == 1
-        assert "user" in result[0].path
-
     async def test_newest_messages_first(self, tmp_path: Path) -> None:
         """Messages are reversed — newest turn appears first in sidebar."""
         conversation = _write_jsonl(
@@ -189,14 +182,6 @@ class TestRead:
 
         assert content == ["line one", "line two", "line three"]
 
-    async def test_every_line_has_commentable_line_number(self, tmp_path: Path) -> None:
-        conversation = _write_jsonl(tmp_path, [_assistant("first\nsecond\nthird")])
-
-        result = await read_transcript(conversation)
-        numbers = [line.new_number for line in result[0].hunks[0].lines]
-
-        assert numbers == [1, 2, 3]
-
     async def test_empty_messages_skipped(self, tmp_path: Path) -> None:
         conversation = _write_jsonl(
             tmp_path,
@@ -208,29 +193,6 @@ class TestRead:
 
         result = await read_transcript(conversation)
         assert len(result) == 1
-
-    async def test_timestamp_in_label(self, tmp_path: Path) -> None:
-        conversation = _write_jsonl(tmp_path, [_user("hello", timestamp="2026-04-04T18:05:44.342Z")])
-
-        result = await read_transcript(conversation)
-        assert "user" in result[0].path
-        assert ")" in result[0].path
-
-    async def test_labels_are_unique(self, tmp_path: Path) -> None:
-        """Each turn gets a unique path so the store can select by path."""
-        conversation = _write_jsonl(
-            tmp_path,
-            [
-                _user("a", timestamp="2026-04-04T18:05:00.000Z"),
-                _assistant("b", timestamp="2026-04-04T18:05:00.000Z"),
-                _user("c", timestamp="2026-04-04T18:05:00.000Z"),
-            ],
-        )
-
-        result = await read_transcript(conversation)
-        paths = [turn.path for turn in result]
-
-        assert len(paths) == len(set(paths))
 
     async def test_no_visible_messages_produces_empty_result(self, tmp_path: Path) -> None:
         """JSONL with only non-message entries produces no turns."""

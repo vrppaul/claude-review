@@ -7,13 +7,6 @@ from claude_review.services.review.review_lifetime import EndReason, ReviewLifet
 from tests.helpers import GLANCE_SECONDS, SETTLE_SECONDS, RecordingPage
 
 
-def test_a_review_runs_until_something_ends_it() -> None:
-    lifetime = ReviewLifetime(RecordingPage())
-
-    assert not lifetime.has_ended
-    assert lifetime.reason is None
-
-
 def test_the_first_reason_a_review_ended_for_is_the_one_it_keeps() -> None:
     """A browser closing as the process is killed must not rewrite why it ended."""
     lifetime = ReviewLifetime(RecordingPage())

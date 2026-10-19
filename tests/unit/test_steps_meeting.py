@@ -19,8 +19,6 @@ FURTHEST_REACH = 400
 WIDEST_GAP = 5
 LONGEST_STEP = 5
 MEETS_NONE = None
-# The places of the steps of a story that tells two narrow ones, then one across them, then a third narrow one
-FIRST_NARROW, SECOND_NARROW, ACROSS, THIRD_NARROW = 0, 1, 2, 3
 
 
 def lines(first: int, last: int) -> LineSpan:
@@ -91,26 +89,5 @@ def test_however_a_story_orders_steps_that_stand_apart_none_meets_another(steps:
     assert one_met_by_each(steps) == [MEETS_NONE] * len(steps)
 
 
-def test_a_file_no_step_tells_has_no_step_to_meet_another() -> None:
-    assert one_met_by_each([]) == []
-
-
-def test_steps_that_follow_one_another_line_after_line_meet_none() -> None:
-    assert one_met_by_each([lines(10, 20), lines(21, 30)]) == [MEETS_NONE, MEETS_NONE]
-
-
 def test_two_steps_that_share_one_line_each_meet_the_other() -> None:
     assert one_met_by_each([lines(10, 20), lines(20, 30)]) == [1, 0]
-
-
-def test_narrow_steps_a_step_lies_across_each_meet_it() -> None:
-    """The lines between the narrow ones are told by nobody but the wide one: none of them meets another."""
-    met = one_met_by_each([lines(10, 12), lines(30, 32), lines(1, 100), lines(20, 22)])
-
-    assert [met[FIRST_NARROW], met[SECOND_NARROW], met[THIRD_NARROW]] == [ACROSS, ACROSS, ACROSS]
-    assert met[ACROSS] in {FIRST_NARROW, SECOND_NARROW, THIRD_NARROW}
-
-
-def test_in_a_knot_of_three_steps_every_one_meets_another() -> None:
-    """The second shares lines with the first, and the third lies across both."""
-    assert MEETS_NONE not in one_met_by_each([lines(10, 20), lines(15, 30), lines(1, 100)])

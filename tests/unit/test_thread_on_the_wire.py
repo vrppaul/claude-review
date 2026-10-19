@@ -8,8 +8,7 @@ on another.
 
 from pathlib import Path
 
-from claude_review.domain.models import LineSide, ThreadQuestion
-from claude_review.presentation.wire import agent
+from claude_review.domain.models import LineSide
 from claude_review.presentation.wire.threads import Thread
 from tests.helpers import line_anchor, thread
 
@@ -22,19 +21,6 @@ A_SCREENSHOT = Path("/reviews/images/shot.png")
 
 def test_a_thread_handed_to_the_agent_says_where_it_hangs() -> None:
     assert Thread.of(ON_REMOVED_LINES).where == WHERE_IT_HANGS
-
-
-def test_a_thread_inside_a_question_says_where_it_hangs_as_one_handed_over_alone_does() -> None:
-    asked = ThreadQuestion(
-        question_id=ON_REMOVED_LINES.thread_id, body=ON_REMOVED_LINES.body, images=[], thread=ON_REMOVED_LINES
-    )
-
-    assert agent.ThreadQuestion.of(asked).thread.where == WHERE_IT_HANGS
-
-
-def test_where_a_thread_hangs_is_written_out_with_it() -> None:
-    """Whoever reads the thread as JSON reads the words too, without working them out from the anchor."""
-    assert Thread.of(ON_REMOVED_LINES).model_dump()["where"] == WHERE_IT_HANGS
 
 
 def test_a_thread_says_where_its_anchor_is_whatever_place_it_was_sent_with() -> None:

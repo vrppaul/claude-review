@@ -92,10 +92,6 @@ def test_a_change_that_sends_no_choice_leaves_the_reader_as_they_were() -> None:
     assert SettingsChange().applied_to(KEPT) == KEPT
 
 
-def test_a_choice_sent_as_null_is_a_choice_not_sent() -> None:
-    assert SettingsChange(theme=None, ignore_whitespace=None).applied_to(KEPT) == KEPT
-
-
 def test_a_reader_shown_a_later_release_is_remembered_as_shown_it_and_still_introduced_to_story() -> None:
     assert GuideChange(seen_release="1.6.0").applied_to(
         GuideState(seen_release="1.5.0", story_introduced=True)

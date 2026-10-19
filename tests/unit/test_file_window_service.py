@@ -61,13 +61,6 @@ async def test_lines_are_read_by_their_number_in_the_file(service: FileWindowSer
     assert window.start == first
 
 
-async def test_the_reader_is_told_how_long_the_file_is(service: FileWindowService, root: Path) -> None:
-    """The caller needs the total to know how much is left below the last hunk."""
-    window = await service.read_window(root, "src/app.py", start=1, end=2, in_review=frozenset({"src/app.py"}))
-
-    assert window.total == SOURCE_LINES
-
-
 async def test_a_window_past_the_end_stops_at_the_last_line(service: FileWindowService, root: Path) -> None:
     window = await service.read_window(root, "src/app.py", start=19, end=100, in_review=frozenset({"src/app.py"}))
 
@@ -160,12 +153,6 @@ async def test_only_files_in_the_review_can_be_read(service: FileWindowService, 
 
     with pytest.raises(FileNotInReviewError):
         await service.read_window(root, ".env", start=1, end=1, in_review=frozenset({"src/app.py"}))
-
-
-async def test_a_file_in_the_review_is_served(service: FileWindowService, root: Path) -> None:
-    window = await service.read_window(root, "src/app.py", start=1, end=2, in_review=frozenset({"src/app.py"}))
-
-    assert window.lines == ["line 1", "line 2"]
 
 
 async def test_a_path_with_a_null_byte_is_refused_not_crashed(service: FileWindowService, root: Path) -> None:

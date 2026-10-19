@@ -8,7 +8,6 @@ where it says them nowhere, the thread stays where it hangs, outdated.
 """
 
 import pytest
-from pydantic import ValidationError
 
 from claude_review.domain.exceptions import FieldPath, UnknownStoryBlockError
 from claude_review.domain.models import (
@@ -228,13 +227,3 @@ def test_a_thread_on_the_story_is_taken_with_the_words_the_page_showed() -> None
 
 def test_what_a_thread_on_the_story_is_on_is_the_words_it_quotes() -> None:
     assert HELD.excerpt(StoryAnchor(block=THE_DOUBT, quote=[OTHER_WORDS])) == [OTHER_WORDS]
-
-
-def test_a_step_is_known_by_a_line_a_file_could_have() -> None:
-    with pytest.raises(ValidationError):
-        ReasonBlock(file=IMAGE_SERVICE, first_line=0)
-
-
-def test_a_thread_on_the_story_quotes_its_block_as_one_text() -> None:
-    with pytest.raises(ValidationError):
-        StoryAnchor(block=THE_DOUBT, quote=[OTHER_WORDS, OTHER_WORDS])

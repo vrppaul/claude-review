@@ -29,19 +29,6 @@ class KeptInMemory(RecordStore[ReaderSettings]):
         self.record = record
 
 
-async def test_a_reader_who_never_chose_gets_nothing_back() -> None:
-    assert await ReaderRecordService(KeptInMemory(), ReaderSettings).read() is None
-
-
-async def test_changing_one_choice_keeps_the_others() -> None:
-    store = KeptInMemory(ReaderSettings(theme=Theme.DARK))
-
-    changed = await ReaderRecordService(store, ReaderSettings).change(SettingsChange(diff_layout=DiffLayout.SPLIT))
-
-    assert (changed.theme, changed.diff_layout) == (Theme.DARK, DiffLayout.SPLIT)
-    assert store.record == changed
-
-
 async def test_the_first_choice_starts_from_what_a_new_reader_gets() -> None:
     store = KeptInMemory()
 

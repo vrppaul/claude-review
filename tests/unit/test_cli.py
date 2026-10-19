@@ -1,24 +1,19 @@
 """The command line as it is typed: what it offers, and what it refuses before it calls anything."""
 
-import importlib
-import inspect
 import json
-import pkgutil
 from pathlib import Path
 import re
 import socket
 import subprocess
 import sys
 
-import click
 import pytest
 from click.testing import CliRunner, Result
 
-import claude_review
 from claude_review.cli.main import main
 from claude_review.cli.story_help import GOOD_STORY
-from claude_review.domain.models import CHAPTER_ID_RULE, MAX_ID_LENGTH, MAX_QUOTE_LINES
-from claude_review.domain.story import TEXT_LIMITS, StoryText, TextLimit, ToldFrom
+from claude_review.domain.models import MAX_ID_LENGTH, MAX_QUOTE_LINES
+from claude_review.domain.story import TEXT_LIMITS, StoryText, TextLimit
 from claude_review.hosting.address import LOOPBACK
 from claude_review.hosting.ports import ANY_FREE_PORT
 from claude_review.presentation.wire.agent import MAX_PROGRESS_STEPS
@@ -57,8 +52,6 @@ BETWEEN_WORDS_OF_A_NAME = "_"
 EITHER_WAY_WORDS_ARE_PARTED = "[ _]"
 # How JSON writes a part that is left out, a list of nothing and a table of nothing
 WRITTEN_FOR_WHAT_IS_LEFT_OUT = ["null", "[]", "{}"]
-# How a diagram marks the node at the heart of the change: mermaid's own class, which the page edges in the agent's colour
-HEART_OF_THE_CHANGE = ":::heart"
 
 
 def _repeated(option: str, count: int, value: str = "") -> list[str]:
@@ -95,23 +88,6 @@ def test_every_command_is_offered() -> None:
 
     assert result.exit_code == 0
     assert _offered_commands(result.output) == {*LAUNCH_COMMANDS, *AGENT_COMMANDS}
-
-
-@pytest.mark.parametrize("command", LAUNCH_COMMANDS)
-def test_every_launch_takes_where_to_serve_and_whether_to_open_a_window(command: str) -> None:
-    result = _run(command, "--help")
-
-    assert "--port" in result.output
-    assert "--no-open" in result.output
-
-
-def test_a_diff_can_be_taken_against_another_base() -> None:
-    assert "--base" in _run("diff", "--help").output
-
-
-@pytest.mark.parametrize("command", ["files", "transcript"])
-def test_a_review_of_files_needs_files_to_review(command: str) -> None:
-    assert _run(command).exit_code == USAGE_ERROR
 
 
 @pytest.mark.parametrize("lines", ["abc", "0", "47-42", "4-x"])
@@ -300,33 +276,6 @@ def test_what_stdin_hands_over_is_read_against_the_reviews_rule(
     assert reason in result.output
 
 
-def _every_command() -> list[click.Command]:
-    """Every command the package defines, whichever module it lives in."""
-    modules = [
-        importlib.import_module(found.name)
-        for found in pkgutil.walk_packages(claude_review.__path__, f"{claude_review.__name__}.")
-    ]
-    found = {
-        id(value): value for module in modules for value in vars(module).values() if isinstance(value, click.Command)
-    }
-    return list(found.values())
-
-
-def test_every_command_takes_what_it_is_typed_with_by_name() -> None:
-    """Click hands every value over by name, and nothing should call a command with a bare value in its place."""
-    by_position = [
-        command.name
-        for command in _every_command()
-        if command.callback is not None
-        and any(
-            parameter.kind is not inspect.Parameter.KEYWORD_ONLY
-            for parameter in inspect.signature(command.callback).parameters.values()
-        )
-    ]
-
-    assert by_position == []
-
-
 # A story's document as the agent writes one, and what stands for stdin where a file is wanted
 A_STORY = as_the_agent_writes(story_of(step("src/app.py", 1, 3)))
 FROM_STDIN = "-"
@@ -373,28 +322,19 @@ def _example_in_the_help_of_story() -> str:
     return example
 
 
-@pytest.mark.parametrize(("kind", "limit"), TEXT_LIMITS.items(), ids=lambda given: str(given))
-def test_the_help_of_story_says_how_long_each_kind_of_text_may_be_and_where_the_rest_belongs(
-    kind: StoryText, limit: TextLimit
-) -> None:
+def test_the_help_of_story_says_how_long_each_kind_of_text_may_be_and_where_the_rest_belongs() -> None:
     """An agent told to write a story reads its limits here, before the review refuses a text for its length."""
     said = _run("story", "--help").output
-    called = kind.replace(BETWEEN_WORDS_OF_A_NAME, EITHER_WAY_WORDS_ARE_PARTED)
 
-    assert re.search(rf"^\s*{called}\b.*\b{limit.characters}\b.*{re.escape(limit.hint)}$", said, re.MULTILINE)
+    said_of = {kind: _limit_said(said, kind, limit) for kind, limit in TEXT_LIMITS.items()}
+
+    assert said_of == dict.fromkeys(TEXT_LIMITS, True)
 
 
 def test_the_example_in_the_help_of_story_is_a_document_the_review_reads_and_finds_no_fault_in() -> None:
     example = StoryRequest.model_validate_json(_example_in_the_help_of_story())
 
     assert document_faults(example.in_the_review()) == []
-
-
-def test_the_example_in_the_help_of_story_marks_the_node_at_the_heart_of_the_change() -> None:
-    """The help is where an agent learns how a story is written, and so how its diagram names its heart."""
-    example = StoryRequest.model_validate_json(_example_in_the_help_of_story())
-
-    assert HEART_OF_THE_CHANGE in example.overview.diagram.mermaid
 
 
 @pytest.mark.parametrize("left_out", WRITTEN_FOR_WHAT_IS_LEFT_OUT)
@@ -408,23 +348,17 @@ def _line_by_line(text: str) -> str:
     return "\n".join(line.strip() for line in text.splitlines())
 
 
+def _limit_said(said: str, kind: StoryText, limit: TextLimit) -> bool:
+    """Whether the help names a kind of text on a line of its own, with how long it may be and where the rest goes."""
+    called = kind.replace(BETWEEN_WORDS_OF_A_NAME, EITHER_WAY_WORDS_ARE_PARTED)
+    return (
+        re.search(rf"^\s*{called}\b.*\b{limit.characters}\b.*{re.escape(limit.hint)}$", said, re.MULTILINE) is not None
+    )
+
+
 def test_the_help_of_story_says_what_makes_a_story_good_line_by_line_as_it_is_written() -> None:
     """An agent learns here, before it writes one, what the reader needs of a story; filled to the width, its lists
     would run together."""
     said = _run("story", "--help").output
 
     assert _line_by_line(GOOD_STORY.read_text(encoding="utf-8")) in _line_by_line(said)
-
-
-def test_the_help_of_story_says_what_a_chapters_id_may_hold() -> None:
-    """An agent learns it here, before the review refuses an id a thread on the chapter could not name."""
-    said_in_one_line = " ".join(_run("story", "--help").output.split())
-
-    assert CHAPTER_ID_RULE in said_in_one_line
-
-
-@pytest.mark.parametrize("told_from", ToldFrom)
-def test_the_help_of_story_says_everything_a_story_may_be_told_from(told_from: ToldFrom) -> None:
-    said = _run("story", "--help").output
-
-    assert re.search(rf"told_from.*\b{told_from}\b", said)

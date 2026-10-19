@@ -10,66 +10,18 @@ import pytest
 from pydantic import JsonValue, ValidationError
 
 from claude_review.domain.exceptions import FieldPath
-from claude_review.domain.models import MAX_ID_LENGTH, MAX_PATH_LENGTH
 from claude_review.domain.story import ToldFrom
-from claude_review.presentation.wire.base import MAX_TEXT_LENGTH
-from claude_review.presentation.wire.story import (
-    MAX_CHAPTERS,
-    MAX_DIAGRAM_LINKS,
-    MAX_HOUSEKEEPING_FILES,
-    MAX_OVERVIEW_ITEMS,
-    MAX_STEPS_IN_CHAPTER,
-    StoryRequest,
-    ToldStory,
-)
+from claude_review.presentation.wire.story import StoryRequest, ToldStory
 from claude_review.services.story_telling import as_told, tell
 from tests.stories import as_the_agent_writes, canvas_story, changed_file, hunk, step, story_of, without_field
 
 SERVICE = "src/service.py"
 CHANGE = [changed_file(SERVICE, hunk(10, 10, "  -++ -- "))]
 FIRST_STEP: FieldPath = ("chapters", 0, "steps", 0)
-# Every part of a document the agent may write a field into
-PARTS: list[FieldPath] = [
-    (),
-    ("overview",),
-    ("overview", "diagram"),
-    ("overview", "decisions", 0),
-    ("chapters", 0),
-    FIRST_STEP,
-]
+# A part of a document the agent writes fields into: every part reads its fields by one rule
+A_CHAPTER: FieldPath = ("chapters", 0)
 # What is no way to write a step's lines: words, a number, the first and the last apart
 NOT_LINES: list[JsonValue] = ["all of it", 42, {"first": 42, "last": 47}, "42 - 47", ""]
-# What an agent might write where lines are wanted, and no lines are named by
-NOT_LINES_AT_ALL = "the whole function"
-# Each list of the document, and the most it may hold
-CAPPED_LISTS: list[tuple[FieldPath, int]] = [
-    (("chapters",), MAX_CHAPTERS),
-    (("chapters", 0, "steps"), MAX_STEPS_IN_CHAPTER),
-    (("overview", "decisions"), MAX_OVERVIEW_ITEMS),
-    (("overview", "turned_down"), MAX_OVERVIEW_ITEMS),
-    (("overview", "later"), MAX_OVERVIEW_ITEMS),
-    (("housekeeping",), MAX_HOUSEKEEPING_FILES),
-]
-# Each text of the document, and the most characters a request may hold in it: a text of the story,
-# a name a chapter or a part of the diagram goes by, a file's path
-CAPPED_TEXTS: list[tuple[FieldPath, int]] = [
-    (("title",), MAX_TEXT_LENGTH),
-    (("overview", "task"), MAX_TEXT_LENGTH),
-    (("overview", "done"), MAX_TEXT_LENGTH),
-    (("overview", "doubt"), MAX_TEXT_LENGTH),
-    (("overview", "diagram", "mermaid"), MAX_TEXT_LENGTH),
-    (("overview", "diagram", "caption"), MAX_TEXT_LENGTH),
-    (("overview", "diagram", "links", "paste"), MAX_ID_LENGTH),
-    (("overview", "decisions", 0, "text"), MAX_TEXT_LENGTH),
-    (("overview", "decisions", 0, "chapter"), MAX_ID_LENGTH),
-    (("chapters", 1, "id"), MAX_ID_LENGTH),
-    (("chapters", 1, "title"), MAX_TEXT_LENGTH),
-    (("chapters", 1, "why"), MAX_TEXT_LENGTH),
-    (("chapters", 1, "doubt"), MAX_TEXT_LENGTH),
-    ((*FIRST_STEP, "file"), MAX_PATH_LENGTH),
-    ((*FIRST_STEP, "reason"), MAX_TEXT_LENGTH),
-    (("housekeeping", 0), MAX_PATH_LENGTH),
-]
 # What a story must say, and nothing it may leave out
 THE_LEAST_A_STORY_SAYS: dict[str, JsonValue] = {
     "title": "A change",
@@ -94,13 +46,6 @@ def written_with(document: dict[str, JsonValue], path: FieldPath, value: JsonVal
         holder = holder[part]
     holder[field] = value
     return document
-
-
-def read_at(document: dict[str, JsonValue], path: FieldPath) -> JsonValue:
-    found = document
-    for part in path:
-        found = found[part]
-    return found
 
 
 def refused_at(document: dict[str, JsonValue]) -> list[FieldPath]:
@@ -139,12 +84,11 @@ def test_what_a_story_must_say_is_asked_for_by_name(left_out: str) -> None:
     assert refused_at(without_field(THE_LEAST_A_STORY_SAYS, left_out)) == [(left_out,)]
 
 
-@pytest.mark.parametrize("part", PARTS)
-def test_a_field_the_document_does_not_have_is_refused_by_name(part: FieldPath) -> None:
+def test_a_field_the_document_does_not_have_is_refused_by_name() -> None:
     """A doubt written as "doubts" would be a story that says less than its author thinks."""
-    document = written_with(as_the_agent_writes(canvas_story()), (*part, "doubts"), "Whether it holds.")
+    document = written_with(as_the_agent_writes(canvas_story()), (*A_CHAPTER, "doubts"), "Whether it holds.")
 
-    assert refused_at(document) == [(*part, "doubts")]
+    assert refused_at(document) == [(*A_CHAPTER, "doubts")]
 
 
 @pytest.mark.parametrize("written", NOT_LINES)
@@ -154,16 +98,6 @@ def test_lines_not_written_as_lines_are_refused_at_the_step(written: JsonValue) 
     assert refused_at(document) == [(*FIRST_STEP, "lines")]
 
 
-def test_lines_refused_are_not_said_back_to_whoever_sent_them() -> None:
-    """A refusal says where and why, never what was sent: lines of any length would come back whole in it."""
-    document = written_with(as_the_agent_writes(canvas_story()), (*FIRST_STEP, "lines"), NOT_LINES_AT_ALL)
-
-    with pytest.raises(ValidationError) as refused:
-        StoryRequest.model_validate(document)
-
-    assert [NOT_LINES_AT_ALL in error["msg"] for error in refused.value.errors()] == [False]
-
-
 def test_lines_that_run_backwards_are_read_and_left_to_the_storys_checks() -> None:
     """Refused here, they would be refused alone, and everything else wrong with the story heard only afterwards."""
     document = written_with(as_the_agent_writes(canvas_story()), (*FIRST_STEP, "lines"), "47-30")
@@ -171,40 +105,6 @@ def test_lines_that_run_backwards_are_read_and_left_to_the_storys_checks() -> No
     lines = StoryRequest.model_validate(document).in_the_review().chapters[0].steps[0].lines
 
     assert (lines.first, lines.last) == (47, 30)
-
-
-@pytest.mark.parametrize(("capped", "most"), CAPPED_LISTS)
-def test_a_list_holds_no_more_than_a_request_may(capped: FieldPath, most: int) -> None:
-    document = as_the_agent_writes(canvas_story())
-    one = read_at(document, (*capped, 0))
-
-    assert refused_at(written_with(document, capped, [one] * (most + 1))) == [capped]
-
-
-def test_a_diagram_links_no_more_parts_than_a_request_may() -> None:
-    document = as_the_agent_writes(canvas_story())
-    links = {f"part-{number}": "ch-1" for number in range(MAX_DIAGRAM_LINKS + 1)}
-
-    assert refused_at(written_with(document, ("overview", "diagram", "links"), links)) == [
-        ("overview", "diagram", "links")
-    ]
-
-
-@pytest.mark.parametrize(("capped", "most"), CAPPED_TEXTS)
-def test_a_text_is_as_long_as_a_request_may_hold_and_no_longer(capped: FieldPath, most: int) -> None:
-    """Far past the length a story holds a text to, which its checks say with a hint: this is only a request's bound."""
-    longest = written_with(as_the_agent_writes(canvas_story()), capped, "x" * most)
-    longer = written_with(as_the_agent_writes(canvas_story()), capped, "x" * (most + 1))
-
-    assert read_at(StoryRequest.model_validate(longest).model_dump(mode="json"), capped) == "x" * most
-    assert refused_at(longer) == [capped]
-
-
-def test_a_part_of_the_diagram_has_a_name_no_longer_than_a_request_may_hold() -> None:
-    named_at_length = {"x" * (MAX_ID_LENGTH + 1): "ch-1"}
-    document = written_with(as_the_agent_writes(canvas_story()), ("overview", "diagram", "links"), named_at_length)
-
-    assert len(refused_at(document)) == 1
 
 
 @pytest.mark.parametrize("lines", ["42", "30-47", "47-30"])

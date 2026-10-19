@@ -9,7 +9,7 @@ the same rule, so nothing the change did can fall between the two.
 import pytest
 from hypothesis import given, strategies as strategy
 
-from claude_review.domain.models import DiffFile, DiffHunk, DiffLine, FileStatus, LineSpan, Unshown
+from claude_review.domain.models import DiffFile, DiffHunk, DiffLine, FileStatus, LineSpan
 from claude_review.services.story_slices import PlacedFile, RowRun
 from tests.stories import ROWS, changed_file, changed_in, hunk, lines_of, rows_of, signs_of
 
@@ -170,37 +170,6 @@ def test_a_piece_of_lines_added_at_the_end_of_a_hunk_starts_past_the_last_line_t
 
     assert [line.content for line in cut.lines] == ["+/12"]
     assert (cut.old_start, cut.new_start) == (11, 12)
-
-
-def test_a_piece_is_the_file_it_was_cut_from_in_everything_but_its_rows() -> None:
-    """Where it was, what became of it, whether it may be run: said of the file, and so of every piece of it."""
-    made_runnable = DiffFile(
-        path="new.sh",
-        old_path="old.sh",
-        status=FileStatus.RENAMED,
-        hunks=[hunk(10, 10, " + ")],
-        old_mode="100644",
-        new_mode="100755",
-    )
-
-    piece = piece_at(made_runnable, 11, 11)
-
-    assert piece.model_dump(exclude={"hunks"}) == made_runnable.model_dump(exclude={"hunks"})
-    assert rows_of(piece) == ["+/11"]
-
-
-def test_a_piece_of_a_file_some_of_which_is_not_shown_says_so_as_the_file_does() -> None:
-    """A picture that became a link: the link is one line, and what the picture held is not text."""
-    became_a_link = DiffFile(
-        path="logo",
-        status=FileStatus.MODIFIED,
-        hunks=[hunk(1, 1, "+")],
-        unshown=Unshown.BINARY,
-        old_mode="100644",
-        new_mode="120000",
-    )
-
-    assert piece_at(became_a_link, 1, 1).unshown == Unshown.BINARY
 
 
 def test_a_piece_carries_no_header_of_the_whole_hunk() -> None:

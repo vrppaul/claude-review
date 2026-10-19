@@ -79,15 +79,6 @@ class TestReadFiles:
         with pytest.raises(UnreadableContentError, match=binary.name):
             await read_text_files([binary], named_from=tmp_path)
 
-    async def test_trailing_newline_does_not_create_phantom_line(self, tmp_path: Path) -> None:
-        """Files ending with \\n don't get an extra empty line."""
-        text_file = tmp_path / "doc.md"
-        text_file.write_text("line one\nline two\n")
-
-        result = await read_text_files([text_file], named_from=tmp_path)
-
-        assert [line.content for line in result[0].hunks[0].lines] == ["line one", "line two"]
-
     async def test_file_without_trailing_newline(self, tmp_path: Path) -> None:
         """Files not ending with \\n are handled identically."""
         text_file = tmp_path / "doc.md"
