@@ -384,8 +384,8 @@ async def test_every_card_stands_on_one_ground_corner_and_room_inside_a_line_lif
     ground = await on_a_probe(page, "backgroundColor", "var(--color-base-200)")
     corner = await on_a_probe(page, "borderTopLeftRadius", "var(--radius-box)")
     room = (
-        await on_a_probe(page, "paddingTop", "var(--cr-card-room-block)"),
-        await on_a_probe(page, "paddingLeft", "var(--cr-card-room-inline)"),
+        await on_a_probe(page, "paddingTop", "var(--cr-card-room)"),
+        await on_a_probe(page, "paddingLeft", "var(--cr-card-room)"),
         A_LINE,
     )
     every_card = len(EVERY_CARD)
@@ -734,6 +734,18 @@ async def test_the_guides_welcome_and_its_tour_are_headed_at_the_size_of_every_p
     sizes.append(await _heading_size(page.get_by_test_id("guide-tour").get_by_role("heading")))
     pane_heading = (await on_a_probe(page, "fontSize", "var(--text-sm)"), BOLD)
     assert sizes == [pane_heading, pane_heading]
+
+
+async def test_the_question_asked_before_a_thread_is_deleted_heads_its_pane_at_the_size_of_every_panes_heading(
+    review: RunningReview, page: Page
+) -> None:
+    await _open_in(page, review, SCHEMES[0])
+    await _comment_on_the_first_line(page)
+
+    await page.get_by_test_id("delete-comment").click()
+
+    asked = await _heading_size(page.get_by_test_id("delete-dialog").get_by_role("heading"))
+    assert asked == (await on_a_probe(page, "fontSize", "var(--text-sm)"), BOLD)
 
 
 # Where an element's left edge stands in the window, in pixels

@@ -14,6 +14,7 @@ import { fakeServer, SERVER_ERROR } from './fake-server';
 import { guideServer, guideServerIntroduced } from './guide-server';
 import type { Review } from '$lib/review/review.svelte';
 import { inReview, openReview } from './review';
+import { colourDrawn, paint, THEMES } from './stylesheets';
 
 let review: Review;
 
@@ -373,6 +374,18 @@ describe('the news card', () => {
 		expect(getByTestId('guide-release-link').getAttribute('href')).toBe(
 			'https://github.com/vrppaul/claude-review/releases/tag/v1.5.0'
 		);
+	});
+
+	it('says the release it is news of beside its heading quietly, as a tag says a measure', async () => {
+		guideServer('1.4.2');
+		await arriveAt('1.5.0');
+
+		const { getByTestId } = render(Guide, inReview(review));
+		await tick();
+
+		const release = getByTestId('guide-release');
+		expect(release.textContent).toBe('1.5.0');
+		for (const theme of THEMES) expect(colourDrawn(release, 'color', theme), theme).toEqual(paint('--cr-muted', theme));
 	});
 
 	it('shows a picture from a file, described for whoever cannot see it', () => {

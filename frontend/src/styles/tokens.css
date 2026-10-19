@@ -56,14 +56,12 @@
 	/*
 	 * A card (lib/ui Card) — a thread, a comment being written, every turn of
 	 * the panel, the facts of a story on its way: how far what it holds
-	 * stands in from its edge, above and below it and at either side, so the
-	 * turns of the panel line their words up. And, where it hangs under what
-	 * it is about, how far in from its left edge its tail points up at that:
-	 * under a line, or under a block of a story's words, where the block's
-	 * heading is.
+	 * stands in from its edge, the same on every side, so the turns of the
+	 * panel line their words up. And, where it hangs under what it is about,
+	 * how far in from its left edge its tail points up at that: under a line,
+	 * or under a block of a story's words, where the block's heading is.
 	 */
-	--cr-card-room-block: 0.875rem;
-	--cr-card-room-inline: 1rem;
+	--cr-card-room: 1rem;
 	--cr-card-tail-under-a-line: 6rem;
 	--cr-card-tail-under-a-block: 2.5rem;
 
@@ -77,7 +75,7 @@
 	 */
 	--cr-edge-width: 2px;
 	--cr-edge-inset: 1.25rem;
-	--cr-edge-end-room: var(--cr-card-room-inline);
+	--cr-edge-end-room: var(--cr-card-room);
 	--cr-edge-block-room: 0.5rem;
 	/*
 	 * How far a band (lib/ui Band) reaches above and below its words: into
@@ -219,7 +217,6 @@
 	 */
 	--cr-control: var(--cr-mark);
 	--cr-control-text: var(--cr-mark-text);
-	--cr-control-tint: var(--cr-mark-tint);
 
 	/*
 	 * The states of whatever can be pressed, each one token for both themes.

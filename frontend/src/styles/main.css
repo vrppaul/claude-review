@@ -1143,14 +1143,6 @@
 	font-size: 0.75rem;
 	color: var(--cr-control-text);
 }
-.cr-guide-release {
-	padding: 0 0.375rem;
-	border-radius: var(--radius-field);
-	background: var(--cr-control-tint);
-	color: var(--cr-control-text);
-	font-family: var(--font-mono);
-	font-size: 0.75rem;
-}
 .cr-guide-plus {
 	color: var(--cr-muted);
 }

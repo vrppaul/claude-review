@@ -15,7 +15,7 @@
 /**
  * Whose the words are, or what they say, by their colour:
  * - quiet: something settled or stepping back — outdated, resolved — or a
- *   measure said quietly
+ *   measure said quietly, as the release something is new in
  * - reader: asked by the reader
  * - agent: the agent's — what it asks, that it raised a thread, the round
  *   its story was told in, where else it tells a file

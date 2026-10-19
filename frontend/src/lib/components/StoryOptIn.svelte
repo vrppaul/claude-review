@@ -6,6 +6,7 @@
 	import type { Closing } from '$lib/ui/dialog-closing';
 	import EdgeFrame from '$lib/ui/EdgeFrame.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
+	import PaneQuestion from '$lib/ui/PaneQuestion.svelte';
 	import { A_WARNING } from './story-frames';
 	import StorySketch from './StorySketch.svelte';
 
@@ -29,10 +30,10 @@
 <Dialog label={QUESTION} width="wide" testId="story-opt-in" {onClose}>
 	{#snippet children({ close, closeThen }: Closing)}
 		<div class="flex flex-col gap-3.5 p-4 text-sm">
-			<!-- A question has no head of its own: it is asked first, at a pane's heading's size, and its answers close it -->
+			<!-- A question has no head of its own: it is asked first, and its answers close it -->
 			<div class="flex items-center gap-2">
 				<span class="text-(--cr-agent)"><Icon name="story" size="sm" /></span>
-				<h2 class="text-sm font-semibold">{QUESTION}</h2>
+				<PaneQuestion question={QUESTION} testId="story-opt-in-question" />
 			</div>
 			<StorySketch />
 			<p>

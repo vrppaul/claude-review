@@ -8,6 +8,7 @@
 	import Key from '$lib/ui/Key.svelte';
 	import Link from '$lib/ui/Link.svelte';
 	import Pane from '$lib/ui/Pane.svelte';
+	import Tag from '$lib/ui/Tag.svelte';
 	import NewsIllustration from './NewsIllustration.svelte';
 	import { HELP_BUTTON_ROLE } from './keymap';
 
@@ -165,7 +166,7 @@
 		<!-- The release it is new in, beside what is new -->
 		{#snippet newIn()}
 			<span class="cr-faint text-xs">New in</span>
-			<span class="cr-guide-release">{news.release}</span>
+			<Tag tone="quiet" testId="guide-release">{news.release}</Tag>
 		{/snippet}
 		<Pane
 			width="medium"

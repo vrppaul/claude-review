@@ -14,6 +14,7 @@ import IconButton from '$lib/ui/IconButton.svelte';
 import Link from '$lib/ui/Link.svelte';
 import NoticeBar from '$lib/ui/NoticeBar.svelte';
 import Pane from '$lib/ui/Pane.svelte';
+import PaneQuestion from '$lib/ui/PaneQuestion.svelte';
 import PopoverPanel from '$lib/ui/PopoverPanel.svelte';
 import Row from '$lib/ui/Row.svelte';
 import Segment from '$lib/ui/Segment.svelte';
@@ -178,6 +179,10 @@ const WITH_A_CLASS_FROM_OUTSIDE = [
 		part: 'a block the reader may ask about',
 		render: () =>
 			render(Band, { current: false, testId: TEST_ID, children: drawn, offer: drawn, class: FROM_OUTSIDE } as never)
+	},
+	{
+		part: 'the question a pane asks',
+		render: () => render(PaneQuestion, { question: WORDS, testId: TEST_ID, class: FROM_OUTSIDE } as never)
 	},
 	{
 		part: 'blocks one under another the reader may ask about',

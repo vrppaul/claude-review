@@ -193,6 +193,17 @@ describe('what is asked before stories are turned on', () => {
 		);
 	});
 
+	it('heads what it asks as the heading of the pane that asks it', async () => {
+		const user = userEvent.setup();
+		drawn();
+
+		await user.click(screen.getByTestId('read-as-story'));
+
+		expect(within(screen.getByTestId('story-opt-in')).getByRole('heading', { level: 2 }).textContent).toBe(
+			'Turn on stories?'
+		);
+	});
+
 	it('shows a story, sketched', async () => {
 		const user = userEvent.setup();
 		drawn();

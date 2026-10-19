@@ -246,6 +246,10 @@
 .cr-ui-pane-heading {
 	flex: 1;
 	min-width: 0;
+}
+/* A pane's heading, and the question that heads a pane with no head (PaneQuestion), at one size */
+.cr-ui-pane-heading,
+.cr-ui-pane-question {
 	font-size: var(--text-sm);
 	line-height: var(--text-sm--line-height);
 	font-weight: 600;
@@ -526,7 +530,7 @@
  * word and button of a thread hung in it
  */
 .cr-ui-card-content {
-	padding: var(--cr-card-room-block) var(--cr-card-room-inline);
+	padding: var(--cr-card-room);
 	font-family: var(--font-sans);
 }
 .cr-ui-card-quiet {

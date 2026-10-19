@@ -294,13 +294,14 @@ const NO_NOTICES_OF_THEIR_OWN = [
 // class lowercased and a filled pill, at three heights by the line each stood in; counted threads with DaisyUI's
 // badges at two sizes, at the box's corner where a tag had the field's; drew its chips by hand, the cross that
 // takes one out of a message a button of its own beside them; its dots as a glyph, as circles of 6 px and of 5,
-// one of utilities in the tree and one of its own in a story's contents; and its keys as a `kbd` of its own and as
-// bare words. The classes it drew them with are refused in a class list and in any string a component holds
+// one of utilities in the tree and one of its own in a story's contents; its keys as a `kbd` of its own and as
+// bare words; and the release the news is of as a chip of main.css, at 12 px beside tags of 11. The classes it drew
+// them with are refused in a class list and in any string a component holds
 const DRAWN_AS_A_MARK =
 	'Draw a tag, a count, a chip, a dot or a key with lib/ui (Tag, Count, Chip, Dot, Key), not with classes of its own.';
 // The classes the page drew its marks with
 const A_MARK_OF_ITS_OWN =
-	'/(^|\\s)([^\\s:]+:)*(cr-tag|cr-pill|cr-severity-[a-z]*|cr-raised-tag|cr-thread-chip(-[a-z]+)?|cr-chip-drop|cr-dot(-[a-z]+)?|cr-contents-dot|cr-guide-hint-dot|cr-guide-key)(\\s|$)/';
+	'/(^|\\s)([^\\s:]+:)*(cr-tag|cr-pill|cr-severity-[a-z]*|cr-raised-tag|cr-thread-chip(-[a-z]+)?|cr-chip-drop|cr-dot(-[a-z]+)?|cr-contents-dot|cr-guide-hint-dot|cr-guide-key|cr-guide-release)(\\s|$)/';
 // A mark drawn anew is round, as a dot or a pill is, and only the library's Dot is drawn round: a corner made round
 // by a utility — `rounded-full` on any side or corner, or any radius written in place, `rounded-[100%]` as much as
 // `rounded-[999px]` — is refused outside the library, behind any variants. Nothing in markup is round now. The

@@ -2,6 +2,7 @@
 	import type { Snippet } from 'svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import type { Placement, TriggerProps } from '$lib/ui/pane';
+	import PaneQuestion from '$lib/ui/PaneQuestion.svelte';
 	import Popover from './Popover.svelte';
 
 	interface Props {
@@ -35,7 +36,7 @@
 	the safe one first, which takes the keyboard; the other loses what was written, drawn as what destroys -->
 <Popover bind:open label={question} {placement} width="fitted" {testId} {trigger}>
 	<div class="flex flex-col gap-3 p-3">
-		<p class="text-sm font-semibold">{question}</p>
+		<PaneQuestion {question} testId="{testId}-question" />
 		<div class="flex justify-end gap-2">
 			<Button tone="quiet" size="sm" testId="confirm-keep" onclick={() => (open = false)}>{keep}</Button>
 			<Button tone="danger" size="sm" testId="confirm-go-ahead" onclick={goAheadNow}>{goAhead}</Button>

@@ -1,5 +1,5 @@
 import { beforeEach, describe, it, expect, vi } from 'vitest';
-import { fireEvent, render } from '@testing-library/svelte';
+import { fireEvent, render, within } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import CommentBox from '$lib/components/CommentBox.svelte';
 import { FIELD_KEYS } from '$lib/components/keymap';
@@ -349,6 +349,18 @@ describe('putting a comment away', () => {
 
 		await user.click(getByTestId('confirm-go-ahead'));
 		expect(onCancel).toHaveBeenCalledOnce();
+	});
+
+	it('heads the question before the words are dropped as the heading of the pane that asks it', async () => {
+		const user = userEvent.setup();
+		const { getByTestId } = drawnPuttingAway(newField());
+		await user.type(getByTestId('comment-input'), 'Half a thought');
+
+		await user.keyboard('{Escape}');
+
+		expect(within(getByTestId('discard-dialog')).getByRole('heading', { level: 2 }).textContent).toBe(
+			'Discard this comment?'
+		);
 	});
 
 	it('keeps the words, and the field, when the reader keeps writing', async () => {
