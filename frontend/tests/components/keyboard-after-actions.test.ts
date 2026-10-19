@@ -264,7 +264,7 @@ describe('where the keyboard is after the tour', () => {
 		render(GuideCard, inReview(review));
 		await drawn();
 
-		await user.click(screen.getAllByTestId('guide-close')[0]);
+		await user.click(screen.getAllByTestId('guide-welcome-close')[0]);
 		await drawn();
 
 		expect(document.activeElement).toBe(screen.getByTestId('open-help'));

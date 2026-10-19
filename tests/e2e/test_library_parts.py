@@ -11,10 +11,11 @@ from pathlib import Path
 
 import pytest
 from httpx import AsyncClient
-from playwright.async_api import Page
+from playwright.async_api import Locator, Page
 from pydantic import BaseModel, ConfigDict
 
 from claude_review.domain.models import CommentSeverity
+from claude_review.hosting.workspace import ReaderFiles
 from tests.e2e.browsers_loop import in_the_browsers_loop
 from tests.e2e.painted import light, on_a_probe, painted
 from tests.helpers import (
@@ -712,3 +713,23 @@ async def test_every_turn_of_the_panel_stands_its_words_as_far_in_from_its_edge_
     insets = [await page.get_by_test_id(test_id).evaluate(TURN_INSET) for test_id in EVERY_TURN]
 
     assert insets == [insets[0]] * len(EVERY_TURN)
+
+
+async def _heading_size(heading: Locator) -> tuple[str, str]:
+    """The size and weight of a heading's words, as the browser works them out."""
+    look = await painted(heading)
+    return (look.size, look.weight)
+
+
+async def test_the_guides_welcome_and_its_tour_are_headed_at_the_size_of_every_panes_heading(
+    review: RunningReview, reader_files: ReaderFiles, page: Page
+) -> None:
+    reader_files.guide.unlink()
+    await page.goto(review.url)
+    sizes = [await _heading_size(page.get_by_test_id("guide-welcome-heading"))]
+
+    await page.get_by_test_id("guide-start").click()
+
+    sizes.append(await _heading_size(page.get_by_test_id("guide-tour").get_by_role("heading")))
+    pane_heading = (await on_a_probe(page, "fontSize", "var(--text-sm)"), BOLD)
+    assert sizes == [pane_heading, pane_heading]

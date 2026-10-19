@@ -168,6 +168,33 @@ describe('what the guide shows a reader arriving', () => {
 
 		expect(review.guide.card).toBeNull();
 	});
+
+	it('heads the welcome as every pane is headed: what it asks, and the way to put it away', async () => {
+		guideServer(null);
+		await arriveAt('1.5.0');
+		const { getByTestId } = render(Guide, inReview(review));
+		await tick();
+		const heading = getByTestId('guide-welcome-heading').textContent;
+
+		getByTestId('guide-welcome-close').click();
+
+		expect(heading).toBe('First time here?');
+		expect(review.guide.card).toBeNull();
+	});
+
+	it('heads the news as every pane is headed: what is new, and the way to put it away', async () => {
+		guideServer('1.4.2');
+		await arriveAt('1.5.0');
+		const { getByTestId } = render(Guide, inReview(review));
+		await tick();
+		const heading = getByTestId('guide-news-heading').textContent;
+		const title = review.guide.news?.title;
+
+		getByTestId('guide-news-close').click();
+
+		expect(heading).toBe(title);
+		expect(review.guide.card).toBeNull();
+	});
 });
 
 describe('Story introduced at the switch', () => {

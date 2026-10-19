@@ -1119,12 +1119,12 @@
 	bottom: 1rem;
 	z-index: var(--cr-layer-guide);
 }
-/* What the card holds, one part under another */
+/* What the card holds, one part under another, as far in from its edge as a pane's head stands its heading */
 .cr-guide-card {
 	display: flex;
 	flex-direction: column;
 	gap: 0.75rem;
-	padding: 1rem 1.125rem;
+	padding: 0.75rem;
 }
 .cr-guide-body {
 	font-size: 0.8125rem;
@@ -1154,8 +1154,16 @@
 		width var(--cr-guide-glide) cubic-bezier(0.2, 0.7, 0.2, 1),
 		height var(--cr-guide-glide) cubic-bezier(0.2, 0.7, 0.2, 1);
 }
+/*
+ * A step's title, which heads the tour's card: at the size and weight a
+ * pane's heading has (lib/ui PaneHead), as the welcome's and the news's
+ * heads have them. It is the step's own, said with its words as the step
+ * changes and given the keyboard when nothing else holds it, so no head
+ * of a pane draws it
+ */
 .cr-guide-title {
-	font-size: 0.9375rem;
+	font-size: var(--text-sm);
+	line-height: var(--text-sm--line-height);
 	font-weight: 600;
 }
 .cr-guide-compass {

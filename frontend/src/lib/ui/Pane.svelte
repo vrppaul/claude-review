@@ -1,19 +1,25 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
-	import { PANE_WIDTHS, type PaneWidth } from './pane';
+	import PaneHead from './PaneHead.svelte';
+	import { PANE_WIDTHS, type PaneHead as Head, type PaneWidth } from './pane';
 
 	interface Props extends Omit<HTMLAttributes<HTMLElement>, 'class' | 'style' | 'children'> {
 		width: PaneWidth;
+		/** What heads it, as every pane with a head is headed; none for one whose way out stands in what it holds. */
+		head?: Head | undefined;
 		testId: string;
 		children: Snippet;
 	}
 
-	let { width, testId, children, ...attributes }: Props = $props();
+	let { width, head, testId, children, ...attributes }: Props = $props();
 </script>
 
 <!-- A pane that stands by itself, where whoever draws it places it: the look of every pane, with nothing of a
-	control's or a modal's -->
+	control's or a modal's, headed as every pane is where it has a head -->
 <section {...attributes} data-testid={testId} class={['cr-ui-pane', PANE_WIDTHS[width]]}>
+	{#if head}
+		<PaneHead {head} {testId} />
+	{/if}
 	{@render children()}
 </section>

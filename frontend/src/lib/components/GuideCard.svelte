@@ -5,12 +5,16 @@
 	import Button from '$lib/ui/Button.svelte';
 	import Dot from '$lib/ui/Dot.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
-	import IconButton from '$lib/ui/IconButton.svelte';
 	import Key from '$lib/ui/Key.svelte';
 	import Link from '$lib/ui/Link.svelte';
 	import Pane from '$lib/ui/Pane.svelte';
 	import NewsIllustration from './NewsIllustration.svelte';
 	import { HELP_BUTTON_ROLE } from './keymap';
+
+	// What the welcome asks a newcomer, which heads it; and what each card's cross says it does
+	const WELCOME = 'First time here?';
+	const CLOSE_THE_WELCOME = 'Close the welcome';
+	const CLOSE_THE_NEWS = 'Close the news';
 
 	const review = useReview();
 
@@ -71,13 +75,6 @@
 	}
 </script>
 
-<!-- The way to put the welcome or the news away, where each card is headed -->
-{#snippet close()}
-	<IconButton tone="quiet" size="xs" label="Close" testId="guide-close" onclick={putAway}>
-		<Icon name="cross" size="xs" />
-	</IconButton>
-{/snippet}
-
 <!-- One card, bottom left: the welcome, what is new, or the tour talking -->
 {#if review.guide.touring && step}
 	<div class="cr-guide-place">
@@ -132,18 +129,21 @@
 	</div>
 {:else if review.guide.card === 'welcome'}
 	<div class="cr-guide-place">
-		<Pane width="medium" testId="guide-welcome" role="complementary" aria-labelledby="guide-welcome-title">
+		<Pane
+			width="medium"
+			testId="guide-welcome"
+			role="complementary"
+			aria-label={WELCOME}
+			head={{ heading: WELCOME, close: putAway, closing: CLOSE_THE_WELCOME }}
+		>
 			<div class="cr-guide-card">
-				<div class="flex items-center gap-2.5">
+				<div class="flex items-start gap-3">
 					<span class="cr-guide-compass"><Icon name="compass" size="xl" /></span>
-					<h2 id="guide-welcome-title" class="cr-guide-title">First time here?</h2>
-					<span class="flex-1"></span>
-					{@render close()}
+					<p class="cr-guide-body">
+						A short walk through one review: what you are reading, where comments go, and how the agent answers them. {review
+							.guide.stepCount} stops, about two minutes.
+					</p>
 				</div>
-				<p class="cr-guide-body">
-					A short walk through one review: what you are reading, where comments go, and how the agent answers them. {review
-						.guide.stepCount} stops, about two minutes.
-				</p>
 				<div class="flex items-center gap-2">
 					<Button
 						bind:element={firstAction}
@@ -162,15 +162,19 @@
 	</div>
 {:else if review.guide.card === 'news' && news}
 	<div class="cr-guide-place">
-		<Pane width="medium" testId="guide-news" role="complementary" aria-labelledby="guide-news-title">
+		<!-- The release it is new in, beside what is new -->
+		{#snippet newIn()}
+			<span class="cr-faint text-xs">New in</span>
+			<span class="cr-guide-release">{news.release}</span>
+		{/snippet}
+		<Pane
+			width="medium"
+			testId="guide-news"
+			role="complementary"
+			aria-label={news.title}
+			head={{ heading: news.title, close: putAway, closing: CLOSE_THE_NEWS, aside: newIn }}
+		>
 			<div class="cr-guide-card">
-				<div class="flex items-center gap-2">
-					<span class="cr-faint text-xs">New in</span>
-					<span class="cr-guide-release">{news.release}</span>
-					<span class="flex-1"></span>
-					{@render close()}
-				</div>
-				<h2 id="guide-news-title" class="cr-guide-title">{news.title}</h2>
 				{#if news.illustration}
 					<NewsIllustration illustration={news.illustration} />
 				{/if}
