@@ -227,7 +227,7 @@ const NO_DAISY_BUTTONS = [
 const HANDED_ITS_TEST_ID = 'Hand a part of the library its test id as testId, which it lays on what it draws.';
 // The parts of the library, by the names the page draws them under
 const LIBRARY_PART =
-	'/^(Button|Card|Chip|CodeBox|ColumnBar|Count|Dialog|EdgeFrame|Icon|IconButton|Link|NoticeBar|Pane|PaneHead|PopoverPanel|Segment|Segmented|Tag)$/';
+	'/^(Button|Card|Chip|CodeBox|ColumnBar|ColumnRail|Count|Dialog|EdgeFrame|FoldChevron|Icon|IconButton|Link|NoticeBar|Pane|PaneHead|PopoverPanel|Row|Segment|Segmented|Tag)$/';
 const NO_BUTTONS_OF_ITS_OWN = [
 	...NO_DAISY_BUTTONS,
 	...inClassLists(LIBRARY_CLASS, DRAWN_BY_THE_LIBRARY),
@@ -298,6 +298,40 @@ const NO_MARKS_OF_ITS_OWN = [
 	{ selector: `TemplateElement[value.raw=${A_MARK_OF_ITS_OWN}]`, message: DRAWN_AS_A_MARK }
 ];
 
+// What can be pressed is the library's to draw, a row of a list as much as a button: the page drew its rows
+// twelve ways, from 24 to 48 px tall, at three corners. So a component outside the library draws no element that
+// can be pressed — no <button>, which a row drawn anew would be (below, with the components that still draw one),
+// and no element given the part of one by its role, as a row drawn on a <div> would be — and the classes the page
+// drew its rows with are refused in a class list and in any string
+const PRESSED_IN_THE_LIBRARY =
+	'Draw what can be pressed with lib/ui (Button, IconButton, Link, Segment, Chip, Row, ColumnRail), not with an element of its own.';
+// The parts an element can be given that are pressed or picked
+const A_PRESSED_PART = '/^(button|link|option|menuitem|menuitemcheckbox|menuitemradio|tab|treeitem|checkbox|switch)$/';
+// The classes the page drew its rows, and the rail of a column put away, with; and the row the reader was at
+const A_ROW_OF_ITS_OWN =
+	'/(^|\\s)([^\\s:]+:)*(cr-tree-row|cr-contents-row|cr-aside-row|cr-option|cr-guide-entry|cr-side-column-rail|cr-current)(\\s|$)/';
+const NO_ROWS_OF_ITS_OWN = [
+	{
+		selector: `SvelteElement[kind='html'] > SvelteStartTag > SvelteAttribute[key.name='role'] SvelteLiteral[value=${A_PRESSED_PART}]`,
+		message: PRESSED_IN_THE_LIBRARY
+	},
+	...inClassLists(A_ROW_OF_ITS_OWN, PRESSED_IN_THE_LIBRARY),
+	{ selector: `Literal[value=${A_ROW_OF_ITS_OWN}]`, message: PRESSED_IN_THE_LIBRARY },
+	{ selector: `TemplateElement[value.raw=${A_ROW_OF_ITS_OWN}]`, message: PRESSED_IN_THE_LIBRARY }
+];
+// The components that still draw a <button> of their own, each with the part that is to take it or why it is the
+// page's: each is let off the rule that refuses one, and nothing else is
+const STILL_PRESSED_BY_HAND = [
+	// The field a reply is begun in, drawn as the button that opens it: the library's Field is to draw it
+	'src/lib/components/OpenThread.svelte',
+	// The line a thread is folded to, which opens it again: the library's Fold is to draw it
+	'src/lib/components/FoldedThread.svelte',
+	// A line's number, and the ways to the lines a gap leaves out: controls in the code, drawn with its rows
+	'src/lib/components/LineGutter.svelte',
+	'src/lib/components/HunkGap.svelte'
+];
+const BUTTON_IN_THE_LIBRARY = { elements: ['button'], message: PRESSED_IN_THE_LIBRARY };
+
 // A part of the library takes no look from outside: what the page needs of one is a variant inside it, with its
 // reason. So no part takes a class, by its own name or with the attributes of an element it draws, which it takes
 // only with the class left out
@@ -338,6 +372,7 @@ const DRAWN_IN_ITS_COMPONENT =
 	'Draw an icon with <Icon name="…">, its drawing a row of ICONS in ui/icons.ts; a story sketched is <StorySketch>.';
 // The components that write a drawing: the library's Icon, every icon; StorySketch, the sketch of a story
 const DRAWING_COMPONENTS = ['src/lib/ui/Icon.svelte', 'src/lib/components/StorySketch.svelte'];
+const SVG_IN_ITS_COMPONENT = { elements: ['svg'], message: DRAWN_IN_ITS_COMPONENT };
 
 // The page makes an HTTP request in one place, which holds every request to the
 // server's schema; its session socket is the other way it talks to the server
@@ -423,7 +458,20 @@ export default tseslint.config(
 	{
 		files: ['**/*.svelte'],
 		ignores: DRAWING_COMPONENTS,
-		rules: { 'svelte/no-restricted-html-elements': ['error', { elements: ['svg'], message: DRAWN_IN_ITS_COMPONENT }] }
+		rules: { 'svelte/no-restricted-html-elements': ['error', SVG_IN_ITS_COMPONENT] }
+	},
+	{
+		// Outside the library a component draws no button of its own either, but those still pressed by hand. The
+		// rule takes one list of what it refuses in a file, the last written for it, so the svg is named here again
+		files: ['src/**/*.svelte'],
+		ignores: ['src/lib/ui/**', ...DRAWING_COMPONENTS, ...STILL_PRESSED_BY_HAND],
+		rules: { 'svelte/no-restricted-html-elements': ['error', SVG_IN_ITS_COMPONENT, BUTTON_IN_THE_LIBRARY] }
+	},
+	{
+		// A component of the page that draws a drawing draws no button of its own
+		files: DRAWING_COMPONENTS,
+		ignores: ['src/lib/ui/**'],
+		rules: { 'svelte/no-restricted-html-elements': ['error', BUTTON_IN_THE_LIBRARY] }
 	},
 	{
 		// The core rule takes a rune's `let` for a plain one; the svelte one knows them
@@ -465,7 +513,8 @@ export default tseslint.config(
 				...NO_CARDS_OF_ITS_OWN,
 				...NO_CODE_BOXES_OF_ITS_OWN,
 				...NO_NOTICES_OF_THEIR_OWN,
-				...NO_MARKS_OF_ITS_OWN
+				...NO_MARKS_OF_ITS_OWN,
+				...NO_ROWS_OF_ITS_OWN
 			],
 			// A function an interface asks for is a property: a method's parameters are compared
 			// loosely, so a value that takes only one kind could stand where every kind is passed
@@ -516,7 +565,8 @@ export default tseslint.config(
 				...NO_CARDS_OF_ITS_OWN,
 				...NO_CODE_BOXES_OF_ITS_OWN,
 				...NO_NOTICES_OF_THEIR_OWN,
-				...NO_MARKS_OF_ITS_OWN
+				...NO_MARKS_OF_ITS_OWN,
+				...NO_ROWS_OF_ITS_OWN
 			]
 		}
 	},
@@ -532,7 +582,8 @@ export default tseslint.config(
 				...NO_CARDS_OF_ITS_OWN,
 				...NO_CODE_BOXES_OF_ITS_OWN,
 				...NO_NOTICES_OF_THEIR_OWN,
-				...NO_MARKS_OF_ITS_OWN
+				...NO_MARKS_OF_ITS_OWN,
+				...NO_ROWS_OF_ITS_OWN
 			]
 		}
 	},

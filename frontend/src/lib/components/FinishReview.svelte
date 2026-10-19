@@ -4,6 +4,7 @@
 	import { useReview } from '$lib/review/context';
 	import Button from '$lib/ui/Button.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
+	import Row from '$lib/ui/Row.svelte';
 	import Tag from '$lib/ui/Tag.svelte';
 	import { raisedByAgent } from '$lib/utils/speakers';
 	import { splitSuggestions } from '$lib/utils/suggestion';
@@ -160,20 +161,17 @@
 				<p class="cr-faint text-sm">Nothing written yet. A summary on its own is a review too.</p>
 			{/if}
 		{:else}
+			<!-- Each comment headed by a row, one press to its thread, what it says in full under it; one sent with a
+				round steps back -->
 			<ul class="flex flex-col gap-1.5">
 				{#each review.threads.all as thread (thread.id)}
 					{@const sent = review.threads.sentInRound(thread.id)}
 					<li>
-						<button
-							type="button"
-							data-testid="finish-comment"
-							class={['cr-pressable w-full rounded px-2 py-1.5 text-left', sent !== undefined && 'cr-viewed']}
-							onclick={() => jump(thread)}
-						>
-							<span class="flex items-baseline gap-2">
-								<span data-testid="modal-comment-ref" class="cr-comment-ref font-mono text-xs">
-									{anchorPlace(thread.anchor)}
-								</span>
+						<Row names="path" testId="finish-comment" viewed={sent !== undefined} onclick={() => jump(thread)}>
+							{#snippet label()}
+								<span data-testid="modal-comment-ref" class="cr-comment-ref">{anchorPlace(thread.anchor)}</span>
+							{/snippet}
+							{#snippet trailing()}
 								{#if thread.severity !== 'note'}
 									<Tag tone={severityTone(thread)} testId="finish-severity">{thread.severity}</Tag>
 								{/if}
@@ -183,13 +181,14 @@
 								{#if thread.resolved}
 									<Tag tone="quiet" testId="finish-resolved">resolved</Tag>
 								{/if}
-								<span class="flex-1"></span>
 								{#if sent !== undefined}
-									<span class="cr-faint shrink-0 text-xs">round {sent}</span>
+									<span class="cr-faint">round {sent}</span>
 								{/if}
-							</span>
+							{/snippet}
+						</Row>
+						<div data-testid="finish-comment-words" class={['px-2', sent !== undefined && 'cr-viewed']}>
 							{@render said(thread.body, thread.anchor)}
-						</button>
+						</div>
 					</li>
 				{/each}
 			</ul>

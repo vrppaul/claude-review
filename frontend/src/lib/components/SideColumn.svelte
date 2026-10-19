@@ -5,6 +5,7 @@
 	import type { TourTarget } from '$lib/guide/tour';
 	import type { PutAwayColumn } from '$lib/reader/page-layout.svelte';
 	import ColumnBar from '$lib/ui/ColumnBar.svelte';
+	import ColumnRail from '$lib/ui/ColumnRail.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import IconButton from '$lib/ui/IconButton.svelte';
 	import EdgeGrip from './EdgeGrip.svelte';
@@ -45,7 +46,7 @@
 	// The column and its way to its rail, while it is on screen; the rail, while it is put away
 	let columnElement: HTMLElement | undefined = $state();
 	let putAwayButton: HTMLButtonElement | undefined = $state();
-	let rail: HTMLElement | undefined = $state();
+	let rail: HTMLButtonElement | undefined = $state();
 
 	// Put away or brought back, by its own control or by a key, the column takes with it whatever held
 	// the keyboard in it: the control pressed, an entry. Looked at before the page redraws it: the
@@ -90,16 +91,11 @@
 		</div>
 	</svelte:element>
 {:else}
-	<button
-		bind:this={rail}
-		type="button"
-		data-testid={testIds.bringBack}
+	<ColumnRail
+		bind:element={rail}
+		label={bringBack}
+		testId={testIds.bringBack}
 		data-tour={tour}
-		class="cr-side-column-rail cr-pressable"
-		title={bringBack}
-		aria-label={bringBack}
 		onclick={() => column.toggle()}
-	>
-		<Icon name="chevron" size="xs" pointing="right" />
-	</button>
+	/>
 {/if}

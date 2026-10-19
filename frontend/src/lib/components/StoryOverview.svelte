@@ -12,8 +12,8 @@
 	import { OVERVIEW_PART } from '$lib/review/story-keys';
 	import type { OverviewList, OverviewText, StoryHeld } from '$lib/types';
 	import EdgeFrame from '$lib/ui/EdgeFrame.svelte';
+	import Row from '$lib/ui/Row.svelte';
 	import AskableBlock from './AskableBlock.svelte';
-	import FoldChevron from './FoldChevron.svelte';
 	import StoryDiagram from './StoryDiagram.svelte';
 	import { AGENTS_VOICE } from './story-frames';
 	import { chapterNamed } from './story-words';
@@ -102,16 +102,11 @@
 	{#if listsSomething}
 		<!-- What more the overview lists, folded under a row whose chevron stands at its far end -->
 		<div data-testid="story-more" class="flex flex-col gap-3">
-			<button
-				type="button"
-				data-testid="story-more-toggle"
-				class="cr-aside-row cr-pressable"
-				aria-expanded={listsOpen}
-				onclick={toggleUnlessWrittenUnder}
-			>
-				<span class="min-w-0 flex-1">More about this change</span>
-				<FoldChevron folded={!listsOpen} />
-			</button>
+			<Row names="title" testId="story-more-toggle" folded={!listsOpen} onclick={toggleUnlessWrittenUnder}>
+				{#snippet label()}
+					More about this change
+				{/snippet}
+			</Row>
 			{#if listsOpen}
 				<EdgeFrame {...AGENTS_VOICE} testId="overview-lists">
 					<div class="flex flex-col gap-4">

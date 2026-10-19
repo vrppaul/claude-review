@@ -2,6 +2,7 @@
 	import { useReview } from '$lib/review/context';
 	import Button from '$lib/ui/Button.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
+	import Row from '$lib/ui/Row.svelte';
 	import { HELP_BUTTON_ROLE, keysOf } from './keymap';
 	import Popover from './Popover.svelte';
 
@@ -59,17 +60,29 @@
 	{/snippet}
 
 	<div class="flex flex-col p-3">
+		<!-- The ways back to the tour and the news, a row each -->
 		<div class="mb-5 flex flex-col gap-1">
-			<button type="button" data-testid="take-tour" class="cr-guide-entry cr-pressable" onclick={takeTour}>
-				<span class="cr-guide-compass"><Icon name="compass" size="xl" /></span>
-				<span class="flex-1 text-left">Take the tour again</span>
-				<span class="cr-faint text-xs">{review.guide.stepCount} stops</span>
-			</button>
+			<Row names="title" testId="take-tour" onclick={takeTour}>
+				{#snippet leading()}
+					<span class="cr-guide-compass"><Icon name="compass" size="xl" /></span>
+				{/snippet}
+				{#snippet label()}
+					Take the tour again
+				{/snippet}
+				{#snippet trailing()}
+					<span class="cr-faint">{review.guide.stepCount} stops</span>
+				{/snippet}
+			</Row>
 			{#if review.guide.latestNews}
-				<button type="button" data-testid="read-news" class="cr-guide-entry cr-pressable" onclick={readNews}>
-					<span class="cr-guide-plus"><Icon name="plus" size="xl" /></span>
-					<span class="flex-1 text-left">What's new in {review.guide.latestNews.release}</span>
-				</button>
+				{@const news = review.guide.latestNews}
+				<Row names="title" testId="read-news" onclick={readNews}>
+					{#snippet leading()}
+						<span class="cr-guide-plus"><Icon name="plus" size="xl" /></span>
+					{/snippet}
+					{#snippet label()}
+						What's new in {news.release}
+					{/snippet}
+				</Row>
 			{/if}
 		</div>
 		<h3 class="mb-3 text-xs font-semibold">Keyboard</h3>

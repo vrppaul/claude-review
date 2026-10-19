@@ -5,6 +5,7 @@
 	import { threadsNotDrawnIn } from '$lib/review/reading-view';
 	import Button from '$lib/ui/Button.svelte';
 	import NoticeBar from '$lib/ui/NoticeBar.svelte';
+	import Row from '$lib/ui/Row.svelte';
 	import { plainWords } from '$lib/utils/plain-words';
 	import { counted, FILES, wordsFor } from '$lib/utils/words';
 
@@ -63,17 +64,15 @@
 		there, and that is the only screen that can draw it. -->
 	<div data-testid="off-screen-list" class="shrink-0 border-b border-base-300 bg-base-100 px-4 py-1.5">
 		{#each offScreen as thread (thread.id)}
-			<button
-				type="button"
-				data-testid="off-screen-thread"
-				class="cr-pressable flex w-full items-center gap-2 rounded px-2 py-1 text-left"
-				onclick={() => review.navigator.reveal(thread)}
-			>
-				<span class="cr-comment-ref shrink-0 font-mono text-xs">
-					{anchorShortPlace(thread.anchor)}
-				</span>
-				<span class="cr-faint min-w-0 flex-1 truncate text-xs">{plainWords(thread.body)}</span>
-			</button>
+			<!-- A row a thread: where it hangs, and what it says -->
+			<Row names="path" testId="off-screen-thread" onclick={() => review.navigator.reveal(thread)}>
+				{#snippet label()}
+					<span class="cr-comment-ref">{anchorShortPlace(thread.anchor)}</span>
+				{/snippet}
+				{#snippet said()}
+					{plainWords(thread.body)}
+				{/snippet}
+			</Row>
 		{/each}
 		<p class="cr-faint px-2 pt-1 text-xs">They are still in the review, and still go out with the round.</p>
 	</div>

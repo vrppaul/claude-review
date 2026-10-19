@@ -8,9 +8,9 @@
 	import { useReview } from '$lib/review/context';
 	import { fileSectionKey } from '$lib/review/reading-view';
 	import Icon from '$lib/ui/Icon.svelte';
+	import Row from '$lib/ui/Row.svelte';
 	import ChangedLines from './ChangedLines.svelte';
 	import FileRow from './FileRow.svelte';
-	import FoldChevron from './FoldChevron.svelte';
 	import SideColumn from './SideColumn.svelte';
 
 	/** What the tree lists, in words: counted in its heading, looked for in its filter. */
@@ -115,17 +115,12 @@
 	{:else}
 		{@const folded = layout.isFolderFolded(node.path)}
 		<li>
-			<button
-				type="button"
-				data-testid="folder-item"
-				class="cr-tree-row cr-pressable flex w-full items-center gap-1 rounded py-1 pr-2 text-left font-mono text-xs font-semibold text-(--cr-muted)"
-				style:--cr-depth={depth}
-				aria-expanded={!folded}
-				onclick={() => layout.toggleFolder(node.path)}
-			>
-				<span class="min-w-0 flex-1 truncate">{node.name}/</span>
-				<FoldChevron {folded} />
-			</button>
+			<!-- A folder, quieter than the files it folds under it -->
+			<Row names="path" testId="folder-item" {depth} {folded} onclick={() => layout.toggleFolder(node.path)}>
+				{#snippet label()}
+					<span class="cr-muted">{node.name}/</span>
+				{/snippet}
+			</Row>
 			{#if !folded}
 				<ul>
 					{#each node.children as child (child.path)}

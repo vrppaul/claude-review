@@ -42,15 +42,12 @@
 	/* The tallest a field being written in grows with its text, before it scrolls instead */
 	--cr-field-tallest: 30rem;
 	/*
-	 * A story's contents: a node on its axis; how far a row stands in from
-	 * the column's own padding, and its room above and below; the gap beside
-	 * a node; and so how far in what hangs under an entry begins.
+	 * A story's contents: a node on its axis, which an entry's row (lib/ui
+	 * Row) stands before its title; and so how far in what hangs under an
+	 * entry begins, for what it starts with to stand under the title.
 	 */
 	--cr-contents-node: 1.125rem;
-	--cr-contents-inset: 0.1875rem;
-	--cr-contents-row-pad: 0.3125rem;
-	--cr-contents-gap: 0.625rem;
-	--cr-contents-indent: calc(var(--cr-contents-inset) + var(--cr-contents-node) + var(--cr-contents-gap));
+	--cr-contents-indent: calc(var(--cr-contents-node) + var(--cr-list-row-gap));
 	/* The number a node holds, small enough that two digits fit its ring; the dot the overview's holds */
 	--cr-contents-node-number: 0.625rem;
 	--cr-contents-dot: 0.375rem;
@@ -105,6 +102,17 @@
 	 */
 	--cr-button-xs: 1.5rem;
 	--cr-button-sm: 2rem;
+
+	/*
+	 * A row of a list (lib/ui Row) — a file of the tree, a part of a story in
+	 * its contents, a fold, an option of a pane: how tall every one stands;
+	 * the room at either end of it, and between what it holds; and how far
+	 * one is set in for each folder of the tree it stands in.
+	 */
+	--cr-list-row-height: 2rem;
+	--cr-list-row-room: 0.5rem;
+	--cr-list-row-gap: 0.5rem;
+	--cr-list-row-indent: 0.75rem;
 
 	/*
 	 * How wide a pane is drawn (lib/ui/pane.ts): one of rows — controls,

@@ -8,6 +8,7 @@
 		threadsOnTheOverview,
 		threadsOnThePiece
 	} from '$lib/review/story-reading';
+	import Row from '$lib/ui/Row.svelte';
 	import { fileStats } from '$lib/utils/file-stats';
 	import { fileName } from '$lib/utils/paths';
 	import ChangedLines from './ChangedLines.svelte';
@@ -126,25 +127,28 @@
 		{#if contents.leftOut.length > 0}
 			<!-- Nothing can be hidden: what no step tells has its place here too, said to be outside the story -->
 			<div class="cr-contents-set-in mt-2">
-				<button
-					type="button"
-					data-testid="contents-left-out"
-					class="cr-aside-row cr-pressable text-warning"
+				<Row
+					names="title"
+					testId="contents-left-out"
 					aria-current={review.parts.beingRead === LEFT_OUT_PART ? 'location' : undefined}
 					aria-label={leftOutChanged === null
 						? undefined
 						: leftOutThenAndNowSaid(leftOutChanged.when_told, leftOutChanged.now)}
 					onclick={() => review.parts.goTo(LEFT_OUT_PART)}
 				>
-					{NOT_IN_THE_STORY}
-					{#if leftOutChanged !== null}
-						<!-- A round moved the code on and changed how much no step tells: how much then, and now; in
-							words to whoever cannot see the arrow -->
-						<span class="ml-2" aria-hidden="true">
-							{leftOutThenAndNow(leftOutChanged.when_told, leftOutChanged.now)}
-						</span>
-					{/if}
-				</button>
+					{#snippet label()}
+						<span class="text-warning">{NOT_IN_THE_STORY}</span>
+					{/snippet}
+					{#snippet trailing()}
+						{#if leftOutChanged !== null}
+							<!-- A round moved the code on and changed how much no step tells: how much then, and now; in
+								words to whoever cannot see the arrow -->
+							<span class="text-warning" aria-hidden="true">
+								{leftOutThenAndNow(leftOutChanged.when_told, leftOutChanged.now)}
+							</span>
+						{/if}
+					{/snippet}
+				</Row>
 				<ul data-testid="contents-left-out-files">
 					{#each contents.leftOut as left (left.section)}
 						{@const piece = left.told.piece}
@@ -169,11 +173,7 @@
 		{/if}
 
 		{#if story.housekeeping.length > 0}
-			<StoryHousekeeping
-				paths={story.housekeeping}
-				testId="contents-housekeeping"
-				class="cr-contents-set-in cr-faint mt-1.5"
-			/>
+			<StoryHousekeeping paths={story.housekeeping} testId="contents-housekeeping" class="cr-contents-set-in mt-1.5" />
 		{/if}
 	</SideColumn>
 {/if}

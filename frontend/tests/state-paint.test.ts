@@ -45,7 +45,7 @@ const STATES = [
 	},
 	{
 		state: 'the one of a set the reader is at: the tint, the edge at its start, a marked line its number in the mark',
-		named: /\.cr-(?:current|row-marked|cell-marked|edge-marked|askable-written-under)\b/,
+		named: /\.cr-(?:ui-row-current|row-marked|cell-marked|edge-marked|askable-written-under)\b/,
 		tokens: ['--cr-selected', '--cr-selected-edge', '--cr-shadow-selected-start', '--cr-mark-text']
 	},
 	{
@@ -55,7 +55,7 @@ const STATES = [
 	},
 	{
 		state: 'what the reader has finished with, stepping back in faint words',
-		named: /\.cr-(?:viewed|step-changed)\b/,
+		named: /\.cr-(?:viewed|ui-row-viewed|step-changed)\b/,
 		tokens: ['--cr-faint']
 	},
 	{

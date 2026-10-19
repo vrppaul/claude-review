@@ -4,8 +4,8 @@
  * (tokens.css) alone. A part takes no look from outside: what the page needs
  * of one is a tone, a size or a variant written here, with the reason a
  * reader needs it. Outside of the library the page draws its own drawings —
- * code rows, a thread's spine, a story's contents and sketch — and its rows,
- * and lights what of them can be pressed with the states below.
+ * code rows, a thread's spine, a story's contents and sketch — and lights
+ * what of them can be pressed with the states below.
  *
  * Outside Tailwind's layers, as the review's own classes are, so they win
  * over any utility on the same element.
@@ -29,7 +29,7 @@
  * keeps the same light (tokens.css says why).
  */
 .cr-pressable:not(:disabled, [aria-disabled='true']):not(
-		.cr-current,
+		.cr-ui-row-current,
 		[aria-pressed='true'],
 		[aria-haspopup][aria-expanded='true']
 	):hover {
@@ -40,20 +40,11 @@
  * its saturated ground moves too little under the other (tokens.css)
  */
 .cr-ui-filled.cr-pressable:not(:disabled, [aria-disabled='true']):not(
-		.cr-current,
+		.cr-ui-row-current,
 		[aria-pressed='true'],
 		[aria-haspopup][aria-expanded='true']
 	):hover {
 	background-image: linear-gradient(var(--cr-hover-on-fill), var(--cr-hover-on-fill));
-}
-/*
- * The one of a set the reader is at, down a column — the file they are in,
- * the base the diff is read against, the option the keys lit — on their
- * mark's tint, its edge at the row's start
- */
-.cr-current {
-	background-color: var(--cr-selected);
-	box-shadow: var(--cr-shadow-selected-start);
 }
 /*
  * A control of a bar pressed down — a segment of a track, a toggle that is
@@ -689,4 +680,88 @@
 	padding-inline: 0.125rem;
 	border-radius: calc(var(--radius-field) - 1px);
 	color: inherit;
+}
+
+/*
+ * A row (Row): one line of a list the reader goes down — a file or a folder
+ * of the tree, a part of a story in its contents, a fold, an option of a
+ * pane — as tall as every other, its words small and strong, a path in the
+ * code's face; set in as far as its folder stands deep in the tree. The
+ * pointer lights it as it lights whatever can be pressed.
+ */
+.cr-ui-row {
+	display: flex;
+	align-items: center;
+	gap: var(--cr-list-row-gap);
+	width: 100%;
+	height: var(--cr-list-row-height);
+	padding-inline: calc(var(--cr-depth) * var(--cr-list-row-indent) + var(--cr-list-row-room)) var(--cr-list-row-room);
+	border-radius: var(--radius-field);
+	color: var(--color-base-content);
+	font-size: var(--text-xs);
+	font-weight: 600;
+	line-height: var(--text-xs--line-height);
+	text-align: left;
+	white-space: nowrap;
+}
+/* What stands before its label, and at its end, never squeezed: its end at the row's far side */
+.cr-ui-row-leading,
+.cr-ui-row-end {
+	display: flex;
+	flex-shrink: 0;
+	align-items: center;
+	gap: var(--cr-list-row-gap);
+}
+.cr-ui-row-end {
+	margin-inline-start: auto;
+}
+/* What it is called, cut where the row ends */
+.cr-ui-row-label {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.cr-ui-row-path .cr-ui-row-label {
+	font-family: var(--font-mono);
+}
+/* What it says of what it names, after its label in quieter words: in the room the label leaves, and cut first */
+.cr-ui-row-said {
+	flex: 1 1 0;
+	min-width: 0;
+	overflow: hidden;
+	color: var(--cr-muted);
+	font-weight: 400;
+	text-overflow: ellipsis;
+}
+/*
+ * The one of its list the reader is at — the file they are in, the base
+ * the diff is read against, the option the keys lit — on their mark's
+ * tint, its edge at the row's start
+ */
+.cr-ui-row-current {
+	background-color: var(--cr-selected);
+	box-shadow: var(--cr-shadow-selected-start);
+}
+/* What the reader has finished with steps back, in faint words that still read at 4.5:1 */
+.cr-ui-row-viewed {
+	color: var(--cr-faint);
+}
+
+/*
+ * What a column beside what is read leaves standing where it stood, put
+ * away (ColumnRail): a strip as wide as the rail, from the column's head to
+ * its foot, so the way back is wherever the reader reaches for it, its
+ * chevron at the head; quiet, on the page's ground, ruled off from what is
+ * read
+ */
+.cr-ui-column-rail {
+	display: flex;
+	flex-shrink: 0;
+	align-items: flex-start;
+	justify-content: center;
+	width: var(--cr-side-column-rail-width);
+	padding-top: 0.75rem;
+	border-right: 1px solid var(--color-base-300);
+	background: var(--color-base-100);
+	color: var(--cr-faint);
 }

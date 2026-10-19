@@ -108,7 +108,6 @@ const DRAWN: { said: string; text: string; grounds: string[] }[] = [
 		text: '--color-base-content',
 		grounds: ['--color-base-100', '--cr-warning-tint', '--cr-selected']
 	},
-	{ said: 'the title of a part read through, in the contents', text: '--cr-muted', grounds: ['--color-base-200'] },
 	{
 		said: 'the check of a part read through, on its node in the contents',
 		text: '--cr-done',

@@ -3,6 +3,7 @@
 	import { useReview } from '$lib/review/context';
 	import Button from '$lib/ui/Button.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
+	import Row from '$lib/ui/Row.svelte';
 	import { messageOf } from '$lib/utils/errors';
 	import { timeAgo } from '$lib/utils/time';
 	import { counted, FILES } from '$lib/utils/words';
@@ -102,29 +103,34 @@
 		/>
 	</div>
 
-	{#each sections as section (section.kind)}
-		{@const listed = matching.filter((version) => version.kind === section.kind)}
-		{#if listed.length > 0}
-			<p class="cr-faint px-3 pt-2 pb-1 text-xs">{section.title}</p>
-			{#each listed as version (version.key)}
-				{@const inForce = version.key === review.diff.base}
-				<button
-					type="button"
-					data-testid="base-option"
-					class={['cr-pressable flex w-full items-center gap-2 px-3 py-1.5 text-left', inForce && 'cr-current']}
-					onclick={() => pick(version)}
-				>
-					<span class="w-3 shrink-0 text-(--cr-control)">
-						{#if inForce}
-							<Icon name="check" size="xs" label="In force" />
-						{/if}
-					</span>
-					<span class="flex-1 truncate font-mono text-xs">{version.label}</span>
-					<span class="cr-faint shrink-0 text-xs">{meta(version)}</span>
-				</button>
-			{/each}
-		{/if}
-	{/each}
+	<!-- Each base a row, inside the pane's margin, its words as far in as the heading's -->
+	<div class="px-1 pb-1">
+		{#each sections as section (section.kind)}
+			{@const listed = matching.filter((version) => version.kind === section.kind)}
+			{#if listed.length > 0}
+				<p class="cr-faint px-2 pt-2 pb-1 text-xs">{section.title}</p>
+				{#each listed as version (version.key)}
+					{@const inForce = version.key === review.diff.base}
+					<Row names="path" testId="base-option" current={inForce} onclick={() => pick(version)}>
+						{#snippet leading()}
+							<!-- Room for the check of the one in force in every row, so their names stand in one line -->
+							<span class="w-3 text-(--cr-control)">
+								{#if inForce}
+									<Icon name="check" size="xs" label="In force" />
+								{/if}
+							</span>
+						{/snippet}
+						{#snippet label()}
+							{version.label}
+						{/snippet}
+						{#snippet trailing()}
+							<span class="cr-faint">{meta(version)}</span>
+						{/snippet}
+					</Row>
+				{/each}
+			{/if}
+		{/each}
+	</div>
 
 	{#if asking && matching.length === 0}
 		<p data-testid="bases-asking" class="cr-muted px-3 py-6 text-center text-xs">

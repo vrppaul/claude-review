@@ -6,6 +6,7 @@ import Button from '$lib/ui/Button.svelte';
 import Card from '$lib/ui/Card.svelte';
 import CodeBox from '$lib/ui/CodeBox.svelte';
 import ColumnBar from '$lib/ui/ColumnBar.svelte';
+import ColumnRail from '$lib/ui/ColumnRail.svelte';
 import Dialog from '$lib/ui/Dialog.svelte';
 import EdgeFrame from '$lib/ui/EdgeFrame.svelte';
 import Icon from '$lib/ui/Icon.svelte';
@@ -14,6 +15,7 @@ import Link from '$lib/ui/Link.svelte';
 import NoticeBar from '$lib/ui/NoticeBar.svelte';
 import Pane from '$lib/ui/Pane.svelte';
 import PopoverPanel from '$lib/ui/PopoverPanel.svelte';
+import Row from '$lib/ui/Row.svelte';
 import Segment from '$lib/ui/Segment.svelte';
 import Segmented from '$lib/ui/Segmented.svelte';
 import Chip from '$lib/ui/Chip.svelte';
@@ -274,5 +276,68 @@ describe('the component library', () => {
 		expect(getByTestId(TEST_ID).textContent).toBe(WORDS);
 		expect(getByTestId(TEST_ID).querySelector('button')).toBeNull();
 		expect(getByTestId(TEST_ID).tagName).toBe('SPAN');
+	});
+});
+
+// A row of the library, and the rail a column put away leaves, each with a class handed to it besides
+const ROWS_WITH_A_CLASS_FROM_OUTSIDE = [
+	{
+		part: 'a row',
+		render: () => render(Row, { names: 'path', testId: TEST_ID, label: drawn, class: FROM_OUTSIDE } as never)
+	},
+	{
+		part: 'a row that folds what is under it',
+		render: () =>
+			render(Row, { names: 'title', folded: true, testId: TEST_ID, label: drawn, class: FROM_OUTSIDE } as never)
+	},
+	{
+		part: 'the rail a column put away leaves',
+		render: () => render(ColumnRail, { label: WORDS, testId: TEST_ID, class: FROM_OUTSIDE } as never)
+	}
+];
+
+describe('a row of the library', () => {
+	it.each(ROWS_WITH_A_CLASS_FROM_OUTSIDE)(
+		'draws $part its own way: a class handed to it from outside is not drawn',
+		({ render: drawIt }) => {
+			const { getByTestId } = drawIt();
+
+			expect(getByTestId(TEST_ID).classList).not.toContain(FROM_OUTSIDE);
+		}
+	);
+
+	it('draws what it is called, and does what it does when pressed', async () => {
+		const onclick = vi.fn();
+		const { getByTestId } = render(Row, { names: 'path', testId: TEST_ID, label: drawn, onclick });
+
+		await userEvent.click(getByTestId(TEST_ID));
+
+		expect(getByTestId(TEST_ID).textContent.trim()).toBe(WORDS);
+		expect(onclick).toHaveBeenCalledOnce();
+	});
+
+	it.each([
+		{ folded: true, expanded: 'false' },
+		{ folded: false, expanded: 'true' }
+	])(
+		'says whether what it folds is open, folded $folded, to whoever cannot see its chevron',
+		({ folded, expanded }) => {
+			const { getByTestId } = render(Row, { names: 'title', folded, testId: TEST_ID, label: drawn });
+
+			expect(getByTestId(TEST_ID).getAttribute('aria-expanded')).toBe(expanded);
+		}
+	);
+
+	it('says nothing of being open where it folds nothing', () => {
+		const { getByTestId } = render(Row, { names: 'title', testId: TEST_ID, label: drawn });
+
+		expect(getByTestId(TEST_ID).hasAttribute('aria-expanded')).toBe(false);
+	});
+
+	it('says what the rail a column put away leaves does, to whoever cannot see its chevron and under the pointer', () => {
+		const { getByTestId } = render(ColumnRail, { label: WORDS, testId: TEST_ID });
+
+		expect(getByTestId(TEST_ID).getAttribute('aria-label')).toBe(WORDS);
+		expect(getByTestId(TEST_ID).getAttribute('title')).toBe(WORDS);
 	});
 });

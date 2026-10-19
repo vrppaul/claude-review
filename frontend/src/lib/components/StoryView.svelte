@@ -90,7 +90,7 @@
 				<StoryHousekeeping
 					paths={story.housekeeping}
 					testId="story-housekeeping"
-					class="cr-muted border-t border-base-300 pt-6 text-sm"
+					class="border-t border-base-300 pt-6"
 				/>
 			{/if}
 		</article>

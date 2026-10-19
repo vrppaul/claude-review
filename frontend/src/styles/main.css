@@ -396,9 +396,9 @@
 
 /*
  * What the reader has finished with steps back, in faint words that still
- * read at 4.5:1, where fading it whole took them below: a file's row in the
- * tree and its header, the files of a chapter read through, a comment sent
- * with a round
+ * read at 4.5:1, where fading it whole took them below: a file's header,
+ * the words of a comment sent with a round. A row steps back so in the
+ * library's own stylesheet (lib/ui Row)
  */
 .cr-viewed {
 	color: var(--cr-faint);
@@ -742,20 +742,6 @@
 }
 
 /*
- * One of a list picked from while the keyboard stays in a field: lit as the
- * keys move through it, as the one of a set the reader is at. Lit inside the
- * pane's own margin, never to its edge, so the edge the pane's arrow grows
- * from keeps the pane's colour.
- */
-.cr-option {
-	display: block;
-	width: 100%;
-	padding: 0.375rem 0.625rem;
-	border-radius: var(--radius-field);
-	text-align: left;
-}
-
-/*
  * A story's diagram under its overview, fitted to the column: mermaid draws
  * it at its own size, and it is scaled down to the width it has, never up.
  * Opened large, it is drawn at its own size.
@@ -912,29 +898,14 @@
 	width: var(--cr-side-column-width);
 	min-width: var(--cr-side-column-least-width);
 }
-/* What such a column leaves behind when it is put away */
-.cr-side-column-rail {
-	display: flex;
-	align-items: flex-start;
-	justify-content: center;
-	padding-top: 0.75rem;
-	width: var(--cr-side-column-rail-width);
-	flex-shrink: 0;
-	border-right: 1px solid var(--color-base-300);
-	background: var(--color-base-100);
-	color: var(--cr-faint);
-}
-
-/* A row of the tree of files, set in by how deep its folder is */
-.cr-tree-row {
-	padding-left: calc(var(--cr-depth) * 0.75rem + 0.5rem);
-}
 
 /*
  * A story's contents: its parts down an axis, each a node on it, and under
  * a chapter the files it tells. An entry holds its stretch of the axis: a
  * line through the middle of its node, from the first entry's node to the
- * last one's, and none where there is one entry alone.
+ * last one's, and none where there is one entry alone. The node stands at
+ * the start of the entry's row (lib/ui Row), the row's room in from its
+ * edge, as high as the row's middle.
  */
 .cr-contents-entry {
 	position: relative;
@@ -944,16 +915,16 @@
 	content: '';
 	position: absolute;
 	inset-block: 0;
-	left: calc(var(--cr-contents-inset) + var(--cr-contents-node) / 2);
+	left: calc(var(--cr-list-row-room) + var(--cr-contents-node) / 2);
 	width: 1px;
 	background: var(--cr-axis);
 }
 .cr-contents-entry:first-child::before {
-	top: calc(var(--cr-contents-row-pad) + var(--cr-contents-node) / 2);
+	top: calc(var(--cr-list-row-height) / 2);
 }
 .cr-contents-entry:last-child::before {
 	bottom: auto;
-	height: calc(var(--cr-contents-row-pad) + var(--cr-contents-node) / 2);
+	height: calc(var(--cr-list-row-height) / 2);
 }
 .cr-contents-entry:only-child::before {
 	content: none;
@@ -962,23 +933,12 @@
 .cr-contents-entry-read::before {
 	background: var(--cr-done-line);
 }
-/* An entry's node and title: one press to the head of its part. Placed, so its node is drawn over the axis */
-.cr-contents-row {
-	position: relative;
-	display: flex;
-	align-items: center;
-	gap: var(--cr-contents-gap);
-	width: 100%;
-	padding: var(--cr-contents-row-pad) 0.125rem var(--cr-contents-row-pad) var(--cr-contents-inset);
-	border-radius: var(--radius-field);
-	/* As large as a row of the tree of files, as its files' rows under it are */
-	font-size: var(--text-xs);
-	font-weight: 500;
-	line-height: var(--text-xs--line-height);
-	text-align: left;
-}
-/* A node: a ring on the column's ground, over the axis, round a chapter's number or the overview's dot */
+/*
+ * A node: a ring on the column's ground, round a chapter's number or the
+ * overview's dot. Placed, so it is drawn over the axis
+ */
 .cr-contents-node {
+	position: relative;
 	display: inline-flex;
 	flex: none;
 	align-items: center;
@@ -1032,22 +992,6 @@
  */
 .cr-contents-set-in {
 	margin-left: var(--cr-contents-indent);
-}
-/*
- * A row of a story that heads or folds what is under it: what the story
- * leaves out, housekeeping, what more the overview lists. One press, as a
- * row of the tree
- */
-.cr-aside-row {
-	display: flex;
-	align-items: center;
-	gap: 0.25rem;
-	width: 100%;
-	padding: var(--cr-contents-row-pad) 0.5rem;
-	border-radius: var(--radius-field);
-	font-size: var(--text-xs);
-	font-weight: 600;
-	text-align: left;
 }
 
 /* The room either side of a story in its area, as wide as the area: the story's, and that of the bar over it */
@@ -1311,14 +1255,6 @@
 	border: 1px solid var(--color-base-300);
 	border-radius: 3px;
 	font-family: var(--font-mono);
-}
-.cr-guide-entry {
-	display: flex;
-	align-items: center;
-	gap: 0.625rem;
-	padding: 0.5rem 0.75rem;
-	border-radius: var(--radius-box);
-	font-size: 0.8125rem;
 }
 .cr-guide-plus {
 	color: var(--cr-muted);

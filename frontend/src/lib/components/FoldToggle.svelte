@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { FOLD_TOGGLE_ROLE } from '$lib/dom/file-sections';
+	import FoldChevron from '$lib/ui/FoldChevron.svelte';
 	import IconButton from '$lib/ui/IconButton.svelte';
-	import FoldChevron from './FoldChevron.svelte';
 
 	interface Props {
 		folded: boolean;

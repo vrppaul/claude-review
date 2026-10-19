@@ -112,8 +112,8 @@ describe('finishing a review', () => {
 
 		const { getByTestId, getAllByTestId } = render(FinishReview, inReview(review));
 
-		expect(getByTestId('finish-comment').textContent).not.toContain('```');
-		expect(getByTestId('finish-comment').textContent).toContain('Name it:');
+		expect(getByTestId('finish-comment-words').textContent).not.toContain('```');
+		expect(getByTestId('finish-comment-words').textContent).toContain('Name it:');
 		expect(getAllByTestId('suggestion-line').map((line) => line.textContent)).toEqual([
 			'−const limit = 3;',
 			'+const limit = MAX_LINES;'

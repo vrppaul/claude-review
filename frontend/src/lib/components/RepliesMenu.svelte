@@ -4,6 +4,7 @@
 	import { useReview } from '$lib/review/context';
 	import Button from '$lib/ui/Button.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
+	import Row from '$lib/ui/Row.svelte';
 	import { plainWords } from '$lib/utils/plain-words';
 	import { AGENT } from '$lib/utils/speakers';
 	import Popover from './Popover.svelte';
@@ -71,31 +72,29 @@
 		</Button>
 	{/snippet}
 
-	<!-- One row a thread, ruled off from the next -->
-	<div class="divide-y divide-base-300">
+	<!-- One row a thread, inside the pane's margin: where it hangs, and what the agent last said in it -->
+	<div class="p-1">
 		{#each threads as thread (thread.id)}
 			{@const unread = review.threads.reading.isUnread(thread.id)}
-			<button
-				type="button"
-				data-testid="reply-row"
-				class="cr-pressable flex w-full gap-2 px-3 py-2 text-left"
-				onclick={() => goTo(thread)}
-			>
-				<span class="w-2 pt-1.5">
-					{#if unread}
-						<span class="block h-1.5 w-1.5 rounded-full bg-(--cr-unread)"></span>
-						<span class="sr-only">unread:</span>
-					{/if}
-				</span>
-				<span class="min-w-0 flex-1">
-					<span class={['block font-mono text-xs', unread ? 'text-(--cr-unread)' : 'cr-muted']}>
-						{anchorShortPlace(thread.anchor)}
+			<Row names="path" testId="reply-row" onclick={() => goTo(thread)}>
+				{#snippet leading()}
+					<!-- Room for the mark of an unread answer in every row, so where each hangs stands in one line -->
+					<span class="w-2">
+						{#if unread}
+							<span class="block h-1.5 w-1.5 rounded-full bg-(--cr-unread)"></span>
+							<span class="sr-only">unread:</span>
+						{/if}
 					</span>
-					<span class="cr-muted block truncate text-sm">{lastAnswer(thread)}</span>
-				</span>
-			</button>
+				{/snippet}
+				{#snippet label()}
+					<span class={unread ? 'text-(--cr-unread)' : 'cr-muted'}>{anchorShortPlace(thread.anchor)}</span>
+				{/snippet}
+				{#snippet said()}
+					{lastAnswer(thread)}
+				{/snippet}
+			</Row>
 		{:else}
-			<p data-testid="no-replies" class="cr-muted px-3 py-6 text-center text-xs">Nothing new. Answers land here.</p>
+			<p data-testid="no-replies" class="cr-muted px-2 py-6 text-center text-xs">Nothing new. Answers land here.</p>
 		{/each}
 	</div>
 </Popover>

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import type { FileStatus } from '$lib/types';
+	import Row from '$lib/ui/Row.svelte';
 	import StatusLetter from './StatusLetter.svelte';
 
 	interface Props {
@@ -44,31 +45,38 @@
 	}: Props = $props();
 </script>
 
+<!-- What became of the file, before its name, where the review says; the compiler is told again inside, as it
+	cannot see the condition the snippet is handed under -->
+{#snippet letter()}
+	{#if status !== null}
+		<StatusLetter {status} />
+	{/if}
+{/snippet}
+
+<!-- Its marks, its threads, and how much it changes, at its end -->
+{#snippet trailing()}
+	{@render marks?.()}
+	{#if threads > 0}
+		<span data-testid="file-threads" class="badge badge-xs badge-primary">{threads}</span>
+	{/if}
+	{@render end?.()}
+{/snippet}
+
 <!-- A file in a column beside what is read, the tree of files or a story's contents: what became of it,
 	its name, its threads and how much it changes. One press to where it is drawn -->
 <li>
-	<button
-		type="button"
-		data-testid={testId}
+	<Row
+		names="path"
+		{testId}
 		data-role={role}
-		class={[
-			'cr-tree-row cr-pressable flex h-8 w-full items-center gap-1 rounded pr-3 text-left font-mono text-xs font-semibold',
-			viewed && 'cr-viewed',
-			current && 'cr-current'
-		]}
-		style:--cr-depth={depth}
+		{depth}
+		{current}
+		{viewed}
 		aria-current={current ? 'true' : undefined}
 		{title}
 		{onclick}
-	>
-		{#if status !== null}
-			<StatusLetter {status} />
-		{/if}
-		<span class="flex-1 truncate">{@render name()}</span>
-		{@render marks?.()}
-		{#if threads > 0}
-			<span data-testid="file-threads" class="badge badge-xs badge-primary">{threads}</span>
-		{/if}
-		{@render end?.()}
-	</button>
+		leading={status === null ? undefined : letter}
+		label={name}
+		{trailing}
+	/>
 </li>

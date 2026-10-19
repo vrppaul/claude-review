@@ -1,12 +1,12 @@
 <script lang="ts">
 	import type { ClassValue } from 'svelte/elements';
 	import { useReview } from '$lib/review/context';
+	import Row from '$lib/ui/Row.svelte';
 	import { fileStats } from '$lib/utils/file-stats';
 	import { fileName } from '$lib/utils/paths';
 	import { counted, FILES } from '$lib/utils/words';
 	import ChangedLines from './ChangedLines.svelte';
 	import FileRow from './FileRow.svelte';
-	import FoldChevron from './FoldChevron.svelte';
 
 	interface Props {
 		/** The files the agent called housekeeping, by their paths. */
@@ -27,18 +27,14 @@
 </script>
 
 <!-- What the agent called housekeeping: named, quiet and folded away. The story draws none of it; each
-	file is a row as the tree of files draws it, and pressed, the files come on screen at it -->
+	file is a row as the tree of files draws it, its name as quiet as the row that folds it, and pressed,
+	the files come on screen at it -->
 <div data-testid={testId} class={set}>
-	<button
-		type="button"
-		data-testid="fold-housekeeping"
-		class="cr-aside-row cr-pressable"
-		aria-expanded={!folded}
-		onclick={() => (folded = !folded)}
-	>
-		<span class="min-w-0 flex-1">Housekeeping · {counted(paths.length, FILES)}</span>
-		<FoldChevron {folded} />
-	</button>
+	<Row names="title" testId="fold-housekeeping" {folded} onclick={() => (folded = !folded)}>
+		{#snippet label()}
+			<span class="cr-muted">Housekeeping · {counted(paths.length, FILES)}</span>
+		{/snippet}
+	</Row>
 	{#if !folded}
 		<ul>
 			{#each files as file (file.path)}
@@ -50,7 +46,7 @@
 					onclick={() => review.navigator.showFile(file.path)}
 				>
 					{#snippet name()}
-						{fileName(file.path)}
+						<span class="cr-muted">{fileName(file.path)}</span>
 					{/snippet}
 					{#snippet end()}
 						<ChangedLines changed={fileStats(file)} />
