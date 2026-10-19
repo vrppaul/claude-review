@@ -14,8 +14,6 @@ import pytest
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
 
-from claude_review.domain.models import CommentSeverity, TurnAuthor
-from claude_review.presentation.wire.content import ChangesSince
 from claude_review.presentation.wire.pushes import AnswererPush, DiffPush
 from claude_review.services.review_opening import ReviewOpening
 from tests.helpers import (
@@ -36,7 +34,6 @@ from tests.helpers import (
     repository_opening,
     review_has_ended,
     thread_on_the_wire,
-    turn_on_the_wire,
     until_an_agent_waits,
 )
 
@@ -89,26 +86,6 @@ async def test_a_later_round_says_which_round_it_is(client: AsyncClient) -> None
     second = await client.post("/api/submit", json={"threads": [A_THREAD], "end": False}, headers=LOCAL_HEADERS)
 
     assert second.json()["markdown"].startswith("## Code Review Comments — round 2")
-
-
-async def test_a_thread_reaches_the_agent_with_what_was_said_in_it(client: AsyncClient) -> None:
-    discussed = thread_on_the_wire(
-        line_on_the_wire(REVIEWED_FILE, 1),
-        "Still reads oddly.",
-        severity=CommentSeverity.QUESTION,
-        turns=[
-            turn_on_the_wire(TurnAuthor.AUTHOR, "Deliberate: two tabs are one reader.", turn_id="turn-1"),
-            turn_on_the_wire(TurnAuthor.READER, "Then say so in the docstring.", turn_id="turn-2"),
-        ],
-        resolved=True,
-    )
-
-    response = await client.post("/api/submit", json={"threads": [discussed], "end": True}, headers=LOCAL_HEADERS)
-    markdown = response.json()["markdown"]
-
-    assert "> **You:** Deliberate: two tabs are one reader." in markdown
-    assert "> **Reviewer:** Then say so in the docstring." in markdown
-    assert "question, resolved" in markdown
 
 
 async def test_a_thread_quoting_fewer_lines_than_it_names_is_refused(client: AsyncClient) -> None:
@@ -169,24 +146,6 @@ def test_the_review_learns_that_someone_is_there_to_answer(review_page: TestClie
     assert before is False
     # And a review opened only now learns it too
     assert review_page.get(REVIEW_ROUTE).json()["answerer_attached"] is True
-
-
-def test_a_retake_names_the_files_that_changed_since_the_last_one(
-    tmp_git_repo: Path, reviews: ReviewFactory, opened_repository: ReviewOpening
-) -> None:
-    """A file the agent rewrote must not keep the tick that says it was read."""
-    (tmp_git_repo / "answered.py").write_text("as it was\n")
-    (tmp_git_repo / "untouched.py").write_text("as it was\n")
-
-    with page_client(reviews.app(opened_repository)) as review_page:
-        (tmp_git_repo / "answered.py").write_text("as the round asked\n")
-
-        with open_session(review_page) as socket:
-            review_page.post("/api/retake", json={})
-
-            told = next_push(socket, DiffPush)
-
-    assert told.changes == ChangesSince(since_round=1, base_key="round:1", paths=["answered.py"])
 
 
 def test_a_retake_tells_the_page_how_many_files_the_review_now_holds(

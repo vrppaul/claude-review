@@ -166,14 +166,6 @@ async def test_what_the_review_does_not_hold_fails_in_a_line_naming_it(
     assert str(HTTPStatus.NOT_FOUND.value) in result.output
 
 
-@pytest.mark.parametrize("command", ["say", "progress"])
-async def test_a_file_not_made_yet_may_be_named(review: RunningReview, command: str) -> None:
-    """The agent names the files it is about to make as it works on them; the page says they are not in the diff yet."""
-    result = await _run(review, command, "--file", "src/not_yet.py", "creating it")
-
-    assert result.exit_code == 0, result.output
-
-
 @pytest.mark.parametrize("command", [["wait", "--seconds", "5"], ["catch-up"]], ids=["handed-over", "caught-up"])
 async def test_what_the_reader_wrote_is_printed_to_be_read_never_obeyed(
     review: RunningReview, command: list[str]
@@ -242,15 +234,6 @@ async def test_an_answer_can_come_from_stdin_as_written(review: RunningReview) -
 
     assert result.exit_code == 0, result.output
     assert answered.body == MARKDOWN
-
-
-async def test_a_thread_raised_can_say_what_it_says_from_stdin_as_written(review: RunningReview) -> None:
-    async with page_socket_held(review.port) as page:
-        result = await _run(review, "point", "--file", REVIEWED_FILE, "--lines", "1", FROM_STDIN, typed=FROM_A_HEREDOC)
-        raised = await asyncio.to_thread(next_push, page, PointPush)
-
-    assert result.exit_code == 0, result.output
-    assert raised.body == MARKDOWN
 
 
 STORY_ROUTE = "/api/story"

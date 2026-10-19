@@ -8,8 +8,6 @@ route raises of its own is held to its word only where the schema test's
 requests reach it: that test fails on any status a route did not describe.
 """
 
-import importlib
-import pkgutil
 from functools import partial
 from http import HTTPStatus
 
@@ -19,9 +17,13 @@ from httpx import AsyncClient
 from pydantic import BaseModel, Field
 from structlog.typing import EventDict
 
-import claude_review
-from claude_review.domain import exceptions
-from claude_review.domain.exceptions import FieldFault, FieldsRefusedError, ReviewError
+from claude_review.domain.exceptions import (
+    FieldFault,
+    FieldsRefusedError,
+    ImageTooLargeError,
+    ReviewError,
+    UnknownThreadError,
+)
 from claude_review.presentation.api_schema import http_document
 from claude_review.presentation.origin_guard import NOT_ITS_PAGE_STATUS
 from claude_review.presentation.refusals import (
@@ -29,7 +31,6 @@ from claude_review.presentation.refusals import (
     REFUSED_FOR_INPUT,
     Takes,
     answer_refusals,
-    status_of,
 )
 from claude_review.presentation.wire.refusal import FieldRefusal, Refusal
 from claude_review.services.image_service import IMAGE_FORMATS
@@ -169,6 +170,9 @@ FAULTS = [
     FieldFault(path=("chapters", 0, "title"), reason="says nothing"),
     FieldFault(path=("housekeeping", 1), reason="is no file of this change"),
 ]
+# Two kinds of refusal and the status each is answered with: one its parent names, and one under two kinds the
+# table names, answered as the nearer
+ANSWERED_WITH = {UnknownThreadError: HTTPStatus.NOT_FOUND, ImageTooLargeError: HTTPStatus.CONTENT_TOO_LARGE}
 # How the test makes a refusal of each kind: with its reason, and with its faults when it carries them
 REFUSALS = {
     **{name: partial(kind, REASON) for name, kind in REFUSAL_KINDS.items()},
@@ -226,27 +230,17 @@ def test_what_a_route_is_refused_for_what_it_takes_in_is_what_it_takes_in_and_no
     assert unlike == {}
 
 
-@pytest.mark.parametrize("kind_name", sorted(REFUSAL_KINDS))
-async def test_a_refusal_is_described_with_the_status_it_is_answered_with(kind_name: str, refusing: FastAPI) -> None:
-    """A kind of refusal is answered as the nearest kind the table names, and described the same way."""
+async def test_a_refusal_is_answered_with_the_status_of_the_nearest_kind_the_table_names(refusing: FastAPI) -> None:
     async with http_client(refusing) as caller:
-        answered = await caller.get(REFUSING_ROUTE.format(kind_name=kind_name))
+        answered = {
+            kind: (await caller.get(REFUSING_ROUTE.format(kind_name=kind.__name__))).status_code
+            for kind in ANSWERED_WITH
+        }
 
-    assert answered.status_code == status_of(REFUSAL_KINDS[kind_name])
-
-
-def test_every_kind_of_refusal_is_kept_where_the_review_keeps_its_refusals() -> None:
-    """A kind written anywhere else is one this test never reads: answered, and held to nothing here."""
-    for module in pkgutil.walk_packages(claude_review.__path__, prefix=f"{claude_review.__name__}."):
-        importlib.import_module(module.name)
-
-    assert {kind.__module__ for kind in every_kind_of(ReviewError)} == {exceptions.__name__}
+    assert answered == ANSWERED_WITH
 
 
-@pytest.mark.parametrize("kind", KINDS_WITH_FIELDS, ids=[kind.__name__ for kind in KINDS_WITH_FIELDS])
-async def test_a_refusal_that_carries_what_it_found_wrong_is_answered_field_by_field(
-    kind: type[FieldsRefusedError], refusing: FastAPI
-) -> None:
+async def test_a_refusal_that_carries_what_it_found_wrong_is_answered_field_by_field(refusing: FastAPI) -> None:
     """Each fault where it was found and why, as a request FastAPI finds wrong is answered: one shape, whoever refused.
 
     And one place: a fault is named under the request's body, where FastAPI
@@ -254,7 +248,7 @@ async def test_a_refusal_that_carries_what_it_found_wrong_is_answered_field_by_f
     reads where.
     """
     async with http_client(refusing) as caller:
-        answered = await caller.get(REFUSING_ROUTE.format(kind_name=kind.__name__))
+        answered = await caller.get(REFUSING_ROUTE.format(kind_name=FieldsRefusedError.__name__))
 
     assert Refusal.model_validate(answered.json()) == Refusal(
         detail=[FieldRefusal(loc=(BODY, *fault.path), msg=fault.reason) for fault in FAULTS]

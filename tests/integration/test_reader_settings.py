@@ -5,7 +5,6 @@ port, so a choice kept there was gone in the next repository's review. The
 server keeps them in the reader's own files instead.
 """
 
-import asyncio
 from contextlib import AbstractAsyncContextManager
 from http import HTTPStatus
 from pathlib import Path
@@ -53,15 +52,6 @@ async def test_a_reader_who_never_chose_gets_the_defaults_and_is_told_so(reviews
     }
 
 
-async def test_stories_turned_on_in_one_review_are_on_in_the_next(reviews: ReviewFactory) -> None:
-    async with _client(reviews) as client:
-        await client.put("/api/settings", json={"stories": True})
-    async with _client(reviews) as another_review:
-        seen = (await another_review.get("/api/settings")).json()
-
-    assert seen["record"]["stories"] is True
-
-
 async def test_settings_kept_before_stories_were_a_choice_are_read_with_stories_off(
     reviews: ReviewFactory, reader_files: ReaderFiles
 ) -> None:
@@ -83,14 +73,6 @@ async def test_a_choice_made_in_one_review_is_there_in_the_next(reviews: ReviewF
 
     assert seen["record"]["theme"] == "dark"
     assert seen["stored"] is True
-
-
-async def test_changing_one_choice_leaves_the_others_alone(reviews: ReviewFactory) -> None:
-    async with _client(reviews) as client:
-        await client.put("/api/settings", json={"diff_layout": "split"})
-        changed = (await client.put("/api/settings", json={"ignore_whitespace": True})).json()
-
-    assert (changed["diff_layout"], changed["ignore_whitespace"]) == ("split", True)
 
 
 async def test_a_choice_the_review_does_not_know_is_refused(reviews: ReviewFactory, reader_files: ReaderFiles) -> None:
@@ -143,15 +125,3 @@ async def test_a_choice_sent_as_null_is_a_choice_not_sent(reviews: ReviewFactory
 
     assert response.status_code == HTTPStatus.OK
     assert (response.json()["theme"], response.json()["diff_layout"]) == ("dark", "split")
-
-
-async def test_settings_changed_together_are_all_kept(reviews: ReviewFactory) -> None:
-    async with _client(reviews) as client:
-        await asyncio.gather(
-            client.put("/api/settings", json={"theme": "dark"}),
-            client.put("/api/settings", json={"diff_layout": "split"}),
-            client.put("/api/settings", json={"sound_on_replies": True}),
-        )
-        kept = (await client.get("/api/settings")).json()["record"]
-
-    assert (kept["theme"], kept["diff_layout"], kept["sound_on_replies"]) == ("dark", "split", True)

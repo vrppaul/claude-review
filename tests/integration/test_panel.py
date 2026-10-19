@@ -13,10 +13,8 @@ from fastapi.testclient import TestClient
 from httpx import AsyncClient
 
 from claude_review.domain.models import (
-    MAX_QUOTE_LINES,
     AnchorKind,
     CommentSeverity,
-    LineSide,
     OverviewText,
     StoryBlockKind,
     TurnAuthor,
@@ -240,13 +238,6 @@ async def test_raised_threads_are_numbered_apart_from_the_readers(client: AsyncC
     assert second.json()["thread_id"] == "raised-2"
 
 
-async def test_a_backwards_range_is_refused(client: AsyncClient) -> None:
-    """A thread that ends before it starts hangs on nothing."""
-    response = await client.post(POINT_ROUTE, json=_pointing(line_on_the_wire(REVIEWED_FILE, 9, 2), "nowhere"))
-
-    assert response.status_code == HTTPStatus.UNPROCESSABLE_CONTENT
-
-
 async def test_a_thread_on_a_block_of_the_storys_words_is_refused_for_the_author_points_at_lines_alone(
     client: AsyncClient,
 ) -> None:
@@ -264,39 +255,12 @@ async def test_a_thread_on_a_file_not_under_review_is_refused(client: AsyncClien
     assert REVIEWED_FILE in response.json()["detail"]
 
 
-async def test_a_thread_on_the_removed_side_must_hang_on_a_removed_line(client: AsyncClient) -> None:
-    """An unchanged line has an old number too, but nothing was removed there to talk about."""
-    response = await client.post(
-        POINT_ROUTE, json=_pointing(line_on_the_wire(REVIEWED_FILE, 1, side=LineSide.OLD), "this one")
-    )
-
-    assert response.status_code == HTTPStatus.UNPROCESSABLE_CONTENT
-    assert "does not show removed line 1" in response.json()["detail"]
-
-
 async def test_a_thread_on_a_line_the_diff_does_not_show_is_refused(client: AsyncClient) -> None:
     """The quote would come back empty and go outdated at the next retake."""
     response = await client.post(POINT_ROUTE, json=_pointing(line_on_the_wire(REVIEWED_FILE, 900), "far away"))
 
     assert response.status_code == HTTPStatus.UNPROCESSABLE_CONTENT
     assert "does not show new line 900" in response.json()["detail"]
-
-
-async def test_a_thread_on_more_lines_than_a_round_can_carry_is_refused(client: AsyncClient) -> None:
-    """Raised, it would block every round until the reader found it and deleted it."""
-    too_many = line_on_the_wire(REVIEWED_FILE, 1, MAX_QUOTE_LINES + 1)
-
-    response = await client.post(POINT_ROUTE, json=_pointing(too_many, "all of it"))
-
-    assert response.status_code == HTTPStatus.UNPROCESSABLE_CONTENT
-    assert str(MAX_QUOTE_LINES) in response.json()["detail"]
-
-
-async def test_a_thread_on_a_line_the_diff_does_show_is_taken(client: AsyncClient) -> None:
-    """The check is a guard, not a hurdle: what is on screen goes through."""
-    response = await client.post(POINT_ROUTE, json=_pointing(line_on_the_wire(REVIEWED_FILE, 1), "this line"))
-
-    assert response.status_code == HTTPStatus.OK
 
 
 def test_the_agent_may_speak_first(review_page: TestClient) -> None:

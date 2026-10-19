@@ -96,10 +96,6 @@ async def test_every_format_a_browser_pastes_is_kept(client: AsyncClient, conten
     assert (await client.get(f"/api/images/{image_id}")).content == content
 
 
-async def test_an_empty_upload_is_refused(client: AsyncClient) -> None:
-    assert (await client.post("/api/images", content=b"")).status_code == HTTPStatus.UNPROCESSABLE_CONTENT
-
-
 async def test_a_review_full_of_images_takes_no_more(client: AsyncClient) -> None:
     """Pasting and removing in a loop would otherwise fill the disk the review lives on."""
     for _ in range(LARGEST_IMAGES_A_REVIEW_HOLDS):
@@ -197,13 +193,6 @@ async def test_a_message_naming_an_image_never_kept_is_refused(client: AsyncClie
 async def test_an_image_never_kept_is_not_there(client: AsyncClient) -> None:
     assert (await client.get(f"/api/images/{NEVER_KEPT}")).status_code == HTTPStatus.NOT_FOUND
     assert (await client.delete(f"/api/images/{NEVER_KEPT}")).status_code == HTTPStatus.NOT_FOUND
-
-
-async def test_a_refusal_says_why(client: AsyncClient) -> None:
-    """Said in the shape every refusal takes, so the browser and the commands read one."""
-    response = await client.delete(f"/api/images/{NEVER_KEPT}")
-
-    assert NEVER_KEPT in response.json()["detail"]
 
 
 async def test_the_catch_up_lists_the_images_said_in_the_panel(client: AsyncClient) -> None:

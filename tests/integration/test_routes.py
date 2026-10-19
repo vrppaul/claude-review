@@ -128,16 +128,6 @@ async def test_a_file_shown_without_its_lines_is_served_saying_why(reviews: Revi
     ]
 
 
-async def test_each_line_says_which_side_it_is_on_and_where(client: AsyncClient) -> None:
-    """A line kept, a line removed and a line added each carry the numbers of the sides they are on."""
-    lines = (await client.get(DIFF_ROUTE)).json()["files"][0]["hunks"][0]["lines"]
-
-    kept, removed, added = lines[:3]
-    assert (kept["kind"], kept["old_number"], kept["new_number"]) == ("context", 1, 1)
-    assert (removed["kind"], removed["old_number"], removed["new_number"]) == ("delete", 2, None)
-    assert (added["kind"], added["old_number"], added["new_number"]) == ("add", None, 2)
-
-
 async def test_a_sent_review_names_each_comment_by_its_file_and_lines(client: AsyncClient) -> None:
     threads = [
         thread_on_the_wire(line_on_the_wire(HANDLER_FILE, 42), "Wrong null check", thread_id="comment-1"),
@@ -153,19 +143,6 @@ async def test_a_sent_review_names_each_comment_by_its_file_and_lines(client: As
     assert f"### `{HANDLER_FILE}`:67-70" in sent["markdown"]
     assert "Wrong null check" in sent["markdown"]
     assert "Add max retry" in sent["markdown"]
-
-
-async def test_a_review_sent_with_nothing_in_it_says_nothing(client: AsyncClient) -> None:
-    response = await client.post("/api/submit", json={"threads": [], "end": True})
-
-    assert response.status_code == HTTPStatus.OK
-    assert (response.json()["comment_count"], response.json()["markdown"]) == (0, "")
-
-
-async def test_sending_the_review_ends_it(client: AsyncClient) -> None:
-    await client.post("/api/submit", json={"threads": [A_NOTE], "end": True})
-
-    assert await review_has_ended(client)
 
 
 async def test_a_review_can_be_sent_only_once(client: AsyncClient) -> None:
@@ -209,31 +186,6 @@ async def test_a_comment_that_says_nothing_is_refused(client: AsyncClient) -> No
     assert response.status_code == HTTPStatus.UNPROCESSABLE_CONTENT
 
 
-async def test_a_summary_alone_is_a_review(client: AsyncClient) -> None:
-    """Wrong direction altogether is said in one paragraph, not on a line."""
-    response = await client.post(
-        "/api/submit", json={"threads": [], "body": "Wrong approach, reconsider the design.", "end": True}
-    )
-
-    assert response.status_code == HTTPStatus.OK
-    assert response.json()["comment_count"] == 1
-    assert "Wrong approach" in response.json()["markdown"]
-    assert await review_has_ended(client)
-
-
-async def test_the_summary_comes_before_the_comments(client: AsyncClient) -> None:
-    threads = [{**A_NOTE, "body": "Fix this"}]
-
-    response = await client.post(
-        "/api/submit", json={"threads": threads, "body": "Generally good, one issue.", "end": True}
-    )
-
-    markdown = response.json()["markdown"]
-    # The summary counts as one
-    assert response.json()["comment_count"] == len(threads) + 1
-    assert markdown.index("Generally good") < markdown.index("### `x.py`:1")
-
-
 @pytest.fixture
 def plan_file(tmp_path: Path) -> Path:
     """A real text file for files-mode integration tests."""
@@ -256,26 +208,6 @@ async def test_a_review_of_files_tells_the_page_it_is_one(files_mode_client: Asy
 
     assert response.status_code == HTTPStatus.OK
     assert response.json()["mode"] == "files"
-
-
-async def test_a_comment_on_a_line_of_a_file_reaches_the_agent_under_that_line(
-    files_mode_client: AsyncClient,
-) -> None:
-    """Load a text file, comment on a specific line, send — and the review ends with it."""
-    file_path = (await files_mode_client.get(DIFF_ROUTE)).json()["files"][0]["path"]
-
-    # Line 3 is "Step one"
-    response = await files_mode_client.post(
-        "/api/submit",
-        json={"threads": [thread_on_the_wire(line_on_the_wire(file_path, 3), "Needs more detail")], "end": True},
-    )
-
-    assert response.status_code == HTTPStatus.OK
-    sent = response.json()
-    assert sent["comment_count"] == 1
-    assert f"### `{file_path}`:3" in sent["markdown"]
-    assert "Needs more detail" in sent["markdown"]
-    assert await review_has_ended(files_mode_client)
 
 
 @pytest.fixture

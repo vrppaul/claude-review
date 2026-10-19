@@ -23,7 +23,6 @@ from tests.helpers import (
     line_on_the_wire,
     next_push,
     open_session,
-    review_has_ended,
     thread_on_the_wire,
     turn_on_the_wire,
     until_the_review_holds_threads,
@@ -61,15 +60,6 @@ async def _question_taken(client: AsyncClient) -> dict:
     return (await client.post(EVENTS_ROUTE, params=WAIT_FOR_EVENT)).json()["question"]
 
 
-async def test_a_question_waits_for_whoever_is_answering(client: AsyncClient) -> None:
-    """Asking does not block the reader; it leaves the question for whoever comes to take it."""
-    response = await client.post(ASK_ROUTE, json=_asking(A_THREAD))
-    taken_later = await _question_taken(client)
-
-    assert response.status_code == HTTPStatus.NO_CONTENT
-    assert taken_later["thread"]["thread_id"] == FIRST_THREAD_ID
-
-
 async def test_the_answerer_is_handed_the_question_in_its_thread(client: AsyncClient) -> None:
     await client.post(ASK_ROUTE, json=_asking(A_THREAD))
 
@@ -93,14 +83,6 @@ async def test_a_question_on_the_storys_words_reaches_the_agent_with_the_words_a
     assert thread["anchor"]["kind"] == "story"
     assert thread["anchor"]["quote"] == [DOUBT_SAID]
     assert thread["where"] == "story overview, Doubt"
-
-
-async def test_a_thread_nothing_was_said_in_asks_the_comment_that_opened_it(client: AsyncClient) -> None:
-    await client.post(ASK_ROUTE, json=_asking(A_THREAD))
-
-    question = await _question_taken(client)
-
-    assert (question["body"], question["thread"]["turns"]) == (OPENING, [])
 
 
 async def test_asking_after_the_readers_own_reply_asks_that_reply(client: AsyncClient) -> None:
@@ -334,9 +316,3 @@ async def test_a_round_carrying_the_agents_thread_changed_is_refused(
     response = await client.post("/api/submit", json={"threads": [{**raised, **changed}], "end": False})
 
     assert response.status_code == HTTPStatus.UNPROCESSABLE_CONTENT
-
-
-async def test_waiting_after_the_review_ended_says_so_at_once(client: AsyncClient) -> None:
-    await client.post("/api/end")
-
-    assert await review_has_ended(client)

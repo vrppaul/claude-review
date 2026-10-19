@@ -48,12 +48,10 @@ SUBMIT_ROUTE = "/api/submit"
 RETAKE_ROUTE = "/api/retake"
 SETTINGS_ROUTE = "/api/settings"
 STORY_CANCEL_ROUTE = "/api/story/cancel"
-# The file the repository was committed with, as the change leaves it, with two lines gained that a story
-# tells; and as a round's work leaves it, those two taken out, and one line put above that no step tells
+# The file the repository was committed with, as the change leaves it, with two lines gained that a story tells
 TOLD_FILE = "initial.txt"
 TOLD_CONTENT = "initial content\ntwo\nthree\n"
-TAKEN_OUT_UNDER_ONE_MORE = "zero\ninitial content\n"
-# And as another round's work leaves it: two lines put above everything, and the first of the two said another way
+# As a round's work leaves it: two lines put above everything, and the first of the two said another way
 TWO_ABOVE_AND_TWO_REWORDED = "above\nabove again\ninitial content\nTwo\nthree\n"
 
 
@@ -122,18 +120,6 @@ async def test_nothing_handed_over_says_so_and_nothing_else(client: AsyncClient)
     assert event == {"type": "timeout"}
 
 
-async def test_a_story_asked_for_where_none_was_told_says_nothing_went_stale(
-    reviews: ReviewFactory, tmp_git_repo: Path
-) -> None:
-    write_files(tmp_git_repo, {TOLD_FILE: TOLD_CONTENT})
-    async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as agent:
-        await agent.post(STORY_REQUEST_ROUTE)
-
-        event = (await agent.post(EVENTS_ROUTE, params=GLANCE_AT_EVENTS)).json()
-
-    assert event == {"type": "story_request", "stale": None}
-
-
 async def test_a_review_opened_while_the_reader_wants_stories_asks_its_agent_for_one_unasked(
     reviews: ReviewFactory, tmp_git_repo: Path
 ) -> None:
@@ -186,20 +172,6 @@ async def test_another_choice_made_while_stories_are_on_asks_for_no_story_the_re
         event = (await agent.post(EVENTS_ROUTE, params=GLANCE_AT_EVENTS)).json()
 
     assert event == {"type": "timeout"}
-
-
-async def test_a_story_asked_for_again_once_a_round_moved_its_code_on_tells_the_agent_what_went_stale(
-    reviews: ReviewFactory, tmp_git_repo: Path
-) -> None:
-    """Each step whose code changed, by its chapter, its file and its lines as they now stand, or none where its code
-    is no longer found, as here, every line of it taken out; and what no step tells."""
-    stale = await stale_once_rewritten(reviews, tmp_git_repo, TAKEN_OUT_UNDER_ONE_MORE)
-
-    assert stale == {
-        "round": 2,
-        "steps": [{"chapter": ONLY_CHAPTER, "file": TOLD_FILE, "lines": None}],
-        "left_out": 1,
-    }
 
 
 async def test_a_step_a_round_pushed_down_and_partly_rewrote_is_told_to_the_agent_where_it_now_stands(

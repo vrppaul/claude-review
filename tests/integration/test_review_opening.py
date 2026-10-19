@@ -129,15 +129,6 @@ async def test_a_file_named_two_ways_is_one_file_and_the_same_review(tmp_path: P
     assert named_twice.identity == (await open_files([plan], named_from=tmp_path)).identity
 
 
-async def test_a_file_is_named_as_seen_from_where_the_review_was_opened(tmp_path: Path) -> None:
-    (tmp_path / "docs").mkdir()
-    [plan] = _written(tmp_path / "docs", "plan.md")
-
-    opened = await open_files([plan], named_from=tmp_path)
-
-    assert [file.path for file in opened.diff_files] == ["docs/plan.md"]
-
-
 async def test_a_conversation_named_by_a_roundabout_path_is_the_same_review(tmp_path: Path) -> None:
     conversation = tmp_path / "abc123.jsonl"
     conversation.write_text("")

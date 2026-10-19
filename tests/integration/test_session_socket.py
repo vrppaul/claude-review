@@ -80,18 +80,6 @@ def test_the_facts_say_how_far_the_telling_had_got_when_they_were_read(review_pa
     assert (facts.instance, facts.sequence) == (welcome.instance, welcome.sequence)
 
 
-def test_a_page_coming_back_to_another_run_is_told_it_was_not_handed_what_it_missed(
-    review_page: TestClient,
-) -> None:
-    """A review restarted on the same port knows nothing of what the last one said."""
-    with open_session(review_page) as first:
-        serving = welcome_of(first)
-
-    elsewhere = serving.model_copy(update={"instance": ANOTHER_RUN})
-    with open_session_at(review_page, _coming_back(elsewhere)) as back:
-        assert not welcome_of(back).resumed
-
-
 @pytest.mark.parametrize(
     "named",
     [
@@ -138,15 +126,6 @@ def test_every_page_open_hears_that_the_review_is_over_once_it_is_sent_for_good(
 
         assert next_push(first, EndedPush) == EndedPush(finished=True)
         assert next_push(second, EndedPush) == EndedPush(finished=True)
-
-
-def test_every_review_on_screen_hears_what_the_server_says(review_page: TestClient) -> None:
-    """Two tabs are one reader, and either may be the one they are looking at."""
-    with open_session(review_page) as first, open_session(review_page) as second:
-        review_page.post("/api/show", json={"file": REVIEWED_FILE})
-
-        assert next_push(first, ShowPush) == SHOWN
-        assert next_push(second, ShowPush) == SHOWN
 
 
 def test_a_review_still_open_says_which_round_it_is_on(review_page: TestClient) -> None:

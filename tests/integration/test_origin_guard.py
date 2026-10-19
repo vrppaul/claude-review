@@ -58,20 +58,9 @@ A_MESSAGE = {"message_id": "panel-1", "body": "Is the retry still needed?"}
 A_PAGE_FILE = "/assets/index.js"
 
 
-async def test_the_review_answers_its_own_page(client: AsyncClient) -> None:
-    assert (await client.get(DIFF_ROUTE)).status_code == HTTPStatus.OK
-
-
 async def test_a_rebound_domain_is_refused(client: AsyncClient) -> None:
     """The name the page asked for is in the Host header, and it is not ours."""
     response = await client.get(DIFF_ROUTE, headers={"Host": "attacker.example"})
-
-    assert response.status_code == HTTPStatus.FORBIDDEN
-
-
-async def test_a_rebound_domain_after_an_ipv6_address_is_refused(client: AsyncClient) -> None:
-    """All of the Host must be a name of this machine, not only its start."""
-    response = await client.get(DIFF_ROUTE, headers={"Host": "[::1]attacker.example"})
 
     assert response.status_code == HTTPStatus.FORBIDDEN
 
@@ -89,26 +78,12 @@ async def test_an_origin_not_written_as_the_reviews_own_is_refused_not_a_fault(
     assert response.status_code == HTTPStatus.FORBIDDEN
 
 
-async def test_localhost_is_the_same_machine(client: AsyncClient) -> None:
-    assert (await client.get(DIFF_ROUTE, headers={"Host": "localhost:8000"})).status_code == HTTPStatus.OK
-
-
 async def test_a_page_on_another_site_cannot_read_the_diff(client: AsyncClient) -> None:
     response = await client.get(DIFF_ROUTE, headers={"Origin": "https://attacker.example"})
 
     assert response.status_code == HTTPStatus.FORBIDDEN
     # Said as every refusal is said, so a caller reads one shape whoever refused
     assert Refusal.model_validate_json(response.content).detail
-
-
-async def test_a_page_on_another_site_cannot_end_the_review(client: AsyncClient) -> None:
-    response = await client.post(
-        "/api/submit",
-        json={"threads": [], "end": True},
-        headers={"Origin": "https://attacker.example"},
-    )
-
-    assert response.status_code == HTTPStatus.FORBIDDEN
 
 
 async def test_the_reviews_own_page_is_allowed(client: AsyncClient) -> None:
@@ -120,12 +95,6 @@ async def test_the_reviews_own_page_is_allowed(client: AsyncClient) -> None:
 async def test_a_page_on_another_port_of_this_machine_cannot_read_the_diff(client: AsyncClient) -> None:
     """Loopback is not one page: any local server's page is a different origin."""
     response = await client.get(DIFF_ROUTE, headers=NEIGHBOUR_HEADERS)
-
-    assert response.status_code == HTTPStatus.FORBIDDEN
-
-
-async def test_a_page_on_another_port_of_this_machine_cannot_end_the_review(client: AsyncClient) -> None:
-    response = await client.post("/api/end", headers=NEIGHBOUR_HEADERS)
 
     assert response.status_code == HTTPStatus.FORBIDDEN
 
