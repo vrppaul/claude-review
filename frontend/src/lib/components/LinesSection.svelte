@@ -26,7 +26,7 @@
 		class: ClassValue;
 		/** What its view says before the header, inside the section: the number and reason of a story's step. */
 		above?: Snippet | undefined;
-		/** Its header, a `SectionHeader`: the file's name, and what its view says and offers beside it. */
+		/** Its header, a section's `Bar` (lib/ui): the file's name, and what its view says and offers beside it.*/
 		header: Snippet;
 	}
 

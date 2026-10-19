@@ -3,11 +3,11 @@
 	import { useReview } from '$lib/review/context';
 	import { threadsOnThePiece } from '$lib/review/story-reading';
 	import type { DiffFile } from '$lib/types';
+	import Bar from '$lib/ui/Bar.svelte';
 	import { languageOf } from '$lib/utils/highlight';
 	import { type Extent, linesView, type PieceShows } from './file-drawing.svelte';
 	import FileTitle from './FileTitle.svelte';
 	import LinesSection from './LinesSection.svelte';
-	import SectionHeader from './SectionHeader.svelte';
 
 	interface Props {
 		/** What the piece's section is known by among those the story draws. */
@@ -55,11 +55,11 @@
 	{above}
 >
 	{#snippet header()}
-		<SectionHeader testId="story-piece-header">
+		<Bar heads="section" testId="story-piece-header">
 			{@render numbered?.()}
 			<FileTitle file={piece} element={fileNamed} testId="piece-file" showsChange {threads} {beside} />
 			<div class="flex-1"></div>
 			{@render atFarEnd?.()}
-		</SectionHeader>
+		</Bar>
 	{/snippet}
 </LinesSection>

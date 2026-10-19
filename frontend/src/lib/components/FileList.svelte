@@ -5,6 +5,7 @@
 	import { isComposingText } from '$lib/dom/keyboard';
 	import { formerName } from '$lib/utils/paths';
 	import { counted, type CountedWords, FILES } from '$lib/utils/words';
+	import { tourStop } from '$lib/guide/tour';
 	import { useReview } from '$lib/review/context';
 	import { fileSectionKey } from '$lib/review/reading-view';
 	import Dot from '$lib/ui/Dot.svelte';
@@ -13,9 +14,9 @@
 	import Heading from '$lib/ui/Heading.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import Row from '$lib/ui/Row.svelte';
+	import SideColumn from '$lib/ui/SideColumn.svelte';
 	import ChangedLines from './ChangedLines.svelte';
 	import FileRow from './FileRow.svelte';
-	import SideColumn from './SideColumn.svelte';
 
 	/** What the tree lists, in words: counted in its heading, looked for in its filter. */
 	interface Listed extends CountedWords {
@@ -138,8 +139,7 @@
 	landmark="aside"
 	label="Files"
 	called="the file tree"
-	tour="file-tree"
-	class="bg-base-100"
+	data-tour={tourStop('file-tree')}
 	testIds={{
 		column: 'sidebar',
 		head: 'sidebar-head',

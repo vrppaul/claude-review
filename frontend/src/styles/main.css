@@ -342,29 +342,9 @@
 [data-role='kept-in-sight'] {
 	position: sticky;
 }
-/*
- * A file's name and controls, kept in sight while its rows scroll under
- * them: at the top of the area, or under what stands over the top of the
- * area where the file is drawn, which says how much room it takes
- * (--cr-top-room)
- */
-.cr-file-header {
-	top: var(--cr-top-room, 0);
-	z-index: var(--cr-layer-over-content);
-}
 /* A section the reader is taken to lands under what stands over the area too, not behind it */
 .cr-lines-section {
 	scroll-margin-top: var(--cr-top-room, 0);
-}
-
-/*
- * What the reader has finished with steps back, in faint words that still
- * read at 4.5:1, where fading it whole took them below: a file's header. A
- * row steps back so in the library's own stylesheet (lib/ui Row), a
- * comment sent with a round among them
- */
-.cr-viewed {
-	color: var(--cr-faint);
 }
 
 /* A gap between hunks is a control, not a caption */
@@ -562,42 +542,6 @@
 	color: var(--cr-add-text);
 }
 
-/*
- * The agent panel: the conversation about everything a thread is not.
- *
- * It takes the right edge and the diff keeps the rest, because what is
- * being discussed has to stay on screen. The reader's turns stand on the
- * mark's tint, by its edge; the agent's answers, and its work while it does
- * it, on a card.
- */
-.cr-panel {
-	position: relative;
-	flex-shrink: 1;
-	width: var(--cr-panel-width);
-	min-width: var(--cr-panel-least-width);
-	background: var(--color-base-100);
-}
-/* A column's edge, there to be dragged: the panel's on its left, the side column's on its right, centred on it */
-.cr-grip {
-	position: absolute;
-	inset-block: 0;
-	width: var(--cr-grip-width);
-	cursor: col-resize;
-	z-index: var(--cr-layer-over-content);
-}
-.cr-grip-left {
-	left: calc(var(--cr-grip-width) / -2);
-}
-.cr-grip-right {
-	right: calc(var(--cr-grip-width) / -2);
-}
-/*
- * A target this thin needs more than the pointer's light to be found under
- * it: it shows itself in the colour of the selected edge, at 3:1 on any surface
- */
-.cr-grip:hover {
-	background-color: var(--cr-selected-edge);
-}
 /* An image in the panel, a square of the thumbnail's size */
 .cr-image-thumb {
 	width: var(--cr-image-thumb);
@@ -723,14 +667,6 @@
 		outline-color: transparent;
 		background: transparent;
 	}
-}
-
-/* The side column: a column beside what is read, the tree of files or a story's contents, as wide as the reader left it */
-.cr-side-column {
-	position: relative;
-	flex-shrink: 1;
-	width: var(--cr-side-column-width);
-	min-width: var(--cr-side-column-least-width);
 }
 
 /*
@@ -1235,26 +1171,6 @@
 	min-width: min(var(--cr-diff-least-width), 100% - var(--cr-side-column-rail-width));
 	/* stylelint-disable-next-line declaration-property-value-disallowed-list -- the reading area, the box of what is read */
 	overflow: auto;
-}
-@media (width < theme(--breakpoint-cr-panel-beside)) {
-	.cr-panel {
-		position: absolute;
-		inset-block: 0;
-		right: 0;
-		max-width: 100%;
-		z-index: var(--cr-layer-column);
-		box-shadow: var(--cr-shadow-raised);
-	}
-}
-@media (width < theme(--breakpoint-cr-side-column-beside)) {
-	.cr-side-column {
-		position: absolute;
-		inset-block: 0;
-		left: 0;
-		max-width: 100%;
-		z-index: var(--cr-layer-column);
-		box-shadow: var(--cr-shadow-raised);
-	}
 }
 
 /*

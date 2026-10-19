@@ -554,19 +554,113 @@
 }
 
 /*
- * The bar a column beside what is read is headed by (ColumnBar): the side
- * column's and the agent panel's, as tall as a small button with room
- * round it, on a raised ground, ruled off from what scrolls under it
+ * A bar across the top of what it heads (Bar): on a raised ground, ruled off
+ * from what is under it. The review's, at least as tall as a row of its
+ * controls and wrapping them onto another on a narrow screen; a section's,
+ * kept in sight as the lines under it scroll, at the top of the area or
+ * under what stands over the top of it where the section is drawn, which
+ * says how much room that takes (--cr-top-room), and stepping back once the
+ * reader is done with its file; a column's, as tall as a small button with
+ * room round it.
  */
-.cr-ui-column-bar {
+.cr-ui-bar {
 	display: flex;
 	flex-shrink: 0;
 	align-items: center;
+	border-bottom: var(--cr-line) solid var(--color-base-300);
+	background: var(--color-base-200);
+}
+.cr-ui-bar-page {
+	flex-wrap: wrap;
+	gap: --spacing(1.5) --spacing(3);
+	min-height: var(--cr-header-least-height);
+	padding: --spacing(1.5) --spacing(4);
+}
+.cr-ui-bar-section {
+	top: var(--cr-top-room, 0);
+	z-index: var(--cr-layer-over-content);
+	flex-wrap: wrap;
+	gap: --spacing(1) --spacing(3);
+	padding: --spacing(2) --spacing(3);
+}
+.cr-ui-bar-column {
 	gap: --spacing(2);
 	min-height: calc(var(--cr-button-xs) + --spacing(3));
 	padding-inline: --spacing(3);
-	border-bottom: var(--cr-line) solid var(--color-base-300);
-	background: var(--color-base-200);
+}
+.cr-ui-bar-viewed {
+	color: var(--cr-faint);
+}
+
+/*
+ * A column beside what is read (Column, lib/ui/column.ts): as wide as the
+ * reader left it, giving up width to what is read down to the least it reads
+ * at, on the page's own ground and ruled off from what is read; what the
+ * reader writes in it at its foot. On a screen too narrow to keep it beside
+ * what is read, it lies over that instead, at the breakpoints of tokens.css
+ */
+.cr-ui-column {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	flex-shrink: 1;
+	min-height: 0;
+	width: var(--cr-column-width);
+	background: var(--color-base-100);
+}
+.cr-ui-column-left {
+	min-width: var(--cr-side-column-least-width);
+	border-right: var(--cr-line) solid var(--color-base-300);
+}
+.cr-ui-column-right {
+	min-width: var(--cr-panel-least-width);
+	border-left: var(--cr-line) solid var(--color-base-300);
+}
+.cr-ui-column-foot {
+	flex-shrink: 0;
+	padding: --spacing(2) --spacing(3);
+	border-top: var(--cr-line) solid var(--color-base-300);
+}
+@media (width < theme(--breakpoint-cr-side-column-beside)) {
+	.cr-ui-column-left {
+		position: absolute;
+		inset-block: 0;
+		left: 0;
+		max-width: 100%;
+		z-index: var(--cr-layer-column);
+		box-shadow: var(--cr-shadow-raised);
+	}
+}
+@media (width < theme(--breakpoint-cr-panel-beside)) {
+	.cr-ui-column-right {
+		position: absolute;
+		inset-block: 0;
+		right: 0;
+		max-width: 100%;
+		z-index: var(--cr-layer-column);
+		box-shadow: var(--cr-shadow-raised);
+	}
+}
+/* A column's edge, there to be dragged (EdgeGrip): on the edge the column grows towards, centred on it */
+.cr-ui-grip {
+	position: absolute;
+	inset-block: 0;
+	width: var(--cr-grip-width);
+	cursor: col-resize;
+	z-index: var(--cr-layer-over-content);
+}
+.cr-ui-grip-left {
+	left: calc(var(--cr-grip-width) / -2);
+}
+.cr-ui-grip-right {
+	right: calc(var(--cr-grip-width) / -2);
+}
+/*
+ * A target this thin needs more than the pointer's light to be found under
+ * it: it shows itself in the colour of the selected edge, at 3:1 on any surface
+ */
+.cr-ui-grip:hover {
+	background-color: var(--cr-selected-edge);
 }
 
 /*

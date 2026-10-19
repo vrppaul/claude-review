@@ -209,9 +209,7 @@ of it is built yet.
 
 - [ ] `refactor(ui)`: the kinds the page still draws outside the library,
       each to become a part of it with its rule (`.claude/rules/page.md`):
-      a column beside what is read, drawn two ways (SideColumn, the agent's
-      panel); the bars across the page, a file and the panel (ReviewHeader,
-      SectionHeader, PanelStatus); an image's thumbnail (`.cr-image-*`); a
+      an image's thumbnail (`.cr-image-*`); a
       turn's avatar (`.cr-avatar`); a link in rendered text, drawn by the
       typography plugin; and the folds, a `<details>` and a folded thread's
       line.

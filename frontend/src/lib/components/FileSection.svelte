@@ -5,6 +5,7 @@
 	import { isRenderable } from '$lib/utils/renderable';
 	import { useReview } from '$lib/review/context';
 	import { fileSectionKey } from '$lib/review/reading-view';
+	import Bar from '$lib/ui/Bar.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import Checkbox from '$lib/ui/Checkbox.svelte';
 	import Failure from '$lib/ui/Failure.svelte';
@@ -13,7 +14,6 @@
 	import FileTitle from './FileTitle.svelte';
 	import { type Extent, type FileView, linesView } from './file-drawing.svelte';
 	import LinesSection from './LinesSection.svelte';
-	import SectionHeader from './SectionHeader.svelte';
 
 	interface Props {
 		file: DiffFile;
@@ -73,7 +73,7 @@
 	class="border-b border-base-300"
 >
 	{#snippet header()}
-		<SectionHeader testId="file-header" class={{ 'cr-viewed': viewed }}>
+		<Bar heads="section" {viewed} testId="file-header">
 			<!-- A heading each, so a file can be reached by its name as well as scrolled to -->
 			<FileTitle {file} element="h2" testId="file-heading" showsChange={isDiffMode} threads={commentCount}>
 				{#snippet beside()}
@@ -118,6 +118,6 @@
 				tone="quiet"
 				onToggle={() => review.reading.toggleFolded(file.path)}
 			/>
-		</SectionHeader>
+		</Bar>
 	{/snippet}
 </LinesSection>

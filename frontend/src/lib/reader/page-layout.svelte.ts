@@ -99,7 +99,7 @@ class StoredWidth {
  * A column beside what is read, which the reader puts away and brings back:
  * on screen or not, and how wide.
  */
-export class PutAwayColumn {
+class PutAwayColumn {
 	readonly #openKey: string;
 	#open: boolean;
 	readonly #width: StoredWidth;

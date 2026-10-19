@@ -2,7 +2,7 @@
 	import { focusWhatCarries } from '$lib/dom/keyboard';
 	import { formatWeight } from '$lib/review/weight';
 	import { useReview } from '$lib/review/context';
-	import ColumnBar from '$lib/ui/ColumnBar.svelte';
+	import Bar from '$lib/ui/Bar.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import IconButton from '$lib/ui/IconButton.svelte';
 	import Tag from '$lib/ui/Tag.svelte';
@@ -38,7 +38,7 @@
 	}
 </script>
 
-<ColumnBar testId="panel-status">
+<Bar heads="column" testId="panel-status">
 	<PresenceDot />
 	<span class={['text-sm font-semibold', !attached && 'cr-muted']}>
 		{attached ? 'Agent' : 'Waiting for the agent'}
@@ -60,7 +60,7 @@
 	<IconButton tone="quiet" size="xs" label="Hide the agent panel" testId="close-panel" onclick={putAway}>
 		<Icon name="chevron" size="xs" pointing="right" />
 	</IconButton>
-</ColumnBar>
+</Bar>
 
 <!-- Two numbers, told apart: one this side measures, one the agent reports -->
 <div class="flex shrink-0 flex-wrap items-center gap-2 border-b border-base-300 px-3 py-1.5">

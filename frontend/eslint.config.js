@@ -425,15 +425,11 @@ const NO_ROWS_OF_ITS_OWN = [
 ];
 // An element handed its kind can be one that is pressed, past every rule that reads an element as it is written:
 // `<svelte:element this={ELEMENT}>` draws a button where ELEMENT is 'button', and `this="kbd"` a key. So outside
-// the library `<svelte:element>` is refused, but in the components handed the element they draw by a prop whose type
-// names only elements that are not pressed, which no rule here can read
+// the library `<svelte:element>` is refused; inside it, a part handed the element it draws (a heading's level, a
+// column's landmark) names only elements that are not pressed, by a type no rule here can read
 const ELEMENT_AS_WRITTEN = 'Write the element as it is: one handed its kind can be one that is pressed.';
 const NO_ELEMENTS_HANDED_THEIR_KIND = [
 	{ selector: "SvelteElement[kind='special'][name.name='svelte:element']", message: ELEMENT_AS_WRITTEN }
-];
-const HANDED_THEIR_ELEMENT = [
-	// A column beside what is read: the landmark it is, the tree's aside or a story's contents' nav
-	'src/lib/components/SideColumn.svelte'
 ];
 // The components that still draw a <button> of their own, each with the part that is to take it or why it is the
 // page's: each is let off the rule that refuses one, and nothing else is
@@ -545,6 +541,21 @@ const NO_FAILURES_OF_ITS_OWN = [
 	{ selector: `TemplateElement[value.raw=${THE_COLOUR_OF_FAILING}]`, message: FAILED_IN_THE_LIBRARY }
 ];
 
+// A bar across what it heads is drawn by the library (Bar), and nothing outside it draws one: the page drew the
+// review's header and a file section's as two of its own, beside the library's bar of a column, at two rooms. A bar
+// drawn anew is a raised ground ruled off above or below, so the raised ground and a rule among the classes of one
+// element are refused outside the library
+const DRAWN_AS_A_BAR =
+	'Draw a bar across what it heads with lib/ui Bar, not with a raised ground and a rule of its own.';
+const A_RAISED_GROUND = '/(^|\\s)([^\\s:]+:)*bg-base-200(\\s|$)/';
+const A_RULE_ACROSS = '/(^|\\s)([^\\s:]+:)*border-[bty](\\s|$)/';
+const NO_BARS_OF_ITS_OWN = [
+	{
+		selector: `SvelteStartTag:has(${amongItsClasses(A_RAISED_GROUND)}):has(${amongItsClasses(A_RULE_ACROSS)})`,
+		message: DRAWN_AS_A_BAR
+	}
+];
+
 // What a component outside the library is refused: drawing a part of the library its own way
 const DRAWN_BY_THE_LIBRARY_ALONE = [
 	...NO_DAISY_COMPONENTS,
@@ -555,6 +566,7 @@ const DRAWN_BY_THE_LIBRARY_ALONE = [
 	...NO_MARKS_OF_ITS_OWN,
 	...NO_ROWS_OF_ITS_OWN,
 	...NO_FIELDS_OF_ITS_OWN,
+	...NO_BARS_OF_ITS_OWN,
 	...NO_HEADINGS_OF_ITS_OWN,
 	...NO_BANDS_OF_ITS_OWN,
 	...NO_FAILURES_OF_ITS_OWN,
@@ -830,11 +842,6 @@ export default tseslint.config(
 		rules: {
 			'no-restricted-syntax': refusedSyntax(NO_PAGE_LOOKUPS, DRAWN_BY_THE_LIBRARY_ALONE, NO_ELEMENTS_HANDED_THEIR_KIND)
 		}
-	},
-	{
-		// A component handed the element it draws, by a prop that names only elements not pressed, draws it as handed
-		files: HANDED_THEIR_ELEMENT,
-		rules: { 'no-restricted-syntax': refusedSyntax(NO_PAGE_LOOKUPS, NO_CHOOSING, DRAWN_BY_THE_LIBRARY_ALONE) }
 	},
 	{
 		// The library draws its parts with its own classes, and takes no look from outside

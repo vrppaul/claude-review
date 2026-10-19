@@ -1,14 +1,12 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import type { ClassValue } from 'svelte/elements';
 	import { focusWhatRemains } from '$lib/dom/keyboard';
-	import type { TourTarget } from '$lib/guide/tour';
-	import type { PutAwayColumn } from '$lib/reader/page-layout.svelte';
-	import ColumnBar from '$lib/ui/ColumnBar.svelte';
-	import ColumnRail from '$lib/ui/ColumnRail.svelte';
-	import EdgeGrip from '$lib/ui/EdgeGrip.svelte';
-	import Icon from '$lib/ui/Icon.svelte';
-	import IconButton from '$lib/ui/IconButton.svelte';
+	import Bar from './Bar.svelte';
+	import Column from './Column.svelte';
+	import type { PutAway } from './column';
+	import ColumnRail from './ColumnRail.svelte';
+	import Icon from './Icon.svelte';
+	import IconButton from './IconButton.svelte';
 
 	/** What the tests know each part of the column by, written whole where the column is drawn. */
 	interface TestIds {
@@ -21,24 +19,22 @@
 
 	interface Props {
 		/** Whether the column is on screen, and how wide the reader left it. */
-		column: PutAwayColumn;
+		column: PutAway;
 		/** What the column is to whoever goes through the page by its parts: something beside what is read, or a way through it. */
 		landmark: 'aside' | 'nav';
 		/** What that part of the page is called: "Files". */
 		label: string;
 		/** What its own controls call it: "the file tree". */
 		called: string;
-		/** The name the tour lights it by, on screen or put away, where the tour stops at it. */
-		tour?: TourTarget;
-		/** The ground it stands on. */
-		class: ClassValue;
+		/** The name the tour lights it by, on screen or put away, written with lib/guide/tour.ts's tourStop. */
+		'data-tour'?: string | undefined;
 		testIds: TestIds;
 		/** What heads the column, beside the way to put it away. */
 		heading: Snippet;
 		children: Snippet;
 	}
 
-	let { column, landmark, label, called, tour, class: ground, testIds, heading, children }: Props = $props();
+	let { column, landmark, label, called, 'data-tour': tour, testIds, heading, children }: Props = $props();
 
 	const putAway = $derived(`Put ${called} away`);
 	const bringBack = $derived(`Bring ${called} back`);
@@ -58,21 +54,20 @@
 	});
 </script>
 
-<!-- A column beside what is read: as wide as the reader left it, scrolling by itself, and put away
-	to a rail where it stood, so the way back is where it went -->
+<!-- A column on the left of what is read, scrolling by itself, and put away to a rail where it stood, so the
+	way back is where it went -->
 {#if column.open}
-	<svelte:element
-		this={landmark}
-		bind:this={columnElement}
-		data-testid={testIds.column}
+	<Column
+		bind:element={columnElement}
+		side="left"
+		width={column}
+		{landmark}
+		{label}
+		resizing="Resize {called}"
+		testIds={{ column: testIds.column, resize: testIds.resize }}
 		data-tour={tour}
-		aria-label={label}
-		class={['cr-side-column flex flex-col border-r border-base-300', ground]}
-		style:--cr-side-column-width="{column.width}px"
 	>
-		<!-- The column is on the left, so it grows rightward -->
-		<EdgeGrip {column} grows="right" label="Resize {called}" testId={testIds.resize} />
-		<ColumnBar testId={testIds.head}>
+		<Bar heads="column" testId={testIds.head}>
 			{@render heading()}
 			<div class="flex-1"></div>
 			<IconButton
@@ -85,11 +80,11 @@
 			>
 				<Icon name="chevron" size="xs" pointing="left" />
 			</IconButton>
-		</ColumnBar>
+		</Bar>
 		<div class="cr-scroller min-h-0 flex-1 p-3">
 			{@render children()}
 		</div>
-	</svelte:element>
+	</Column>
 {:else}
 	<ColumnRail
 		bind:element={rail}

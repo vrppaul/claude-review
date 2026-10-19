@@ -223,6 +223,15 @@
   to the tour's stops, or handed to a component whose prop is typed so:
   two of the eleven written were held before, and eslint refuses one
   written bare.
+- **One column and one bar.** The tree of files, a story's contents and
+  the agent's panel stand in one column of the library: as wide as the
+  reader left it, sized by its grip on the edge facing what is read, on
+  the page's own ground, and lying over what is read on a screen too
+  narrow to keep it beside; the panel's field to write in stands at its
+  foot. The review's header, a file's and a story piece's, and a column's
+  are one bar, at its room for each; a file's bar steps back once the file
+  is viewed. eslint refuses a raised ground ruled off above or below
+  drawn outside the library.
 - **Every size is taken off one scale.** Room between things is one of
   nine steps from 0 to 32 pixels, words one of a few sizes in two weights
   at their size's own leading, a line 1 or 2 pixels, a corner a field's or

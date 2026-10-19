@@ -2,7 +2,7 @@
 	import { dragEdge, stepEdge, type ColumnWidth, type Grows } from '$lib/dom/resize';
 
 	// Which edge of the column the grip sits on: the one the column grows towards
-	const EDGES: Record<Grows, string> = { left: 'cr-grip-left', right: 'cr-grip-right' };
+	const EDGES: Record<Grows, string> = { left: 'cr-ui-grip-left', right: 'cr-ui-grip-right' };
 
 	interface Props {
 		/** The column the grip sizes. */
@@ -23,7 +23,7 @@
 	role="separator"
 	tabindex="0"
 	data-testid={testId}
-	class={['cr-grip', EDGES[grows]]}
+	class={['cr-ui-grip', EDGES[grows]]}
 	aria-label={label}
 	aria-orientation="vertical"
 	aria-valuenow={column.width}

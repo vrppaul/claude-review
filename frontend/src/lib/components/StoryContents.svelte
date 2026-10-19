@@ -11,12 +11,12 @@
 	import Dot from '$lib/ui/Dot.svelte';
 	import Heading from '$lib/ui/Heading.svelte';
 	import Row from '$lib/ui/Row.svelte';
+	import SideColumn from '$lib/ui/SideColumn.svelte';
 	import { fileStats } from '$lib/utils/file-stats';
 	import { fileName } from '$lib/utils/paths';
 	import ChangedLines from './ChangedLines.svelte';
 	import ContentsEntry from './ContentsEntry.svelte';
 	import FileRow from './FileRow.svelte';
-	import SideColumn from './SideColumn.svelte';
 	import {
 		alsoInShort,
 		chapterEntitled,
@@ -55,7 +55,6 @@
 		landmark="nav"
 		label="Story contents"
 		called="the contents"
-		class="bg-base-100"
 		testIds={{
 			column: 'contents',
 			head: 'contents-head',

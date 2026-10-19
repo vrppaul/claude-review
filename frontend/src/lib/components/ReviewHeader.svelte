@@ -2,6 +2,7 @@
 	import { tourStop } from '$lib/guide/tour';
 	import { useReview } from '$lib/review/context';
 	import type { Ending } from '$lib/review/server-link.svelte';
+	import Bar from '$lib/ui/Bar.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import Dot from '$lib/ui/Dot.svelte';
 	import Failure from '$lib/ui/Failure.svelte';
@@ -60,10 +61,7 @@
 	<NoticeBar tone={over.tone} icon={over.icon} testId={over.testId}>{over.said}</NoticeBar>
 {:else}
 	<!-- One row while it fits; on a narrow screen the controls wrap onto another, none cut off -->
-	<header
-		data-testid="top-bar"
-		class="flex min-h-(--cr-header-least-height) shrink-0 flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-base-300 bg-base-200 px-4 py-1.5"
-	>
+	<Bar heads="page" testId="top-bar">
 		<span class="font-semibold">Review</span>
 		<HelpMenu />
 		<!-- Right after Help, where it never moves, whatever else the header shows -->
@@ -158,7 +156,7 @@
 		<FinishReview />
 
 		<SettingsMenu />
-	</header>
+	</Bar>
 	{#if review.link.state === 'reconnecting'}
 		<!-- Not over until the review says so: the page tries again, and holds every send meanwhile -->
 		<NoticeBar tone="warning" icon="notice" testId="connection-lost">
