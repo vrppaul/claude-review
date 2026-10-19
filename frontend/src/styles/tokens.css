@@ -51,9 +51,9 @@
 	/* A suggested line's sign, + or −: a little over a character of the code wide, half a character before it */
 	--cr-sign-width: 1.25ch;
 	--cr-sign-gap: 0.5ch;
-	/* The columns a row of the diff stands in beside its code: a line's number, and the row's sign, + or − */
+	/* The columns beside a row of code: its line's number, and in a diff its sign, + or − */
 	--cr-line-number-width: 3rem;
-	--cr-sign-column-width: 1rem;
+	--cr-diff-sign-width: 1rem;
 	/*
 	 * What a section of a file's lines takes up, beside its rows, before they
 	 * are drawn: what each of its parts is as tall as, set here once, which
@@ -152,6 +152,13 @@
 	--cr-list-row-room: --spacing(2);
 	--cr-list-row-gap: --spacing(2);
 	--cr-list-row-indent: --spacing(3);
+	/*
+	 * The slot a row keeps before its words for a mark, drawn or not, so its
+	 * words stand in line with every other row's: a dot, and a small mark (a
+	 * file's status letter, the check of the base in force)
+	 */
+	--cr-row-dot-slot: 0.5rem;
+	--cr-row-mark-slot: 0.75rem;
 
 	/*
 	 * How wide a pane is drawn (lib/ui/pane.ts): one of rows — controls,
@@ -178,6 +185,10 @@
 	 * line under it. What is read under it stands that far down.
 	 */
 	--cr-chapter-bar-height: calc(var(--cr-button-sm) + --spacing(4) + var(--cr-line));
+	/* The review's header at its least: one row of its controls, which wraps onto more on a narrow screen */
+	--cr-header-least-height: 3rem;
+	/* How wide the page says, alone on it, that the review could not open */
+	--cr-failure-width: 28rem;
 
 	/*
 	 * Whatever breathes while the agent works on it — a dot (lib/ui Dot), a
@@ -190,13 +201,6 @@
 	--cr-breath-turn: 0.18s;
 	/* How far across a dot (lib/ui Dot) is */
 	--cr-dot-size: 0.375rem;
-	/*
-	 * The room a row of a list keeps before its words for a mark, drawn or
-	 * not, so its words stand in line with every other row's: a dot; and a
-	 * small mark, a file's status letter or the check of the base in force
-	 */
-	--cr-dot-room: 0.5rem;
-	--cr-mark-room: 0.75rem;
 	/* How long what arrives stays marked before it fades: an answer landing, a file the agent brings the reader to */
 	--cr-arrival: 2s;
 	/* How the tour's light glides from one step to the next: fast away, slowing as it lands */
@@ -335,8 +339,6 @@
 	--cr-panel-least-width: 17.5rem;
 	/* What a side column put away leaves standing beside the diff, at every width */
 	--cr-side-column-rail-width: 1.5rem;
-	/* The review's header at its least: one row of its controls, which wraps onto more on a narrow screen */
-	--cr-header-least-height: 3rem;
 	/* A column's edge, there to be dragged: a target as wide as this, centred on the edge */
 	--cr-grip-width: 0.375rem;
 	/* An image the reader pasted into the panel: small enough to keep the words beside it in view */

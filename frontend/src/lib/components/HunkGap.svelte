@@ -8,6 +8,11 @@
 	import { counted, type CountedWords } from '$lib/utils/words';
 	import type { FileDrawing } from './file-drawing.svelte';
 
+	// What the lines a gap hides are called, counted, where they may be read in; and what is said below the last
+	// hunk of a file whose length the diff does not tell
+	const HIDDEN_LINES: CountedWords = { one: 'hidden line', many: 'hidden lines' };
+	const MAY_GO_ON_BELOW = 'The file may go on below';
+
 	interface Props {
 		/** What the diff left out above a hunk, between two, or below the last. */
 		gap: ContextGap;
@@ -36,9 +41,7 @@
 	// of a file; null where the lines may be read in instead, and the gap
 	// then says how many it hides, as far as that is known
 	const onlySaid = $derived(drawing.saidOfAGap);
-	// What the lines a gap hides are called, counted, where they may be read in
-	const HIDDEN_LINES: CountedWords = { one: 'hidden line', many: 'hidden lines' };
-	const hiddenLines = $derived(hidden === null ? 'The file may go on below' : counted(hidden, HIDDEN_LINES));
+	const hiddenLines = $derived(hidden === null ? MAY_GO_ON_BELOW : counted(hidden, HIDDEN_LINES));
 
 	/**
 	 * Read lines into the gap. The button pressed keeps the keyboard while

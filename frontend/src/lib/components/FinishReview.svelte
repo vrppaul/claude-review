@@ -15,6 +15,9 @@
 	import { severityTone } from './severity-tone';
 	import SuggestionDiff from './SuggestionDiff.svelte';
 
+	// What the comments still open in their fields are said to do, counted
+	const OPEN_COMMENTS_GOING: CountedWords = { one: 'comment still open goes', many: 'comments still open go' };
+
 	const review = useReview();
 
 	const submission = review.submission;
@@ -24,8 +27,6 @@
 	const unsent = $derived(review.threads.unsent.length);
 	// Comments still open in their fields, which go with whatever is sent
 	const open = $derived(review.threads.open);
-	// What those comments are said to do, counted
-	const OPEN_COMMENTS_GOING: CountedWords = { one: 'comment still open goes', many: 'comments still open go' };
 
 	/** Put the pane away and go to a thread in it. */
 	function jump(thread: Thread) {

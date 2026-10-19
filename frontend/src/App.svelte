@@ -15,7 +15,7 @@
 	</div>
 {:else if page.state.kind === 'failed'}
 	<div class="flex items-center justify-center min-h-screen">
-		<div class="alert alert-error max-w-md">
+		<div class="alert alert-error max-w-(--cr-failure-width)">
 			<span>{page.state.reason}</span>
 		</div>
 	</div>

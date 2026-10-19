@@ -20,8 +20,8 @@ repos:
 
       # The code rules no linter here can be told to keep: no function
       # inside another, no name too short to say what it holds, no model
-      # taken apart by the names of its fields. The tests are held to
-      # formatting alone, here as by every linter.
+      # taken apart by the names of its fields. It leaves the tests alone,
+      # as every linter does: the two hooks below read them for a look.
       - id: code-rules
         name: code rules (nested functions, short names, models by field names)
         entry: uv run python scripts/check_code_rules.py
@@ -30,21 +30,22 @@ repos:
         exclude: ^tests/
 
       # A test checks what an act did, never how the page looks
-      # (.claude/rules/tests.md): a browser test reads no box, no size and no
-      # style. tests/e2e/placing.py puts a control where the reader would have
+      # (.claude/rules/tests.md): a browser test reads no box, no size, no
+      # style and no class, and takes no picture of the page.
+      # tests/e2e/placing.py puts a control where the reader would have
       # scrolled it before a test acts, and is let alone for that
       - id: no-look-in-browser-tests
         name: no browser test reads a box, a size or a style
-        entry: 'bounding_box\(|getBoundingClientRect|getComputedStyle|opacity|elementFromPoint|to_have_css|scroll(Height|Width)|client(Height|Width)|inner(Height|Width)|offset(Top|Left|Height|Width)'
+        entry: 'bounding_box\(|getBoundingClientRect|getClientRects|getComputedStyle|computedStyleMap|opacity|elements?FromPoint|to_have_css|to_have_class|get_attribute\(.(class|style).|screenshot|scroll(Height|Width)|client(Height|Width)|inner(Height|Width)|offset(Top|Left|Height|Width)'
         language: pygrep
         files: ^tests/e2e/.*\.py$
         exclude: ^tests/e2e/placing\.py$
 
-      # The page's tests hand jsdom the boxes it cannot lay out, and read no
-      # style and no class back
+      # The page's tests hand jsdom the boxes it cannot lay out, touch no
+      # element's class list, and read no style and no class back
       - id: no-look-in-page-tests
         name: no page test reads a style or a class back
-        entry: 'getComputedStyle|getPropertyValue|toHaveStyle|toHaveClass|classList'
+        entry: 'getComputedStyle|getPropertyValue|toHaveStyle|toHaveClass|classList|className|(getAttribute|toHaveAttribute)\(.(class|style).'
         language: pygrep
         files: ^frontend/tests/
 

@@ -38,8 +38,8 @@ paths:
 - Cases of one rule are one test that names every case that fails. A property test (hypothesis, fast-check) replaces the example tests of its rule, one example kept at most.
 - Data with a shape is a typed model, never a raw `dict` or `Mapping`, in tests too.
 - Wire JSON is written out by hand only where a test speaks as the browser or the agent and its neighbours already do.
-- The tests are held to formatting alone, `ruff format` and Prettier: no linter, type checker or spelling check reads them. vulture and knip read them for what of the package and the page they use.
-- One check reads them for a look: a commit refuses a browser test that reads a box, a size or a style, and a page test that reads a style or a class back (`.pre-commit-config.yaml`).
+- The tests are held to formatting, `ruff format` and Prettier: no linter, type checker or spelling check reads them. vulture and knip read them for what of the package and the page they use.
+- And two hooks read them for a look alone: a browser test may read no box, size or style, a page test no style or class (`.pre-commit-config.yaml`); `tests/e2e/placing.py` is the one setup let alone.
 - A test acts on an element by its `data-testid`, and never asserts one. `getByText` and `text=` only assert words the user sees. Never a CSS class selector.
 
 ## The browser

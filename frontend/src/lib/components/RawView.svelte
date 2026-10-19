@@ -61,7 +61,7 @@
 					{/if}
 					<col class="w-(--cr-line-number-width)" />
 					{#if isDiffMode}
-						<col class="w-(--cr-sign-column-width)" />
+						<col class="w-(--cr-diff-sign-width)" />
 					{/if}
 					<col />
 				</colgroup>
@@ -80,7 +80,7 @@
 								<LineGutter {drawn} side="new" reach={reachOf(drawn, 'new')} {commenting} />
 							</td>
 							{#if isDiffMode}
-								<td class="cr-sign w-(--cr-sign-column-width) px-1 text-center select-none">
+								<td class="cr-sign w-(--cr-diff-sign-width) px-1 text-center select-none">
 									{SIGNS[drawn.line.kind]}
 								</td>
 							{/if}

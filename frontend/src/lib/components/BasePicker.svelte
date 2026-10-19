@@ -114,7 +114,7 @@
 					<Row names="path" testId="base-option" current={inForce} onclick={() => pick(version)}>
 						{#snippet leading()}
 							<!-- Room for the check of the one in force in every row, so their names stand in one line -->
-							<span class="w-(--cr-mark-room) text-(--cr-control)">
+							<span class="w-(--cr-row-mark-slot) text-(--cr-control)">
 								{#if inForce}
 									<Icon name="check" size="xs" label="In force" />
 								{/if}

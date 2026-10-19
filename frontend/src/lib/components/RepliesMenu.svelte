@@ -80,7 +80,7 @@
 			<Row names="path" testId="reply-row" onclick={() => goTo(thread)}>
 				{#snippet leading()}
 					<!-- Room for the mark of an unread answer in every row, so where each hangs stands in one line -->
-					<span class="flex w-(--cr-dot-room)">
+					<span class="flex w-(--cr-row-dot-slot)">
 						{#if unread}
 							<Dot tone="unread" testId="reply-unread" />
 							<span class="sr-only">unread:</span>

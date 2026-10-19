@@ -5,7 +5,7 @@
  */
 
 import type { FollowedChapter, FollowedStep } from '$lib/types';
-import { CHANGED_LINES, counted, type CountedWords, FILES, wordsFor } from '$lib/utils/words';
+import { counted, type CountedWords, FILES, wordsFor } from '$lib/utils/words';
 
 // What joins the first line of a step to its last, and a chapter's number to a step's
 const RANGE_DASH = '–';
@@ -24,6 +24,8 @@ const CHAPTERS: CountedWords = { one: A_CHAPTER, many: 'chapters' };
 const STEPS: CountedWords = { one: 'step', many: 'steps' };
 // What threads are called where a part of the story counts those hanging in it
 const THREADS: CountedWords = { one: 'thread', many: 'threads' };
+// What the lines a change added or removed are called where the part no step tells counts them
+const CHANGED_LINES: CountedWords = { one: 'changed line', many: 'changed lines' };
 // What stands between the two counts of a chapter's head
 const BETWEEN_COUNTS = ' · ';
 // What stands between the numbers of several chapters

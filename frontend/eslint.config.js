@@ -197,10 +197,13 @@ const ON_THE_SCALE =
 // sign: `gap-2.5`, `md:pl-3.5`, `-mt-5`, `top-5`, `-translate-y-2.5`, `scroll-mt-5`, `indent-5`, `p-px`; a share
 // of what it stands in, `left-1/2`, is a place, no size
 const ROOM_OFF_THE_SCALE = `/${UTILITY_START}(p[xytblrse]?|m[xytblrse]?|gap(-[xy])?|space-[xy]|inset(-[xy])?|top|right|bottom|left|start|end|translate-[xy]|scroll-[mp][xytblrse]?|indent)-((?!(0|0\\.5|1|1\\.5|2|3|4|6|8|[0-9]+\\/[0-9]+)${UTILITY_END})[0-9]|px${UTILITY_END})/`;
-// A width or a height at a step of Tailwind's own, behind any variants: `w-12`, `min-h-16`, `max-h-60`, `size-4`;
-// none, `min-w-0`, and a share of what it stands in, `w-1/2`, are no size. A box is sized by a token by name,
-// `w-(--cr-line-number-width)`
-const SIZE_OFF_THE_SCALE = `/${UTILITY_START}(min-|max-)?(w|h|size)-((?!(0|[0-9]+\\/[0-9]+)${UTILITY_END})[0-9])/`;
+// A box is sized by a token by name (tokens.css), as a colour is painted
+const SIZED_BY_A_TOKEN = 'Size a box by a token by name (tokens.css): w-(--cr-…), min-h-(--cr-…).';
+// A width, a height or a basis at a step of Tailwind's own, behind any variants: numbered, `w-12`, `min-h-16`,
+// `md:max-h-60`, `size-4`, `basis-24`; named, `max-w-md`, `w-3xs`, `max-w-prose`, `max-w-screen-lg`; or a hairline,
+// `w-px`. None, `min-w-0`, a share of what it stands in, `w-1/2`, and the whole of it, `w-full`, `h-screen`, are
+// no size
+const SIZE_OFF_THE_SCALE = `/${UTILITY_START}(min-|max-)?(w|h|size|basis)-((?!(0|[0-9]+\\/[0-9]+)${UTILITY_END})[0-9]|(px|[2-3]xs|xs|sm|md|lg|xl|[2-7]xl|prose|screen-[a-z0-9]+)${UTILITY_END})/`;
 // A value written in place: `grid-cols-[4rem_1fr]`, `w-[26rem]`, `text-[13px]`
 const ARBITRARY_VALUE = `/${UTILITY_START}[a-z0-9-]+-\\[/`;
 // Words at a size off the scale, with a leading or a spacing of their own beside their size's, or in a weight off
@@ -230,7 +233,7 @@ const NO_INLINE_STYLING = [
 	...inClassLists(STATE_VARIANT, PAINTED_BY_STATE_TOKENS),
 	...inClassLists(SCROLLING_UTILITY, SCROLLS_IN_ITS_OWN_BOX),
 	...inClassLists(ROOM_OFF_THE_SCALE, ON_THE_SCALE),
-	...inClassLists(SIZE_OFF_THE_SCALE, ON_THE_SCALE),
+	...inClassLists(SIZE_OFF_THE_SCALE, SIZED_BY_A_TOKEN),
 	...inClassLists(ARBITRARY_VALUE, ON_THE_SCALE),
 	...inClassLists(WORDS_OFF_THE_SCALE, ON_THE_SCALE),
 	...inClassLists(MEASURE_OFF_THE_SCALE, ON_THE_SCALE)

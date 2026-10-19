@@ -9,6 +9,11 @@
 	import { plainWords } from '$lib/utils/plain-words';
 	import { counted, type CountedWords, FILES, wordsFor } from '$lib/utils/words';
 
+	// What the list's button says, while the list is shown and while it is not, of one thread or of several
+	const LIST_WORDS = { shown: { one: 'Hide it', many: 'Hide them' }, folded: { one: 'List it', many: 'List them' } };
+	// What the threads this screen does not draw are said to be, counted
+	const THREADS_BEING: CountedWords = { one: 'thread is', many: 'threads are' };
+
 	const review = useReview();
 
 	// Threads the base on screen cannot draw. They are not lost — they are
@@ -20,11 +25,7 @@
 	// from a screen the reader has left.
 	let listedOver = $state.raw<DiffFile[] | null>(null);
 	const listing = $derived(listedOver === review.diff.files);
-	// What the list's button says, while the list is shown and while it is not, of one thread or of several
-	const LIST_WORDS = { shown: { one: 'Hide it', many: 'Hide them' }, folded: { one: 'List it', many: 'List them' } };
 	const listWords = $derived(LIST_WORDS[listing ? 'shown' : 'folded']);
-	// What the threads this screen does not draw are said to be, counted
-	const THREADS_BEING: CountedWords = { one: 'thread is', many: 'threads are' };
 </script>
 
 <!-- A state, not news: no Dismiss, because dismissing it would leave the
