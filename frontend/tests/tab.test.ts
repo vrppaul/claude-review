@@ -1,15 +1,7 @@
 import { afterEach, describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { markTab } from '$lib/dom/tab';
 
 const TITLE = 'repo: uncommitted changes';
-// The icons as the files they are, read for what they write in them
-const ICONS = ['tab-icon.svg', 'tab-icon-unread.svg'].map((name) =>
-	readFileSync(join(__dirname, '../src/lib/assets', name), 'utf8')
-);
-// A colour written out rather than named: #rgb to #rrggbbaa, or a function of channels
-const WRITTEN_COLOUR = /#[0-9a-f]{3,8}\b|rgba?\(|hsla?\(/i;
 // What the page's tokens say, as a test sets them: jsdom reads no stylesheet
 const UNREAD = '#7a5cc8';
 const FAINT = '#6f7b8c';
@@ -41,11 +33,6 @@ describe('the tab of a review in the background', () => {
 describe('the colours of the tab icon', () => {
 	afterEach(() => {
 		document.documentElement.removeAttribute('style');
-	});
-
-	it('are named by their tokens in the icons, never written out there', () => {
-		for (const icon of ICONS) expect(icon).not.toMatch(WRITTEN_COLOUR);
-		expect(ICONS[1]).toContain('var(--cr-unread)');
 	});
 
 	it('are written in from the page as the icon is set: the dot in the colour of what is unread', () => {

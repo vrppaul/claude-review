@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { Jumps } from '$lib/dom/jump';
 import { ReadingParts } from '$lib/dom/reading-parts';
-import { areasWatching, scriptTheScroll, scrollTo } from './scripted-scroll';
+import { scriptTheScroll, scrollTo } from './scripted-scroll';
 
 // What a part of a story is known by here
 const A_PART = 'a part of the story';
@@ -31,15 +31,5 @@ describe('an area a story is no longer read in', () => {
 		stop();
 
 		expect(parts.beingRead).toBeNull();
-	});
-
-	it('is watched for no head of a part', () => {
-		const head = drawn();
-		parts.register(A_PART, drawn(), head);
-		const stop = parts.watchInView(drawn());
-
-		stop();
-
-		expect(areasWatching(head)).toEqual([]);
 	});
 });

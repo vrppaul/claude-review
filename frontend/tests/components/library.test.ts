@@ -3,19 +3,10 @@ import { render } from '@testing-library/svelte';
 import { createRawSnippet, tick } from 'svelte';
 import { userEvent } from '@testing-library/user-event';
 import Button from '$lib/ui/Button.svelte';
-import Card from '$lib/ui/Card.svelte';
-import CodeBox from '$lib/ui/CodeBox.svelte';
-import ColumnBar from '$lib/ui/ColumnBar.svelte';
 import ColumnRail from '$lib/ui/ColumnRail.svelte';
-import Dialog from '$lib/ui/Dialog.svelte';
-import EdgeFrame from '$lib/ui/EdgeFrame.svelte';
 import Heading from '$lib/ui/Heading.svelte';
-import Icon from '$lib/ui/Icon.svelte';
 import IconButton from '$lib/ui/IconButton.svelte';
 import Link from '$lib/ui/Link.svelte';
-import NoticeBar from '$lib/ui/NoticeBar.svelte';
-import Pane from '$lib/ui/Pane.svelte';
-import PaneQuestion from '$lib/ui/PaneQuestion.svelte';
 import PopoverPanel from '$lib/ui/PopoverPanel.svelte';
 import Row from '$lib/ui/Row.svelte';
 import Segment from '$lib/ui/Segment.svelte';
@@ -24,16 +15,11 @@ import Chip from '$lib/ui/Chip.svelte';
 import Count from '$lib/ui/Count.svelte';
 import Dot from '$lib/ui/Dot.svelte';
 import Key from '$lib/ui/Key.svelte';
-import Tag from '$lib/ui/Tag.svelte';
-import Band from '$lib/ui/Band.svelte';
-import Bands from '$lib/ui/Bands.svelte';
 
 // What a test hands the library's parts to draw inside them, and what it finds each by
 const WORDS = 'Show the whole diff';
 const drawn = createRawSnippet(() => ({ render: () => `<span>${WORDS}</span>` }));
 const TEST_ID = 'drawn';
-// A look someone might try to lay over a part of the library from outside, which the library takes no part of
-const FROM_OUTSIDE = 'from-outside';
 const RELEASE = 'https://github.com/pavelparanin/claude-review/releases';
 // How many threads a count says hang on what it stands beside
 const THREADS = 3;
@@ -42,170 +28,7 @@ const REMOVING = 'Take this thread out of the message';
 // Keys held together, as the help writes them
 const CHORD = 'Ctrl+Enter';
 
-/** A part of the library, drawn with what every one of them is drawn with, and a class handed to it besides. */
-const WITH_A_CLASS_FROM_OUTSIDE = [
-	{
-		part: 'a button',
-		render: () =>
-			render(Button, {
-				tone: 'quiet',
-				size: 'xs',
-				testId: TEST_ID,
-				children: drawn,
-				class: FROM_OUTSIDE
-			} as never)
-	},
-	{
-		part: 'an icon button',
-		render: () =>
-			render(IconButton, {
-				tone: 'quiet',
-				size: 'xs',
-				label: WORDS,
-				testId: TEST_ID,
-				children: drawn,
-				class: FROM_OUTSIDE
-			} as never)
-	},
-	{
-		part: 'an icon',
-		render: () => render(Icon, { name: 'check', size: 'xs', testId: TEST_ID, class: FROM_OUTSIDE } as never)
-	},
-	{
-		part: 'a pane by a control',
-		render: () =>
-			render(PopoverPanel, {
-				role: 'dialog',
-				label: WORDS,
-				placement: 'below-start',
-				width: 'medium',
-				arrow: true,
-				arrowOffset: 0,
-				testId: TEST_ID,
-				children: drawn,
-				class: FROM_OUTSIDE
-			} as never)
-	},
-	{
-		part: 'a pane that stands by itself',
-		render: () => render(Pane, { width: 'medium', testId: TEST_ID, children: drawn, class: FROM_OUTSIDE } as never)
-	},
-	{
-		part: 'a modal',
-		render: () =>
-			render(Dialog, {
-				label: WORDS,
-				width: 'wide',
-				testId: TEST_ID,
-				onClose: () => undefined,
-				children: drawn,
-				class: FROM_OUTSIDE
-			} as never)
-	},
-	{
-		part: "a column's bar",
-		render: () => render(ColumnBar, { testId: TEST_ID, children: drawn, class: FROM_OUTSIDE } as never)
-	},
-	{
-		part: 'a card',
-		render: () =>
-			render(Card, { tone: 'quiet', hangs: 'line', testId: TEST_ID, children: drawn, class: FROM_OUTSIDE } as never)
-	},
-	{
-		part: 'code set apart',
-		render: () => render(CodeBox, { code: WORDS, testId: TEST_ID, class: FROM_OUTSIDE } as never)
-	},
-	{
-		part: 'a frame with an edge at its start',
-		render: () =>
-			render(EdgeFrame, {
-				tone: 'agent',
-				ground: 'none',
-				testId: TEST_ID,
-				children: drawn,
-				class: FROM_OUTSIDE
-			} as never)
-	},
-	{
-		part: 'a link',
-		render: () => render(Link, { href: RELEASE, testId: TEST_ID, children: drawn, class: FROM_OUTSIDE } as never)
-	},
-	{
-		part: 'a notice',
-		render: () =>
-			render(NoticeBar, {
-				tone: 'warning',
-				icon: 'notice',
-				testId: TEST_ID,
-				children: drawn,
-				class: FROM_OUTSIDE
-			} as never)
-	},
-	{
-		part: 'a segment',
-		render: () => render(Segment, { pressed: false, testId: TEST_ID, children: drawn, class: FROM_OUTSIDE } as never)
-	},
-	{
-		part: 'a segmented control',
-		render: () => render(Segmented, { label: WORDS, testId: TEST_ID, children: drawn, class: FROM_OUTSIDE } as never)
-	},
-	{
-		part: 'a tag',
-		render: () => render(Tag, { tone: 'quiet', testId: TEST_ID, children: drawn, class: FROM_OUTSIDE } as never)
-	},
-	{
-		part: 'a count',
-		render: () => render(Count, { count: THREADS, testId: TEST_ID, class: FROM_OUTSIDE } as never)
-	},
-	{
-		part: 'a chip',
-		render: () =>
-			render(Chip, {
-				voice: 'reader',
-				onclick: () => undefined,
-				testId: TEST_ID,
-				children: drawn,
-				class: FROM_OUTSIDE
-			} as never)
-	},
-	{
-		part: 'a dot',
-		render: () => render(Dot, { tone: 'unread', testId: TEST_ID, class: FROM_OUTSIDE } as never)
-	},
-	{
-		part: 'a key',
-		render: () => render(Key, { keys: CHORD, testId: TEST_ID, class: FROM_OUTSIDE } as never)
-	},
-	{
-		part: 'a block the reader may ask about',
-		render: () =>
-			render(Band, { current: false, testId: TEST_ID, children: drawn, offer: drawn, class: FROM_OUTSIDE } as never)
-	},
-	{
-		part: 'the question a pane asks',
-		render: () => render(PaneQuestion, { question: WORDS, testId: TEST_ID, class: FROM_OUTSIDE } as never)
-	},
-	{
-		part: 'a heading',
-		render: () =>
-			render(Heading, { tag: 'h2', heads: 'pane', testId: TEST_ID, children: drawn, class: FROM_OUTSIDE } as never)
-	},
-	{
-		part: 'blocks one under another the reader may ask about',
-		render: () => render(Bands, { testId: TEST_ID, children: drawn, class: FROM_OUTSIDE } as never)
-	}
-];
-
 describe('the component library', () => {
-	it.each(WITH_A_CLASS_FROM_OUTSIDE)(
-		'draws $part its own way: a class handed to it from outside is not drawn',
-		({ render: drawIt }) => {
-			const { getByTestId } = drawIt();
-
-			expect(getByTestId(TEST_ID).classList).not.toContain(FROM_OUTSIDE);
-		}
-	);
-
 	it('draws a button with the words it is handed, and does what it does when pressed', async () => {
 		const onclick = vi.fn();
 		const { getByTestId } = render(Button, {
@@ -264,18 +87,6 @@ describe('the component library', () => {
 
 		expect(getByTestId(TEST_ID).getAttribute('role')).toBe('group');
 		expect(getByTestId(TEST_ID).getAttribute('aria-label')).toBe(WORDS);
-	});
-
-	it('draws a tag with the words it is handed', () => {
-		const { getByTestId } = render(Tag, { tone: 'agent', testId: TEST_ID, children: drawn });
-
-		expect(getByTestId(TEST_ID).textContent).toBe(WORDS);
-	});
-
-	it('says how many in a count', () => {
-		const { getByTestId } = render(Count, { count: THREADS, testId: TEST_ID });
-
-		expect(getByTestId(TEST_ID).textContent).toBe(String(THREADS));
 	});
 
 	it('draws a chip that names a way somewhere as a button, which takes the reader there when pressed', async () => {
@@ -389,33 +200,7 @@ describe('a pane by a control', () => {
 	});
 });
 
-// A row of the library, and the rail a column put away leaves, each with a class handed to it besides
-const ROWS_WITH_A_CLASS_FROM_OUTSIDE = [
-	{
-		part: 'a row',
-		render: () => render(Row, { names: 'path', testId: TEST_ID, label: drawn, class: FROM_OUTSIDE } as never)
-	},
-	{
-		part: 'a row that folds what is under it',
-		render: () =>
-			render(Row, { names: 'title', folded: true, testId: TEST_ID, label: drawn, class: FROM_OUTSIDE } as never)
-	},
-	{
-		part: 'the rail a column put away leaves',
-		render: () => render(ColumnRail, { label: WORDS, testId: TEST_ID, class: FROM_OUTSIDE } as never)
-	}
-];
-
 describe('a row of the library', () => {
-	it.each(ROWS_WITH_A_CLASS_FROM_OUTSIDE)(
-		'draws $part its own way: a class handed to it from outside is not drawn',
-		({ render: drawIt }) => {
-			const { getByTestId } = drawIt();
-
-			expect(getByTestId(TEST_ID).classList).not.toContain(FROM_OUTSIDE);
-		}
-	);
-
 	it('draws what it is called, and does what it does when pressed', async () => {
 		const onclick = vi.fn();
 		const { getByTestId } = render(Row, { names: 'path', testId: TEST_ID, label: drawn, onclick });

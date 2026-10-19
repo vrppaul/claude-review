@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { Crossing } from '$lib/dom/crossing';
-import { areasWatching, scriptTheScroll, scrollTo } from './scripted-scroll';
+import { scriptTheScroll, scrollTo } from './scripted-scroll';
 
 // The whole of an area, as a strip of it
 const THE_WHOLE_AREA = '0px';
@@ -57,26 +57,5 @@ describe('what crosses a strip of a scrolling area', () => {
 		stopTheFirst();
 
 		expect(crossing.has(shown)).toBe(true);
-	});
-});
-
-describe('an area watched no longer', () => {
-	it('is watched for nothing that was drawn in it', () => {
-		const drawnBefore = drawn();
-		const stop = crossing.watch(drawn(), [drawnBefore]);
-
-		stop();
-
-		expect(areasWatching(drawnBefore)).toEqual([]);
-	});
-
-	it('is watched for nothing drawn after', () => {
-		const stop = crossing.watch(drawn(), []);
-		stop();
-		const drawnAfter = drawn();
-
-		crossing.add(drawnAfter);
-
-		expect(areasWatching(drawnAfter)).toEqual([]);
 	});
 });

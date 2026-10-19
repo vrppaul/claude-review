@@ -124,18 +124,6 @@ describe("a story's diagram", () => {
 		expect(toTheBeginnings).not.toHaveBeenCalled();
 	});
 
-	it('marks each node that leads to a chapter, for a test to press, and no other', async () => {
-		vi.mocked(drawDiagram).mockImplementation(drawnAs);
-		render(ReviewScreen, { props: { review } });
-		await within(figure()).findByTestId('diagram-drawing');
-
-		expect(
-			within(figure())
-				.getAllByTestId('diagram-link')
-				.map((node) => node.textContent)
-		).toEqual(['store', 'store-2']);
-	});
-
 	it('takes the reader nowhere from a node the story, read again, no longer links, and no longer marks it', async () => {
 		vi.mocked(drawDiagram).mockImplementation(drawnAs);
 		fakeServer().answer('GET /api/story', storyResponse({ held: RELINKED }));

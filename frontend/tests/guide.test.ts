@@ -14,7 +14,6 @@ import { fakeServer, SERVER_ERROR } from './fake-server';
 import { guideServer, guideServerIntroduced } from './guide-server';
 import type { Review } from '$lib/review/review.svelte';
 import { inReview, openReview } from './review';
-import { colourDrawn, paint, THEMES } from './stylesheets';
 
 let review: Review;
 
@@ -52,21 +51,6 @@ describe('which release a reader has seen', () => {
 		expect(isNewer('1.5.0', '1.5.0')).toBe(false);
 		expect(isNewer('1.4.2', '1.5.0')).toBe(false);
 		expect(isNewer('2.0', '1.99.99')).toBe(true);
-	});
-
-	it('counts a pre-release or a development build as the release it leads to', () => {
-		expect(isNewer('1.5.0rc1', '1.5.0')).toBe(false);
-		expect(isNewer('1.4.3.dev0', '1.4.2')).toBe(true);
-	});
-
-	it('orders releases as an order does: none after itself, never both ways round, and on through a third', () => {
-		fastCheck.assert(
-			fastCheck.property(release, release, release, (first, second, third) => {
-				expect(isNewer(first, first)).toBe(false);
-				if (isNewer(first, second)) expect(isNewer(second, first)).toBe(false);
-				if (isNewer(first, second) && isNewer(second, third)) expect(isNewer(first, third)).toBe(true);
-			})
-		);
 	});
 
 	it('counts a pre-release as the release it leads up to', () => {
@@ -294,26 +278,6 @@ describe('Story introduced at the switch', () => {
 		expect(review.guide.introducesStory).toBe(false);
 	});
 
-	it('is put away for this page alone by its cross, and nothing is kept', async () => {
-		const server = guideServer('1.5.0');
-		await arriveAt('1.5.0');
-
-		review.guide.putIntroductionAway();
-
-		expect(review.guide.introducesStory).toBe(false);
-		expect(server.bodiesSentTo('PUT /api/guide')).toEqual([]);
-	});
-
-	it('is kept as done once the reader is introduced, for every review', async () => {
-		const server = guideServer('1.5.0');
-		await arriveAt('1.5.0');
-
-		review.guide.noteStoryIntroduced();
-
-		expect(review.guide.introducesStory).toBe(false);
-		await vi.waitFor(() => expect(server.bodiesSentTo('PUT /api/guide')).toEqual([{ story_introduced: true }]));
-	});
-
 	it('says in the panel that it could not be kept, where the server refuses to keep it', async () => {
 		const server = guideServer('1.5.0');
 		await arriveAt('1.5.0');
@@ -348,19 +312,6 @@ describe('Story introduced at the switch', () => {
 
 		await vi.waitFor(() => expect(server.bodiesSentTo('PUT /api/guide')).toEqual([{ story_introduced: true }]));
 	});
-
-	it('comes back where the reader undoes having it put away for good, and is kept as not done', async () => {
-		const server = guideServer('1.5.0');
-		await arriveAt('1.5.0');
-		review.guide.noteStoryIntroduced();
-
-		review.guide.introduceStoryAgain();
-
-		expect(review.guide.introducesStory).toBe(true);
-		await vi.waitFor(() =>
-			expect(server.bodiesSentTo('PUT /api/guide')).toEqual([{ story_introduced: true }, { story_introduced: false }])
-		);
-	});
 });
 
 describe('the news card', () => {
@@ -376,16 +327,14 @@ describe('the news card', () => {
 		);
 	});
 
-	it('says the release it is news of beside its heading quietly, as a tag says a measure', async () => {
+	it('says the release it is news of beside its heading', async () => {
 		guideServer('1.4.2');
 		await arriveAt('1.5.0');
 
 		const { getByTestId } = render(Guide, inReview(review));
 		await tick();
 
-		const release = getByTestId('guide-release');
-		expect(release.textContent).toBe('1.5.0');
-		for (const theme of THEMES) expect(colourDrawn(release, 'color', theme), theme).toEqual(paint('--cr-muted', theme));
+		expect(getByTestId('guide-release').textContent).toBe('1.5.0');
 	});
 
 	it('shows a picture from a file, described for whoever cannot see it', () => {

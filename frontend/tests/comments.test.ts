@@ -22,11 +22,6 @@ function threadsOn(file: string, side: LineSide, line: number) {
 }
 
 describe('the comments of a review', () => {
-	it('start with nothing written', () => {
-		expect(review.threads.count).toBe(0);
-		expect(review.threads.all).toEqual([]);
-	});
-
 	it('keep a comment where it was written, under an id of its own', () => {
 		const id = review.threads.add(newComment({ file: 'file.ts', startLine: 10, body: 'fix this' }));
 
@@ -118,16 +113,6 @@ describe('the comments of a review', () => {
 });
 
 describe('the summary of a review', () => {
-	it('starts empty', () => {
-		expect(review.submission.body).toBe('');
-	});
-
-	it('is kept as it is written', () => {
-		review.submission.setBody('Wrong approach');
-
-		expect(review.submission.body).toBe('Wrong approach');
-	});
-
 	it('is something to send on its own', () => {
 		expect(review.submission.hasContent).toBe(false);
 

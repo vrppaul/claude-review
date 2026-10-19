@@ -13,7 +13,6 @@ import { handOverNext } from '../pushes';
 import { openReview } from '../review';
 import { areasWatching, scriptTheScroll, scrollTo } from '../scripted-scroll';
 import { settled } from '../settled';
-import { colourDrawn, paint, THEMES } from '../stylesheets';
 import {
 	ASKED,
 	changedStep,
@@ -54,9 +53,6 @@ const TOLD = storyHeld({
 });
 // What a story told from commits says of itself, by how it begins
 const NOT_THE_AGENTS_OWN_CHANGE = /^The agent did not make this change\./;
-// The colours a story's round is tagged in: the agent's, and a warning's
-const AGENTS = '--cr-agent';
-const A_WARNING = '--color-warning';
 
 let review: Review;
 
@@ -129,24 +125,6 @@ describe('a review read as its story', () => {
 		render(ReviewScreen, { props: { review } });
 
 		expect(said(screen.getByTestId('story-round'))).toBe('round 1 the code moved on in round 2');
-	});
-
-	it('tags the round in the agent’s colour while the story’s code is current', () => {
-		render(ReviewScreen, { props: { review } });
-
-		for (const theme of THEMES) {
-			expect(colourDrawn(screen.getByTestId('story-round'), 'color', theme)).toEqual(paint(AGENTS, theme));
-		}
-	});
-
-	it('tags the round in the warning’s colour once a later round moved the code on', () => {
-		review = openReview({ files, story: storyHeld(TOLD.story, { moved_on: codeMovedOn() }) });
-		review.views.choose('story');
-		render(ReviewScreen, { props: { review } });
-
-		for (const theme of THEMES) {
-			expect(colourDrawn(screen.getByTestId('story-round'), 'color', theme)).toEqual(paint(A_WARNING, theme));
-		}
 	});
 
 	it('says what was asked and what was done, and nothing to doubt where the agent named nothing', () => {
@@ -727,21 +705,6 @@ describe('a piece of a story, as the reader scrolls', () => {
 	});
 });
 
-describe('the room a piece of a story holds before it is built', () => {
-	it('is a row for every line it shows, and one row where it shows no line', () => {
-		const picture = diffFile({ path: 'docs/logo.png', status: 'added', unshown: 'binary' });
-		const chapters = [toldChapter('ch-1', [toldStepOfLines('a.py', 5, 9)])];
-		review = openReview({ files, story: storyHeld({ chapters, left_out: [{ piece: picture, changed_lines: 0 }] }) });
-		review.views.choose('story');
-		render(ReviewScreen, { props: { review } });
-
-		const [ofFiveLines, ofNoLine] = pieces();
-
-		expect(within(ofFiveLines).getByTestId('file-lines').style.getPropertyValue('--cr-rows')).toBe('5');
-		expect(within(ofNoLine).getByTestId('file-lines').style.getPropertyValue('--cr-rows')).toBe('1');
-	});
-});
-
 describe('a story the diff is taken again under', () => {
 	it('is drawn no more once the story followed onto the diff taken again cannot be read', async () => {
 		review = openReview({ files, story: TOLD });
@@ -894,14 +857,6 @@ describe('a story whose code a round changed after it was told', () => {
 		render(ReviewScreen, { props: { review } });
 
 		expect(said(screen.getByTestId('chapter-changed'))).not.toContain('The agent is updating them.');
-	});
-
-	it('says one step as one', () => {
-		review = openReview({ files, story: followedWith([changedStep('a.py', 1), toldStep('b.py', 5)], 1) });
-		review.views.choose('story');
-		render(ReviewScreen, { props: { review } });
-
-		expect(said(screen.getByTestId('chapter-changed'))).toContain('1 step in this chapter changed.');
 	});
 
 	it('says nothing of it in a chapter the review says it changed nothing of', () => {

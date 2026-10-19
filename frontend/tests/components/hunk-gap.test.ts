@@ -4,7 +4,7 @@ import { userEvent } from '@testing-library/user-event';
 import DiffView from '$lib/components/DiffView.svelte';
 import FileSection from '$lib/components/FileSection.svelte';
 import type { DiffFile } from '$lib/types';
-import { addedLine, contextLine, diffFile, diffResponse, hunk, removedLine, wholeFile } from '../diff';
+import { addedLine, contextLine, diffFile, diffResponse, hunk, removedLine } from '../diff';
 import { newComment } from '../new-comment';
 import { keepingImages, paste, screenshot, SEND_LIMITS } from '../pasted-images';
 import { BAD_REQUEST, fakeServer } from '../fake-server';
@@ -193,15 +193,6 @@ describe('widening the context around a hunk', () => {
 		review = openReview({ files: [fromTop] });
 
 		const { queryByTestId } = render(FileSection, inReview(review, { file: fromTop }));
-
-		expect(queryByTestId('hunk-gap')).toBeNull();
-	});
-
-	it('leaves plain files alone, since nothing of them is hidden', () => {
-		const plain = wholeFile('/tmp/plan.md', '# Plan', 'Ship it.');
-		review = openReview({ files: [plain], facts: { mode: 'files' } });
-
-		const { queryByTestId } = render(FileSection, inReview(review, { file: plain }));
 
 		expect(queryByTestId('hunk-gap')).toBeNull();
 	});

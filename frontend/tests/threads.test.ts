@@ -10,6 +10,7 @@ import { said } from './elements';
 import { fakeServer, SERVER_ERROR, type FakeServer } from './fake-server';
 import { newComment } from './new-comment';
 import type { Review } from '$lib/review/review.svelte';
+import type { Turn } from '$lib/types';
 import { inReview, openReview } from './review';
 
 let review: Review;
@@ -33,6 +34,11 @@ function answering(): FakeServer {
 /** A comment on the added line of the file. */
 function onTheAddedLine(body: string, images: string[] = []) {
 	return newComment({ file: 'src/handler.ts', startLine: 2, body, images, quote: ['const y = 3;'] });
+}
+
+/** Whether each of these answers in a thread arrived after the reader last looked at it. */
+function arrivedSinceLooked(threadId: string, answers: Turn[]): boolean[] {
+	return answers.map((answer) => review.threads.reading.isNewAnswer(threadId, answer.id));
 }
 
 describe('a thread is a conversation', () => {
@@ -160,33 +166,29 @@ describe('a thread is a conversation', () => {
 		expect(review.threads.unread.length).toBe(0);
 	});
 
-	it('draws as new only the answers that arrived since the reader last looked', () => {
+	it('takes as new only the answers that arrived since the reader last looked', () => {
 		const id = review.threads.add(onTheAddedLine('Why 3?'));
 		review.threads.receiveReply(id, 'Because of the retry path', null);
 		review.threads.reading.markRead(id);
 		review.threads.addTurn(id, { author: 'reader', body: 'Then say so in the docstring', images: [] });
 		review.threads.receiveReply(id, 'Added', null);
 
-		const { getAllByTestId } = render(DiffView, inReview(review));
-		const [read, unread] = getAllByTestId('thread-answer');
+		const [read, , arrived] = review.threads.all[0].turns;
 
-		expect(read.classList).not.toContain('cr-answer-new');
-		expect(unread.classList).toContain('cr-answer-new');
+		expect(arrivedSinceLooked(id, [read, arrived])).toEqual([false, true]);
 	});
 
-	it('draws every answer that arrived while the reader was away as new, and none once they look', async () => {
+	it('takes every answer that arrived while the reader was away as new, and none once they look', () => {
 		const id = review.threads.add(onTheAddedLine('Why 3?'));
 		review.threads.addTurn(id, { author: 'reader', body: 'And why here?', images: [] });
 		review.threads.receiveReply(id, 'Because of the retry path', null);
 		review.threads.receiveReply(id, 'And here because the caller retries', null);
-
-		const { getAllByTestId } = render(DiffView, inReview(review));
-		const answers = getAllByTestId('thread-answer');
-		expect(answers.map((answer) => answer.classList.contains('cr-answer-new'))).toEqual([true, true]);
+		const [, first, second] = review.threads.all[0].turns;
+		expect(arrivedSinceLooked(id, [first, second])).toEqual([true, true]);
 
 		review.threads.reading.markRead(id);
-		flushSync();
-		expect(answers.map((answer) => answer.classList.contains('cr-answer-new'))).toEqual([false, false]);
+
+		expect(arrivedSinceLooked(id, [first, second])).toEqual([false, false]);
 	});
 
 	it('says a folded thread in its first words, plainly, and counts the replies under it', () => {

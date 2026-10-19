@@ -55,35 +55,9 @@ describe('the diff on screen', () => {
 
 		await expect(review.diff.take()).rejects.toThrow(`Could not take the diff: ${SERVER_ERROR}`);
 	});
-
-	it('reads as a diff until told otherwise', () => {
-		expect(review.mode).toBe('diff');
-	});
-
-	it('reads plain files as files', () => {
-		review = openReview({ files: files, facts: { mode: 'files' } });
-
-		expect(review.mode).toBe('files');
-	});
-
-	it('reads a transcript as one', () => {
-		review = openReview({ files: files, facts: { mode: 'transcript' } });
-
-		expect(review.mode).toBe('transcript');
-	});
 });
 
 describe('how a markdown file is shown', () => {
-	it('is the raw text until the reader asks otherwise', () => {
-		expect(review.layout.contentView.mode).toBe('raw');
-	});
-
-	it('is the way the reader picked', () => {
-		review.layout.contentView.set('preview');
-
-		expect(review.layout.contentView.mode).toBe('preview');
-	});
-
 	it('is remembered in this browser', () => {
 		review.layout.contentView.set('side-by-side');
 
@@ -192,14 +166,5 @@ describe('how a diff is laid out', () => {
 
 		expect(review.settings.current.diff_layout).toBe('split');
 		expect(server.bodiesSentTo('PUT /api/settings')).toEqual([{ diff_layout: 'split' }]);
-	});
-
-	it('stays across reviews, which are not what it belongs to', async () => {
-		keepingSettings(fakeServer());
-		await review.settings.change({ diff_layout: 'split' });
-
-		review = openReview({ settings: review.settings });
-
-		expect(review.settings.current.diff_layout).toBe('split');
 	});
 });

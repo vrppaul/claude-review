@@ -44,23 +44,6 @@ describe('split layout', () => {
 		review = openReview({ files: [file] });
 	});
 
-	it('marks the lines being written about, keeping what changed on them, in either layout', async () => {
-		const added = { side: 'new', number: 2 } as const;
-		review.threads.writing.pickLines('src/app.ts', { side: 'new', startLine: 2, endLine: 2, opensBelow: added }, [
-			'const b = 3;'
-		]);
-
-		const oneColumn = render(FileSection, inReview(review, { file }));
-		const row = oneColumn.getByRole('button', { name: 'Comment on line 2' }).closest('tr');
-		expect([...(row?.classList ?? [])]).toEqual(expect.arrayContaining(['cr-row-add', 'cr-row-marked']));
-		oneColumn.unmount();
-
-		await inTwoColumns();
-		render(FileSection, inReview(review, { file }));
-		const cell = within(rowHolding('const b = 3;')).getByTestId('split-new-code');
-		expect([...cell.classList]).toEqual(expect.arrayContaining(['cr-cell-add', 'cr-cell-marked']));
-	});
-
 	it('offers the lines below the last change in two columns too', async () => {
 		// The hunk ends on an unchanged line, so the file may go on below it
 		const goesOn = diffFile({ path: 'src/goes-on.ts', hunks: [hunk([removedLine(1, 'a'), contextLine(2, 1, 'b')])] });

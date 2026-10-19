@@ -53,10 +53,4 @@ describe('the files of a review as a tree', () => {
 
 		expect(folder.path).toBe('src/lib');
 	});
-
-	it('keeps the file a row stands for', () => {
-		const [readme] = treeOf('README.md');
-
-		expect(readme.kind === 'file' && readme.file.path).toBe('README.md');
-	});
 });

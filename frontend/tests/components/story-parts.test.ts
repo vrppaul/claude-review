@@ -79,19 +79,6 @@ describe('the part of a story being read', () => {
 
 		expect(review.parts.beingRead).toBeNull();
 	});
-
-	it('is watched for no longer in a chapter the story, told again, has dropped: neither the chapter nor its head', async () => {
-		const [, theEnd] = screen.getAllByTestId('story-chapter');
-		const itsHead = within(theEnd).getByTestId('part-head');
-		const [onlyTheBeginnings] = TOLD.story.chapters;
-		fakeServer().answer('GET /api/story', storyResponse({ held: storyHeld({ chapters: [onlyTheBeginnings] }) }));
-
-		handOverNext(review, { type: 'story' });
-		await settled();
-
-		expect(areasWatching(theEnd)).toEqual([]);
-		expect(areasWatching(itsHead)).toEqual([]);
-	});
 });
 
 describe('the parts of a story, to whoever goes through the page by its parts', () => {

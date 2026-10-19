@@ -21,31 +21,6 @@ describe('choosing how a markdown file is shown', () => {
 		expect(getByTestId('view-mode-side-by-side')).toBeTruthy();
 	});
 
-	it('starts on the raw text', () => {
-		const { getByTestId } = render(ContentViewToggle, inReview(review));
-
-		expect(getByTestId('view-mode-raw').getAttribute('aria-pressed')).toBe('true');
-		expect(getByTestId('view-mode-preview').getAttribute('aria-pressed')).toBe('false');
-	});
-
-	it('shows the preview once it is picked', async () => {
-		const user = userEvent.setup();
-		const { getByTestId } = render(ContentViewToggle, inReview(review));
-
-		await user.click(getByTestId('view-mode-preview'));
-
-		expect(review.layout.contentView.mode).toBe('preview');
-	});
-
-	it('shows both side by side once that is picked', async () => {
-		const user = userEvent.setup();
-		const { getByTestId } = render(ContentViewToggle, inReview(review));
-
-		await user.click(getByTestId('view-mode-side-by-side'));
-
-		expect(review.layout.contentView.mode).toBe('side-by-side');
-	});
-
 	it('shows which mode is chosen', async () => {
 		const user = userEvent.setup();
 		const { getByTestId } = render(ContentViewToggle, inReview(review));

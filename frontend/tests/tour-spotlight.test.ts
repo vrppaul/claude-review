@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { render } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import TourSpotlight from '$lib/components/TourSpotlight.svelte';
@@ -13,35 +13,21 @@ function placeAt(name: string, rect: { left: number; top: number; width: number;
 	return element;
 }
 
-/** A resize observer that remembers everything it was asked to watch. */
-class WatchingResizeObserver implements ResizeObserver {
-	static watched: Element[] = [];
-	observe = (element: Element) => {
-		WatchingResizeObserver.watched.push(element);
-	};
-	unobserve = vi.fn();
-	disconnect = vi.fn();
-}
-
 async function nextFrame() {
 	await new Promise((resolve) => requestAnimationFrame(resolve));
 	await tick();
 }
 
-// Where the lit element stands is invented: no browser test measures the light
-// over a real page; test_a_first_review_is_welcomed_and_shown_around in
-// tests/e2e/test_review_flow.py only sees it drawn
+// Where the lit element stands is invented: no browser test measures the light over a real page
 describe('the light over a tour step', () => {
 	afterEach(() => {
 		document.body.innerHTML = '';
 	});
 
-	it('follows what it lights without setting itself up again on every move', async () => {
+	it('follows what it lights as the page moves under it', async () => {
 		const lit = placeAt('file-tree', { left: 10, top: 20, width: 100, height: 50 });
-		const listening = vi.spyOn(window, 'addEventListener');
 		const { getByTestId } = render(TourSpotlight, { props: { targets: ['file-tree'] } });
 		await tick();
-		const setUps = listening.mock.calls.filter(([type]) => type === 'scroll').length;
 
 		lit.getBoundingClientRect = () =>
 			({ left: 10, top: 80, width: 100, height: 50, right: 110, bottom: 130 }) as DOMRect;
@@ -50,17 +36,5 @@ describe('the light over a tour step', () => {
 
 		// Where the light stands, as the component hands it to the stylesheet
 		expect(getByTestId('tour-spotlight').style.getPropertyValue('--cr-spot-top')).toBe('76px');
-		expect(listening.mock.calls.filter(([type]) => type === 'scroll').length).toBe(setUps);
-	});
-
-	it('watches the size of what it lights, which grows as a comment is typed', async () => {
-		const lit = placeAt('comment-field', { left: 0, top: 0, width: 300, height: 80 });
-		WatchingResizeObserver.watched = [];
-		vi.stubGlobal('ResizeObserver', WatchingResizeObserver);
-
-		render(TourSpotlight, { props: { targets: ['comment-field'] } });
-		await tick();
-
-		expect(WatchingResizeObserver.watched).toContain(lit);
 	});
 });

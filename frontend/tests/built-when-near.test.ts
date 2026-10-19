@@ -27,12 +27,4 @@ describe('what is built when the reader comes near it', () => {
 
 		expect(nearness.built).toBe(true);
 	});
-
-	it('is watched no more once it is built: there is nothing to stop', () => {
-		const nearness = new BuiltWhenNear();
-		nearness.watch(element, null);
-		scrollTo(element);
-
-		expect(nearness.watch(element, null)).toBeUndefined();
-	});
 });

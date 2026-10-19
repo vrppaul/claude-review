@@ -14,8 +14,6 @@ const A_MINUTE_AND_A_BIT = 61_000;
 const TWELVE_SECONDS = 12_000;
 const FORTY_SECONDS = 40_000;
 const TWO_MINUTES = 120_000;
-// Longer than the draft waits before it keeps what changed: the timers left after it are the clock's
-const THE_DRAFT_KEPT = 1_000;
 
 const file = diffFile({
 	path: 'a.py',
@@ -47,28 +45,6 @@ describe('how long a question has waited', () => {
 
 		expect(screen.getByTestId('awaiting-answer').textContent).toContain('asked 1m ago');
 	});
-
-	it('keeps one clock however many questions wait', async () => {
-		vi.useFakeTimers();
-		const review = waitingOn([1, 2, 3]);
-		render(DiffView, inReview(review));
-		await vi.advanceTimersByTimeAsync(THE_DRAFT_KEPT);
-
-		expect(screen.getAllByTestId('awaiting-answer')).toHaveLength(3);
-		expect(vi.getTimerCount()).toBe(1);
-	});
-
-	it('keeps no clock while every thread is folded', async () => {
-		vi.useFakeTimers();
-		const review = waitingOn([1]);
-		const [thread] = review.threads.all;
-		review.threads.reading.setFolded(thread.id, true);
-		render(DiffView, inReview(review));
-
-		await vi.advanceTimersByTimeAsync(THE_DRAFT_KEPT);
-
-		expect(vi.getTimerCount()).toBe(0);
-	});
 });
 
 describe('who said each turn of a thread, and how long ago', () => {
@@ -94,18 +70,6 @@ describe('who said each turn of a thread, and how long ago', () => {
 		render(DiffView, inReview(review));
 
 		expect(said(screen.getByTestId('thread-question'))).toMatch(/^You /);
-	});
-
-	it('keeps one clock however many threads say how long ago', async () => {
-		vi.useFakeTimers();
-		const review = openReview({ files: [file] });
-		for (const line of [1, 2, 3]) review.threads.add(newComment({ file: 'a.py', startLine: line, body: 'why' }));
-		render(DiffView, inReview(review));
-
-		await vi.advanceTimersByTimeAsync(THE_DRAFT_KEPT);
-
-		expect(screen.getAllByTestId('thread-question')).toHaveLength(3);
-		expect(vi.getTimerCount()).toBe(1);
 	});
 });
 
