@@ -25,13 +25,9 @@ import pytest
 
 from claude_review.cli.launch_commands import NOTHING_TO_REVIEW
 from claude_review.domain.models import CommentSeverity, ReviewMode
-from claude_review.presentation.wire.agent import ProgressStep
 from claude_review.presentation.wire.pushes import (
     AnswererPush,
-    ChangedPush,
-    ProgressPush,
     ReplyPush,
-    StatusPush,
 )
 from claude_review.presentation.wire.session import Welcome
 from claude_review.services.review.browser_presence import RELOAD_GRACE_SECONDS
@@ -46,7 +42,6 @@ from tests.helpers import (
     message_said,
     next_push,
     thread_on_the_wire,
-    work_pushed,
 )
 from tests.page_socket import HandshakeRefusedError, PageSocket
 
@@ -70,9 +65,6 @@ PAST_GRACE_SECONDS = RELOAD_GRACE_SECONDS + NOTICE_SECONDS
 
 # How long the agent's own wait lasts, in the commands these tests run: long enough for what the test sets going
 AGENT_WAIT_SECONDS = "20"
-# A wait that times out almost at once, and long enough after it for it to have
-SHORTEST_WAIT_SECONDS = "0.2"
-PAST_THE_SHORTEST_WAIT_SECONDS = 0.6
 # How a failure the command line explains begins, on the one line it takes
 ONE_LINE_FAILURE = "Error: "
 # A conversation as Claude Code writes one, an entry a line: a question, and its answer
@@ -521,30 +513,6 @@ def test_a_question_and_its_answer_travel_between_processes(changed_repo: Path, 
         )
 
 
-def test_the_agent_reports_what_the_review_cannot_measure(changed_repo: Path, cli: CliProcesses, port: int) -> None:
-    """Which model, and how much context is left, come from the agent alone."""
-    cli.review(changed_repo, port)
-
-    with _session(port) as review_socket:
-        reported = cli.run("status", "--port", str(port), "--model", "opus-5", "--context", "53% of 1M")
-        assert reported.returncode == 0
-
-        pushed = next_push(review_socket, StatusPush)
-        assert (pushed.agent.model, pushed.agent.context) == ("opus-5", "53% of 1M")
-
-
-def test_a_file_changed_under_the_review_is_said_to_the_review_on_screen(
-    changed_repo: Path, cli: CliProcesses, port: int
-) -> None:
-    """Said, never acted on: the reader decides when to take the diff again."""
-    cli.review(changed_repo, port)
-
-    with _session(port) as review_socket:
-        (changed_repo / "initial.txt").write_text("changed again, by somebody else\n")
-
-        assert next_push(review_socket, ChangedPush) == ChangedPush(moved_count=1)
-
-
 def test_what_the_agent_never_took_is_written_out_when_the_review_ends(
     changed_repo: Path, cli: CliProcesses, port: int
 ) -> None:
@@ -601,76 +569,3 @@ def test_a_review_stopped_by_a_signal_while_its_page_is_open_exits_without_being
         review.terminate()
 
         assert review.finish() == 0
-
-
-def _until_the_review_holds_threads(cli: CliProcesses, port: int, count: int) -> dict:
-    """The review as the agent reads it, once the page has told it of as many threads."""
-    deadline = time.monotonic() + HEARD_SECONDS
-    while time.monotonic() < deadline:
-        seen = json.loads(cli.run("catch-up", "--port", str(port), "--json").stdout)
-        if len(seen["threads"]) == count:
-            return seen
-    failure = f"the review never held {count} threads"
-    raise AssertionError(failure)
-
-
-def test_a_thread_named_is_read_in_full(changed_repo: Path, cli: CliProcesses, port: int) -> None:
-    """The index is for choosing; naming a thread hands over all of it, with the lines it is about."""
-    cli.review(changed_repo, port)
-    with _session(port) as review_socket:
-        anchor = {**line_on_the_wire("initial.txt", 1), "quote": ["changed"]}
-        review_socket.send(json.dumps({"threads": [thread_on_the_wire(anchor, "Why this?\nAnd not that?")]}))
-        _until_the_review_holds_threads(cli, port, 1)
-
-        read = cli.run("catch-up", "--port", str(port), "--thread", FIRST_THREAD_ID)
-
-    assert read.returncode == 0
-    assert "And not that?" in read.stdout
-    assert "lines: changed" in read.stdout
-
-
-def test_the_work_reported_reaches_the_review_on_screen_and_goes_when_done(
-    changed_repo: Path, cli: CliProcesses, port: int
-) -> None:
-    """What the agent says it is doing is drawn as it said it, and taken away when it says it is done."""
-    cli.review(changed_repo, port)
-    with _session(port) as review_socket:
-        cli.run(
-            "progress",
-            "--port",
-            str(port),
-            "--message",
-            "panel-1",
-            "--file",
-            "initial.txt",
-            "--did",
-            "read the handler",
-            "--step",
-            "two subagents out",
-            "rewriting the handler",
-        )
-        work = work_pushed(review_socket)
-
-        cli.run("progress", "--port", str(port), "--done")
-        finished = next_push(review_socket, ProgressPush)
-
-    assert (work.message_id, work.text, work.files) == ("panel-1", "rewriting the handler", ["initial.txt"])
-    assert work.steps == [
-        ProgressStep(text="read the handler", done=True),
-        ProgressStep(text="two subagents out", done=False),
-    ]
-    assert finished.work is None
-
-
-def test_waiting_until_an_event_waits_through_the_timeouts(changed_repo: Path, cli: CliProcesses, port: int) -> None:
-    """The agent's loop is handed only what happened, never a timeout to look for and skip."""
-    cli.review(changed_repo, port)
-    with _session(port) as review_socket:
-        waiting = cli.start("wait", "--port", str(port), "--seconds", SHORTEST_WAIT_SECONDS, "--until-event")
-        next_push(review_socket, AnswererPush)
-        # Long enough for the first wait to have timed out
-        time.sleep(PAST_THE_SHORTEST_WAIT_SECONDS)
-
-        _post(port, "/api/message", {"message_id": "panel-1", "body": "Still there?"})
-
-        assert json.loads(waiting.printed())["type"] == "message"

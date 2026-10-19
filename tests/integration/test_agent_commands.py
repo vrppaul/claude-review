@@ -13,19 +13,20 @@ from pathlib import Path
 
 import pytest
 from click.testing import CliRunner, Result
-from httpx import AsyncClient
+from httpx import AsyncClient, Client
 
 from claude_review.cli.main import main
 from claude_review.domain.models import CommentSeverity, LineSide
 from claude_review.presentation.wire.agent import CatchUpResponse, ProgressStep
 from claude_review.presentation.wire.content import ReviewResponse
-from claude_review.presentation.wire.pushes import ChatPush, PointPush, ReplyPush
+from claude_review.presentation.wire.pushes import ChatPush, PointPush, ProgressPush, ReplyPush, StatusPush
 from claude_review.presentation.wire.story import StoryResponse
 from tests.helpers import (
     CATCH_UP_ROUTE,
     FIRST_THREAD_ID,
     REVIEW_ROUTE,
     REVIEWED_FILE,
+    REVIEWED_LINE,
     STORY_REQUEST_ROUTE,
     ReviewServers,
     RunningReview,
@@ -38,6 +39,8 @@ from tests.helpers import (
     removed_line,
     repository_opening,
     thread_on_the_wire,
+    until_the_review_holds_threads,
+    work_pushed,
     write_files,
 )
 from tests.page_socket import page_socket_held
@@ -56,6 +59,9 @@ CONTROL_CATEGORY = "Cc"
 MEANT = "\n\t"
 MESSAGE_ROUTE = "/api/message"
 ASK_ROUTE = "/api/ask"
+# A wait that times out almost at once, and long enough after it for it to have
+SHORTEST_WAIT_SECONDS = "0.2"
+PAST_THE_SHORTEST_WAIT_SECONDS = 0.6
 
 # An answer in Markdown, which the shell would mangle inside double quotes: it
 # runs the code spans and empties the price
@@ -144,6 +150,55 @@ async def test_the_work_is_shown_with_each_file_and_branch_once(review: RunningR
         ProgressStep(text="read the handler", done=True),
         ProgressStep(text="two subagents out", done=False),
     ]
+
+
+async def test_the_work_reported_reaches_the_review_on_screen_and_goes_when_done(review: RunningReview) -> None:
+    """What the agent says it is doing is drawn as it said it, and taken away when it says it is done."""
+    async with page_socket_held(review.port) as page:
+        await _run(review, "progress", "--message", "panel-1", "--file", REVIEWED_FILE, "rewriting the handler")
+        work = await asyncio.to_thread(work_pushed, page)
+        await _run(review, "progress", "--done")
+        finished = await asyncio.to_thread(next_push, page, ProgressPush)
+
+    assert (work.message_id, work.text, work.files) == ("panel-1", "rewriting the handler", [REVIEWED_FILE])
+    assert finished.work is None
+
+
+async def test_the_agent_reports_what_the_review_cannot_measure(review: RunningReview) -> None:
+    """Which model, and how much context is left, come from the agent alone."""
+    async with page_socket_held(review.port) as page:
+        result = await _run(review, "status", "--model", "opus-5", "--context", "53% of 1M")
+        pushed = await asyncio.to_thread(next_push, page, StatusPush)
+
+    assert result.exit_code == 0, result.output
+    assert (pushed.agent.model, pushed.agent.context) == ("opus-5", "53% of 1M")
+
+
+async def test_a_thread_named_is_read_in_full(review: RunningReview) -> None:
+    """The index is for choosing; naming a thread hands over all of it, with the lines it is about."""
+    quoted = {**line_on_the_wire(REVIEWED_FILE, 1), "quote": [REVIEWED_LINE]}
+    written = thread_on_the_wire(quoted, "Why this?\nAnd not that?")
+    async with page_socket_held(review.port) as page:
+        page.send(json.dumps({"threads": [written]}))
+        with Client(base_url=review.url) as reader:
+            await asyncio.to_thread(until_the_review_holds_threads, reader, 1)
+
+        read = await _run(review, "catch-up", "--thread", FIRST_THREAD_ID)
+
+    assert read.exit_code == 0, read.output
+    assert "And not that?" in read.output
+    assert f"lines: {REVIEWED_LINE}" in read.output
+
+
+async def test_waiting_until_an_event_waits_through_the_timeouts(review: RunningReview) -> None:
+    """The agent's loop is handed only what happened, never a timeout to look for and skip."""
+    waiting = asyncio.create_task(_run(review, "wait", "--seconds", SHORTEST_WAIT_SECONDS, "--until-event"))
+    # Long enough for the first wait to have timed out
+    await asyncio.sleep(PAST_THE_SHORTEST_WAIT_SECONDS)
+    async with AsyncClient(base_url=review.url) as page:
+        await page.post(MESSAGE_ROUTE, json={"message_id": "panel-1", "body": "Still there?"})
+
+    assert json.loads((await waiting).output)["type"] == "message"
 
 
 @pytest.mark.parametrize(

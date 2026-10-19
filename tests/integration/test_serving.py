@@ -23,9 +23,18 @@ from claude_review.hosting.errors import ReviewStoppedError, ServerStartError
 from claude_review.hosting.hosted_review import HostedReview
 from claude_review.hosting.ports import ANY_FREE_PORT, bind
 from claude_review.hosting.serving import hold_open, serve_review, stop_signals
+from claude_review.presentation.wire.pushes import ChangedPush
 from claude_review.repositories.git_repository import GitRepository, GitStagedTree
 from claude_review.services.review_opening import ReviewOpening, open_diff
-from tests.helpers import IMAGES_ROUTE, LOOK_EVERY_SECONDS, PNG, SETTLE_SECONDS, ReviewFactory
+from tests.helpers import (
+    IMAGES_ROUTE,
+    LOOK_EVERY_SECONDS,
+    PNG,
+    SETTLE_SECONDS,
+    ReviewFactory,
+    committed_repository,
+    next_push,
+)
 from tests.page_socket import page_socket_held
 
 SUBMIT_ROUTE = "/api/submit"
@@ -169,6 +178,30 @@ async def _until_logged(logged: list[EventDict], event: str) -> None:
     """Return once the review has logged an event."""
     while event not in _events(logged):
         await asyncio.sleep(LOOK_EVERY_SECONDS)
+
+
+async def test_a_file_changed_under_the_review_is_said_to_the_review_on_screen(
+    reviews: ReviewFactory, announcer: RecordingAnnouncer, tmp_path_factory: pytest.TempPathFactory
+) -> None:
+    """Said, never acted on: the reader decides when to take the diff again.
+
+    The repository stands apart from the test's directory, where the review keeps what it writes: nothing but the
+    file changed moves in it.
+    """
+    repository = committed_repository(tmp_path_factory.mktemp("apart"), {"initial.txt": "initial content\n"})
+    (repository / "initial.txt").write_text("changed\n")
+    opened = await open_diff(repository, None, GitRepository(objects=None))
+    serving = asyncio.ensure_future(_served(reviews.hosted(opened), announcer))
+    address = await asyncio.wait_for(announcer.address, SETTLE_SECONDS)
+
+    # The tree is watched only once a page is there to be told
+    async with page_socket_held(_port_of(address)) as page, AsyncClient(base_url=address) as agent:
+        (repository / "initial.txt").write_text("changed again, by somebody else\n")
+        moved = await asyncio.to_thread(next_push, page, ChangedPush)
+        await agent.post(SUBMIT_ROUTE, json=LAST_ROUND)
+    await asyncio.wait_for(serving, timeout=SETTLE_SECONDS)
+
+    assert moved == ChangedPush(moved_count=1)
 
 
 async def test_a_watch_on_the_tree_that_fails_leaves_the_review_running_and_its_round_handed_back(
