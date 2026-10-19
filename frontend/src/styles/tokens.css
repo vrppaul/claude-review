@@ -29,8 +29,8 @@
  * (in each theme below), or round; a line is one of the two below. Whatever
  * else has a size, a time or a strength — a row, a pane, an arrow, a breath
  * — is named here once. stylelint refuses one written as a number in any
- * other stylesheet, and eslint refuses room, words or a value written in
- * place off the scale in the markup.
+ * other stylesheet, and eslint refuses room, words, a box's width or height
+ * or a value written in place off the scale in the markup.
  */
 
 :root {
@@ -51,6 +51,9 @@
 	/* A suggested line's sign, + or −: a little over a character of the code wide, half a character before it */
 	--cr-sign-width: 1.25ch;
 	--cr-sign-gap: 0.5ch;
+	/* The columns a row of the diff stands in beside its code: a line's number, and the row's sign, + or − */
+	--cr-line-number-width: 3rem;
+	--cr-sign-column-width: 1rem;
 	/*
 	 * What a section of a file's lines takes up, beside its rows, before they
 	 * are drawn: what each of its parts is as tall as, set here once, which
@@ -69,6 +72,9 @@
 	--cr-prose-measure: 72ch;
 	/* The tallest a field being written in grows with its text, before it scrolls instead */
 	--cr-field-tallest: 30rem;
+	/* The least a field stands while nothing is written in it: a comment's, and the summary a review is sent with */
+	--cr-comment-field-least: 5rem;
+	--cr-summary-field-least: 4rem;
 	/*
 	 * A story's contents: a node on its axis, which an entry's row (lib/ui
 	 * Row) stands before its title; and so how far in what hangs under an
@@ -153,6 +159,10 @@
 	 */
 	--cr-pane-medium: 20rem;
 	--cr-pane-wide: 24rem;
+	/* The column the help lists its keys in, beside what each does */
+	--cr-key-column-width: 8rem;
+	/* The tallest the list of threads to mention stands over the field, before it scrolls itself */
+	--cr-mention-list-tallest: 15rem;
 	/*
 	 * An arrow: what a pane points at what opened it with, and a hanging
 	 * card up at what it is about, a square this long on its side turned on
@@ -180,6 +190,13 @@
 	--cr-breath-turn: 0.18s;
 	/* How far across a dot (lib/ui Dot) is */
 	--cr-dot-size: 0.375rem;
+	/*
+	 * The room a row of a list keeps before its words for a mark, drawn or
+	 * not, so its words stand in line with every other row's: a dot; and a
+	 * small mark, a file's status letter or the check of the base in force
+	 */
+	--cr-dot-room: 0.5rem;
+	--cr-mark-room: 0.75rem;
 	/* How long what arrives stays marked before it fades: an answer landing, a file the agent brings the reader to */
 	--cr-arrival: 2s;
 	/* How the tour's light glides from one step to the next: fast away, slowing as it lands */
@@ -318,6 +335,8 @@
 	--cr-panel-least-width: 17.5rem;
 	/* What a side column put away leaves standing beside the diff, at every width */
 	--cr-side-column-rail-width: 1.5rem;
+	/* The review's header at its least: one row of its controls, which wraps onto more on a narrow screen */
+	--cr-header-least-height: 3rem;
 	/* A column's edge, there to be dragged: a target as wide as this, centred on the edge */
 	--cr-grip-width: 0.375rem;
 	/* An image the reader pasted into the panel: small enough to keep the words beside it in view */

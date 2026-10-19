@@ -78,9 +78,9 @@
 				<!-- Fixed layout with both content columns unsized: the two halves
 					then split what the gutters leave, so neither side is wider. -->
 				<colgroup>
-					<col class="w-12" />
+					<col class="w-(--cr-line-number-width)" />
 					<col />
-					<col class="w-12" />
+					<col class="w-(--cr-line-number-width)" />
 					<col />
 				</colgroup>
 				<tbody>
@@ -89,7 +89,11 @@
 						{@const rightNotes = notedIn(row.right, 'new')}
 						<tr data-testid="split-row" class="cr-side-del">
 							<td
-								class={['cr-gutter w-12 p-0 text-right select-none', edge(row.left, 'old'), tint(row.left, 'old')]}
+								class={[
+									'cr-gutter w-(--cr-line-number-width) p-0 text-right select-none',
+									edge(row.left, 'old'),
+									tint(row.left, 'old')
+								]}
 								onmouseenter={() => row.left && commenting.enter(row.left)}
 							>
 								{#if row.left}
@@ -105,7 +109,7 @@
 
 							<td
 								class={[
-									'cr-gutter cr-side-add w-12 p-0 text-right select-none',
+									'cr-gutter cr-side-add w-(--cr-line-number-width) p-0 text-right select-none',
 									edge(row.right, 'new'),
 									tint(row.right, 'new')
 								]}

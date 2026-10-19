@@ -211,12 +211,6 @@ of it is built yet.
       — the gutter, the hunk gap's ways, the reply field, the folded line —
       named with the part that is to take each in `STILL_PRESSED_BY_HAND`
       (`frontend/eslint.config.js`); eslint refuses one everywhere else.
-- [ ] `refactor(ui)`: the markup still sizes boxes by Tailwind's numbered
-      steps, off the scale's names: the diff's number columns (`w-12`), its
-      sign columns, a status letter, the help's key column (`w-32`), the
-      header's least height, the mention list's most, a field's least
-      (`min-h-16`, `min-h-20`). Each is to be a token by name, and eslint to
-      refuse a numbered width or height.
 - [ ] `refactor(ui)`: what every gate still lets through: a quiet or done
       notice bar on base-200; an opacity form such as `bg-warning/10` (a
       colour `tokens.css` never wrote); a mark whose corner and ground are

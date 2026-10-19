@@ -13,7 +13,10 @@
 
 <!-- What became of a file, as a letter in the change's own colour beside its name; and the word for it,
 	for whoever cannot see the letter or tell its colour -->
-<span aria-hidden="true" class={['w-3 shrink-0 text-center font-mono text-xs font-semibold', said.colour]}>
+<span
+	aria-hidden="true"
+	class={['w-(--cr-mark-room) shrink-0 text-center font-mono text-xs font-semibold', said.colour]}
+>
 	{said.letter}
 </span>
 <span class="sr-only">{status}</span>

@@ -54,7 +54,7 @@
 	<!-- A short list over the conversation, whatever room the window leaves above the field: it scrolls itself.
 		Each option a row, lit inside the pane's margin, never to its edge, so the edge the pane's arrow grows from
 		keeps the pane's colour -->
-	<div class="cr-scroller max-h-60 p-1">
+	<div class="cr-scroller max-h-(--cr-mention-list-tallest) p-1">
 		{#each mentions.candidates as pick, index (keyOf(pick))}
 			{@const lit = index === mentions.highlighted}
 			<!-- The option the keys lit is the one of the list the reader is at -->

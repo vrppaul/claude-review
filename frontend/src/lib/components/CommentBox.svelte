@@ -188,7 +188,7 @@
 		id={fieldId}
 		data-testid="comment-input"
 		aria-label={label ? undefined : REPLY}
-		class="cr-field cr-field-grows cr-comment-body textarea min-h-20 w-full"
+		class="cr-field cr-field-grows cr-comment-body textarea min-h-(--cr-comment-field-least) w-full"
 		placeholder={PLACEHOLDERS[field.at.kind]}
 		maxlength={review.limits.max_text_length}
 		bind:value={field.text}

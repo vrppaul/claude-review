@@ -57,11 +57,11 @@
 			<table class="cr-code w-full table-fixed border-collapse font-mono">
 				<colgroup>
 					{#if isDiffMode}
-						<col class="w-12" />
+						<col class="w-(--cr-line-number-width)" />
 					{/if}
-					<col class="w-12" />
+					<col class="w-(--cr-line-number-width)" />
 					{#if isDiffMode}
-						<col class="w-4" />
+						<col class="w-(--cr-sign-column-width)" />
 					{/if}
 					<col />
 				</colgroup>
@@ -72,15 +72,15 @@
 							onmouseenter={() => commenting.enter(drawn)}
 						>
 							{#if isDiffMode}
-								<td class="cr-gutter w-12 p-0 text-right select-none">
+								<td class="cr-gutter w-(--cr-line-number-width) p-0 text-right select-none">
 									<LineGutter {drawn} side="old" reach={reachOf(drawn, 'old')} {commenting} />
 								</td>
 							{/if}
-							<td class="cr-gutter w-12 border-r border-base-300 p-0 text-right select-none">
+							<td class="cr-gutter w-(--cr-line-number-width) border-r border-base-300 p-0 text-right select-none">
 								<LineGutter {drawn} side="new" reach={reachOf(drawn, 'new')} {commenting} />
 							</td>
 							{#if isDiffMode}
-								<td class="cr-sign w-4 px-1 text-center select-none">
+								<td class="cr-sign w-(--cr-sign-column-width) px-1 text-center select-none">
 									{SIGNS[drawn.line.kind]}
 								</td>
 							{/if}

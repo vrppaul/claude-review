@@ -94,7 +94,7 @@
 			<dl data-testid="shortcuts-list" class="space-y-2">
 				{#each keysOf(review) as row (row.does)}
 					<div class="flex items-baseline gap-4">
-						<dt class="cr-muted w-32 shrink-0 text-xs">
+						<dt class="cr-muted w-(--cr-key-column-width) shrink-0 text-xs">
 							{#each row.keys as key, position (key)}
 								{#if position > 0}{OPPOSITES_APART}{/if}<Key keys={key} testId="shortcut-key" />
 							{/each}
@@ -104,7 +104,7 @@
 				{/each}
 				<!-- The list's own key, and every open pane's: not one the review answers -->
 				<div class="flex items-baseline gap-4">
-					<dt class="w-32 shrink-0 text-xs"><Key keys="Esc" testId="shortcut-key" /></dt>
+					<dt class="w-(--cr-key-column-width) shrink-0 text-xs"><Key keys="Esc" testId="shortcut-key" /></dt>
 					<dd class="text-sm">Close it</dd>
 				</div>
 			</dl>
