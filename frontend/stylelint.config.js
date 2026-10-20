@@ -4,10 +4,10 @@
 // it. Formatting is Prettier's.
 const A_LAYER = ['/^var\\(--cr-layer-[a-z-]+\\)$/'];
 const A_SHADOW = ['/^var\\(--cr-shadow-[a-z-]+\\)$/', 'none'];
-// The washes a notice's tones stand on, the warning's and the reader's softest, are laid by the library alone
-// (lib/ui NoticeBar, and EdgeFrame's warning): a rule of another stylesheet naming one draws a notice its own way,
-// as main.css's .cr-warning-bar drew the bar saying the review cannot be reached beside the library's
-const A_NOTICE_WASH = ['/var\\(--cr-(warning-tint|mark-soft)\\)/'];
+// The tints a notice's tones stand on, the warning's and the reader's, are laid by the library alone (lib/ui
+// NoticeBar, and EdgeFrame's warning): a rule of another stylesheet naming one draws a notice its own way, as
+// main.css's .cr-warning-bar drew the bar saying the review cannot be reached beside the library's
+const A_NOTICE_TINT = ['/var\\(--cr-(warning|mark)-tint\\)/'];
 // The colour of what fails is the library's alone (lib/ui Failure, and a Button and an Icon of tone danger), as
 // eslint holds the markup to: a rule of another stylesheet painting with it says what failed its own way
 const THE_COLOUR_OF_FAILING = ['/var\\(--color-error/'];
@@ -31,6 +31,11 @@ const WRITTEN_IN_THE_TOKENS = [
 	'oklch',
 	'color-mix',
 	'cubic-bezier'
+];
+// Every hue is drawn at a step of tokens.css's one ladder of strengths, named as that step: a hue mixed at a
+// strength written in is a step of its own, as the reader's mark was drawn at five strengths and the agent's at four
+const A_HUE_AT_A_WRITTEN_STRENGTH = [
+	'/color-mix\\(in srgb, var\\(--(cr-(mark|agent|done)|color-(warning|error))\\) \\d/'
 ];
 // Every size is taken off one scale, which tokens.css sets out: a number with a unit, either way up and in any
 // case, is named there once and named everywhere else — every unit but those of a turn and of a grid's share,
@@ -80,7 +85,7 @@ export default {
 				...A_WRITTEN_SIZE,
 				...OFF_THE_SCALE,
 				...THE_STEP_MULTIPLIED,
-				...A_NOTICE_WASH,
+				...A_NOTICE_TINT,
 				...THE_COLOUR_OF_FAILING,
 				...THE_COMMENT_FACE,
 				...A_LIBRARY_ROOM
@@ -94,12 +99,14 @@ export default {
 	overrides: [
 		{
 			// The palette: where the colours, the sizes and the curves are written down, the library's rooms some in
-			// terms of others, its spacing on the scale's steps
+			// terms of others, its spacing on the scale's steps, every hue on the ladder's
 			files: ['src/styles/tokens.css'],
 			rules: {
 				'color-no-hex': null,
 				'function-disallowed-list': null,
-				'declaration-property-value-disallowed-list': { '/.*/': OFF_THE_SCALE }
+				'declaration-property-value-disallowed-list': {
+					'/.*/': [...OFF_THE_SCALE, ...A_HUE_AT_A_WRITTEN_STRENGTH]
+				}
 			}
 		},
 		{

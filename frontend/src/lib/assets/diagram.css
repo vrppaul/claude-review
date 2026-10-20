@@ -16,7 +16,7 @@
 .node ellipse,
 .node polygon,
 .node path {
-	fill: var(--color-base-200);
+	fill: var(--cr-ground-card);
 	stroke: var(--color-base-300);
 }
 
@@ -60,12 +60,12 @@ span {
 	stroke: var(--cr-faint);
 }
 
-/* What a line says, on the page's ground */
+/* What a line says, on the reading ground the drawing lies on */
 .edgeLabel,
 .edgeLabel p,
 .labelBkg {
-	background-color: var(--color-base-100);
+	background-color: var(--cr-ground-reading);
 }
 .edgeLabel rect {
-	fill: var(--color-base-100);
+	fill: var(--cr-ground-reading);
 }

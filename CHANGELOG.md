@@ -147,6 +147,23 @@
   that id as `said_id`.
 
 ### Changed
+- **One ladder of colour.** Each colour that says whose a thing is or
+  what it means — the reader's blue, the agent's violet, what is done, a
+  warning — is drawn at the same steps in both themes: itself, its tint
+  (12%), its chip (18%) and its edge (35%), where the reader's blue had
+  been drawn at five strengths and the agent's at four. A thread's card is
+  edged at 35%, where it was 45%; a notice of the reader's stands on the
+  tint, where it stood at 10%. A chip is one colour wherever it stands,
+  mixed with the reading ground rather than laid over what is under it.
+  What is read is the lighter surface: in the light theme the side columns
+  and the cards are grey beside the white reading area, where only the
+  bars were; in the dark theme the reading area is the lighter ground and
+  the columns and cards the darker. In the dark theme a primary button and
+  the reader's count are a darker blue under white words (4.99:1), where
+  they were the mark's own under dark ones, and they darken under the
+  pointer. The light theme's warning is a step darker, so its words read
+  at 4.8:1 on its tint where the reader is at it. stylelint refuses a
+  colour mixed at a strength off the ladder.
 - **One conversation.** The panel's conversation with the agent reads as
   a thread's does: a turn to a row, each by the avatar of who said it,
   their name and how long ago it was said — "2m ago", where the panel said

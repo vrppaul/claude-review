@@ -61,7 +61,7 @@
 	row, then what no step tells and what the agent called housekeeping. Over it, deep in a chapter, the
 	bar that says which; above it, any thread on words it no longer says. Until a story is told, what the
 	reader waits on stands in its place, under any thread on the words of a story told before -->
-<main bind:this={container} data-testid="story-view" class="cr-diff-area bg-base-100">
+<main bind:this={container} data-testid="story-view" class="cr-diff-area bg-(--cr-ground-reading)">
 	{#if drawn.kind === 'wait'}
 		<!-- Threads the review picked up on the words of a story it no longer holds: nothing else draws them -->
 		<div class="cr-story-gutter">

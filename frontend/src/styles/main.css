@@ -13,7 +13,7 @@
  * box of it is scrolled by, on no ground of its own
  */
 :root {
-	background-color: var(--color-base-100);
+	background-color: var(--cr-ground-reading);
 	color: var(--color-base-content);
 	scrollbar-color: var(--cr-scrollbar) transparent;
 }
@@ -519,7 +519,7 @@
 }
 /* The stretch of the axis of a part read through, in the colour of what is done */
 .cr-contents-entry-read::before {
-	background: var(--cr-done-line);
+	background: var(--cr-done-border);
 }
 /*
  * A node: a ring on the column's ground, round a chapter's number, at a
@@ -537,20 +537,20 @@
 	border: var(--cr-line) solid var(--cr-node-edge);
 	/* A ring, whatever its size */
 	border-radius: 50%;
-	background: var(--color-base-100);
+	background: var(--cr-ground-column);
 	color: var(--cr-faint);
 	font-size: var(--text-2xs);
 	font-variant-numeric: tabular-nums;
 }
 /*
  * The node of a part read through: a check in the colour of what is done,
- * on a wash of it laid over the column's ground, which still hides the axis.
+ * on its tint laid over the column's ground, which still hides the axis.
  * Written before the rule of the part being read: a part read through and
  * read again keeps the reader's ring, and its check is in their colour
  */
 .cr-contents-node-read {
 	border-color: var(--cr-done-border);
-	background-image: linear-gradient(var(--cr-done-soft), var(--cr-done-soft));
+	background-image: linear-gradient(var(--cr-done-tint), var(--cr-done-tint));
 	color: var(--cr-done);
 }
 /*
@@ -790,8 +790,8 @@
 	font-weight: var(--font-weight-semibold);
 }
 .cr-guide-route-primary {
-	border-color: var(--cr-control);
-	background: var(--cr-control);
+	border-color: var(--cr-control-fill);
+	background: var(--cr-control-fill);
 	color: var(--cr-on-control);
 }
 .cr-guide-hint {
@@ -873,7 +873,7 @@
  * what it is, in the colour it has in a story told.
  */
 .cr-sketch {
-	--cr-sketch-ground: var(--color-base-100);
+	--cr-sketch-ground: var(--cr-ground-reading);
 	/* A line of words; the titles of the chapters not being read stand fainter */
 	--cr-sketch-words: var(--cr-gutter-fg);
 	--cr-sketch-faded: 0.6;
@@ -892,7 +892,7 @@
 	--cr-sketch-added-edge: var(--cr-add-edge);
 	--cr-sketch-added-tint: var(--cr-add-tint);
 	/* What the agent writes first, as it stands in a story told: the first chapter, read, and the task */
-	--cr-sketch-read-fill: var(--cr-done-soft);
+	--cr-sketch-read-fill: var(--cr-done-tint);
 	--cr-sketch-written-edge: var(--cr-done-border);
 	--cr-sketch-written-ring: none;
 	--cr-sketch-written-title: var(--cr-sketch-words);
@@ -912,7 +912,7 @@
  * page's own ground, so it is laid a step above it, as a card on the page is
  */
 .cr-sketch-waiting {
-	--cr-sketch-ground: var(--color-base-200);
+	--cr-sketch-ground: var(--cr-ground-card);
 	--cr-sketch-words: var(--cr-node-edge);
 	--cr-sketch-faded: 1;
 	--cr-sketch-strong: var(--cr-node-edge);

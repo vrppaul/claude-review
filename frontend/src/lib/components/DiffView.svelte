@@ -50,7 +50,7 @@
 </script>
 
 <!-- What is reviewed: the page's main part, beside the tree and the panel -->
-<main bind:this={container} data-testid="diff-view" class="cr-diff-area bg-base-100">
+<main bind:this={container} data-testid="diff-view" class="cr-diff-area bg-(--cr-ground-reading)">
 	{#each offTheDiff as { file, threads } (file)}
 		<UnplacedThreads {threads} why={offTheDiffWords(file)} />
 	{/each}

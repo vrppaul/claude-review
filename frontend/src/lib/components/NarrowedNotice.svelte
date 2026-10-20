@@ -66,7 +66,7 @@
 	<!-- Where they are, so a count is not the end of the road. Picking one
 		goes to it, which puts the whole diff back first: it is anchored
 		there, and that is the only screen that can draw it. -->
-	<div data-testid="off-screen-list" class="shrink-0 border-b border-base-300 bg-base-100 px-4 py-1.5">
+	<div data-testid="off-screen-list" class="shrink-0 border-b border-base-300 bg-(--cr-ground-reading) px-4 py-1.5">
 		{#each offScreen as thread (thread.id)}
 			<!-- A row a thread: where it hangs, and what it says -->
 			<Row names="path" testId="off-screen-thread" onclick={() => review.navigator.reveal(thread)}>

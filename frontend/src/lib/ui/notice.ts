@@ -13,7 +13,7 @@
  * What a notice is to the reader, said by its ground and by its mark:
  * - reader: what the reader did, or reads the review by — a base picked, the
  *   diff taken again, their unsent comments brought back, a story that shows
- *   part of the change — on their mark's softest wash, marked in it
+ *   part of the change — on their mark's tint, marked in it
  * - warning: what they stand to lose, or must decide about — the code moved
  *   on under them, a draft set aside, a part that could not be drawn, a
  *   review that cannot be reached or ended under them — on the warning's

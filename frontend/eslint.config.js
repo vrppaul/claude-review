@@ -300,14 +300,14 @@ const NO_CODE_BOXES_OF_ITS_OWN = [
 // it the page drew by hand the bar saying the review cannot be reached, the one saying it is over, the one in place
 // of a part that could not be drawn and a file's notes, from 29 to 48 px tall, their words at two sizes, one of them
 // centred. A notice is words on its tone's ground: the grounds of its tones that are washes of a colour — the
-// warning's, the reader's softest — are laid by the library alone, so one named in markup or in any string is
+// warning's tint and the reader's — are laid by the library alone, so one named in markup or in any string is
 // refused, as are the classes the page drew its notices with; stylelint holds every stylesheet but the library's
 // to the same. A quiet or a done notice stands on the raised surface every header of the page stands on, which no
 // rule here tells from a header's
 const DRAWN_AS_A_NOTICE = 'Draw a notice with lib/ui NoticeBar, in its tone, not on a wash or with classes of its own.';
 // The washes a notice's tones stand on, and the classes the page drew its notices with, behind any variants
 const A_NOTICE_OF_ITS_OWN =
-	'/--cr-(warning-tint|mark-soft)\\b|(^|\\s)([^\\s:]+:)*(cr-notice(-[a-z]+)*|cr-warning-bar)(\\s|$)/';
+	'/--cr-(warning|mark)-tint\\b|(^|\\s)([^\\s:]+:)*(cr-notice(-[a-z]+)*|cr-warning-bar)(\\s|$)/';
 const NO_NOTICES_OF_THEIR_OWN = [
 	{ selector: `SvelteLiteral[value=${A_NOTICE_OF_ITS_OWN}]`, message: DRAWN_AS_A_NOTICE },
 	{ selector: `SvelteDirective[kind='Class'][key.name.name=${A_NOTICE_OF_ITS_OWN}]`, message: DRAWN_AS_A_NOTICE },

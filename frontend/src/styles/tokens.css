@@ -259,25 +259,42 @@
 	/* What lifts a card off what it hangs under: a thread's, or a comment being written */
 	--cr-shadow-hanging: 0 8px 24px rgb(0 0 0 / 0.25);
 	/* The card's ground in a ring round an avatar in a thread, which parts it from the spine behind it */
-	--cr-shadow-avatar-ring: 0 0 0 3px var(--color-base-200);
+	--cr-shadow-avatar-ring: 0 0 0 3px var(--cr-ground-card);
 
-	/* The reader's mark at each strength it is drawn with, faintest first */
-	--cr-mark-soft: color-mix(in srgb, var(--cr-mark) 10%, transparent);
-	--cr-mark-chip: color-mix(in srgb, var(--cr-mark) 18%, transparent);
-	--cr-mark-border: color-mix(in srgb, var(--cr-mark) 35%, transparent);
-	--cr-mark-line: color-mix(in srgb, var(--cr-mark) 45%, transparent);
-	/* The agent's colour, at the strengths the mark uses for the same things */
-	--cr-agent-tint: color-mix(in srgb, var(--cr-agent) 12%, transparent);
-	--cr-agent-chip: color-mix(in srgb, var(--cr-agent) 18%, transparent);
-	--cr-agent-border: color-mix(in srgb, var(--cr-agent) 35%, transparent);
-	--cr-agent-line: color-mix(in srgb, var(--cr-agent) 45%, transparent);
+	/*
+	 * A card stands one step off the reading ground, as the side columns do,
+	 * so it takes their ground: a thread, a comment being written, the facts
+	 * of a story on its way
+	 */
+	--cr-ground-card: var(--cr-ground-column);
+
+	/*
+	 * One ladder of strengths every hue is drawn at, in both themes: its edge,
+	 * its chip and its tint, each made from the hue's one value, so a theme
+	 * sets one value per hue. No hue is drawn at any other strength, and
+	 * stylelint refuses one mixed at a strength written in.
+	 */
+	--cr-strength-border: 35%;
+	--cr-strength-chip: 18%;
+	--cr-strength-tint: 12%;
+	/*
+	 * The reader's mark and the agent's colour at each step they are drawn
+	 * at. A chip is mixed with the reading ground rather than laid over what
+	 * is under it, so it is one colour wherever it stands.
+	 */
+	--cr-mark-tint: color-mix(in srgb, var(--cr-mark) var(--cr-strength-tint), transparent);
+	--cr-mark-chip: color-mix(in srgb, var(--cr-mark) var(--cr-strength-chip), var(--cr-ground-reading));
+	--cr-mark-border: color-mix(in srgb, var(--cr-mark) var(--cr-strength-border), transparent);
+	--cr-agent-tint: color-mix(in srgb, var(--cr-agent) var(--cr-strength-tint), transparent);
+	--cr-agent-chip: color-mix(in srgb, var(--cr-agent) var(--cr-strength-chip), var(--cr-ground-reading));
+	--cr-agent-border: color-mix(in srgb, var(--cr-agent) var(--cr-strength-border), transparent);
 	/*
 	 * The ground of the avatar the reader, and the agent, speak by in a
-	 * thread: their colour over the card's, opaque, so the spine behind it
-	 * stops at its edge
+	 * thread: their tint over the card's ground, opaque, so the spine behind
+	 * it stops at its edge
 	 */
-	--cr-avatar-reader: color-mix(in srgb, var(--cr-mark) 14%, var(--color-base-200));
-	--cr-avatar-agent: color-mix(in srgb, var(--cr-agent) 12%, var(--color-base-200));
+	--cr-avatar-reader: color-mix(in srgb, var(--cr-mark) var(--cr-strength-tint), var(--cr-ground-card));
+	--cr-avatar-agent: color-mix(in srgb, var(--cr-agent) var(--cr-strength-tint), var(--cr-ground-card));
 	/*
 	 * Words written in Markdown (Prose): a step quieter than the page's own;
 	 * the marks of a list and the rule under a table's head quieter again; and
@@ -297,6 +314,18 @@
 	 */
 	--cr-control: var(--cr-mark);
 	--cr-control-text: var(--cr-mark-text);
+	/*
+	 * And as a fill, under white words (--cr-on-control): a primary button,
+	 * the reader's count. The control's own blue, but in the dark theme,
+	 * where that blue is too light for white words on it, a darker one.
+	 */
+	--cr-control-fill: var(--cr-control);
+	/*
+	 * The light that fill takes under the pointer: a fill's own, which moves
+	 * it away from the words on it, but in the dark theme, where the light
+	 * for a fill brightens it toward its white words, a darker one (below)
+	 */
+	--cr-hover-on-control-fill: var(--cr-hover-on-fill);
 
 	/*
 	 * The states of whatever can be pressed, each one token for both themes.
@@ -331,10 +360,9 @@
 	--cr-unread: var(--cr-agent);
 	/* Something done, or ready: a thread settled, a branch of work finished, a file viewed, an agent listening */
 	--cr-done: var(--cr-add-text);
-	/* And at the strengths the mark is drawn with, on the node and the axis of a part of a story read through */
-	--cr-done-soft: color-mix(in srgb, var(--cr-done) 10%, transparent);
-	--cr-done-border: color-mix(in srgb, var(--cr-done) 35%, transparent);
-	--cr-done-line: color-mix(in srgb, var(--cr-done) 45%, transparent);
+	/* And at the ladder's steps, on the node and the axis of a part of a story read through */
+	--cr-done-tint: color-mix(in srgb, var(--cr-done) var(--cr-strength-tint), transparent);
+	--cr-done-border: color-mix(in srgb, var(--cr-done) var(--cr-strength-border), transparent);
 	/* What a field says before anything is written in it: quieter than what is written, still read at 4.5:1 */
 	--cr-placeholder: var(--cr-faint);
 
@@ -388,9 +416,8 @@
 	 */
 	--cr-absent-hatch: --spacing(3);
 	--cr-absent-strength: 0.5;
-	/* The ground of something the review warns about, and the edge of it */
-	--cr-warning-tint: color-mix(in srgb, var(--color-warning) 10%, transparent);
-	--cr-warning-border: color-mix(in srgb, var(--color-warning) 35%, transparent);
+	/* The ground of something the review warns about */
+	--cr-warning-tint: color-mix(in srgb, var(--color-warning) var(--cr-strength-tint), transparent);
 }
 
 /*
@@ -441,8 +468,16 @@
 	--color-base-200: #171c25;
 	--color-base-300: #232b37;
 	--color-base-content: #d9e1ec;
+	/*
+	 * What is read is the lighter surface: the reading area on the lighter
+	 * ground, the side columns on the darker
+	 */
+	--cr-ground-reading: var(--color-base-200);
+	--cr-ground-column: var(--color-base-100);
 	/* Words on a fill: the control's, a primary button's or the reader's count; a warning's; an error's */
-	--cr-on-control: #0b111c;
+	--cr-on-control: #ffffff;
+	/* The control's blue as a fill, dark enough for white words on it (4.99:1); its marks, rings and edges keep --cr-mark */
+	--cr-control-fill: #2c6bd9;
 	--color-warning: #e8c440;
 	--color-warning-content: #1c1608;
 	--color-error: #fb5c62;
@@ -459,7 +494,6 @@
 	 * drawn as an edge or a fill does not need to
 	 */
 	--cr-mark-text: #90b2f4;
-	--cr-mark-tint: rgb(91 141 239 / 0.14);
 	/* What the tour lays over everything it is not pointing at */
 	--cr-shade: rgb(6 9 14 / 0.6);
 	/*
@@ -488,6 +522,12 @@
 	 * fills, the control's and the error's, at 1.15:1 as the screen draws it
 	 */
 	--cr-hover-on-fill: color-mix(in srgb, var(--color-base-content) 22%, transparent);
+	/*
+	 * And over the control's fill, under white words: the darkest ground laid
+	 * over it at the least that stands off it at 1.15:1 (1.18), its words then
+	 * at 5.9:1, where the light above would take them to 3.65:1
+	 */
+	--cr-hover-on-control-fill: color-mix(in srgb, var(--color-base-100) 12%, transparent);
 	--cr-add-text: #59c470;
 	--cr-del-text: #ff8086;
 
@@ -508,12 +548,15 @@
 	--color-base-200: #f4f7fa;
 	--color-base-300: #dde4ec;
 	--color-base-content: #1b2430;
+	--cr-ground-reading: var(--color-base-100);
+	--cr-ground-column: var(--color-base-200);
 	--cr-on-control: #ffffff;
 	/*
-	 * A warning in words reads at 4.5:1 on its own wash with the reader's mark laid over it — a chapter's doubt a
-	 * thread hangs under — with a tenth to spare for how a browser rounds the layers
+	 * A warning in words reads at 4.5:1 on its own tint with the place the reader is at laid over it — a chapter's
+	 * doubt a thread hangs under — at 4.8:1 under the ink's tint and 5.2:1 under the mark's, with room to spare for
+	 * how a browser rounds the layers
 	 */
-	--color-warning: #775e00;
+	--color-warning: #6b5500;
 	--color-warning-content: #ffffff;
 	--color-error: #c22c37;
 	--color-error-content: #ffffff;
@@ -524,7 +567,6 @@
 	--cr-del-tint: rgb(200 50 60 / 0.08);
 	--cr-mark: #2c6bd9;
 	--cr-mark-text: #1b4fa9;
-	--cr-mark-tint: rgb(44 107 217 / 0.12);
 	--cr-shade: rgb(27 36 48 / 0.45);
 	/* As in the dark theme: words on its chip under the pointer on a card at 4.5:1, a tenth to spare */
 	--cr-agent: #5f40a8;

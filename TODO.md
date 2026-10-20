@@ -263,12 +263,14 @@ of it is built yet.
       avatar, as the panel's were on cards, which no import tells. A rule
       that each look class has one owner is to hold them.
 - [ ] `refactor(ui)`: the colours DaisyUI's themes named keep its names:
-      the three grounds, `--color-base-100`, `-200` and `-300` (the last
-      the line between surfaces too), the page's words,
+      the line between surfaces, `--color-base-300`, the page's words,
       `--color-base-content`, and the words on a warning's and an error's
-      fill, `--color-warning-content` and `--color-error-content`. Name
-      each by what it means, and the markup's utilities with it
-      (`bg-base-200`, `border-base-300`), when the palette is chosen anew.
+      fill, `--color-warning-content` and `--color-error-content`. The
+      reading area, the columns and the cards stand on grounds named by
+      what they hold (`--cr-ground-reading`, `-column`, `-card`), but a
+      pane, a bar and a button still stand on `--color-base-100` or
+      `-200`. Name each by what it means, and the markup's utilities with
+      it (`bg-base-200`, `border-base-300`).
 - [ ] `feat(ui)`: whether a pane keeps its side while the page scrolls under
       it: one now opens the other way the moment it stops fitting.
 - [ ] `feat(ui)`: whether a notice other than a broken part's announces
