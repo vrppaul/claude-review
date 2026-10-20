@@ -27,9 +27,10 @@
  * mark's (2xs), at code's or at a comment's, each at its own leading, and in
  * one of two weights, normal and semibold. A corner is a field's or a box's,
  * or round; a line is one of the two below. Whatever else has a size, a time
- * or a strength — a row, a pane, an arrow, a breath — is named here once. stylelint refuses one written as a number in any
- * other stylesheet, and eslint refuses room, words, a box's width or height
- * or a value written in place off the scale in the markup.
+ * or a strength — a row, a pane, an arrow, a breath — is named here once.
+ * stylelint refuses one written as a number in any other stylesheet, and
+ * eslint refuses room, words, a corner, a box's width or height or a value
+ * written in place off the scale in the markup.
  */
 
 :root {
@@ -286,7 +287,7 @@
 	--cr-prose-words: color-mix(in srgb, var(--color-base-content) 80%, transparent);
 	--cr-prose-marks: color-mix(in srgb, var(--color-base-content) 50%, transparent);
 	--cr-prose-rule: color-mix(in srgb, var(--color-base-content) 20%, transparent);
-	/* The bar a box is scrolled by: the words it stands among, faint, on no ground of its own */
+	/* The bar a box is scrolled by: the words it stands among, faint */
 	--cr-scrollbar: color-mix(in srgb, currentColor 35%, transparent);
 
 	/*
@@ -441,8 +442,8 @@
 	--color-base-200: #171c25;
 	--color-base-300: #232b37;
 	--color-base-content: #d9e1ec;
-	/* Words on a fill: a primary button's or the reader's count, a warning's, an error's */
-	--color-primary-content: #0b111c;
+	/* Words on a fill: the control's, a primary button's or the reader's count; a warning's; an error's */
+	--cr-on-control: #0b111c;
 	--color-warning: #e8c440;
 	--color-warning-content: #1c1608;
 	--color-error: #fb5c62;
@@ -508,7 +509,7 @@
 	--color-base-200: #f4f7fa;
 	--color-base-300: #dde4ec;
 	--color-base-content: #1b2430;
-	--color-primary-content: #ffffff;
+	--cr-on-control: #ffffff;
 	/*
 	 * A warning in words reads at 4.5:1 on its own wash with the reader's mark laid over it — a chapter's doubt a
 	 * thread hangs under — with a tenth to spare for how a browser rounds the layers

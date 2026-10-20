@@ -108,7 +108,7 @@
  */
 .cr-ui-primary {
 	background-color: var(--cr-control);
-	color: var(--color-primary-content);
+	color: var(--cr-on-control);
 }
 .cr-ui-danger {
 	background-color: var(--color-error);
@@ -1054,7 +1054,7 @@
 /* How many of the reader's threads: on their mark, in bold figures as wide as one another */
 .cr-ui-count {
 	background-color: var(--cr-mark);
-	color: var(--color-primary-content);
+	color: var(--cr-on-control);
 	font-weight: var(--font-weight-semibold);
 	font-variant-numeric: tabular-nums;
 }
@@ -1255,36 +1255,6 @@
 .cr-ui-dot-inherited {
 	background-color: currentColor;
 }
-
-/*
- * Who says a turn (Avatar, lib/ui/avatar.ts): round, as wide as the room it
- * stands in, its glyph on a ground of its colour laid opaque over a card's,
- * ringed in the card's ground. Positioned, so it lies over whatever its row
- * draws behind it: a thread's spine
- */
-.cr-ui-avatar {
-	position: relative;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	width: 100%;
-	aspect-ratio: 1;
-	border-radius: 50%;
-	box-shadow: var(--cr-shadow-avatar-ring);
-}
-.cr-ui-avatar-reader {
-	background-color: var(--cr-avatar-reader);
-	color: var(--cr-mark);
-}
-.cr-ui-avatar-agent {
-	background-color: var(--cr-avatar-agent);
-	color: var(--cr-agent);
-}
-/* The reader's turn not said yet, in the field to reply in: grey */
-.cr-ui-avatar-unsaid {
-	background-color: var(--color-base-300);
-	color: var(--cr-faint);
-}
 /*
  * One that breathes while what it marks is on its way, as a line that never
  * changes reads as a hang; dots side by side breathe in turn, each a turn
@@ -1315,6 +1285,36 @@
 	display: inline-flex;
 	align-items: center;
 	gap: --spacing(1);
+}
+
+/*
+ * Who says a turn (Avatar, lib/ui/avatar.ts): round, as wide as the room it
+ * stands in, its glyph on a ground of its colour laid opaque over a card's,
+ * ringed in the card's ground. Positioned, so it lies over whatever its row
+ * draws behind it: a thread's spine
+ */
+.cr-ui-avatar {
+	position: relative;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	aspect-ratio: 1;
+	border-radius: 50%;
+	box-shadow: var(--cr-shadow-avatar-ring);
+}
+.cr-ui-avatar-reader {
+	background-color: var(--cr-avatar-reader);
+	color: var(--cr-mark);
+}
+.cr-ui-avatar-agent {
+	background-color: var(--cr-avatar-agent);
+	color: var(--cr-agent);
+}
+/* The reader's turn not said yet, in the field to reply in: grey */
+.cr-ui-avatar-unsaid {
+	background-color: var(--color-base-300);
+	color: var(--cr-faint);
 }
 
 /*

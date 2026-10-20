@@ -8,7 +8,10 @@
 	--font-mono: ui-monospace, 'SF Mono', 'JetBrains Mono', 'Cascadia Code', 'Fira Code', Menlo, Consolas, monospace;
 }
 
-/* The page's ground and words, in the theme it is read in, and the bar every box of it is scrolled by */
+/*
+ * The page's ground and words, in the theme it is read in, and the bar every
+ * box of it is scrolled by, on no ground of its own
+ */
 :root {
 	background-color: var(--color-base-100);
 	color: var(--color-base-content);
@@ -898,7 +901,7 @@
 .cr-guide-route-primary {
 	border-color: var(--cr-control);
 	background: var(--cr-control);
-	color: var(--color-primary-content);
+	color: var(--cr-on-control);
 }
 .cr-guide-hint {
 	display: flex;

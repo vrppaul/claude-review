@@ -35,7 +35,7 @@
 		<!-- The room the story keeps for the bar over its top, which the bar fills -->
 		<div data-testid="chapter-bar-room" class="cr-chapter-bar-room">
 			<Bar heads="chapter" testId="chapter-bar">
-				<div class="cr-story-gutter flex h-full min-w-0 flex-1 items-center gap-3">
+				<div class="cr-story-gutter flex min-w-0 flex-1 items-center gap-3">
 					<span data-testid="chapter-bar-number" class="cr-chapter-number text-xs">{chapterNumber(chapter.place)}</span>
 					<span data-testid="chapter-bar-title" class="truncate text-sm font-semibold">{chapter.told.title}</span>
 					<!-- None while why the changes belong together is read, before the first step -->

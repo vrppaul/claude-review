@@ -257,10 +257,14 @@
   the colours of words written in Markdown are now set by the page, the
   last of them by the library's Prose. The page looks as it did, but for
   code in a line of Markdown: set in by 2 pixels above and below and 6
-  beside, where it stood in by 2.6 and 6.4. The colours only its own
-  components read went, and so did eslint's rule against its classes, the
-  variants of its 53 components in 340 lines: with no plugin, its classes
-  draw nothing.
+  beside, where it stood in by a fifth and a half of its letters' size,
+  2.4 and 6 in a file's preview, 2.6 and 6.4 in a comment. The colours only
+  its own components read went, and so did eslint's rule against its
+  classes, the variants of its 53 components in 332 lines: with no plugin,
+  its classes draw nothing. eslint refuses a utility written with a colour
+  or a corner its themes named that the page's do not, as
+  `text-primary-content` or `rounded-box`, which would draw nothing too.
+  Words on the control's fill are named for it, `--cr-on-control`.
 - **Every size is taken off one scale.** Room between things is one of
   nine steps from 0 to 32 pixels, words one of a few sizes in two weights
   at their size's own leading, a line 1 or 2 pixels, a corner a field's or

@@ -162,9 +162,11 @@ const Z_UTILITY = `/${UTILITY_START}z-/`;
 // The utilities that take a colour
 const PAINTS =
 	'(bg|text|border(-[xytblrse])?|ring(-offset)?|outline|fill|stroke|from|via|to|decoration|divide|placeholder|caret|accent|inset-ring)';
-// A colour of Tailwind's own palette, at any shade, or its black and white. A
-// slash in a pattern is escaped: a selector's regex ends at one
-const PALETTE = `((slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-[0-9]+|(black|white)(\\/|${UTILITY_END}))`;
+// A colour of Tailwind's own palette, at any shade, or its black and white; and a colour DaisyUI's themes named
+// that Tailwind no longer has, being handed the page's own alone (tokens.css), so a utility written with one draws
+// nothing: `text-primary-content`, `bg-success`, `text-warning-content`. A slash in a pattern is escaped: a
+// selector's regex ends at one
+const PALETTE = `((slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-[0-9]+|((black|white|primary|secondary|accent|neutral|info|success)(-content)?|warning-content)(\\/|${UTILITY_END}))`;
 // A colour written in place, as an arbitrary value
 const RAW_COLOUR = '\\[(#|(rgba?|hsla?|hwb|lab|lch|oklab|oklch|color|color-mix)\\b)';
 const COLOUR_UTILITY = `/${UTILITY_START}${PAINTS}-(${PALETTE}|${RAW_COLOUR})/`;
@@ -211,8 +213,9 @@ const ARBITRARY_VALUE = `/${UTILITY_START}[a-z0-9-]+-\\[/`;
 // strength, `text-warning/80`, is no size of words
 const WORDS_OFF_THE_SCALE = `/${UTILITY_START}(text-(base|[2-9]xl)(${UTILITY_END}|\\/)|text-(2xs|xs|sm|lg|xl)\\/|leading-|tracking-|font-(thin|extralight|light|medium|bold|extrabold|black)${UTILITY_END})/`;
 // A corner, a line, a ring, a strength or a time at a step of Tailwind's own beside the scale's: `rounded`,
-// `rounded-sm`, `rounded-t-lg`, `border-4`, `divide-y-2`, `ring-2`, `outline-offset-2`, `opacity-50`, `duration-300`
-const MEASURE_OFF_THE_SCALE = `/${UTILITY_START}(rounded(-(t|r|b|l|s|e|tl|tr|bl|br|ss|se|es|ee))?(-(none|xs|sm|md|lg|xl|[2-4]xl))?${UTILITY_END}|(border(-[xytblrse])?|divide-[xy])-(?!0${UTILITY_END})[0-9]|(ring|outline)(-offset)?-[0-9]|opacity-(?!(0|100)${UTILITY_END})[0-9]|(duration|delay)-[0-9])/`;
+// `rounded-sm`, `rounded-t-lg`, `border-4`, `divide-y-2`, `ring-2`, `outline-offset-2`, `opacity-50`, `duration-300`;
+// and a corner by the name DaisyUI gave it, which Tailwind no longer has, so it draws nothing: `rounded-box`
+const MEASURE_OFF_THE_SCALE = `/${UTILITY_START}(rounded(-(t|r|b|l|s|e|tl|tr|bl|br|ss|se|es|ee))?(-(none|xs|sm|md|lg|xl|[2-4]xl|box|field|selector))?${UTILITY_END}|(border(-[xytblrse])?|divide-[xy])-(?!0${UTILITY_END})[0-9]|(ring|outline)(-offset)?-[0-9]|opacity-(?!(0|100)${UTILITY_END})[0-9]|(duration|delay)-[0-9])/`;
 
 /** Selectors for every way a class list is written in markup, holding a pattern. */
 function inClassLists(pattern, message) {
@@ -413,7 +416,8 @@ const NO_ELEMENTS_HANDED_THEIR_KIND = [
 // The controls that are the code's own drawing, as the code's rows, the gaps round its pieces and the controls in
 // them are the page's drawings (ui.css's head): a line's number, a <button> in its row's gutter cell, which a comment
 // is begun on; and the ways to the lines a gap leaves out, <button>s in the gap's row above, between or below the
-// pieces of the code, in the code's face on the gap's ground. They are let off the rule that refuses a button, and nothing else is
+// pieces of the code, in the code's face on the gap's ground. They are let off the rule that refuses a button, and
+// nothing else is
 const PRESSED_IN_THE_CODE = ['src/lib/components/LineGutter.svelte', 'src/lib/components/HunkGap.svelte'];
 const BUTTON_IN_THE_LIBRARY = { elements: ['button'], message: PRESSED_IN_THE_LIBRARY };
 // A field is drawn by the library (Field, Filter, Checkbox), and nothing outside it draws one: the page drew its

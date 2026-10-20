@@ -218,20 +218,26 @@ of it is built yet.
       or an element in a spread of attributes; a mark, a question or a
       heading drawn by `main.css` or by utilities; a round drawing of
       `main.css`, an avatar drawn there anew as much as a story's nodes;
-      the story contents' axis laid
-      out in `main.css` from Row's tokens; utilities held in a script's
-      string and handed to `class={…}`, which no gate of a class list
-      reads; a list's or a view's "nothing here" drawn by hand rather than
-      with `EmptyNote`, muted words with room round them that no pattern
-      tells from other words; a tour's name in a spread of attributes; a
-      bar drawn by a rule of `main.css`, its raised ground and its rule
-      across in one rule, which no stylesheet gate reads as a pair; a
-      selector of another stylesheet reading the library's classes or the
-      kept-in-sight role by a part of an attribute (`[class*='cr-ui-']`,
-      `[data-role~='kept-in-sight']`); a raised ground or a comment's size
-      written with a type hint in markup
+      the story contents' axis laid out in `main.css` from Row's tokens;
+      utilities held in a script's string and handed to `class={…}`, which
+      no gate of a class list reads; a list's or a view's "nothing here"
+      drawn by hand rather than with `EmptyNote`, muted words with room
+      round them that no pattern tells from other words; a tour's name in
+      a spread of attributes; a bar drawn by a rule of `main.css`, its
+      raised ground and its rule across in one rule, which no stylesheet
+      gate reads as a pair; a selector of another stylesheet reading the
+      library's classes or the kept-in-sight role by a part of an
+      attribute (`[class*='cr-ui-']`, `[data-role~='kept-in-sight']`); a
+      raised ground or a comment's size written with a type hint in markup
       (`bg-(color:--color-base-200)`, `text-(length:--cr-comment-size)`).
       A rule that each look class has one owner is to hold them.
+- [ ] `refactor(ui)`: the colours DaisyUI's themes named keep its names:
+      the three grounds, `--color-base-100`, `-200` and `-300` (the last
+      the line between surfaces too), the page's words,
+      `--color-base-content`, and the words on a warning's and an error's
+      fill, `--color-warning-content` and `--color-error-content`. Name
+      each by what it means, and the markup's utilities with it
+      (`bg-base-200`, `border-base-300`), when the palette is chosen anew.
 - [ ] `feat(ui)`: whether a pane keeps its side while the page scrolls under
       it: one now opens the other way the moment it stops fitting.
 - [ ] `feat(ui)`: whether a notice other than a broken part's announces
