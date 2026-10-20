@@ -15,13 +15,13 @@
 		look: string;
 	}
 
-	const SPEAKERS: Record<Speaker, Drawn> = {
+	const DRAWN_AS: Record<Speaker, Drawn> = {
 		reader: { icon: 'person', look: 'cr-ui-avatar-reader' },
 		agent: { icon: 'story', look: 'cr-ui-avatar-agent' },
 		unsaid: { icon: 'person', look: 'cr-ui-avatar-unsaid' }
 	};
 
-	const drawn = $derived(SPEAKERS[speaker]);
+	const drawn = $derived(DRAWN_AS[speaker]);
 </script>
 
 <!-- Who says a turn, round (lib/ui/avatar.ts): as wide as its turn's first column (Turn), which lays out round it -->

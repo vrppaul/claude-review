@@ -844,8 +844,8 @@ export default tseslint.config(
 		rules: { 'prefer-const': 'off', 'svelte/prefer-const': 'error' }
 	},
 	{
-		// Everywhere else — the components, the page's entry — a part is named plainly too, and draws no avatar
-		// of its own; each part of src/lib below says so again with what it may not reach
+		// Everywhere else — the components, the page's entry — a part is named plainly too, and draws an avatar
+		// only through Turn; each part of src/lib below says again how a part is named, with what it may not reach
 		files: ['src/**'],
 		rules: { 'no-restricted-imports': ['error', { patterns: [PLAINLY_NAMED, AVATAR_OF_A_TURN] }] }
 	},

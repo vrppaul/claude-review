@@ -11,7 +11,7 @@
 </script>
 
 <!-- A conversation, a thread's or the panel's with the agent: its rows one under another, as far apart as the
-	pieces of the spine each draws reach, so the spine runs unbroken from the first avatar to the last -->
+	pieces of the spine each draws reach, so the spine runs unbroken from the first row to the last -->
 <div data-testid={testId} class="cr-ui-conversation">
 	{@render children()}
 </div>

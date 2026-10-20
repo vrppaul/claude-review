@@ -4,14 +4,14 @@
 	import Avatar from './Avatar.svelte';
 	import type { Speaker } from './avatar';
 
-	/** A speaker's name at the head of their turns, where they have one, and their row's class where it looks its own. */
-	interface Named {
+	/** How a speaker's turns are headed: their name, where they have a head, and their row's class, if its own. */
+	interface Headed {
 		name: string | null;
 		look: string | null;
 	}
 
 	// The agent's name is said in its colour; the reader about to say something has no head yet
-	const NAMED: Record<Speaker, Named> = {
+	const HEADED: Record<Speaker, Headed> = {
 		reader: { name: 'You', look: null },
 		agent: { name: 'Agent', look: 'cr-ui-turn-agent' },
 		unsaid: { name: null, look: null }
@@ -33,7 +33,7 @@
 
 	let { speaker, testId, landing = false, head, headEnd, children, ...attributes }: Props = $props();
 
-	const named = $derived(NAMED[speaker]);
+	const headed = $derived(HEADED[speaker]);
 </script>
 
 <!-- One turn of a conversation, a thread's or the panel's: the avatar of who says it, beside their name, the
@@ -42,16 +42,16 @@
 <div
 	{...attributes}
 	data-testid={testId}
-	class={['cr-ui-turn-row cr-ui-turn', named.look, landing && 'cr-ui-turn-landing']}
+	class={['cr-ui-turn-row cr-ui-turn', headed.look, landing && 'cr-ui-turn-landing']}
 >
 	<Avatar {speaker} />
 	<div data-testid="turn-body" class="cr-ui-turn-body">
-		{#if named.name !== null}
+		{#if headed.name !== null}
 			<div data-testid="turn-head" class="cr-ui-turn-head">
-				<strong class="cr-ui-turn-name">{named.name}</strong>
+				<strong class="cr-ui-turn-name">{headed.name}</strong>
 				{@render head?.()}
 				{#if headEnd}
-					<span class="cr-ui-turn-head-end">{@render headEnd()}</span>
+					<div data-testid="turn-head-end" class="cr-ui-turn-head-end">{@render headEnd()}</div>
 				{/if}
 			</div>
 		{/if}

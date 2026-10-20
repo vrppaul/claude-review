@@ -13,7 +13,7 @@
 	import MarkdownRenderer from './MarkdownRenderer.svelte';
 	import SaidImages from './SaidImages.svelte';
 	import SuggestionDiff from './SuggestionDiff.svelte';
-	import ThreadActions from './ThreadActions.svelte';
+	import ThreadHeadEnd from './ThreadHeadEnd.svelte';
 	import ThreadHeading from './ThreadHeading.svelte';
 	import { TURN_VOICES } from './thread-voice';
 
@@ -58,18 +58,13 @@
 			<span class="cr-faint text-xs">round {exchange.round}</span>
 		</TurnAside>
 	{/if}
-	<Turn speaker={TURN_VOICES[exchange.by]} testId="thread-question">
+	<Turn speaker={TURN_VOICES[exchange.by]} testId="thread-question" headEnd={opening ? threadHeadEnd : undefined}>
 		{#snippet head()}
 			{#if exchange.at !== undefined}
 				<span>{howLongAgo(exchange.at)}</span>
 			{/if}
 			{#if opening}
 				<ThreadHeading {thread} />
-			{/if}
-		{/snippet}
-		{#snippet headEnd()}
-			{#if opening}
-				<ThreadActions {thread} />
 			{/if}
 		{/snippet}
 		{#if opening && thread.anchor.outdated && writtenAgainst.length > 0}
@@ -123,3 +118,8 @@
 		/>
 	{/if}
 {/each}
+
+<!-- The far end of the head of the first turn alone: whose the thread is, and what can be done to it -->
+{#snippet threadHeadEnd()}
+	<ThreadHeadEnd {thread} />
+{/snippet}

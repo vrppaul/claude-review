@@ -26,7 +26,7 @@ afterEach(() => {
 	vi.useRealTimers();
 });
 
-/** What was said in the panel: the reader's message two minutes before `now`, and the agent's answer forty seconds before. */
+/** What was said in the panel: the reader's message two minutes before `now`, the answer forty seconds before. */
 function saidInThePanel(now: number): SaidInPanel[] {
 	const asked = { said_id: 'panel-1', message_id: 'panel-1', images: [], threads: [], files: [], taken_back: false };
 	return [
@@ -58,7 +58,7 @@ describe('how long a question has waited', () => {
 	});
 });
 
-describe('who said each turn of a thread, and how long ago', () => {
+describe('who said each turn, in a thread and in the panel, and how long ago', () => {
 	it('says the reader asked two minutes ago and the agent answered forty seconds ago', async () => {
 		vi.useFakeTimers();
 		const review = openReview({ files: [file] });

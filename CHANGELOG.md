@@ -170,10 +170,10 @@
   beside it, and the waiting story's way to the files stand in such a row
   too; the Undo in Story's note is quiet among its words, where it was
   edged. eslint holds a row to it, and refuses a main act laid out among
-  other acts by hand. Where a row takes the keyboard as it opens — the question before
-  stories are turned on, the guide's welcome and its news, Story's
-  introduction — its main act still takes it, now last, and the act beside
-  it is a Shift+Tab away.
+  other acts by hand. Where a row takes the keyboard as it opens — the
+  question before stories are turned on, the guide's welcome and its news,
+  Story's introduction — its main act still takes it, now last, and the act
+  beside it is a Shift+Tab away.
 - **Tests hold what someone can name, and run when their part changed.**
   A test is written for a behaviour — what the command line prints or
   refuses, what a route answers, what the reader sees or where the keyboard

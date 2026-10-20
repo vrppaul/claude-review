@@ -18,7 +18,7 @@
 </script>
 
 <!-- The rest of the head of the thread's first turn, after who said it and when: what the thread hangs on and
-	what state it is in; what can be done to it stands at the head's far end (ThreadActions) -->
+	what state it is in; whose it is and what can be done to it stand at the head's far end (ThreadHeadEnd) -->
 <AnchorHeading anchor={thread.anchor} />
 {#if thread.severity !== 'note'}
 	<Tag tone={severityTone(thread)} testId="comment-severity">{thread.severity}</Tag>

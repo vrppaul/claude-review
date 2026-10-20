@@ -17,19 +17,14 @@
 	const review = useReview();
 
 	const work = $derived(review.answerer.work);
-	// Only a message the reader sent can be taken back
-	const takeBack = $derived(messageId === undefined ? undefined : takingBack(messageId));
-
-	/** Take back the message being worked on: the agent decides what to do about it. */
-	function takingBack(sentMessage: string): () => Promise<void> {
-		return () => review.conversation.cancel(sentMessage);
-	}
+	// Only a message the reader sent can be taken back; the agent decides what to do about it
+	const takeBack = $derived(messageId === undefined ? undefined : () => review.conversation.cancel(messageId));
 </script>
 
 <!-- The agent at work in the panel, as an answer awaited in a thread is: what it says it is doing, replaced as
 	it changes -->
 <AgentOnItsWay
-	testId={messageId ? 'panel-working' : 'panel-work'}
+	testId={messageId === undefined ? 'panel-work' : 'panel-working'}
 	waited={`working ${timeAgo(since, review.clock.now)}`}
 	{takeBack}
 >
@@ -53,7 +48,8 @@
 		</ul>
 	{/if}
 	{#if work && work.files.length > 0}
-		<div class="flex flex-wrap gap-1">
+		<!-- As far under what it says as the files of the agent's answer stand under its words -->
+		<div class="mt-2 flex flex-wrap gap-1">
 			<!-- Known by where they stand, since the agent may name a file twice -->
 			{#each work.files as path, position (position)}
 				<FileChip {path} testId="progress-file" />
