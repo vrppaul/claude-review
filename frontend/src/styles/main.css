@@ -909,7 +909,7 @@
  * sketch is greyed whole — but for the overview's edge, the voice that
  * writes — and what the agent writes first stands in its colour,
  * breathing as its dots do (.cr-sketch-writing). It is awaited on the
- * page's own ground, so it is laid a step above it, as a card on the page is
+ * reading ground, so it is laid a step off it, as a card on the page is
  */
 .cr-sketch-waiting {
 	--cr-sketch-ground: var(--cr-ground-card);

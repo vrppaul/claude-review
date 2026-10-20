@@ -60,14 +60,27 @@
 	background-color: var(--color-base-content);
 	color: var(--cr-on-ink);
 }
-/* Every change of state eases, but for a reader who asked for less motion (main.css) */
+/*
+ * And whatever is drawn in it, in its words: a dot, an icon or a figure in a
+ * hue of its own stood on the ink at under 3:1 — the agent's presence, a
+ * danger's bin, the unread replies' count
+ */
+.cr-pressable:is([aria-pressed='true'], [aria-haspopup][aria-expanded='true']) * {
+	color: inherit;
+}
+.cr-pressable:is([aria-pressed='true'], [aria-haspopup][aria-expanded='true']) .cr-ui-dot {
+	background-color: currentColor;
+}
+/*
+ * A button or a segment eases into its pressed or open look, but for a
+ * reader who asked for less motion (main.css). A row and a band the keys
+ * move do not, as nothing moves that the keys outrun
+ */
 .cr-ui-button,
-.cr-ui-segment,
-.cr-ui-row,
-.cr-ui-band {
+.cr-ui-segment {
 	transition:
-		background-color var(--cr-change) ease,
-		color var(--cr-change) ease;
+		background-color var(--cr-state-change) ease,
+		color var(--cr-state-change) ease;
 }
 
 /* One focus treatment, in the palette, so keyboard use is visible everywhere */
@@ -876,8 +889,9 @@
 }
 
 /*
- * A card (Card, lib/ui/card.ts), and code set apart on one (CodeBox): on a
- * raised surface, a line round it in its tone's colour, at the box's corner
+ * A card (Card, lib/ui/card.ts), and code set apart on one (CodeBox): on the
+ * card's ground, a step off the reading ground, a line round it in its tone's
+ * colour, at the box's corner
  */
 .cr-ui-card {
 	border: var(--cr-line) solid;
@@ -943,7 +957,7 @@
  */
 .cr-ui-icon {
 	flex-shrink: 0;
-	transition: rotate var(--default-transition-duration) var(--default-transition-timing-function);
+	transition: rotate var(--cr-state-change) ease;
 }
 .cr-ui-icon-xs {
 	width: var(--text-xs);
@@ -1145,7 +1159,8 @@
 	min-height: var(--cr-list-row-height);
 	padding-block: calc((var(--cr-list-row-height) - var(--cr-one-line)) / 2);
 	padding-inline: calc(var(--cr-depth) * var(--cr-list-row-indent) + var(--cr-list-row-room)) var(--cr-list-row-room);
-	border-radius: var(--radius-field);
+	/* A box's corner, so the pointer's light and the pill of the one the reader is at are rounded alike */
+	border-radius: var(--radius-box);
 	color: var(--color-base-content);
 	font-size: var(--text-xs);
 	font-weight: var(--font-weight-semibold);
@@ -1208,14 +1223,13 @@
 }
 /*
  * The one of its list the reader is at — the file they are in, the base
- * the diff is read against, the option the keys lit — on the ink's tint,
- * rounded, with no edge, its words in ink, though they finished with it:
- * faint words read at 4.2:1 on the tint; and so the band (Band) of the
- * story's words a thread of theirs hangs open under
+ * the diff is read against, the option the keys lit — on the ink's tint, at
+ * its own corner as the pointer's light is, with no edge, its words in ink
+ * though they finished with it; and so the band (Band) of the story's words
+ * a thread of theirs hangs open under
  */
 .cr-ui-row-current,
 .cr-ui-band-current {
-	border-radius: var(--radius-box);
 	background-color: var(--cr-selected);
 	color: var(--color-base-content);
 }

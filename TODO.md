@@ -268,9 +268,14 @@ of it is built yet.
       fill, `--color-warning-content` and `--color-error-content`. The
       reading area, the columns and the cards stand on grounds named by
       what they hold (`--cr-ground-reading`, `-column`, `-card`), but a
-      pane, a bar and a button still stand on `--color-base-100` or
-      `-200`. Name each by what it means, and the markup's utilities with
-      it (`bg-base-200`, `border-base-300`).
+      pane, a bar (the header, a column's, a file's, a hunk's header and
+      gap), a button, a notice, code in a line of words and the story
+      sketch's nodes still stand on `--color-base-100` or `-200`, and some
+      no longer stand a step off what is under them: in the dark theme the
+      header, a file's bar, a hunk's header and a pane stand on the
+      reading area's own ground, in the light one a column's bar on its
+      column's. Give each a ground by what it holds, and the markup's
+      utilities with it (`bg-base-200`, `border-base-300`).
 - [ ] `feat(ui)`: whether a pane keeps its side while the page scrolls under
       it: one now opens the other way the moment it stops fitting.
 - [ ] `feat(ui)`: whether a notice other than a broken part's announces

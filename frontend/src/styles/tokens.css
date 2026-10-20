@@ -260,10 +260,12 @@
 	--cr-ground-card: var(--cr-ground-column);
 
 	/*
-	 * One ladder of strengths every hue is drawn at, in both themes: its edge,
-	 * its chip and its tint, each made from the hue's one value, so a theme
-	 * sets one value per hue. No hue is drawn at any other strength, and
-	 * stylelint refuses one mixed at a strength written in.
+	 * One ladder of strengths every hue that says whose a thing is or what it
+	 * means is drawn at, in both themes: its edge, its chip and its tint, each
+	 * made from the hue's one value, so a theme sets one value per hue.
+	 * stylelint refuses the reader's, the agent's, done's, a warning's or an
+	 * error's colour mixed at a strength written in. The diff's own green and
+	 * red — its added and removed rows and words — stand outside it still.
 	 */
 	--cr-strength-border: 35%;
 	--cr-strength-chip: 18%;
@@ -334,16 +336,18 @@
 	 * What is chosen is drawn in ink, never in a hue, and marked the more
 	 * weakly the larger it is. A small thing chosen — a segment pressed, a
 	 * toggle on, a control whose pane is open — is reversed: the page's words
-	 * its ground, the page's plainest ground its words. The row or band the reader is
-	 * at — the file they are in, the option the keys lit, the block a thread
-	 * of theirs hangs open under — stands on the ink's tint, rounded, with no
-	 * edge, its words in ink. The pointer leaves either as it is. What holds
-	 * the keyboard is ringed in the control's colour, a field edged in it;
-	 * and every change of state eases over --cr-change.
+	 * its ground, the page's plainest ground its words, and whatever is drawn
+	 * in it in those words. The row or band the reader is at — the file they
+	 * are in, the option the keys lit, the block a thread of theirs hangs open
+	 * under — stands on the ink's tint, rounded, with no edge, its words in
+	 * ink. The pointer leaves either as it is. What holds the keyboard is
+	 * ringed in the control's colour, a field edged in it. A button or a
+	 * segment pressed or opened eases into its look over --cr-state-change; a
+	 * row or a band the keys move does not, since it would trail them.
 	 */
 	--cr-on-ink: var(--color-base-100);
 	--cr-selected: color-mix(in srgb, var(--color-base-content) var(--cr-strength-tint), transparent);
-	--cr-change: 150ms;
+	--cr-state-change: 150ms;
 	/*
 	 * What the reader marked in the code, the lines they picked to comment
 	 * on: theirs, so in their mark, on its tint with its edge at the row's
@@ -515,12 +519,13 @@
 	--cr-status-modified: #e0a458;
 	--cr-gutter-fg: #8694a8;
 	--cr-muted: #98a5b6;
-	--cr-faint: #8894a4;
+	/* Faint words, at 4.5:1 even on the ink's tint of the row the reader is at */
+	--cr-faint: #929dab;
 	/* The pointer's light: the page's words at the least strength that stands off every ground at 1.15:1 */
 	--cr-hover: color-mix(in srgb, var(--color-base-content) 7%, transparent);
 	/*
-	 * And over a filled button's own fill: the least that stands off both
-	 * fills, the control's and the error's, at 1.15:1 as the screen draws it
+	 * And over a filled button's own fill under dark words, the error's: the
+	 * least that stands off it at 1.15:1 as the screen draws it
 	 */
 	--cr-hover-on-fill: color-mix(in srgb, var(--color-base-content) 22%, transparent);
 	/*
@@ -554,8 +559,8 @@
 	--cr-on-control: #ffffff;
 	/*
 	 * A warning in words reads at 4.5:1 on its own tint with the place the reader is at laid over it — a chapter's
-	 * doubt a thread hangs under — at 4.8:1 under the ink's tint and 5.2:1 under the mark's, with room to spare for
-	 * how a browser rounds the layers
+	 * doubt a thread hangs under — at 4.8:1 under the ink's tint, with room to spare for how a browser rounds the
+	 * layers
 	 */
 	--color-warning: #6b5500;
 	--color-warning-content: #ffffff;
@@ -574,10 +579,11 @@
 	--cr-pane-edge: #c3cdd9;
 	--cr-axis: #d0d8e2;
 	--cr-node-edge: #b3bfcd;
-	--cr-status-modified: #8f5c07;
+	/* A modified file's letter and faint words, at 4.5:1 even on the ink's tint of the row the reader is at */
+	--cr-status-modified: #855607;
 	--cr-gutter-fg: #5b6878;
 	--cr-muted: #4c5866;
-	--cr-faint: #5b6878;
+	--cr-faint: #556170;
 	--cr-hover: color-mix(in srgb, var(--color-base-content) 8%, transparent);
 	--cr-hover-on-fill: color-mix(in srgb, var(--color-base-content) 12%, transparent);
 	--cr-add-text: #16702e;

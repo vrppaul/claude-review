@@ -148,16 +148,20 @@
 
 ### Changed
 - **What is chosen is drawn in ink.** A segment pressed, a toggle on and a
-  button whose pane is open are reversed, the page's words their ground,
-  where they stood on the reader's blue tint with a blue edge at their
-  foot. The file the reader is in, the option the keys lit and the block a
-  thread hangs open under stand on a grey pill, rounded, with no edge at
-  their start, their words in ink even once viewed. A box ticks in ink.
-  The lines the reader marked to comment on keep their blue. A field the
-  keyboard is in is edged twice as strong in blue, with no ring outside
-  it, and a column's edge to drag shows in grey under the pointer. Every
-  change of state eases over 150 ms, but for a reader who asked for less
-  motion. A chevron is a line, where it was filled.
+  button whose pane is open are reversed, the page's words their ground
+  and what is drawn in them in those words, where they stood on the
+  reader's blue tint with a blue edge at their foot. The file the reader
+  is in, the option the keys lit and the block a thread hangs open under
+  stand on a grey tint with no edge at their start, their words in ink
+  even once viewed; a row is rounded at a box's corner, under the pointer
+  as where the reader is. A box ticks in ink. Faint words, and in the light
+  theme a modified file's letter, are a step stronger, so they read at
+  4.5:1 on that grey. The lines the reader marked to comment on keep their
+  blue. A field the keyboard is in is edged twice as strong in blue, with
+  no ring outside it, and a column's edge to drag shows in grey under the
+  pointer. A button or a segment eases into its pressed or open look over
+  150 ms, but for a reader who asked for less motion. A chevron is a line,
+  where it was filled.
 - **One ladder of colour.** Each colour that says whose a thing is or
   what it means — the reader's blue, the agent's violet, what is done, a
   warning — is drawn at the same steps in both themes: itself, its tint
@@ -171,10 +175,11 @@
   bars were; in the dark theme the reading area is the lighter ground and
   the columns and cards the darker. In the dark theme a primary button and
   the reader's count are a darker blue under white words (4.99:1), where
-  they were the mark's own under dark ones, and they darken under the
-  pointer. The light theme's warning is a step darker, so its words read
-  at 4.8:1 on its tint where the reader is at it. stylelint refuses a
-  colour mixed at a strength off the ladder.
+  they were the mark's own under dark ones, and the button darkens under
+  the pointer. The light theme's warning is a step darker, so its words
+  read at 4.8:1 on its tint where the reader is at it. stylelint refuses
+  any of those colours mixed at a strength off the ladder. The diff's own
+  green and red stand outside the ladder still.
 - **One conversation.** The panel's conversation with the agent reads as
   a thread's does: a turn to a row, each by the avatar of who said it,
   their name and how long ago it was said — "2m ago", where the panel said

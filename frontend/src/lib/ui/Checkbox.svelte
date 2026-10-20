@@ -4,8 +4,8 @@
 
 	/**
 	 * How it is drawn:
-	 * - box: a setting of a pane, its words first and the browser's own box at the far end of their line, in the
-	 *   colour of the reader's controls; what more is said of it under its words, quieter
+	 * - box: a setting of a pane, its words first and the browser's own box at the far end of their line, ticked
+	 *   in ink as whatever is chosen is; what more is said of it under its words, quieter
 	 * - chip: among a header's controls, the whole chip the box to press: the box laid over it unseen, and drawn as
 	 *   an icon before its words, ticked once what it marks is done
 	 */

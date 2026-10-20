@@ -10,7 +10,7 @@
  * theme.
  */
 
-/* A node: drawn as the page's raised surfaces are */
+/* A node: on the card's ground, a step off the reading ground, as a card is */
 .node rect,
 .node circle,
 .node ellipse,
