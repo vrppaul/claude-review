@@ -31,6 +31,10 @@ class ImagesNoted(ReviewAnnouncer):
     def images_left_in(self, directory: Path) -> None:
         self.left_in.append(directory)
 
+    @override
+    def never_opened(self) -> None:
+        """These reviews are never served."""
+
 
 @pytest.fixture(autouse=True)
 def temporary_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:

@@ -2,12 +2,12 @@
 
 Four things run while a review is open, and the review ending stops all of
 them: the server, the word to whoever started it that it is listening, the
-check that its page is still open, and the watch on the working tree.
-Whichever way it ends — sent, closed, Ctrl+C or `kill`, the server stopping,
-a fault — the way out is the same: the directories it wrote go, and the last
-round is handed back. Ctrl+C and `kill` are answered from the moment the
-review starts to open, so one that arrives before it runs still leaves
-nothing behind.
+check that its reader came and is still there, and the watch on the working
+tree. Whichever way it ends — sent, closed, never opened, Ctrl+C or `kill`,
+the server stopping, a fault — the way out is the same: the directories it
+wrote go, and the last round is handed back. Ctrl+C and `kill` are answered
+from the moment the review starts to open, so one that arrives before it
+runs still leaves nothing behind.
 """
 
 import asyncio
@@ -151,6 +151,10 @@ async def serve_review(
         await review.discard_unsent_images()
 
     server.raise_if_it_never_came_up()
+    # The one ending nobody saw happen: an agent hearing the review closed would
+    # take it for the reader closing it
+    if review.lifetime.reason is EndReason.NEVER_OPENED:
+        announcer.never_opened()
     return review.exit_report()
 
 
@@ -159,7 +163,7 @@ async def _run_until_ended(
 ) -> None:
     """Run everything a review open on screen needs, until the review ends and every one of them has stopped.
 
-    The server is the review. Saying where it is and noticing its page close
+    The server is the review. Saying where it is and noticing its reader gone
     are what it cannot do without: one of them failing ends the review, the
     last round handed back. The watch on the tree only helps: it failing
     leaves the review running.
@@ -169,7 +173,7 @@ async def _run_until_ended(
     async with asyncio.TaskGroup() as tasks:
         tasks.create_task(server.serve_until_ended(listening))
         tasks.create_task(_needed(_announce_once_listening(server, url, announcer), lifetime))
-        tasks.create_task(_needed(review.end_once_its_page_is_closed(), lifetime))
+        tasks.create_task(_needed(review.end_once_its_reader_is_gone(), lifetime))
         tasks.create_task(_helping(review.tell_when_the_tree_moves()))
 
 

@@ -668,6 +668,13 @@
   plus is as large as the compass above it.
 
 ### Fixed
+- **A review nobody opens ends after an hour.** One started in the
+  background whose page never opened held its port and some 35 MB until the
+  machine stopped, and twelve were once found running at once. It now ends
+  an hour after it starts if no page has opened it, and says "Nobody opened
+  the review in time" on its way out, so an agent that hears it closed does
+  not tell the reader they closed it. A review once opened lives as long as
+  a page holds it, as before.
 - **What the pointer is on is seen in the dark theme too.** A row of the
   tree, the contents or a pane, a chip, a segment, a line's number, a hunk
   gap's ways to show lines, a column's rail and grip, a thread's buttons:

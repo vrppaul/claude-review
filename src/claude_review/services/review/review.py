@@ -22,6 +22,7 @@ makes a thread's screenshots files the agent may open, and a
 is sent.
 """
 
+import asyncio
 from collections.abc import Awaitable
 from contextlib import AbstractContextManager
 
@@ -71,7 +72,11 @@ from claude_review.services.place_words import place_in_words
 from claude_review.services.reader_record_service import ReaderRecordService
 from claude_review.services.review.agent_inbox import AgentInbox, Silence
 from claude_review.services.review.answerer import ANSWERER_LEASE_SECONDS, Answerer
-from claude_review.services.review.browser_presence import RELOAD_GRACE_SECONDS, BrowserPresence
+from claude_review.services.review.browser_presence import (
+    FIRST_PAGE_DEADLINE_SECONDS,
+    RELOAD_GRACE_SECONDS,
+    BrowserPresence,
+)
 from claude_review.services.review.content_sources import ContentSource, DiffView, Retaken
 from claude_review.services.review.conversation import Conversation
 from claude_review.services.review.reader_threads import ReaderThreads
@@ -105,7 +110,9 @@ class Review:
         self._opened_against = opening.opened_against
         self._page = page
         self._images = images
-        self._presence = BrowserPresence(reload_grace=RELOAD_GRACE_SECONDS)
+        self._presence = BrowserPresence(
+            reload_grace=RELOAD_GRACE_SECONDS, first_page_deadline=FIRST_PAGE_DEADLINE_SECONDS
+        )
         self._lifetime = ReviewLifetime(page)
         self._rounds = RoundTracker()
         self._answerer = Answerer(page, clock, lease_seconds=ANSWERER_LEASE_SECONDS)
@@ -507,10 +514,16 @@ class Review:
         """End a review that was kept open for rounds."""
         self._lifetime.end(EndReason.FINISHED)
 
-    async def end_once_its_page_is_closed(self) -> None:
-        """End the review once its page is closed rather than reloaded: for everyone, an agent waiting included."""
-        if await self._lifetime.before_the_end(self._presence.until_closed_for_good()):
-            self._lifetime.end(EndReason.BROWSER_CLOSED)
+    async def end_once_its_reader_is_gone(self) -> None:
+        """End the review once its page is closed rather than reloaded, or none opened it in time.
+
+        Ended for everyone, an agent waiting included, with the reason the
+        presence gives: held as a future, so that it can be read once the wait
+        is over.
+        """
+        gone = asyncio.ensure_future(self._presence.until_gone())
+        if await self._lifetime.before_the_end(gone):
+            self._lifetime.end(gone.result())
 
     async def tell_when_the_tree_moves(self) -> None:
         """Tell the pages each time the tree stops matching the diff, from the first page on, until the review ends.

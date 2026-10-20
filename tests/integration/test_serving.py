@@ -44,6 +44,10 @@ THE_ROUND = "Rename the helper."
 LAST_ROUND = {"threads": [], "body": THE_ROUND, "end": True}
 # What the pieces of a staging are called in the temporary directory
 STAGING_LEFTOVERS = ("*.git-index", "*.git-objects")
+# How long a review waits for its first page, as the review reads it when it is put together
+FIRST_PAGE_DEADLINE = "claude_review.services.review.review.FIRST_PAGE_DEADLINE_SECONDS"
+# A wait for a first page a test outlasts, and which the server still comes up well within, as it does in the real one
+UNOPENED_DEADLINE_SECONDS = 1.0
 
 
 class StagingThatHangs(GitRepository):
@@ -95,6 +99,7 @@ class RecordingAnnouncer(ReviewAnnouncer):
     def __init__(self) -> None:
         self.address: asyncio.Future[str] = asyncio.get_running_loop().create_future()
         self.images_left: list[Path] = []
+        self.told_nobody_came = False
 
     @override
     async def listening_at(self, url: str) -> None:
@@ -103,6 +108,10 @@ class RecordingAnnouncer(ReviewAnnouncer):
     @override
     def images_left_in(self, directory: Path) -> None:
         self.images_left.append(directory)
+
+    @override
+    def never_opened(self) -> None:
+        self.told_nobody_came = True
 
 
 class TerminalThatIsGone(RecordingAnnouncer):
@@ -231,6 +240,21 @@ async def test_a_review_that_cannot_tell_whoever_started_it_where_it_is_ends_rat
     assert "review_part_failed" in _events(logged)
 
 
+async def test_a_review_nobody_opens_in_time_ends_and_says_so_to_whoever_started_it(
+    opening: ReviewOpening, reviews: ReviewFactory, announcer: RecordingAnnouncer, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Started in the background and never opened, it would hold its port and its memory until the machine stops.
+
+    Said as it ends, for an agent hearing it closed must not take it for the
+    reader closing it.
+    """
+    monkeypatch.setattr(FIRST_PAGE_DEADLINE, UNOPENED_DEADLINE_SECONDS)
+
+    await asyncio.wait_for(_served(reviews.hosted(opening), announcer), timeout=SETTLE_SECONDS)
+
+    assert announcer.told_nobody_came
+
+
 async def _the_check_fails() -> None:
     failure = "the event loop went away"
     raise OSError(failure)
@@ -249,7 +273,7 @@ async def test_a_review_that_can_no_longer_tell_its_page_closed_ends_rather_than
     fail it: the review handed to the server is given one that fails.
     """
     hosted = reviews.hosted(opening)
-    monkeypatch.setattr(hosted.review, "end_once_its_page_is_closed", _the_check_fails)
+    monkeypatch.setattr(hosted.review, "end_once_its_reader_is_gone", _the_check_fails)
 
     handed_back = await asyncio.wait_for(_served(hosted, announcer), timeout=SETTLE_SECONDS)
 

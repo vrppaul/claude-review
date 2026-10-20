@@ -1,10 +1,10 @@
 """When a review ends, and why.
 
-A review ends in several ways: the reader sends it for good, closes its tab,
-the process is stopped, or its server stops on its own. Whichever comes
-first ends it for everyone at once — the server, the agent waiting on it,
-the watcher of the tree, the pages still open on it — and the reason is
-said once, by that first one.
+A review ends in several ways: the reader sends it for good, closes its tab
+or never opens it, the process is stopped, or its server stops on its own.
+Whichever comes first ends it for everyone at once — the server, the agent
+waiting on it, the watcher of the tree, the pages still open on it — and the
+reason is said once, by that first one.
 """
 
 import asyncio
@@ -25,6 +25,7 @@ class EndReason(StrEnum):
 
     FINISHED — the reader sent it and ended it.
     BROWSER_CLOSED — its page was closed and not opened again in time.
+    NEVER_OPENED — no page opened it in the time it waits for one.
     STOPPED — the process was stopped: Ctrl+C, or `kill`.
     SERVER_STOPPED — its server stopped on its own, or never came up.
     FAULT — something the review cannot run without failed.
@@ -32,6 +33,7 @@ class EndReason(StrEnum):
 
     FINISHED = auto()
     BROWSER_CLOSED = auto()
+    NEVER_OPENED = auto()
     STOPPED = auto()
     SERVER_STOPPED = auto()
     FAULT = auto()

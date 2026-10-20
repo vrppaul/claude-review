@@ -201,7 +201,11 @@ somebody who is waiting.
      look if you were not waiting at the time. Anything else you never took
      — a question, a panel message — follows it there, under "Left unread
      when the review ended": the server stops a moment after the review
-     ends, so a `wait` may find nobody listening rather than `closed`.
+     ends, so a `wait` may find nobody listening rather than `closed`. A
+     review no page opens within an hour ends by itself, and its log says
+     "Nobody opened the review in time": the user did not close it. Tell
+     them, and start it again when they want it: it comes back at the same
+     address.
 
 6. Answer in the thread it belongs to, naming the question:
    ```bash

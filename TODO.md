@@ -50,14 +50,6 @@ tests. Remove items when done — don't check them off.
       either writes, and the second puts back what the first changed. The
       settings, several choices in one file, have the same gap.
 
-- [ ] `fix(server)`: a review nobody ever opened lives forever. The server
-      winds down when the last browser leaves, and "leaves" needs one to
-      have arrived: `BrowserPresence` counts the reader gone only once a
-      page has opened, so a `--no-open` review whose URL is never opened
-      holds its port and ~35 MB until the machine is rebooted. Twelve of
-      them were found running at once. Give an unopened review a deadline
-      of its own.
-
 - [ ] `fix(cli)`: three usage errors print what the command was handed as
       it was written — a field's name from the story's document, the text
       given for `--lines`, the story file's path — so a terminal's control

@@ -42,6 +42,10 @@ class TerminalAnnouncer(ReviewAnnouncer):
             f"Images pasted in this review stay in {directory} until the system clears its temporary files.", err=True
         )
 
+    @override
+    def never_opened(self) -> None:
+        click.echo("Nobody opened the review in time, so it has ended.", err=True)
+
 
 def _open_browser(url: str) -> None:
     """Open the review, and let it go if there is nothing to open it with.

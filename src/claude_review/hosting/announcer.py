@@ -19,3 +19,7 @@ class ReviewAnnouncer(ABC):
     @abstractmethod
     def images_left_in(self, directory: Path) -> None:
         """The review has ended, and the images pasted into it stay here for the agent to open."""
+
+    @abstractmethod
+    def never_opened(self) -> None:
+        """The review has ended with no page ever opening it: nobody came to it."""

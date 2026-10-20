@@ -8,23 +8,32 @@ throttled.
 
 Nothing here looks at a clock. A page opening or closing is what moves it,
 and a closed page is given a moment to come back before the reader counts
-as gone.
+as gone. A review no page has opened is given a while for its first: one
+started in the background and never opened would otherwise hold its port
+and its memory until the machine stops.
 """
 
 import asyncio
 import contextlib
 from collections.abc import Generator
 
+from claude_review.services.review.review_lifetime import EndReason
+
 # How long the review may have no page open before the reader counts as gone.
 # A reload drops the socket and takes it again within a moment.
 RELOAD_GRACE_SECONDS = 3.0
+# How long a review waits for its first page before nobody is coming: an hour.
+# Long, since ending too soon costs the reader a review started again, at the
+# same address, and waiting on costs a port and some memory.
+FIRST_PAGE_DEADLINE_SECONDS = 3600.0
 
 
 class BrowserPresence:
-    """The pages a review has open, and when the last of them has closed for good."""
+    """The pages a review has open, and when its reader is gone: the last page closed for good, or none ever came."""
 
-    def __init__(self, reload_grace: float) -> None:
+    def __init__(self, reload_grace: float, first_page_deadline: float) -> None:
         self._reload_grace = reload_grace
+        self._first_page_deadline = first_page_deadline
         self._open_pages = 0
         # Set while at least one page is open
         self._shown = asyncio.Event()
@@ -52,17 +61,22 @@ class BrowserPresence:
         """Return once a page has opened the review."""
         await self._ever_shown.wait()
 
-    async def until_closed_for_good(self) -> None:
-        """Return once every page has closed and none came back within the grace period.
+    async def until_gone(self) -> EndReason:
+        """Return once the reader is gone, and say how.
 
-        A review nobody has opened yet waits: starting without a page is how
-        every review starts.
+        Every page has closed and none came back within the grace period, or
+        no page opened within the deadline. Until then a review nobody has
+        opened yet waits: starting without a page is how every review starts.
         """
-        await self._ever_shown.wait()
+        try:
+            async with asyncio.timeout(self._first_page_deadline):
+                await self._ever_shown.wait()
+        except TimeoutError:
+            return EndReason.NEVER_OPENED
         while True:
             await self._alone.wait()
             try:
                 async with asyncio.timeout(self._reload_grace):
                     await self._shown.wait()
             except TimeoutError:
-                return
+                return EndReason.BROWSER_CLOSED
