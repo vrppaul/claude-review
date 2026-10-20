@@ -533,14 +533,14 @@ const NO_BANDS_OF_ITS_OWN = [
 ];
 
 // A part of the library keeps its own room, named after it in tokens.css — a frame's edge and room, a band's
-// reach, a card's, a notice's, a pane's and a track's room, a button's and a field's heights — and lays out what
-// stands round it itself: the page hung a band's threads past its reach, stood words as far in as a frame's and
+// reach, a card's, a notice's, a pane's and a track's room, a button's and a field's heights, a turn's avatar and
+// rows — and lays out what stands round it itself: the page hung a band's threads past its reach, stood words as far in as a frame's and
 // stacked blocks as far apart as a button is tall, each by naming such a token. Named in a class list or in any
 // string, or set by a style directive, one is refused outside the library; stylelint refuses one named in a
 // stylesheet but the library's
 const LAID_OUT_BY_THE_LIBRARY =
 	'Lay out round a part of the library with the library: the tokens of its room are its own.';
-const A_LIBRARY_ROOM = '/--cr-(edge|band|card|notice|pane|track|button|field)-/';
+const A_LIBRARY_ROOM = '/--cr-(edge|band|card|notice|pane|track|button|field|turn)-/';
 const NO_LAYOUT_ROUND_THE_LIBRARY = [
 	...inClassLists(A_LIBRARY_ROOM, LAID_OUT_BY_THE_LIBRARY),
 	{ selector: `Literal[value=${A_LIBRARY_ROOM}]`, message: LAID_OUT_BY_THE_LIBRARY },
@@ -665,6 +665,13 @@ function refusedSyntax(...besides) {
 // card goes as it is asked; and a story's diagram at its own size, as large as the window allows, which no pane
 // by its button could hold
 const MODALS = ['src/lib/components/StoryOptIn.svelte', 'src/lib/components/StoryDiagram.svelte'];
+
+// A turn of a conversation is drawn by lib/ui Turn, the one part that stands an avatar by what was said: the
+// thread drew its turns by their avatars and the panel drew its own as cards, each headed its own way
+const AVATAR_OF_A_TURN = {
+	name: '$lib/ui/Avatar.svelte',
+	message: 'Draw a turn of a conversation with lib/ui Turn, which stands the avatar by what was said.'
+};
 const A_PANE_OF_A_CONTROL =
 	'A pane opened from a control is a Popover: a modal (Dialog) is only for what MODALS in eslint.config.js lists, with why.';
 
@@ -836,7 +843,7 @@ export default tseslint.config(
 		// Everywhere else — the components, the page's entry — a part is named plainly too;
 		// each part of src/lib below says so again with what it may not reach
 		files: ['src/**'],
-		rules: { 'no-restricted-imports': ['error', { patterns: [PLAINLY_NAMED] }] }
+		rules: { 'no-restricted-imports': ['error', { paths: [AVATAR_OF_A_TURN], patterns: [PLAINLY_NAMED] }] }
 	},
 	{
 		// A modal only where MODALS says why: every other component opens its panes by their controls
@@ -845,7 +852,10 @@ export default tseslint.config(
 		rules: {
 			'no-restricted-imports': [
 				'error',
-				{ paths: [{ name: '$lib/ui/Dialog.svelte', message: A_PANE_OF_A_CONTROL }], patterns: [PLAINLY_NAMED] }
+				{
+					paths: [{ name: '$lib/ui/Dialog.svelte', message: A_PANE_OF_A_CONTROL }, AVATAR_OF_A_TURN],
+					patterns: [PLAINLY_NAMED]
+				}
 			]
 		}
 	},

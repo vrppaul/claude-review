@@ -2,10 +2,10 @@
 	import { useReview } from '$lib/review/context';
 	import BreathingDots from '$lib/ui/BreathingDots.svelte';
 	import Button from '$lib/ui/Button.svelte';
-	import Card from '$lib/ui/Card.svelte';
 	import Dot from '$lib/ui/Dot.svelte';
 	import Failure from '$lib/ui/Failure.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
+	import Turn from '$lib/ui/Turn.svelte';
 	import { messageOf } from '$lib/utils/errors';
 	import { timeAgo } from '$lib/utils/time';
 	import { AGENT_STOPPED_LISTENING, TAKE_BACK } from './agent-waits';
@@ -40,23 +40,22 @@
 	}
 </script>
 
-<!-- The agent at work, on a card as its answer will be: how long for, and what it says it is doing, replaced
-	as it changes -->
-<Card tone="quiet" testId={messageId ? 'panel-working' : 'panel-work'}>
+<!-- The agent at work, a turn of its own on its way, as one awaited in a thread is: how long for, and what it
+	says it is doing, replaced as it changes -->
+<Turn speaker="agent" testId={messageId ? 'panel-working' : 'panel-work'}>
+	{#snippet head()}
+		{#if listening}
+			<BreathingDots tone="quiet" testId="working-dots" />
+		{/if}
+		<span class="flex-1"></span>
+		<span class="cr-muted">
+			{listening ? `working ${timeAgo(since, review.clock.now)}` : AGENT_STOPPED_LISTENING}
+		</span>
+		{#if messageId}
+			<Button tone="secondary" size="xs" testId="stop-message" onclick={takeBack}>{TAKE_BACK}</Button>
+		{/if}
+	{/snippet}
 	<div class="flex flex-col gap-2">
-		<div class="flex items-center gap-3">
-			<span class="cr-who"><strong>Agent</strong></span>
-			{#if listening}
-				<BreathingDots tone="quiet" testId="working-dots" />
-			{/if}
-			<div class="flex-1"></div>
-			<span class="cr-faint text-xs">
-				{listening ? `working ${timeAgo(since, review.clock.now)}` : AGENT_STOPPED_LISTENING}
-			</span>
-			{#if messageId}
-				<Button tone="secondary" size="xs" testId="stop-message" onclick={takeBack}>{TAKE_BACK}</Button>
-			{/if}
-		</div>
 		{#if failed}
 			<Failure stands="apart" testId="stop-error" said={failed} />
 		{/if}
@@ -88,4 +87,4 @@
 			</div>
 		{/if}
 	</div>
-</Card>
+</Turn>

@@ -5,15 +5,17 @@
 	import Button from '$lib/ui/Button.svelte';
 	import Card from '$lib/ui/Card.svelte';
 	import type { CardHanging, CardTone } from '$lib/ui/card';
+	import Conversation from '$lib/ui/Conversation.svelte';
 	import Failure from '$lib/ui/Failure.svelte';
 	import FieldButton from '$lib/ui/FieldButton.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
+	import Turn from '$lib/ui/Turn.svelte';
+	import TurnAside from '$lib/ui/TurnAside.svelte';
 	import { messageOf } from '$lib/utils/errors';
 	import { AGENT, raisedByAgent } from '$lib/utils/speakers';
 	import CommentBox from './CommentBox.svelte';
 	import { PLACEHOLDERS } from './placeholders';
 	import ThreadConversation from './ThreadConversation.svelte';
-	import ThreadTurn from './ThreadTurn.svelte';
 	import { threadVoice } from './thread-voice';
 
 	interface Props {
@@ -86,17 +88,17 @@
 	}
 </script>
 
-<!-- One card, its turns a row each; what is said in a thread the agent raised is said in the agent's colour -->
+<!-- One card, its turns a row each -->
 <Card {tone} {hangs} testId="thread-card" role="presentation" onclick={markRead} onfocusin={markRead}>
-	<div class={['cr-thread-rows', raised && 'cr-raised']}>
+	<Conversation testId="thread-turns">
 		<ThreadConversation {thread} />
 
 		{#if askable || failed}
 			<!-- Hands over everything said so far, the comment included: a row of its own under the last of it, in
 				the column of what was said, rather than beside the empty field below; and why it could not be -->
-			<div data-testid="ask-row" class="cr-thread-row cr-thread-aside flex flex-col items-start gap-2">
+			<TurnAside lays="stacked" testId="ask-row">
 				{#if askable}
-					<Button tone="asking" size="xs" testId="ask-now-thread" onclick={() => asking(review.threads.ask(thread.id))}>
+					<Button tone="asking" size="sm" testId="ask-now-thread" onclick={() => asking(review.threads.ask(thread.id))}>
 						<Icon name="conversation" size="xs" />
 						{thread.turns.length === 0 ? 'Ask about this' : 'Ask about all this'}
 					</Button>
@@ -104,11 +106,11 @@
 				{#if failed}
 					<Failure stands="apart" testId="ask-error" said={failed} />
 				{/if}
-			</div>
+			</TurnAside>
 		{/if}
 
 		<!-- The reader's next turn, the last of the thread: a field to begin it in, the field itself once begun -->
-		<ThreadTurn voice="reply" testId="reply-turn">
+		<Turn speaker="unsaid" testId="reply-turn">
 			{#if replying}
 				<CommentBox
 					field={replying}
@@ -127,6 +129,6 @@
 					onclick={() => writing.openReply(thread.id)}
 				/>
 			{/if}
-		</ThreadTurn>
-	</div>
+		</Turn>
+	</Conversation>
 </Card>

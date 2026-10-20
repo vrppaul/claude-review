@@ -24,5 +24,5 @@
 	const drawn = $derived(TONES[tone]);
 </script>
 
-<!-- Who says a turn, round (lib/ui/avatar.ts): as wide as the room it stands in, which lays out round it -->
+<!-- Who says a turn, round (lib/ui/avatar.ts): as wide as its turn's first column (Turn), which lays out round it -->
 <span class={['cr-ui-avatar', drawn.look]}><Icon name={drawn.icon} size="xs" /></span>

@@ -194,8 +194,6 @@ of it is built yet.
 - [ ] `feat(ui)`: a new look for the arrows.
 - [ ] `feat(ui)`: every chip, looked at again.
 - [ ] `feat(ui)`: animations.
-- [ ] `refactor(ui)`: one kind of dialog everywhere, the agent's panel
-      included.
 
 ## The page's library, what its steps left
 

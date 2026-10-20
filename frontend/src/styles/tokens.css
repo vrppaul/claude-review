@@ -132,11 +132,12 @@
 	 */
 	--cr-thread-inset: --spacing(3);
 	/*
-	 * A thread's turns, a row each: the room between rows, the avatar each
-	 * speaker stands by and the gap between it and what was said.
+	 * A conversation's turns, a thread's or the panel's, a row each (lib/ui
+	 * Turn): the room between rows, the avatar each speaker stands by and the
+	 * gap between it and what was said.
 	 */
-	--cr-thread-row-gap: --spacing(4);
-	--cr-avatar-size: 1.5rem;
+	--cr-turn-row-gap: --spacing(4);
+	--cr-turn-avatar-size: 1.5rem;
 	--cr-turn-gap: --spacing(3);
 
 	/*

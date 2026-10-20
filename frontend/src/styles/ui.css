@@ -1339,6 +1339,106 @@
 }
 
 /*
+ * A conversation (Conversation), a thread's or the panel's with the agent,
+ * reads a turn to a row (Turn): the avatar of who said it, beside their
+ * name, how long ago, and what was said; and rows nobody says (TurnAside).
+ * A spine joins the avatars down the conversation. Each row draws its own
+ * piece of it, from its top into the room before the next row, so the spine
+ * holds whatever a row's height: it begins at the first row's avatar and
+ * ends at the last's.
+ */
+.cr-ui-conversation {
+	display: flex;
+	flex-direction: column;
+	gap: var(--cr-turn-row-gap);
+}
+.cr-ui-turn-row {
+	position: relative;
+}
+.cr-ui-turn-row::before {
+	content: '';
+	position: absolute;
+	top: 0;
+	bottom: calc(-1 * var(--cr-turn-row-gap));
+	left: calc(var(--cr-turn-avatar-size) / 2);
+	width: var(--cr-line);
+	background: var(--cr-axis);
+}
+.cr-ui-turn-row:nth-child(1 of .cr-ui-turn-row)::before {
+	top: calc(var(--cr-turn-avatar-size) / 2);
+}
+.cr-ui-turn-row:nth-last-child(1 of .cr-ui-turn-row)::before {
+	bottom: auto;
+	height: calc(var(--cr-turn-avatar-size) / 2);
+}
+/* The avatar (Avatar) fills the first column, and the spine stands by it */
+.cr-ui-turn {
+	display: grid;
+	grid-template-columns: var(--cr-turn-avatar-size) minmax(0, 1fr);
+	gap: var(--cr-turn-gap);
+	align-items: start;
+}
+.cr-ui-turn-body {
+	display: flex;
+	flex-direction: column;
+	gap: --spacing(1);
+	min-width: 0;
+}
+/* Who said it, in plain words and bold, and when, quieter than what was said; wrapped on a narrow screen */
+.cr-ui-turn-head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: --spacing(2);
+	font-size: var(--text-xs);
+	color: var(--cr-faint);
+}
+.cr-ui-turn-name {
+	font-weight: var(--font-weight-semibold);
+	color: var(--color-base-content);
+}
+.cr-ui-turn-agent .cr-ui-turn-name {
+	color: var(--cr-agent);
+}
+/* An answer lands in the agent's colour, a tint that fades, and leaves the words "new reply" behind */
+.cr-ui-turn-landing {
+	animation: cr-land var(--cr-arrival) ease-out 1;
+}
+@keyframes cr-land {
+	0% {
+		background: var(--cr-agent-tint);
+	}
+	100% {
+		background: transparent;
+	}
+}
+/*
+ * A row nobody says stands in the column of what was said: what it holds one
+ * under another at its start (an act on the whole conversation, and why it
+ * failed), or across it between two rules (where a round ended, what the
+ * review did)
+ */
+.cr-ui-turn-aside {
+	padding-left: calc(var(--cr-turn-avatar-size) + var(--cr-turn-gap));
+}
+.cr-ui-turn-aside-stacked {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: --spacing(2);
+}
+.cr-ui-turn-aside-across {
+	display: flex;
+	align-items: center;
+	gap: --spacing(2);
+}
+.cr-ui-turn-aside-rule {
+	flex-grow: 1;
+	height: var(--cr-line);
+	background: var(--color-base-300);
+}
+
+/*
  * An image pasted into what is said (Thumbnail): a square of one size at a
  * field's corner, edged as a surface is, the image cut to fill it; while it
  * is on its way, or once it can no longer be shown, the square holds what

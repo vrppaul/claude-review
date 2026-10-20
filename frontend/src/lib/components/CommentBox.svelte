@@ -9,6 +9,7 @@
 	import Card from '$lib/ui/Card.svelte';
 	import type { CardHanging } from '$lib/ui/card';
 	import ConfirmPopover from '$lib/ui/ConfirmPopover.svelte';
+	import Conversation from '$lib/ui/Conversation.svelte';
 	import Failure from '$lib/ui/Failure.svelte';
 	import Field from '$lib/ui/Field.svelte';
 	import Segment from '$lib/ui/Segment.svelte';
@@ -163,9 +164,9 @@
 		testId="comment-box"
 		data-tour={field.at.kind === 'new' ? tourStop('comment-field') : undefined}
 	>
-		<div class="cr-thread-rows">
+		<Conversation testId="comment-parts">
 			{@render writing()}
-		</div>
+		</Conversation>
 	</Card>
 {/if}
 

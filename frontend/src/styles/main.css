@@ -352,79 +352,6 @@
 .cr-thread-hang {
 	padding: --spacing(2) var(--cr-thread-inset) --spacing(3);
 }
-/*
- * An open thread is one card (lib/ui Card) hung under what it is about, as
- * wide as that: what is said in it wraps at the width it has rather than
- * leave empty margins beside it. What it holds stands one under another, as
- * far apart as a thread's rows: its turns, or the parts of a comment being
- * written as the card it becomes.
- */
-.cr-thread-rows {
-	display: flex;
-	flex-direction: column;
-	gap: var(--cr-thread-row-gap);
-}
-
-/*
- * A thread reads as a conversation, a turn to a row: the avatar of who said
- * it, beside their name, how long ago, and what was said. A spine joins the
- * avatars down the card. Each row draws its own piece of it, from its top
- * into the room before the next row, so the spine holds whatever a row's
- * height: it begins at the first avatar and ends at the last, the reader's
- * own beside the field to reply in.
- */
-.cr-thread-row {
-	position: relative;
-}
-.cr-thread-row::before {
-	content: '';
-	position: absolute;
-	top: 0;
-	bottom: calc(-1 * var(--cr-thread-row-gap));
-	left: calc(var(--cr-avatar-size) / 2);
-	width: var(--cr-line);
-	background: var(--cr-axis);
-}
-.cr-thread-row:nth-child(1 of .cr-thread-row)::before {
-	top: calc(var(--cr-avatar-size) / 2);
-}
-.cr-thread-row:nth-last-child(1 of .cr-thread-row)::before {
-	bottom: auto;
-	height: calc(var(--cr-avatar-size) / 2);
-}
-/* The avatar (lib/ui Avatar) fills the first column: the thread sets how wide it is, and the spine stands by that */
-.cr-thread-turn {
-	display: grid;
-	grid-template-columns: var(--cr-avatar-size) minmax(0, 1fr);
-	gap: var(--cr-turn-gap);
-	align-items: start;
-}
-/* A row with no speaker — where a round ended, the offer to ask — stands in the column of what was said */
-.cr-thread-aside {
-	padding-left: calc(var(--cr-avatar-size) + var(--cr-turn-gap));
-}
-.cr-turn-body {
-	display: flex;
-	flex-direction: column;
-	gap: --spacing(1);
-	min-width: 0;
-}
-/* Who said it, in plain words and bold, and when, quieter than what was said; wrapped on a narrow screen */
-.cr-turn-head {
-	display: flex;
-	flex-wrap: wrap;
-	align-items: center;
-	gap: --spacing(2);
-	font-size: var(--text-xs);
-	color: var(--cr-faint);
-}
-.cr-turn-name {
-	font-weight: var(--font-weight-semibold);
-	color: var(--color-base-content);
-}
-.cr-turn-agent .cr-turn-name {
-	color: var(--cr-agent);
-}
 
 /*
  * What the agent writes first in a story's sketch (.cr-sketch-waiting)
@@ -433,32 +360,6 @@
  */
 .cr-sketch-writing {
 	animation: cr-breathe var(--cr-breath) ease-in-out infinite;
-}
-
-/* An answer lands in the agent's colour, a tint that fades, and leaves the words "new reply" behind */
-.cr-answer-new {
-	animation: cr-land var(--cr-arrival) ease-out 1;
-}
-@keyframes cr-land {
-	0% {
-		background: var(--cr-agent-tint);
-	}
-	100% {
-		background: transparent;
-	}
-}
-
-/* Where a round ended, inside a thread that outlived it */
-.cr-round-mark {
-	display: flex;
-	align-items: center;
-	gap: --spacing(2);
-}
-.cr-round-mark > span:first-child,
-.cr-round-mark > span:last-child {
-	flex-grow: 1;
-	height: var(--cr-line);
-	background: var(--color-base-300);
 }
 
 /* Which side of the diff a thread hangs on, in the diff's own signs */
@@ -508,16 +409,6 @@
 	color: var(--cr-add-text);
 }
 
-/* Who said a turn in the panel, and when: once per turn, a caption quieter than what was said */
-.cr-who {
-	font-size: var(--text-2xs);
-	color: var(--cr-faint);
-}
-.cr-who strong {
-	font-weight: var(--font-weight-semibold);
-	color: var(--color-base-content);
-}
-
 /*
  * A story's diagram under its overview, fitted to the column: mermaid draws
  * it at its own size, and it is scaled down to the width it has, never up.
@@ -549,9 +440,9 @@
  * Not the reader's mark colour: the marks in a review are theirs, and one
  * that arrived from the other side has to say so before it is read. Violet
  * is the agent's, and nothing else's. Its card says so by its edge, its
- * folded line by its frame in the agent's tone, the field to reply in by its
- * voice (lib/ui/field.ts), and what is said inside either in the agent's
- * colour.
+ * folded line by its frame in the agent's tone and the place it hangs on in
+ * the agent's colour, and the field to reply in by its voice
+ * (lib/ui/field.ts).
  */
 .cr-raised .cr-comment-ref {
 	color: var(--cr-agent);

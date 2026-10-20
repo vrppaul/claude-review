@@ -1,9 +1,11 @@
 <script lang="ts">
 	import type { Thread } from '$lib/types';
 	import { anchorQuoteReads, anchorReplaces, anchorWrittenAgainst } from '$lib/anchors/views';
+	import { tourStop } from '$lib/guide/tour';
 	import { useReview } from '$lib/review/context';
 	import EdgeFrame from '$lib/ui/EdgeFrame.svelte';
-	import { AGENT } from '$lib/utils/speakers';
+	import Turn from '$lib/ui/Turn.svelte';
+	import TurnAside from '$lib/ui/TurnAside.svelte';
 	import { splitSuggestions } from '$lib/utils/suggestion';
 	import { exchangesOf } from '$lib/utils/thread-exchanges';
 	import { timeAgo } from '$lib/utils/time';
@@ -12,7 +14,7 @@
 	import SaidImages from './SaidImages.svelte';
 	import SuggestionDiff from './SuggestionDiff.svelte';
 	import ThreadHeading from './ThreadHeading.svelte';
-	import ThreadTurn from './ThreadTurn.svelte';
+	import { TURN_VOICES } from './thread-voice';
 
 	interface Props {
 		thread: Thread;
@@ -51,13 +53,11 @@
 	{@const opening = index === 0}
 	{#if exchange.startsRound}
 		<!-- Where one round ended and the next began, in this thread -->
-		<div data-testid="round-mark" class="cr-thread-row cr-thread-aside cr-round-mark">
-			<span></span>
+		<TurnAside lays="across" testId="round-mark">
 			<span class="cr-faint text-xs">round {exchange.round}</span>
-			<span></span>
-		</div>
+		</TurnAside>
 	{/if}
-	<ThreadTurn voice={exchange.by} testId="thread-question">
+	<Turn speaker={TURN_VOICES[exchange.by]} testId="thread-question">
 		{#snippet head()}
 			{#if exchange.at !== undefined}
 				<span>{howLongAgo(exchange.at)}</span>
@@ -89,13 +89,13 @@
 			{/if}
 		{/each}
 		<SaidImages images={exchange.images} />
-	</ThreadTurn>
+	</Turn>
 
 	{#each exchange.answers as answer (answer.id)}
-		<ThreadTurn
-			voice={AGENT}
+		<Turn
+			speaker="agent"
 			testId="thread-answer"
-			tour="answer"
+			data-tour={tourStop('answer')}
 			landing={review.threads.reading.isNewAnswer(thread.id, answer.id)}
 		>
 			{#snippet head()}
@@ -104,7 +104,7 @@
 				{/if}
 			{/snippet}
 			<MarkdownRenderer text={answer.body} dense />
-		</ThreadTurn>
+		</Turn>
 	{/each}
 
 	{#if waitedOn !== undefined}

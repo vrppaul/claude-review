@@ -1,13 +1,13 @@
 <script lang="ts">
+	import { tourStop } from '$lib/guide/tour';
 	import { useReview } from '$lib/review/context';
 	import BreathingDots from '$lib/ui/BreathingDots.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import Failure from '$lib/ui/Failure.svelte';
+	import Turn from '$lib/ui/Turn.svelte';
 	import { messageOf } from '$lib/utils/errors';
-	import { AGENT } from '$lib/utils/speakers';
 	import { timeAgo } from '$lib/utils/time';
 	import { AGENT_STOPPED_LISTENING, TAKE_BACK } from './agent-waits';
-	import ThreadTurn from './ThreadTurn.svelte';
 
 	interface Props {
 		/** The thread the question was asked in. */
@@ -41,7 +41,7 @@
 
 <!-- A turn that has not arrived is still a turn, the agent's: it holds its place, and says how long it has
 	been waited on, so silence reads as silence rather than as something broken -->
-<ThreadTurn voice={AGENT} testId="awaiting-answer" tour="awaited-answer">
+<Turn speaker="agent" testId="awaiting-answer" data-tour={tourStop('awaited-answer')}>
 	{#snippet head()}
 		{#if listening}
 			<BreathingDots tone="quiet" testId="awaiting-dots" />
@@ -57,4 +57,4 @@
 	{#if failed}
 		<Failure stands="apart" testId="take-back-error" said={failed} />
 	{/if}
-</ThreadTurn>
+</Turn>

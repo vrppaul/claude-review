@@ -1,12 +1,14 @@
 <script lang="ts">
 	import { anchorShortPlace } from '$lib/anchors/views';
 	import { useReview } from '$lib/review/context';
-	import Card from '$lib/ui/Card.svelte';
 	import Chip from '$lib/ui/Chip.svelte';
+	import Conversation from '$lib/ui/Conversation.svelte';
 	import EmptyNote from '$lib/ui/EmptyNote.svelte';
+	import Turn from '$lib/ui/Turn.svelte';
+	import TurnAside from '$lib/ui/TurnAside.svelte';
 	import type { Voice } from '$lib/ui/voice';
 	import { READER, THE_REVIEW } from '$lib/utils/speakers';
-	import { clockTime } from '$lib/utils/time';
+	import { timeAgo } from '$lib/utils/time';
 	import AgentAtWork from './AgentAtWork.svelte';
 	import AttachByHand from './AttachByHand.svelte';
 	import FileChip from './FileChip.svelte';
@@ -36,6 +38,11 @@
 	/** The thread a turn names, if it is still in the review. */
 	function threadNamed(threadId: string | undefined) {
 		return review.threads.all.find((thread) => thread.id === threadId);
+	}
+
+	/** How long ago a turn was said, by the review's clock, which ticks while it is drawn: as a thread says it. */
+	function howLongAgo(at: number): string {
+		return timeAgo(at, review.clock.now);
 	}
 
 	/** Near enough to the bottom that the conversation should keep following. */
@@ -107,12 +114,13 @@
 			</div>
 		{/if}
 	{:else}
-		<div class="flex flex-col gap-3">
+		<!-- The conversation as a thread's reads: a turn to a row, each by its speaker's avatar, the spine joining
+			them, and what the review did across it -->
+		<Conversation testId="panel-conversation">
 			{#each review.conversation.turns as turn (turn.id)}
 				{#if turn.author === THE_REVIEW}
 					{@const raised = threadNamed(turn.threads?.[0])}
-					<div data-testid="panel-event" class="cr-round-mark">
-						<span></span>
+					<TurnAside lays="across" testId="panel-event">
 						{#if raised}
 							<!-- A thread the agent raised: the agent's arrival, in its colour -->
 							<Chip voice="agent" testId="panel-thread-ref" onclick={() => review.navigator.reveal(raised)}>
@@ -121,13 +129,13 @@
 						{:else}
 							<span class="cr-faint text-xs">{turn.body}</span>
 						{/if}
-						<span></span>
-					</div>
+					</TurnAside>
 				{:else if turn.author === READER}
-					<!-- What the reader asked, on a card as the answer is, edged in their colour -->
-					<Card tone="reader" testId="panel-said">
+					<Turn speaker="reader" testId="panel-said">
+						{#snippet head()}
+							<span>{howLongAgo(turn.at)}</span>
+						{/snippet}
 						<div class={[turn.cancelled && 'cr-faint']}>
-							<p class="cr-who"><strong>You</strong> {clockTime(turn.at)}</p>
 							{#if turn.body}
 								<MarkdownRenderer text={turn.body} dense />
 							{/if}
@@ -141,10 +149,12 @@
 								</p>
 							{/if}
 						</div>
-					</Card>
+					</Turn>
 				{:else}
-					<Card tone="quiet" testId="panel-answer">
-						<p class="cr-who"><strong>Agent</strong> {clockTime(turn.at)}</p>
+					<Turn speaker="agent" testId="panel-answer">
+						{#snippet head()}
+							<span>{howLongAgo(turn.at)}</span>
+						{/snippet}
 						<MarkdownRenderer text={turn.body} dense />
 						{#if turn.threads && turn.threads.length > 0}
 							<!-- Threads its words mention, drawn as the reader's mentions are -->
@@ -158,7 +168,7 @@
 								{/each}
 							</div>
 						{/if}
-					</Card>
+					</Turn>
 				{/if}
 			{/each}
 
@@ -171,6 +181,6 @@
 					tell work from a hang. -->
 				<AgentAtWork since={review.answerer.work.at} />
 			{/if}
-		</div>
+		</Conversation>
 	{/if}
 </div>
