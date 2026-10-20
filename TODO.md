@@ -39,6 +39,17 @@ tests. Remove items when done — don't check them off.
       thread resolved, but a reply — the reader's or the author's — stays
       whatever it says. A duplicate answer has no way out of the thread.
 
+- [ ] `feat(review)`: the checks the agent ran, in the header. The agent
+      reports each command, `claude-review check --name … --status
+      passed|failed --summary …`; the review stamps each report with the
+      tree it ran on and says when files changed after it. After the view
+      switch the header draws "✓ 3 checks", a yellow dot once it is out of
+      date, "✕ 1 of 3 failed", or nothing when none was reported, and the
+      chip opens a list of the commands. Drawn on the design canvas of
+      2026-10-20 (board Checks), after the story's design of 2026-10-07.
+      The server has none of it: a command, a model and a wire field, so
+      the domain model changes.
+
 ## Bugs
 
 - [ ] `fix(server)`: two reviews running at once can lose one another's
@@ -179,6 +190,29 @@ tests. Remove items when done — don't check them off.
 The owner's list of 2026-10-15, after the story's UI round ("потом"): none
 of it is built yet.
 
+- [ ] `feat(ui)`: a review of the page itself, for its look. Behind a flag
+      of `scripts/look.py`, the reader holds Alt, sees the element under
+      the pointer named, clicks it and writes what is wrong with it and
+      why. The thread hangs on that element, a third `AnchorKind` beside
+      the lines and the story's words, and goes stale as a thread on a
+      deleted line does when the element is gone. The agent reads the
+      comment, the `cr-ui-*` parts from the pane down to the element (a
+      fold's chevron reads as `cr-ui-row` › `cr-ui-icon`), its text, the
+      theme, the window's size and a selector. The domain model changes:
+      the owner's yes first. Open, his to decide: whether a comment leaves
+      with the round (proposed: the agent rebuilds once for a batch) or at
+      once. Later, his idea of 2026-10-20: a user's own front end in the
+      review's window, commented the same way beside the agent's panel.
+      Its hard part is reaching into a page served from another address:
+      the review serves it under its own with its script added, or the
+      user adds a plugin to their bundler, as visdiff does.
+- [ ] `feat(ui)`: a board of the page's parts, each in every state, and of
+      its colours, kept apart from the page: one place to see what there
+      is, and to change it on the board itself. The design canvas of
+      2026-10-20 drew it by hand (its Colours board, its sheets of
+      states), so it ages with each change to the page; this one is drawn
+      from the library's own parts and tokens. Open: how a change made on
+      the board reaches the code.
 - [ ] `feat(ui)`: a new look for the agent's progress in its panel.
 - [ ] `feat(ui)`: a new look for a folded thread's line (its words are in
       the code's face today).
