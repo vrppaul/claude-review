@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import Actions from './Actions.svelte';
 	import Button from './Button.svelte';
 	import type { Placement, TriggerProps } from './pane';
 	import PaneQuestion from './PaneQuestion.svelte';
@@ -37,9 +38,11 @@
 <Popover bind:open label={question} {placement} width="fitted" {testId} {trigger}>
 	<div class="flex flex-col gap-3 p-3">
 		<PaneQuestion {question} testId="{testId}-question" />
-		<div class="flex justify-end gap-2">
-			<Button tone="quiet" size="sm" testId="confirm-keep" onclick={() => (open = false)}>{keep}</Button>
+		<Actions testId="{testId}-actions">
+			{#snippet others()}
+				<Button tone="quiet" size="sm" testId="confirm-keep" onclick={() => (open = false)}>{keep}</Button>
+			{/snippet}
 			<Button tone="danger" size="sm" testId="confirm-go-ahead" onclick={goAheadNow}>{goAhead}</Button>
-		</div>
+		</Actions>
 	</div>
 </Popover>

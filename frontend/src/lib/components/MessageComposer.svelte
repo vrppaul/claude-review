@@ -5,6 +5,7 @@
 	import { threadsIn, withMention, withoutThread } from '$lib/anchors/mentions';
 	import { isComposingText, isTypingTarget } from '$lib/dom/keyboard';
 	import { useReview } from '$lib/review/context';
+	import Actions from '$lib/ui/Actions.svelte';
 	import BreathingDots from '$lib/ui/BreathingDots.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import Chip from '$lib/ui/Chip.svelte';
@@ -167,20 +168,25 @@
 		onkeydown={onKeydown}
 		onpaste={onPaste}
 	/>
-	<div class="mt-2 flex items-center gap-2">
-		<Button tone="quiet" size="xs" testId="mention-thread" onclick={mention}>@ thread or file</Button>
-		<span class="cr-faint hidden text-xs lg:inline">{FIELD_KEYS} sends</span>
-		<div class="flex-1"></div>
-		{#if whatWentWrong}
-			<Failure stands="inline" testId="panel-error" said={whatWentWrong} />
-		{/if}
-		<Button tone="primary" size="xs" testId="send-message" disabled={!canSend} onclick={send}>
-			{#if review.conversation.sending}
-				<BreathingDots tone="inherited" testId="message-sending-dots" />
-				Sending
-			{:else}
-				Send
-			{/if}
-		</Button>
+	<div class="mt-2">
+		<Actions testId="message-actions">
+			{#snippet aside()}
+				<Button tone="quiet" size="sm" testId="mention-thread" onclick={mention}>@ thread or file</Button>
+				<span class="cr-faint hidden text-xs lg:inline">{FIELD_KEYS} sends</span>
+			{/snippet}
+			{#snippet others()}
+				{#if whatWentWrong}
+					<Failure stands="inline" testId="panel-error" said={whatWentWrong} />
+				{/if}
+			{/snippet}
+			<Button tone="primary" size="sm" testId="send-message" disabled={!canSend} onclick={send}>
+				{#if review.conversation.sending}
+					<BreathingDots tone="inherited" testId="message-sending-dots" />
+					Sending
+				{:else}
+					Send
+				{/if}
+			</Button>
+		</Actions>
 	</div>
 </div>

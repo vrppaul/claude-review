@@ -3,6 +3,7 @@
 	import { anchorPlace, anchorReplaces } from '$lib/anchors/views';
 	import { tourStop } from '$lib/guide/tour';
 	import { useReview } from '$lib/review/context';
+	import Actions from '$lib/ui/Actions.svelte';
 	import BreathingDots from '$lib/ui/BreathingDots.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import Field from '$lib/ui/Field.svelte';
@@ -67,7 +68,7 @@
 
 <!-- A summary, and the two ways out: at the pane's foot, in sight however far what was written scrolls -->
 {#snippet sending()}
-	<div class="p-3">
+	<div class="flex flex-col gap-2 p-3">
 		<Field
 			{@attach focusOnDraw}
 			holds="message"
@@ -80,20 +81,23 @@
 			oninput={(event: Event & { currentTarget: HTMLTextAreaElement }) => submission.setBody(event.currentTarget.value)}
 		/>
 
-		<div class="mt-2 flex items-center gap-2">
-			<span class="cr-faint hidden text-xs lg:inline">{FINISH_KEYS} sends</span>
-			<div class="flex-1"></div>
-			{#if inRounds}
-				<Button
-					tone="quiet"
-					size="sm"
-					testId="end-review"
-					disabled={!submission.canEnd}
-					onclick={() => submission.end()}
-				>
-					End review
-				</Button>
-			{/if}
+		<Actions testId="finish-actions">
+			{#snippet aside()}
+				<span class="cr-faint hidden text-xs lg:inline">{FINISH_KEYS} sends</span>
+			{/snippet}
+			{#snippet others()}
+				{#if inRounds}
+					<Button
+						tone="quiet"
+						size="sm"
+						testId="end-review"
+						disabled={!submission.canEnd}
+						onclick={() => submission.end()}
+					>
+						End review
+					</Button>
+				{/if}
+			{/snippet}
 			<Button
 				tone="primary"
 				size="sm"
@@ -110,7 +114,7 @@
 					Send review
 				{/if}
 			</Button>
-		</div>
+		</Actions>
 	</div>
 {/snippet}
 

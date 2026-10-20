@@ -4,6 +4,7 @@
 	import { isComposingText } from '$lib/dom/keyboard';
 	import { tourStop } from '$lib/guide/tour';
 	import { useReview } from '$lib/review/context';
+	import Actions from '$lib/ui/Actions.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import Card from '$lib/ui/Card.svelte';
 	import type { CardHanging } from '$lib/ui/card';
@@ -206,33 +207,36 @@
 	{#if failed}
 		<Failure stands="apart" testId="comment-error" said={failed} />
 	{/if}
-	<div class="flex items-center gap-2">
-		{#if suggestFrom && suggestFrom.length > 0}
-			<Button tone="quiet" size="xs" testId="suggest-change" disabled={hasSuggestion(field.text)} onclick={suggest}>
-				Suggest a change
-			</Button>
-		{/if}
-		<div class="flex-1"></div>
-		<!-- Asked over Cancel, which asks it, or as Escape does in the field: over the words it would lose, inside
-			the card, so nothing past the card's foot can cut it off -->
-		<ConfirmPopover
-			bind:open={askingToDiscard}
-			question={DISCARD_QUESTION}
-			goAhead={DISCARD}
-			keep={KEEP_WRITING}
-			placement="above-end"
-			testId="discard-dialog"
-			onGoAhead={onCancel}
-		>
-			{#snippet trigger(control)}
-				<Button {...control} tone="quiet" size="xs" testId="cancel-comment" onclick={putAway}>Cancel</Button>
-			{/snippet}
-		</ConfirmPopover>
-		{#if onAsk}
-			<Button tone="asking" size="xs" testId="ask-now" disabled={!sayable} onclick={ask}>Ask now</Button>
-		{/if}
-		<Button tone="primary" size="xs" testId="save-comment" disabled={!sayable} onclick={save}>Add to review</Button>
-	</div>
+	<Actions testId="comment-actions">
+		{#snippet aside()}
+			{#if suggestFrom && suggestFrom.length > 0}
+				<Button tone="quiet" size="sm" testId="suggest-change" disabled={hasSuggestion(field.text)} onclick={suggest}>
+					Suggest a change
+				</Button>
+			{/if}
+		{/snippet}
+		{#snippet others()}
+			<!-- Asked over Cancel, which asks it, or as Escape does in the field: over the words it would lose, inside
+				the card, so nothing past the card's foot can cut it off -->
+			<ConfirmPopover
+				bind:open={askingToDiscard}
+				question={DISCARD_QUESTION}
+				goAhead={DISCARD}
+				keep={KEEP_WRITING}
+				placement="above-end"
+				testId="discard-dialog"
+				onGoAhead={onCancel}
+			>
+				{#snippet trigger(control)}
+					<Button {...control} tone="quiet" size="sm" testId="cancel-comment" onclick={putAway}>Cancel</Button>
+				{/snippet}
+			</ConfirmPopover>
+			{#if onAsk}
+				<Button tone="asking" size="sm" testId="ask-now" disabled={!sayable} onclick={ask}>Ask now</Button>
+			{/if}
+		{/snippet}
+		<Button tone="primary" size="sm" testId="save-comment" disabled={!sayable} onclick={save}>Add to review</Button>
+	</Actions>
 	<p class="cr-faint text-xs">
 		{#if onAsk}
 			{FIELD_KEYS} adds it to the review. Ask now sends this one straight away.

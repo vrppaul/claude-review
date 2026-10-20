@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { useReview } from '$lib/review/context';
 	import { formatWeight } from '$lib/review/weight';
+	import Actions from '$lib/ui/Actions.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import Dialog from '$lib/ui/Dialog.svelte';
 	import type { Closing } from '$lib/ui/dialog-closing';
@@ -25,8 +26,8 @@
 </script>
 
 <!-- Asked before the first story is written: a story spends the agent's tokens, so whether to have them is
-	the reader's to say, knowing what this review would cost. The way on comes first, and takes the
-	keyboard; Escape and a press outside are "Not now" -->
+	the reader's to say, knowing what this review would cost. The way on comes last, as every row of acts
+	ends, and takes the keyboard as the question opens; Escape and a press outside are "Not now" -->
 <Dialog label={QUESTION} width="wide" testId="story-opt-in" {onClose}>
 	{#snippet children({ close, closeThen }: Closing)}
 		<div class="flex flex-col gap-3 p-4 text-sm">
@@ -52,12 +53,15 @@
 			<p class="cr-muted text-xs">
 				Stories stay on for every review on this machine. Turn them off in Settings, the gear in the header.
 			</p>
-			<div class="flex flex-wrap gap-2 pt-1">
-				<Button tone="primary" size="sm" testId="turn-on-stories" onclick={() => closeThen(onTurnOn)}>
+			<Actions testId="story-opt-in-actions">
+				{#snippet others()}
+					<Button tone="quiet" size="sm" testId="stories-not-now" onclick={close}>Not now</Button>
+				{/snippet}
+				<!-- The control a modal gives the keyboard to as it opens, by the browser's own word for it -->
+				<Button autofocus tone="primary" size="sm" testId="turn-on-stories" onclick={() => closeThen(onTurnOn)}>
 					Turn on stories
 				</Button>
-				<Button tone="secondary" size="sm" testId="stories-not-now" onclick={close}>Not now</Button>
-			</div>
+			</Actions>
 		</div>
 	{/snippet}
 </Dialog>

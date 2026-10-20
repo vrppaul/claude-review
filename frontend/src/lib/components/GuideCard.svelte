@@ -2,6 +2,7 @@
 	import { focusWhatCarries, focusWhatRemains } from '$lib/dom/keyboard';
 	import { releaseUrl } from '$lib/guide/news';
 	import { useReview } from '$lib/review/context';
+	import Actions from '$lib/ui/Actions.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import Dot from '$lib/ui/Dot.svelte';
 	import Heading from '$lib/ui/Heading.svelte';
@@ -31,12 +32,12 @@
 	const offersStory = $derived(news?.introducesStory === true && review.story.canBeTold);
 
 	let title = $state<HTMLElement>();
-	let firstAction = $state<HTMLButtonElement>();
+	let mainAction = $state<HTMLButtonElement>();
 
-	// A card that appears offers its first button, unless the reader is busy:
+	// A card that appears offers the act it leads to, unless the reader is busy:
 	// it takes the keyboard from no one — not from a comment the tour asked for
 	$effect(() => {
-		if (review.guide.card !== null) focusWhatRemains(() => firstAction);
+		if (review.guide.card !== null) focusWhatRemains(() => mainAction);
 	});
 
 	// A step reached with focus nowhere — the button that led to it is gone —
@@ -117,17 +118,18 @@
 						{waiting.hint}
 					</p>
 				{/if}
-				<div class="flex items-center gap-2">
-					{#if review.guide.canGoBack}
-						<Button tone="secondary" size="sm" testId="guide-back" onclick={() => review.guide.back()}>Back</Button>
-					{/if}
-					<span class="flex-1"></span>
+				<Actions testId="guide-step-actions">
+					{#snippet others()}
+						{#if review.guide.canGoBack}
+							<Button tone="quiet" size="sm" testId="guide-back" onclick={() => review.guide.back()}>Back</Button>
+						{/if}
+					{/snippet}
 					{#if !waiting}
 						<Button tone="primary" size="sm" testId="guide-next" onclick={goOn}>
 							{review.guide.isLastStep ? 'Done' : 'Next'}
 						</Button>
 					{/if}
-				</div>
+				</Actions>
 			</div>
 		</Pane>
 	</div>
@@ -148,9 +150,12 @@
 							.guide.stepCount} stops, about two minutes.
 					</p>
 				</div>
-				<div class="flex items-center gap-2">
+				<Actions testId="guide-welcome-actions">
+					{#snippet others()}
+						<Button tone="quiet" size="sm" testId="guide-not-now" onclick={putAway}>Not now</Button>
+					{/snippet}
 					<Button
-						bind:element={firstAction}
+						bind:element={mainAction}
 						tone="primary"
 						size="sm"
 						testId="guide-start"
@@ -158,8 +163,7 @@
 					>
 						Show me around
 					</Button>
-					<Button tone="quiet" size="sm" testId="guide-not-now" onclick={putAway}>Not now</Button>
-				</div>
+				</Actions>
 				<p class="cr-faint text-xs">You can take it later from the <Key keys="?" testId="guide-help-key" /> list.</p>
 			</div>
 		</Pane>
@@ -196,20 +200,22 @@
 						>Everything in {news.release}, on GitHub</Link
 					>
 				</p>
-				<div class="flex items-center gap-2">
+				<Actions testId="guide-news-actions">
+					{#snippet others()}
+						<Button tone="quiet" size="sm" testId="guide-take-tour" onclick={() => review.guide.startTour()}>
+							Take the tour
+						</Button>
+					{/snippet}
 					{#if offersStory}
-						<Button bind:element={firstAction} tone="primary" size="sm" testId="guide-try-story" onclick={tryStory}>
+						<Button bind:element={mainAction} tone="primary" size="sm" testId="guide-try-story" onclick={tryStory}>
 							Try Story
 						</Button>
 					{:else}
-						<Button bind:element={firstAction} tone="primary" size="sm" testId="guide-got-it" onclick={putAway}>
+						<Button bind:element={mainAction} tone="primary" size="sm" testId="guide-got-it" onclick={putAway}>
 							Got it
 						</Button>
 					{/if}
-					<Button tone="quiet" size="sm" testId="guide-take-tour" onclick={() => review.guide.startTour()}>
-						Take the tour
-					</Button>
-				</div>
+				</Actions>
 			</div>
 		</Pane>
 	</div>

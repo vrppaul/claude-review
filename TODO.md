@@ -221,8 +221,12 @@ of it is built yet.
       library's classes or the kept-in-sight role by a part of an
       attribute (`[class*='cr-ui-']`, `[data-role~='kept-in-sight']`); a
       raised ground or a comment's size written with a type hint in markup
-      (`bg-(color:--color-base-200)`, `text-(length:--cr-comment-size)`).
-      A rule that each look class has one owner is to hold them.
+      (`bg-(color:--color-base-200)`, `text-(length:--cr-comment-size)`); a
+      row of acts laid out by hand rather than with `Actions`, which no
+      pattern tells from a main act that stands alone (the control that
+      opens the finishing pane, the stopped story's way on, a note's act
+      among its words). A rule that each look class has one owner is to
+      hold them.
 - [ ] `refactor(ui)`: the colours DaisyUI's themes named keep its names:
       the three grounds, `--color-base-100`, `-200` and `-300` (the last
       the line between surfaces too), the page's words,

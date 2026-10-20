@@ -59,12 +59,12 @@ class Answered(BaseModel):
 # The question opens with the keyboard on the way to turn stories on; the way to put it off comes next
 ANSWERS_BY_KEY = [
     Answered(how="stories turned on", keys=("Enter",), then_on_screen="story-view"),
-    Answered(how="not now", keys=("Tab", "Enter"), then_on_screen="diff-view"),
+    Answered(how="not now", keys=("Shift+Tab", "Enter"), then_on_screen="diff-view"),
     Answered(how="Escape", keys=("Escape",), then_on_screen="diff-view"),
 ]
-# What Tab puts the keyboard on, press by press, from the way to turn stories on: the other answer, nothing
-# of the page while the keyboard is on the browser's own controls, and the first answer again
-ROUND_THE_QUESTION = ["stories-not-now", None, "turn-on-stories"]
+# What Tab puts the keyboard on, press by press, from the way to turn stories on, the last answer: nothing of the
+# page while the keyboard is on the browser's own controls, the other answer, and the way on again
+ROUND_THE_QUESTION = [None, "stories-not-now", "turn-on-stories"]
 # A corner of the window, which the question stands in the middle of: a press there is a press outside it
 BESIDE_THE_QUESTION = (5, 5)
 
@@ -190,7 +190,7 @@ async def test_the_question_before_stories_opens_with_the_keyboard_on_turning_th
 async def test_the_question_before_stories_holds_the_keyboard_until_it_is_answered(
     review: RunningReview, page: Page
 ) -> None:
-    """Tab goes to the other answer, out to what is the browser's own, and back to the first: never to the page."""
+    """Tab goes out to what is the browser's own, to the other answer, and back to the way on: never to the page."""
     await _ask_to_read_the_story(page, review)
 
     held_the_keyboard = []

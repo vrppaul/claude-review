@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { focusWhatRemains } from '$lib/dom/keyboard';
 	import { useReview } from '$lib/review/context';
+	import Actions from '$lib/ui/Actions.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import { arrowOffsetTo } from '$lib/ui/pane';
@@ -78,10 +79,14 @@
 				code. Your threads and rounds work the same.
 			</p>
 			<p class="cr-muted text-xs">It spends the agent's tokens, so it asks before it starts.</p>
-			<div class="flex items-center gap-1.5 pt-0.5">
+			<Actions testId="story-introduction-actions">
+				{#snippet others()}
+					<Button tone="quiet" size="sm" testId="story-introduction-hide" onclick={hideForGood}>
+						Don't show again
+					</Button>
+				{/snippet}
 				<Button bind:element={tryStory} tone="primary" size="sm" testId="try-story" onclick={onTry}>Try Story</Button>
-				<Button tone="quiet" size="sm" testId="story-introduction-hide" onclick={hideForGood}>Don't show again</Button>
-			</div>
+			</Actions>
 		</div>
 	</PopoverPanel>
 {:else if hiddenForGood}

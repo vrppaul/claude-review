@@ -420,6 +420,30 @@ const NO_ELEMENTS_HANDED_THEIR_KIND = [
 // nothing else is
 const PRESSED_IN_THE_CODE = ['src/lib/components/LineGutter.svelte', 'src/lib/components/HunkGap.svelte'];
 const BUTTON_IN_THE_LIBRARY = { elements: ['button'], message: PRESSED_IN_THE_LIBRARY };
+// The acts that end a pane, a card, a question or a field being written stand in one row, lib/ui Actions, alike
+// everywhere: the page laid its nine such rows out by hand, the main act first in four and last in five, at the
+// start of the row in four, an act beside it edged in two, at 24 px in two and 32 in seven.
+// Inside one, every button is sm, the acts beside the main one are quiet, or asking where they ask the agent now,
+// and a primary or danger button, the act the row leads to, is never one of them: it is the row's own content,
+// drawn last. A size or a tone handed in by an expression passes
+const IN_A_ROW_OF_ACTIONS = "SvelteElement[kind='component'][name.name='Actions']";
+const A_BUTTON_OF_THE_LIBRARY = "SvelteElement[kind='component'][name.name=/^(Button|IconButton)$/]";
+const ONE_ROW_OF_ACTIONS_MESSAGE =
+	"In lib/ui Actions every button is sm, the others are quiet or asking, and a primary or danger act is the row's content, drawn last.";
+const ONE_ROW_OF_ACTIONS = [
+	{
+		selector: `${IN_A_ROW_OF_ACTIONS} ${A_BUTTON_OF_THE_LIBRARY} > SvelteStartTag > SvelteAttribute[key.name='size'] > SvelteLiteral[value!='sm']`,
+		message: ONE_ROW_OF_ACTIONS_MESSAGE
+	},
+	{
+		selector: `${IN_A_ROW_OF_ACTIONS} ${A_BUTTON_OF_THE_LIBRARY} > SvelteStartTag > SvelteAttribute[key.name='tone'] > SvelteLiteral[value=/^(secondary|marked)$/]`,
+		message: ONE_ROW_OF_ACTIONS_MESSAGE
+	},
+	{
+		selector: `${IN_A_ROW_OF_ACTIONS} SvelteSnippetBlock ${A_BUTTON_OF_THE_LIBRARY} > SvelteStartTag > SvelteAttribute[key.name='tone'] > SvelteLiteral[value=/^(primary|danger)$/]`,
+		message: ONE_ROW_OF_ACTIONS_MESSAGE
+	}
+];
 // A field is drawn by the library (Field, Filter, Checkbox), and nothing outside it draws one: the page drew its
 // three fields to write in two ways, with DaisyUI's textarea and with utilities of their own, its two filters on
 // two grounds, the field a reply is begun in as a button of main.css, and its checkboxes as DaisyUI's and as a
@@ -609,7 +633,7 @@ const NO_UNCHECKED_TOUR_NAMES = [
  * names again all it still refuses; each such list is written here, from the same parts.
  */
 function refusedSyntax(...besides) {
-	return ['error', ...NO_NESTED_HELPERS, ...NO_INLINE_STYLING, ...besides.flat()];
+	return ['error', ...NO_NESTED_HELPERS, ...NO_INLINE_STYLING, ...ONE_ROW_OF_ACTIONS, ...besides.flat()];
 }
 
 // A pane opened from a control is a Popover, which stands by the control; a modal stands over the whole review,

@@ -144,6 +144,26 @@
 }
 
 /*
+ * The acts that end a pane, a card, a question or a field being written
+ * (Actions): at the far end of the row, the main one last, and what stands
+ * aside of them pushed to its start; wrapped where the row is narrow
+ */
+.cr-ui-actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: flex-end;
+	gap: --spacing(2);
+}
+.cr-ui-actions-aside {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: --spacing(2);
+	margin-inline-end: auto;
+}
+
+/*
  * Words that lead somewhere or do something (Link), and a link of words
  * written in Markdown (Prose): in the colour of the reader's controls as
  * words, at the size and weight of the line they stand in; underlined under
