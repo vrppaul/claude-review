@@ -22,14 +22,14 @@ from claude_review.services.review.review_lifetime import EndReason
 # How long the review may have no page open before the reader counts as gone.
 # A reload drops the socket and takes it again within a moment.
 RELOAD_GRACE_SECONDS = 3.0
-# How long a review waits for its first page before nobody is coming: an hour.
-# Long, since ending too soon costs the reader a review started again, at the
-# same address, and waiting on costs a port and some memory.
+# How long a review waits for its first page before it takes it that nobody is
+# coming: an hour. Long, since ending too soon costs the reader a review started
+# again, at the same address, and waiting on costs a port and some memory.
 FIRST_PAGE_DEADLINE_SECONDS = 3600.0
 
 
 class BrowserPresence:
-    """The pages a review has open, and when its reader is gone: the last page closed for good, or none ever came."""
+    """The pages a review has open, and when its reader is gone: the last page closed for good, or none came in time."""
 
     def __init__(self, reload_grace: float, first_page_deadline: float) -> None:
         self._reload_grace = reload_grace

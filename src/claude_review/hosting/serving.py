@@ -151,8 +151,8 @@ async def serve_review(
         await review.discard_unsent_images()
 
     server.raise_if_it_never_came_up()
-    # The one ending nobody saw happen: an agent hearing the review closed would
-    # take it for the reader closing it
+    # An ending whoever started the review would misread unless told: an agent
+    # hearing the review closed would take it for the reader closing it
     if review.lifetime.reason is EndReason.NEVER_OPENED:
         announcer.never_opened()
     return review.exit_report()

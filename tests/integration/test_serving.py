@@ -1,8 +1,10 @@
 """A review held open in this process: what it hands back, whatever else goes wrong while it runs.
 
 What goes wrong is played by what the review is built on — a repository
-that goes away, one that cannot be staged, a terminal that cannot be told —
-and by nothing reached into from outside.
+that goes away, one that cannot be staged, a terminal that cannot be told.
+The review is reached into only where nothing it is built on can play it:
+its own check on its reader failing, and its own wait for a first page
+running out.
 """
 
 import asyncio
@@ -44,10 +46,10 @@ THE_ROUND = "Rename the helper."
 LAST_ROUND = {"threads": [], "body": THE_ROUND, "end": True}
 # What the pieces of a staging are called in the temporary directory
 STAGING_LEFTOVERS = ("*.git-index", "*.git-objects")
-# How long a review waits for its first page, as the review reads it when it is put together
-FIRST_PAGE_DEADLINE = "claude_review.services.review.review.FIRST_PAGE_DEADLINE_SECONDS"
+# The name the review reads how long it waits for its first page by, as it is put together
+FIRST_PAGE_DEADLINE_NAME = "claude_review.services.review.review.FIRST_PAGE_DEADLINE_SECONDS"
 # A wait for a first page a test outlasts, and which the server still comes up well within, as it does in the real one
-UNOPENED_DEADLINE_SECONDS = 1.0
+SHORT_FIRST_PAGE_DEADLINE_SECONDS = 1.0
 
 
 class StagingThatHangs(GitRepository):
@@ -246,9 +248,11 @@ async def test_a_review_nobody_opens_in_time_ends_and_says_so_to_whoever_started
     """Started in the background and never opened, it would hold its port and its memory until the machine stops.
 
     Said as it ends, for an agent hearing it closed must not take it for the
-    reader closing it.
+    reader closing it. The hour is shortened where the review reads it: the
+    review builds its parts from its module's constants, and is put together
+    here as the command line puts it together.
     """
-    monkeypatch.setattr(FIRST_PAGE_DEADLINE, UNOPENED_DEADLINE_SECONDS)
+    monkeypatch.setattr(FIRST_PAGE_DEADLINE_NAME, SHORT_FIRST_PAGE_DEADLINE_SECONDS)
 
     await asyncio.wait_for(_served(reviews.hosted(opening), announcer), timeout=SETTLE_SECONDS)
 

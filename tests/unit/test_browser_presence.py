@@ -56,6 +56,13 @@ async def test_a_review_nobody_has_opened_yet_keeps_waiting() -> None:
     assert await _still_open_after(asyncio.ensure_future(presence.until_gone()))
 
 
+async def test_a_page_open_past_the_wait_for_the_first_keeps_the_review_open() -> None:
+    """The wait is for a first page alone: once one has come, the review lives as long as a page holds it."""
+    presence = BrowserPresence(reload_grace=GRACE_SECONDS, first_page_deadline=GRACE_SECONDS)
+    with presence.page_open():
+        assert await _still_open_after(asyncio.ensure_future(presence.until_gone()))
+
+
 async def test_a_second_tab_keeps_the_review_open() -> None:
     presence = _presence()
     with presence.page_open():

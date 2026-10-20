@@ -11,7 +11,7 @@ It makes a repository of its own with a long change in it (`long_change.py`
 says what the change is), serves the change through the review's own
 command line, tells a story of it the same way, prints where the review is,
 and stays until the review ends: a review ends once its page has been
-closed. The repository, the story and what the review remembers about its
+closed, or an hour on if no page has opened it. The repository, the story and what the review remembers about its
 reader are kept in a directory of the look's own, removed as it ends: a
 look writes nothing where it is run, and a fresh reader opens the page
 every time.
