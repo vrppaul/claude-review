@@ -165,12 +165,12 @@
 .cr-row-del > td:first-child {
 	border-left-color: var(--cr-del-edge);
 }
-/* Selection outranks the change underneath it: it is the reader's own mark, drawn as whatever is selected is */
+/* What the reader marked outranks the change underneath it: it is their own mark */
 .cr-row-marked {
-	background: var(--cr-selected);
+	background: var(--cr-marked);
 }
 .cr-row-marked > td:first-child {
-	border-left-color: var(--cr-selected-edge);
+	border-left-color: var(--cr-marked-edge);
 }
 
 .cr-gutter {
@@ -260,7 +260,7 @@
 	background: var(--cr-del-tint);
 }
 .cr-cell-marked {
-	background: var(--cr-selected);
+	background: var(--cr-marked);
 }
 .cr-edge {
 	border-left: var(--cr-line-strong) solid transparent;
@@ -272,7 +272,7 @@
 	border-left-color: var(--cr-del-edge);
 }
 .cr-edge-marked {
-	border-left-color: var(--cr-selected-edge);
+	border-left-color: var(--cr-marked-edge);
 }
 /* An absent side of a replacement: nothing was there, and it is not a gap */
 .cr-cell-absent {

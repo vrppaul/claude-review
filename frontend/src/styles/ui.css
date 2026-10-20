@@ -52,18 +52,22 @@
 	background-image: linear-gradient(var(--cr-fill-light), var(--cr-fill-light));
 }
 /*
- * A control of a bar pressed down — a segment of a track, a toggle that is
- * on — or whose pane is open: drawn over its tone, not in place of it, the
- * mark's tint laid over its own ground as the pointer's light is, and the
- * edge at its foot; its words are its tone's still
+ * A control pressed down — a segment of a track, a toggle that is on — or
+ * whose pane is open: a small thing chosen, so reversed, in ink whatever its
+ * tone (tokens.css)
  */
 .cr-pressable:is([aria-pressed='true'], [aria-haspopup][aria-expanded='true']) {
-	background-image: linear-gradient(var(--cr-selected), var(--cr-selected));
-	box-shadow: var(--cr-shadow-selected-foot);
+	background-color: var(--color-base-content);
+	color: var(--cr-on-ink);
 }
-/* A filled one, whose fill is the mark's own, takes the edge in the colour of its words */
-.cr-ui-filled:is([aria-pressed='true'], [aria-haspopup][aria-expanded='true']) {
-	box-shadow: var(--cr-shadow-selected-foot-on-fill);
+/* Every change of state eases, but for a reader who asked for less motion (main.css) */
+.cr-ui-button,
+.cr-ui-segment,
+.cr-ui-row,
+.cr-ui-band {
+	transition:
+		background-color var(--cr-change) ease,
+		color var(--cr-change) ease;
 }
 
 /* One focus treatment, in the palette, so keyboard use is visible everywhere */
@@ -307,9 +311,8 @@
 	line-height: var(--text-2xs--line-height);
 	white-space: nowrap;
 }
-/* The one picked, in plain words and bold, besides the tint and edge of whatever is pressed */
+/* The one picked, in bold, reversed as whatever is pressed is */
 .cr-ui-segment[aria-pressed='true'] {
-	color: var(--color-base-content);
 	font-weight: var(--font-weight-semibold);
 }
 /* A segment whose view the agent is writing: said in the agent's colour */
@@ -367,8 +370,11 @@
 .cr-ui-field-agent {
 	border-color: var(--cr-agent-border);
 }
+/* The field the keyboard is in: its edge the keyboard's, twice as strong, and nothing outside it */
 .cr-ui-field:focus {
 	border-color: var(--cr-focus-ring);
+	outline: none;
+	box-shadow: var(--cr-shadow-focused-edge);
 }
 /* What a field says before anything is written in it, in a colour of the palette rather than half the text's */
 .cr-ui-field::placeholder {
@@ -419,9 +425,9 @@
 	font-size: var(--text-xs);
 	line-height: var(--text-xs--line-height);
 }
-/* A box ticked or not (Checkbox): the browser's own, in the colour of the reader's controls */
+/* A box ticked or not (Checkbox): the browser's own, ticked in ink, as whatever is chosen is */
 .cr-ui-checkbox {
-	accent-color: var(--cr-control);
+	accent-color: var(--color-base-content);
 }
 /*
  * A choice drawn as a chip (Checkbox drawn as one), the whole of which is the
@@ -752,10 +758,10 @@
 }
 /*
  * A target this thin needs more than the pointer's light to be found under
- * it: it shows itself in the colour of the selected edge, at 3:1 on any surface
+ * it: it shows itself in muted ink, at 3:1 on any surface
  */
 .cr-ui-grip:hover {
-	background-color: var(--cr-selected-edge);
+	background-color: var(--cr-muted);
 }
 
 /*
@@ -853,9 +859,9 @@
 	border-left-color: var(--color-base-300);
 }
 /*
- * The reader's words and something settled lay the raised surface: the
- * reader's mark's own wash is the tint of the one they are at
- * (--cr-selected), and a frame of theirs on it would read as where they are
+ * The reader's words and something settled lay the card's ground: the
+ * reader's mark's own tint is what they marked in the code (--cr-marked),
+ * and a frame of theirs on it would read as lines they picked
  */
 .cr-ui-frame-reader.cr-ui-frame-tinted,
 .cr-ui-frame-quiet.cr-ui-frame-tinted {
@@ -1196,20 +1202,22 @@
 	font-weight: var(--font-weight-normal);
 	text-overflow: ellipsis;
 }
-/*
- * The one of its list the reader is at — the file they are in, the base
- * the diff is read against, the option the keys lit — on their mark's
- * tint, its edge at the row's start; and so the band (Band) of the story's
- * words a thread of theirs hangs open under
- */
-.cr-ui-row-current,
-.cr-ui-band-current {
-	background-color: var(--cr-selected);
-	box-shadow: var(--cr-shadow-selected-start);
-}
 /* What the reader has finished with steps back, in faint words that still read at 4.5:1 */
 .cr-ui-row-viewed {
 	color: var(--cr-faint);
+}
+/*
+ * The one of its list the reader is at — the file they are in, the base
+ * the diff is read against, the option the keys lit — on the ink's tint,
+ * rounded, with no edge, its words in ink, though they finished with it:
+ * faint words read at 4.2:1 on the tint; and so the band (Band) of the
+ * story's words a thread of theirs hangs open under
+ */
+.cr-ui-row-current,
+.cr-ui-band-current {
+	border-radius: var(--radius-box);
+	background-color: var(--cr-selected);
+	color: var(--color-base-content);
 }
 
 /*

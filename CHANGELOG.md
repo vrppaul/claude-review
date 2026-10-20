@@ -147,6 +147,17 @@
   that id as `said_id`.
 
 ### Changed
+- **What is chosen is drawn in ink.** A segment pressed, a toggle on and a
+  button whose pane is open are reversed, the page's words their ground,
+  where they stood on the reader's blue tint with a blue edge at their
+  foot. The file the reader is in, the option the keys lit and the block a
+  thread hangs open under stand on a grey pill, rounded, with no edge at
+  their start, their words in ink even once viewed. A box ticks in ink.
+  The lines the reader marked to comment on keep their blue. A field the
+  keyboard is in is edged twice as strong in blue, with no ring outside
+  it, and a column's edge to drag shows in grey under the pointer. Every
+  change of state eases over 150 ms, but for a reader who asked for less
+  motion. A chevron is a line, where it was filled.
 - **One ladder of colour.** Each colour that says whose a thing is or
   what it means — the reader's blue, the agent's violet, what is done, a
   warning — is drawn at the same steps in both themes: itself, its tint

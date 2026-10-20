@@ -235,17 +235,8 @@
 
 	/* Every shadow the page is drawn with. What lifts a pane off the page it lies over: */
 	--cr-shadow-raised: 0 18px 48px rgb(0 0 0 / 0.45);
-	/*
-	 * The edge of the one of a set the reader is at, laid inside it: at the
-	 * start of a row read down a column, at the foot of a control in a bar
-	 */
-	--cr-shadow-selected-start: inset var(--cr-line-strong) 0 0 var(--cr-selected-edge);
-	--cr-shadow-selected-foot: inset 0 calc(-1 * var(--cr-line-strong)) 0 var(--cr-selected-edge);
-	/*
-	 * And at the foot of a filled button whose pane is open, in the colour of
-	 * its own words: the mark's edge would vanish on the mark's own fill
-	 */
-	--cr-shadow-selected-foot-on-fill: inset 0 calc(-1 * var(--cr-line-strong)) 0 currentColor;
+	/* The edge of a field the keyboard is in, twice as strong: a line inside it, over its own, nothing outside */
+	--cr-shadow-focused-edge: inset 0 0 0 var(--cr-line) var(--cr-focus-ring);
 	/* The tour's light: a ring round the control it points at, in a shade spread over any screen */
 	--cr-shadow-spotlight: 0 0 0 var(--cr-line-strong) var(--cr-control), 0 0 0 9999px var(--cr-shade);
 	/* The reader's mark round the node of the part of a story they are reading */
@@ -340,16 +331,26 @@
 	 * same light, so it takes a stronger one of its own (--cr-hover-on-fill,
 	 * in each theme below), which only parts it further from the words on it.
 	 *
-	 * The one of a set the reader is at — the file they are in, the option
-	 * the keys lit, a segment pressed, a toggle on, a control whose pane is
-	 * open — stands on their mark's tint, the strongest the words on it allow,
-	 * and says so at 3:1 by an edge of their mark (the shadows above); a
-	 * control pressed or open keeps its own ground and words, the tint laid
-	 * over them. The pointer leaves it as it is. What holds the keyboard is
-	 * ringed in the control's colour.
+	 * What is chosen is drawn in ink, never in a hue, and marked the more
+	 * weakly the larger it is. A small thing chosen — a segment pressed, a
+	 * toggle on, a control whose pane is open — is reversed: the page's words
+	 * its ground, the page's plainest ground its words. The row or band the reader is
+	 * at — the file they are in, the option the keys lit, the block a thread
+	 * of theirs hangs open under — stands on the ink's tint, rounded, with no
+	 * edge, its words in ink. The pointer leaves either as it is. What holds
+	 * the keyboard is ringed in the control's colour, a field edged in it;
+	 * and every change of state eases over --cr-change.
 	 */
-	--cr-selected: var(--cr-mark-tint);
-	--cr-selected-edge: var(--cr-mark);
+	--cr-on-ink: var(--color-base-100);
+	--cr-selected: color-mix(in srgb, var(--color-base-content) var(--cr-strength-tint), transparent);
+	--cr-change: 150ms;
+	/*
+	 * What the reader marked in the code, the lines they picked to comment
+	 * on: theirs, so in their mark, on its tint with its edge at the row's
+	 * start
+	 */
+	--cr-marked: var(--cr-mark-tint);
+	--cr-marked-edge: var(--cr-mark);
 	--cr-focus-ring: var(--cr-control);
 	/* The ring: a strong line, a line's width off what it rings */
 	--cr-focus-ring-width: var(--cr-line-strong);
