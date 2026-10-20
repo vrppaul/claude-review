@@ -212,9 +212,8 @@
   forms. An icon that says something by its colour — a check of something
   done, the bin, the agent's book, a warning, the base in force, the
   panel's empty mark — takes it from its tone. The library draws each of
-  these. eslint refuses a class of any of DaisyUI's components anywhere,
-  and the colour of what fails outside the library, as stylelint does in
-  every stylesheet but the library's.
+  these. eslint refuses the colour of what fails outside the library, as
+  stylelint does in every stylesheet but the library's.
 - **The pane a control opens, its question and its note are the
   library's.** Popover, the question asked before something is lost, the
   note put by a control, a fold's toggle and a column's grip moved into
@@ -253,6 +252,15 @@
   commands away until asked for, where it was the browser's own
   `<details>`, its triangle beside the page's chevrons. eslint refuses a
   `<details>` or a `<summary>` outside the library.
+- **DaisyUI is gone.** Its colours were the page's own already, written in
+  `tokens.css`; the page's ground and words, the bar a box scrolls by, and
+  the colours of words written in Markdown are now set by the page, the
+  last of them by the library's Prose. The page looks as it did, but for
+  code in a line of Markdown: set in by 2 pixels above and below and 6
+  beside, where it stood in by 2.6 and 6.4. The colours only its own
+  components read went, and so did eslint's rule against its classes, the
+  variants of its 53 components in 340 lines: with no plugin, its classes
+  draw nothing.
 - **Every size is taken off one scale.** Room between things is one of
   nine steps from 0 to 32 pixels, words one of a few sizes in two weights
   at their size's own leading, a line 1 or 2 pixels, a corner a field's or

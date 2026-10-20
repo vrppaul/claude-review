@@ -1,12 +1,18 @@
 @import 'tailwindcss';
 @plugin "@tailwindcss/typography";
-@plugin "daisyui";
 @import './tokens.css';
 @import './ui.css';
 
 @theme {
 	--font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 	--font-mono: ui-monospace, 'SF Mono', 'JetBrains Mono', 'Cascadia Code', 'Fira Code', Menlo, Consolas, monospace;
+}
+
+/* The page's ground and words, in the theme it is read in, and the bar every box of it is scrolled by */
+:root {
+	background-color: var(--color-base-100);
+	color: var(--color-base-content);
+	scrollbar-color: var(--cr-scrollbar) transparent;
 }
 
 /*
@@ -1109,9 +1115,9 @@
  * animation and every transition on the page stops, here and nowhere else.
  * Last in the stylesheet and as specific as one class, it wins over each
  * rule above that moves something — a rule more specific than one class
- * that adds motion must not be written — and over Tailwind's and DaisyUI's,
- * which sit in layers under it. A scroll the page starts itself never
- * glides, for any reader (dom/jump.ts).
+ * that adds motion must not be written — and over Tailwind's, which sit in
+ * layers under it. A scroll the page starts itself never glides, for any
+ * reader (dom/jump.ts).
  */
 @media (prefers-reduced-motion: reduce) {
 	:root *,

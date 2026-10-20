@@ -225,11 +225,10 @@ of it is built yet.
       tells from other words; a tour's name in a spread of attributes; a
       bar drawn by a rule of `main.css`, its raised ground and its rule
       across in one rule, which no stylesheet gate reads as a pair; a
-      DaisyUI component's bare name held in a string, a word of a sentence
-      as often; a selector of another stylesheet reading the library's
-      classes or the kept-in-sight role by a part of an attribute
-      (`[class*='cr-ui-']`, `[data-role~='kept-in-sight']`); a raised ground
-      or a comment's size written with a type hint in markup
+      selector of another stylesheet reading the library's classes or the
+      kept-in-sight role by a part of an attribute (`[class*='cr-ui-']`,
+      `[data-role~='kept-in-sight']`); a raised ground or a comment's size
+      written with a type hint in markup
       (`bg-(color:--color-base-200)`, `text-(length:--cr-comment-size)`).
       A rule that each look class has one owner is to hold them.
 - [ ] `feat(ui)`: whether a pane keeps its side while the page scrolls under

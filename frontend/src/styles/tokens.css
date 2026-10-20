@@ -25,10 +25,9 @@
  * px, written `p-2` in the markup and `--spacing(2)` in a stylesheet, here
  * too. Words are set at one of Tailwind's sizes — xs, sm, lg, xl — at a
  * mark's (2xs), at code's or at a comment's, each at its own leading, and in
- * one of two weights, normal and semibold. A corner is a field's or a box's
- * (in each theme below), or round; a line is one of the two below. Whatever
- * else has a size, a time or a strength — a row, a pane, an arrow, a breath
- * — is named here once. stylelint refuses one written as a number in any
+ * one of two weights, normal and semibold. A corner is a field's or a box's,
+ * or round; a line is one of the two below. Whatever else has a size, a time
+ * or a strength — a row, a pane, an arrow, a breath — is named here once. stylelint refuses one written as a number in any
  * other stylesheet, and eslint refuses room, words, a box's width or height
  * or a value written in place off the scale in the markup.
  */
@@ -41,6 +40,9 @@
 	 */
 	--cr-line: 1px;
 	--cr-line-strong: 2px;
+	/* A corner: a field's, a control's or a chip's; and a box's, a card's or a pane's */
+	--radius-field: 0.25rem;
+	--radius-box: 0.375rem;
 	/* One line of the words of whatever names it, as tall as their leading makes it there */
 	--cr-one-line: 1lh;
 
@@ -275,6 +277,17 @@
 	 */
 	--cr-avatar-reader: color-mix(in srgb, var(--cr-mark) 14%, var(--color-base-200));
 	--cr-avatar-agent: color-mix(in srgb, var(--cr-agent) 12%, var(--color-base-200));
+	/*
+	 * Words written in Markdown (Prose): a step quieter than the page's own;
+	 * the marks of a list and the rule under a table's head quieter again; and
+	 * the rules across — between a table's rows, beside a quotation, between
+	 * parts — faintest
+	 */
+	--cr-prose-words: color-mix(in srgb, var(--color-base-content) 80%, transparent);
+	--cr-prose-marks: color-mix(in srgb, var(--color-base-content) 50%, transparent);
+	--cr-prose-rule: color-mix(in srgb, var(--color-base-content) 20%, transparent);
+	/* The bar a box is scrolled by: the words it stands among, faint, on no ground of its own */
+	--cr-scrollbar: color-mix(in srgb, currentColor 35%, transparent);
 
 	/*
 	 * A control is the reader's, so it is drawn in their blue: every focus
@@ -288,15 +301,14 @@
 	 * The states of whatever can be pressed, each one token for both themes.
 	 * Under the pointer, a thing is lit by the page's words laid faintly over
 	 * whatever it is drawn on (--cr-hover, in each theme below): that
-	 * lightens a dark ground as it darkens a light one, where DaisyUI's hover
-	 * only darkened, and a near-black ground darkened stayed near-black
-	 * (1.02:1). It stands off its ground at about 1.15:1 and no more, since
-	 * the words on it lose as much: every colour of words is held at 4.5:1 on
-	 * it. Pressed, a thing keeps the same light: a stronger one would take
-	 * the quietest words below 4.5:1. A saturated fill — a filled button's —
-	 * moves less under the same light, so it takes a stronger one of its own
-	 * (--cr-hover-on-fill, in each theme below), which only parts it further
-	 * from the words on it.
+	 * lightens a dark ground as it darkens a light one, where a hover that
+	 * only darkens leaves a near-black ground near-black (1.02:1). It stands
+	 * off its ground at about 1.15:1 and no more, since the words on it lose
+	 * as much: every colour of words is held at 4.5:1 on it. Pressed, a thing
+	 * keeps the same light: a stronger one would take the quietest words
+	 * below 4.5:1. A saturated fill — a filled button's — moves less under the
+	 * same light, so it takes a stronger one of its own (--cr-hover-on-fill,
+	 * in each theme below), which only parts it further from the words on it.
 	 *
 	 * The one of a set the reader is at — the file they are in, the option
 	 * the keys lit, a segment pressed, a toggle on, a control whose pane is
@@ -393,6 +405,20 @@
 }
 
 /*
+ * The grounds and the words the markup sets as Tailwind's colours
+ * (`bg-base-100`, `border-base-300`, `text-warning`), handed to its theme by
+ * name alone: each theme below gives the value, so Tailwind writes none of
+ * its own (reference) and its utilities read the theme's (inline)
+ */
+@theme inline reference {
+	--color-base-100: var(--color-base-100);
+	--color-base-200: var(--color-base-200);
+	--color-base-300: var(--color-base-300);
+	--color-base-content: var(--color-base-content);
+	--color-warning: var(--color-warning);
+}
+
+/*
  * Where the side column, and where the panel, stops standing beside the
  * diff and lies over it. A media query cannot read a custom property, so
  * each is the sum of the widths above written out, as Tailwind's
@@ -415,30 +441,12 @@
 	--color-base-200: #171c25;
 	--color-base-300: #232b37;
 	--color-base-content: #d9e1ec;
-	--color-neutral: #232b37;
-	--color-neutral-content: #d9e1ec;
-	/* DaisyUI's colours for its buttons, badges and notes, which the review draws only as controls */
-	--color-primary: var(--cr-control);
+	/* Words on a fill: a primary button's or the reader's count, a warning's, an error's */
 	--color-primary-content: #0b111c;
-	--color-secondary: #c792ea;
-	--color-secondary-content: #14101c;
-	--color-accent: var(--cr-control);
-	--color-accent-content: #0b111c;
-	--color-info: var(--cr-control);
-	--color-info-content: #0b111c;
-	--color-success: #4fb865;
-	--color-success-content: #08150c;
 	--color-warning: #e8c440;
 	--color-warning-content: #1c1608;
 	--color-error: #fb5c62;
 	--color-error-content: #1c0a0c;
-
-	--radius-selector: 0.375rem;
-	--radius-field: 0.25rem;
-	--radius-box: 0.375rem;
-	--border: 1px;
-	--depth: 0;
-	--noise: 0;
 
 	--cr-add-edge: #3f9d54;
 	--cr-add-tint: rgb(79 184 101 / 0.09);
@@ -500,19 +508,7 @@
 	--color-base-200: #f4f7fa;
 	--color-base-300: #dde4ec;
 	--color-base-content: #1b2430;
-	--color-neutral: #dde4ec;
-	--color-neutral-content: #1b2430;
-	/* DaisyUI's colours for its buttons, badges and notes, which the review draws only as controls */
-	--color-primary: var(--cr-control);
 	--color-primary-content: #ffffff;
-	--color-secondary: #7c3fbf;
-	--color-secondary-content: #ffffff;
-	--color-accent: var(--cr-control);
-	--color-accent-content: #ffffff;
-	--color-info: var(--cr-control);
-	--color-info-content: #ffffff;
-	--color-success: #1f8b3a;
-	--color-success-content: #ffffff;
 	/*
 	 * A warning in words reads at 4.5:1 on its own wash with the reader's mark laid over it — a chapter's doubt a
 	 * thread hangs under — with a tenth to spare for how a browser rounds the layers
@@ -521,13 +517,6 @@
 	--color-warning-content: #ffffff;
 	--color-error: #c22c37;
 	--color-error-content: #ffffff;
-
-	--radius-selector: 0.375rem;
-	--radius-field: 0.25rem;
-	--radius-box: 0.375rem;
-	--border: 1px;
-	--depth: 0;
-	--noise: 0;
 
 	--cr-add-edge: #2f9e4f;
 	--cr-add-tint: rgb(31 139 58 / 0.08);
