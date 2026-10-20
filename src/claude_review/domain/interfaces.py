@@ -12,7 +12,7 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
-from claude_review.domain.models import DiffFile, EpochMillis, GitRef
+from claude_review.domain.models import Checkout, DiffFile, EpochMillis, GitRef
 from claude_review.domain.page_events import PageEvent
 
 
@@ -74,6 +74,10 @@ class Repository(ABC):
     @abstractmethod
     async def empty_tree(self, path: Path) -> str:
         """Return the id of the tree with nothing in it: what a repository with nothing committed is read against."""
+
+    @abstractmethod
+    async def checkout(self, path: Path) -> Checkout:
+        """Return what the working tree has checked out: its branch, or the commit HEAD names when it is on none."""
 
     @abstractmethod
     async def diff_between(self, path: Path, earlier: str, later: str) -> str:

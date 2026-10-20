@@ -106,6 +106,7 @@ class Review:
         opening = source.opening
         self._mode = opening.mode
         self._title = opening.title
+        self._repository_at = opening.repository_at
         self._identity = opening.identity_digest
         self._opened_against = opening.opened_against
         self._page = page
@@ -139,6 +140,7 @@ class Review:
         """What the review is and where it has got to, in one piece."""
         return ReviewStanding(
             title=self._title,
+            repository=self._repository_at,
             identity=self._identity,
             mode=self._mode,
             opened_against=self._opened_against,

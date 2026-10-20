@@ -2,7 +2,7 @@
 
 from pydantic import BaseModel, ConfigDict
 
-from claude_review.domain.models import AgentStatus, PanelEntry, ReviewMode, ThreadDraft
+from claude_review.domain.models import AgentStatus, PanelEntry, RepositoryAt, ReviewMode, ThreadDraft
 from claude_review.domain.story import StoryAsking
 
 
@@ -12,6 +12,9 @@ class ReviewStanding(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     title: str
+    # Where the change is: its repository and what was checked out there, or
+    # None for a review of files or of a conversation
+    repository: RepositoryAt | None
     # What makes it the same review when it is opened again, in short: the
     # name its page keeps the reader's unsent work under
     identity: str

@@ -5,13 +5,16 @@ from pathlib import Path
 import pytest
 
 from claude_review.domain.exceptions import UnknownVersionError
-from claude_review.domain.models import ReviewMode
+from claude_review.domain.models import OnBranch, OnCommit, RepositoryAt, ReviewMode
 from claude_review.repositories.git_repository import GitRepository
 from claude_review.services.review_opening import open_diff, open_files, open_transcript
 from tests.helpers import git
 
 # More files than a title names before it counts the rest
 FIVE_FILES = ("e.md", "d.md", "c.md", "b.md", "a.md")
+# A branch the change is made on, and how short git writes a commit's id in a repository this small
+FEATURE_BRANCH = "feature/where-the-change-is"
+SHORT_ID_LENGTH = 7
 
 
 @pytest.fixture
@@ -33,6 +36,19 @@ async def test_a_diff_is_named_by_its_repository_and_what_it_is_compared_against
 
     assert uncommitted.title == f"{changed_repo.name}: uncommitted changes"
     assert since_a_commit.title == f"{changed_repo.name}: changes since HEAD"
+
+
+async def test_a_diff_says_the_branch_checked_out_or_on_none_the_commit(changed_repo: Path) -> None:
+    git(changed_repo, "switch", "--quiet", "--create", FEATURE_BRANCH)
+    on_a_branch = await open_diff(changed_repo, None, GitRepository(objects=None))
+    git(changed_repo, "switch", "--quiet", "--detach")
+    on_no_branch = await open_diff(changed_repo, None, GitRepository(objects=None))
+    commit = git(changed_repo, "rev-parse", "HEAD").strip()
+
+    assert on_a_branch.repository_at == RepositoryAt(name=changed_repo.name, checkout=OnBranch(branch=FEATURE_BRANCH))
+    assert on_no_branch.repository_at == RepositoryAt(
+        name=changed_repo.name, checkout=OnCommit(commit=commit[:SHORT_ID_LENGTH])
+    )
 
 
 async def test_a_diff_opened_from_a_subdirectory_is_the_whole_repository(changed_repo: Path) -> None:

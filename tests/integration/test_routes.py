@@ -280,6 +280,20 @@ async def test_the_review_says_what_is_under_review(client: AsyncClient) -> None
     assert response.json()["title"] == REVIEW_TITLE
 
 
+async def test_the_review_of_a_repository_says_its_name_and_the_branch_checked_out(
+    reviews: ReviewFactory, tmp_git_repo: Path
+) -> None:
+    """The header says where the change is: the repository, and the branch it is made on."""
+    git(tmp_git_repo, "switch", "--quiet", "--create", "feature/where")
+    async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as client:
+        response = await client.get(REVIEW_ROUTE)
+
+    assert response.json()["repository"] == {
+        "name": tmp_git_repo.name,
+        "checkout": {"at": "branch", "branch": "feature/where"},
+    }
+
+
 async def _identity_of(reviews: ReviewFactory, opening: ReviewOpening) -> str:
     """The name a review gives itself to the page that opens it."""
     async with http_client(reviews.app(opening)) as client:

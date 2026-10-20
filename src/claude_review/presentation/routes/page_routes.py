@@ -47,6 +47,7 @@ from claude_review.presentation.wire.content import (
     DiffFile,
     DiffResponse,
     FileWindowResponse,
+    RepositoryAt,
     RetakeResponse,
     ReviewResponse,
     StoryAsking,
@@ -82,6 +83,7 @@ async def get_the_review(
     told = broadcast.position()
     return ReviewResponse(
         title=standing.title,
+        repository=RepositoryAt.of(standing.repository) if standing.repository is not None else None,
         identity=standing.identity,
         mode=standing.mode,
         round=standing.round,

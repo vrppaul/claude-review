@@ -82,11 +82,14 @@ export function diffResponse(given: Partial<DiffResponse> = {}): DiffResponse {
 
 /** What the review a test opens is of, unless it says otherwise. */
 export const REVIEW_TITLE = 'repo: uncommitted changes';
+/** Where its change is: the repository, on the branch the change is made on. */
+const REVIEWED_REPOSITORY: ReviewResponse['repository'] = { name: 'repo', checkout: { at: 'branch', branch: 'main' } };
 
 /** What the server says the review is, as a page opening reads it: a diff in its first round. */
 export function reviewResponse(given: Partial<ReviewResponse> = {}): ReviewResponse {
 	return {
 		title: REVIEW_TITLE,
+		repository: REVIEWED_REPOSITORY,
 		identity: REVIEW_IDENTITY,
 		mode: 'diff',
 		round: 1,

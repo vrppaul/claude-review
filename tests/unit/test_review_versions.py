@@ -13,7 +13,16 @@ from pathlib import Path
 from typing import override
 
 from claude_review.domain.interfaces import Repository, StagedTree
-from claude_review.domain.models import ChangedSinceRound, DiffFile, GitRef, RoundKey, VersionOnOffer
+from claude_review.domain.models import (
+    ChangedSinceRound,
+    Checkout,
+    DiffFile,
+    GitRef,
+    OnBranch,
+    RepositoryAt,
+    RoundKey,
+    VersionOnOffer,
+)
 from claude_review.services.review.review_versions import ReviewVersions
 from claude_review.services.review_opening import OpenedRepository
 from tests.helpers import FixedClock
@@ -21,6 +30,8 @@ from tests.helpers import FixedClock
 ROOT = Path("/repository")
 # The commit the review opened on: its uncommitted changes, as HEAD stood then
 OPENED_ON = "commit-at-opening"
+# What the repository had checked out as the review opened
+CHECKED_OUT = OnBranch(branch="main")
 # When every mark here is left, on the review's clock
 MARKED_AT = 1_791_000_000_000
 # What the repository says differs from a base: one file, named after the base
@@ -86,6 +97,10 @@ class RepositoryThatMoves(Repository):
         return "empty-tree"
 
     @override
+    async def checkout(self, path: Path) -> Checkout:
+        return CHECKED_OUT
+
+    @override
     async def diff_between(self, path: Path, earlier: str, later: str) -> str:
         return ""
 
@@ -98,7 +113,12 @@ class MarkingReview:
         self.versions = ReviewVersions(
             self._repository,
             FixedClock(MARKED_AT),
-            OpenedRepository(root=ROOT, named_base=None, pinned_base=OPENED_ON),
+            OpenedRepository(
+                root=ROOT,
+                named_base=None,
+                pinned_base=OPENED_ON,
+                at=RepositoryAt(name=ROOT.name, checkout=CHECKED_OUT),
+            ),
         )
 
     async def mark(self, round_number: int) -> None:

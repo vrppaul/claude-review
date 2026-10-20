@@ -11,7 +11,16 @@ import structlog
 from pydantic import BaseModel
 
 from claude_review.domain.interfaces import GitError, ReviewedRepository, StagedTree
-from claude_review.domain.models import HEAD, LARGEST_FILE_SHOWN_BYTES, DiffFile, FileStatus, GitRef
+from claude_review.domain.models import (
+    HEAD,
+    LARGEST_FILE_SHOWN_BYTES,
+    Checkout,
+    DiffFile,
+    FileStatus,
+    GitRef,
+    OnBranch,
+    OnCommit,
+)
 
 log = structlog.get_logger()
 
@@ -33,6 +42,10 @@ COMMIT_TYPE = "commit"
 AS_COMMIT = "^{commit}"
 # What an option begins with, which no revision a review reads against may
 OPTION_MARK = "-"
+# What git says HEAD is on: the branch, by its short name and nothing printed on none; and the commit it names,
+# its id as short as still names it alone
+BRANCH_CHECKED_OUT = ["symbolic-ref", "--quiet", "--short", HEAD]
+COMMIT_CHECKED_OUT = ["rev-parse", "--short", HEAD]
 # Git dates a ref in seconds, and the review says every time in milliseconds
 MILLISECONDS_PER_SECOND = 1000
 # Where the path starts in an entry of `git status --porcelain`
@@ -345,6 +358,21 @@ class GitRepository(ReviewedRepository):
             ],
         )
         return [ref for line in listed.splitlines() if (ref := _offered_ref(line)) is not None]
+
+    @override
+    async def checkout(self, path: Path) -> Checkout:
+        """What the working tree has checked out: the branch HEAD is on, or the commit it names on none.
+
+        A branch with nothing committed on it yet is still the branch checked
+        out: git names it all the same.
+
+        Raises:
+            GitError: if HEAD is on no branch and names no commit, or git fails.
+        """
+        branch = await _execute(path, BRANCH_CHECKED_OUT)
+        if branch.exit_code == 0:
+            return OnBranch(branch=branch.output.strip())
+        return OnCommit(commit=(await _run(path, COMMIT_CHECKED_OUT)).strip())
 
     @override
     async def commit_named(self, path: Path, revision: str) -> str | None:

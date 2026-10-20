@@ -16,7 +16,7 @@ from pydantic import BaseModel, ConfigDict
 
 from claude_review.domain.exceptions import UnknownVersionError
 from claude_review.domain.interfaces import Repository
-from claude_review.domain.models import HEAD, DiffFile, ReviewMode
+from claude_review.domain.models import HEAD, DiffFile, RepositoryAt, ReviewMode
 from claude_review.services.diff_reading import read_diff
 from claude_review.services.text_files import read_text_files
 from claude_review.services.transcript import read_transcript
@@ -59,6 +59,9 @@ class OpenedRepository(BaseModel):
     # every commit, and the agent commits as it works: read against the name,
     # the review would lose the work under review, and its threads with it.
     pinned_base: str
+    # Where the change is, as the header says it: the repository's name and
+    # what its working tree had checked out as the review opened
+    at: RepositoryAt
 
 
 class ReviewOpening(BaseModel):
@@ -87,6 +90,11 @@ class ReviewOpening(BaseModel):
         """The base as the reader named it: None for the uncommitted changes, and for a review of no repository."""
         return self.repository.named_base if self.repository is not None else None
 
+    @property
+    def repository_at(self) -> RepositoryAt | None:
+        """Where the change under review is: None for a review of files or of a conversation, of no repository."""
+        return self.repository.at if self.repository is not None else None
+
 
 async def open_diff(location: Path, base: str | None, repository: Repository) -> ReviewOpening:
     """The changes in the repository `location` is in, against `base`, or uncommitted ones without it.
@@ -105,12 +113,13 @@ async def open_diff(location: Path, base: str | None, repository: Repository) ->
         pinned_base = await _pinned_base(repository, resolved_location, base)
         diff_files = await read_diff(staged, base=pinned_base, ignore_whitespace=False)
     root = await repository.top_level(resolved_location) or resolved_location
+    at = RepositoryAt(name=_repository_name(root), checkout=await repository.checkout(resolved_location))
     return ReviewOpening(
         mode=ReviewMode.DIFF,
         diff_files=diff_files,
-        title=_diff_title(root, base),
+        title=_diff_title(at.name, base),
         identity=IDENTITY_SEPARATOR.join((str(root), base or NO_BASE)),
-        repository=OpenedRepository(root=root, named_base=base, pinned_base=pinned_base),
+        repository=OpenedRepository(root=root, named_base=base, pinned_base=pinned_base, at=at),
     )
 
 
@@ -172,9 +181,14 @@ def changes_since(base: str | None) -> str:
     return SINCE_A_BASE.format(base=base) if base else UNCOMMITTED
 
 
-def _diff_title(root: Path, base: str | None) -> str:
+def _repository_name(root: Path) -> str:
+    """What a repository is called: its root's name, or the whole path where the root has none, as `/` does."""
+    return root.name or str(root)
+
+
+def _diff_title(repository: str, base: str | None) -> str:
     """Name the repository under review and what it is compared against."""
-    return DIFF_TITLE.format(repository=root.name or root, against=changes_since(base))
+    return DIFF_TITLE.format(repository=repository, against=changes_since(base))
 
 
 def _files_title(paths: list[Path]) -> str:

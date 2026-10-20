@@ -854,6 +854,7 @@ export interface components {
          * @enum {string}
          */
         ChapterText: "why" | "doubt";
+        Checkout: components["schemas"]["OnBranch"] | components["schemas"]["OnCommit"];
         /** ClosedEvent */
         ClosedEvent: {
             /**
@@ -1298,6 +1299,32 @@ export interface components {
             threads?: components["schemas"]["ThreadInput-Input"][];
         };
         /**
+         * OnBranch
+         * @description A branch checked out, by its name: the branch the change is made on.
+         */
+        OnBranch: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            at: "branch";
+            /** Branch */
+            branch: string;
+        };
+        /**
+         * OnCommit
+         * @description A commit checked out on no branch, by its id as short as git writes it and still names it alone.
+         */
+        OnCommit: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            at: "commit";
+            /** Commit */
+            commit: string;
+        };
+        /**
          * OverviewBlock
          * @description One of the overview's three lines, by its name.
          */
@@ -1533,6 +1560,15 @@ export interface components {
             question_id?: string | null;
         };
         /**
+         * RepositoryAt
+         * @description Where the change under review is: the repository, by its name, and what its working tree had checked out.
+         */
+        RepositoryAt: {
+            /** Name */
+            name: string;
+            checkout: components["schemas"]["Checkout"];
+        };
+        /**
          * RetakeResponse
          * @description Response for POST /api/retake — the diff taken again.
          *
@@ -1568,6 +1604,7 @@ export interface components {
         ReviewResponse: {
             /** Title */
             title: string;
+            repository: components["schemas"]["RepositoryAt"] | null;
             /** Identity */
             identity: string;
             mode: components["schemas"]["ReviewMode"];

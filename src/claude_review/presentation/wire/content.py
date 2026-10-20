@@ -1,12 +1,14 @@
 """What the page is served of the review: its facts, its diff, the bases it can be read against, and its limits."""
 
 from enum import StrEnum, auto
+from typing import Annotated, Literal
 
 from pydantic import Field
 
 from claude_review.domain.models import (
     LARGEST_FILE_SHOWN_BYTES,
     MAX_QUOTE_LINES,
+    CheckedOut,
     EpochMillis,
     FileStatus,
     LineType,
@@ -141,6 +143,31 @@ class StoryAsking(WireModel):
     stopped: WireBool
 
 
+class OnBranch(WireModel):
+    """A branch checked out, by its name: the branch the change is made on."""
+
+    at: Literal[CheckedOut.BRANCH] = CheckedOut.BRANCH
+    branch: str
+
+
+class OnCommit(WireModel):
+    """A commit checked out on no branch, by its id as short as git writes it and still names it alone."""
+
+    at: Literal[CheckedOut.COMMIT] = CheckedOut.COMMIT
+    commit: str
+
+
+# What a working tree has checked out, told apart by `at`
+type Checkout = Annotated[OnBranch | OnCommit, Field(discriminator="at")]
+
+
+class RepositoryAt(WireModel):
+    """Where the change under review is: the repository, by its name, and what its working tree had checked out."""
+
+    name: str
+    checkout: Checkout
+
+
 class ReviewResponse(WireModel):
     """Response for GET /api/review — what the review is and where it stands, whichever base is on screen.
 
@@ -150,6 +177,9 @@ class ReviewResponse(WireModel):
     """
 
     title: str
+    # Where the change is, which the header says in place of the tool's name:
+    # None for a review of files or of a conversation, of no repository
+    repository: RepositoryAt | None
     # What makes it the same review whenever it is opened, as a name that says
     # nothing of what it is made of: the page keeps the reader's unsent work
     # under it, and knows by it a review on this port that is not its own

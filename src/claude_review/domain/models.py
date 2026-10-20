@@ -842,6 +842,44 @@ class GitRef(BaseModel):
 HEAD = "HEAD"
 
 
+class CheckedOut(StrEnum):
+    """What a repository's working tree has checked out: a branch, or a commit on none."""
+
+    BRANCH = auto()
+    COMMIT = auto()
+
+
+class OnBranch(BaseModel):
+    """A branch checked out, by its name: the branch the change is made on."""
+
+    model_config = ConfigDict(frozen=True)
+
+    at: Literal[CheckedOut.BRANCH] = CheckedOut.BRANCH
+    branch: str
+
+
+class OnCommit(BaseModel):
+    """A commit checked out on no branch, by its id as short as git writes it and still names it alone."""
+
+    model_config = ConfigDict(frozen=True)
+
+    at: Literal[CheckedOut.COMMIT] = CheckedOut.COMMIT
+    commit: str
+
+
+# What a working tree has checked out, told apart by `at`
+type Checkout = Annotated[OnBranch | OnCommit, Field(discriminator="at")]
+
+
+class RepositoryAt(BaseModel):
+    """Where a change under review is: the repository, by its name, and what its working tree has checked out."""
+
+    model_config = ConfigDict(frozen=True)
+
+    name: str
+    checkout: Checkout
+
+
 class ReviewKey(BaseModel):
     """The review's own base: what it was opened against, and the diff it keeps."""
 

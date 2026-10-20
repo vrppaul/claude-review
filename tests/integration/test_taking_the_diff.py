@@ -24,7 +24,16 @@ from pathlib import Path
 from typing import override
 
 from claude_review.domain.interfaces import GitError, ReviewedRepository, StagedTree
-from claude_review.domain.models import FIRST_ROUND, FIRST_TAKE, DiffFile, GitRef, ReviewMode
+from claude_review.domain.models import (
+    FIRST_ROUND,
+    FIRST_TAKE,
+    Checkout,
+    DiffFile,
+    GitRef,
+    OnBranch,
+    RepositoryAt,
+    ReviewMode,
+)
 from claude_review.services.review.review import Review
 from claude_review.services.review_opening import OpenedRepository, ReviewOpening
 from tests.helpers import LOOK_EVERY_SECONDS, SETTLE_SECONDS, TEST_IDENTITY, FixedClock, ReviewFactory, one_line_file
@@ -32,6 +41,8 @@ from tests.helpers import LOOK_EVERY_SECONDS, SETTLE_SECONDS, TEST_IDENTITY, Fix
 ROOT = Path("/repository")
 # The commit the review opened on: its uncommitted changes, as HEAD stood then
 OPENED_ON = "commit-at-opening"
+# What the repository had checked out as the review opened
+CHECKED_OUT = OnBranch(branch="main")
 # When every mark here is left, on the review's clock
 MARKED_AT = 1_791_000_000_000
 # The one file each staging finds changed, in the order the stagings are made:
@@ -112,6 +123,10 @@ class RepositoryBeingWorkedOn(ReviewedRepository):
         return "empty-tree"
 
     @override
+    async def checkout(self, path: Path) -> Checkout:
+        return CHECKED_OUT
+
+    @override
     async def diff_between(self, path: Path, earlier: str, later: str) -> str:
         return ""
 
@@ -136,7 +151,12 @@ async def _opened(reviews: ReviewFactory, repository: RepositoryBeingWorkedOn, r
         diff_files=read_for_it,
         title="",
         identity=TEST_IDENTITY,
-        repository=OpenedRepository(root=ROOT, named_base=None, pinned_base=OPENED_ON),
+        repository=OpenedRepository(
+            root=ROOT,
+            named_base=None,
+            pinned_base=OPENED_ON,
+            at=RepositoryAt(name=ROOT.name, checkout=CHECKED_OUT),
+        ),
     )
     review = reviews.hosted(opening, clock=FixedClock(MARKED_AT), repository=repository).review
     await review.open()
