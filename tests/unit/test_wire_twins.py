@@ -66,6 +66,10 @@ TWINS: list[tuple[type[BaseModel], type[BaseModel], frozenset[str]]] = [
     (models.StaleStep, agent.StaleStep, frozenset()),
     (models.ReaderSettings, records.ReaderSettings, frozenset()),
     (models.GuideState, records.GuideState, frozenset()),
+    # Where the change under review is, as the page's header says it
+    (models.RepositoryAt, content.RepositoryAt, frozenset()),
+    (models.OnBranch, content.OnBranch, frozenset()),
+    (models.OnCommit, content.OnCommit, frozenset()),
     # A thread as the page holds it, sent back with whatever is about it
     (models.ThreadDraft, threads.ThreadInput, frozenset()),
     (models.TurnDraft, threads.TurnInput, frozenset()),

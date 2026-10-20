@@ -842,7 +842,7 @@ class GitRef(BaseModel):
 HEAD = "HEAD"
 
 
-class CheckedOut(StrEnum):
+class CheckoutKind(StrEnum):
     """What a repository's working tree has checked out: a branch, or a commit on none."""
 
     BRANCH = auto()
@@ -854,7 +854,7 @@ class OnBranch(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    at: Literal[CheckedOut.BRANCH] = CheckedOut.BRANCH
+    at: Literal[CheckoutKind.BRANCH] = CheckoutKind.BRANCH
     branch: str
 
 
@@ -863,7 +863,7 @@ class OnCommit(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    at: Literal[CheckedOut.COMMIT] = CheckedOut.COMMIT
+    at: Literal[CheckoutKind.COMMIT] = CheckoutKind.COMMIT
     commit: str
 
 

@@ -16,7 +16,7 @@ from pydantic import BaseModel, ConfigDict
 
 from claude_review.domain.exceptions import UnknownVersionError
 from claude_review.domain.interfaces import Repository
-from claude_review.domain.models import HEAD, DiffFile, RepositoryAt, ReviewMode
+from claude_review.domain.models import HEAD, Checkout, DiffFile, RepositoryAt, ReviewMode
 from claude_review.services.diff_reading import read_diff
 from claude_review.services.text_files import read_text_files
 from claude_review.services.transcript import read_transcript
@@ -45,7 +45,7 @@ NO_BASE = ""
 
 
 class OpenedRepository(BaseModel):
-    """The repository a diff review reads from, and what its working tree is compared against."""
+    """The repository a diff review reads from, what its tree is compared against, and what it had checked out."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -59,9 +59,19 @@ class OpenedRepository(BaseModel):
     # every commit, and the agent commits as it works: read against the name,
     # the review would lose the work under review, and its threads with it.
     pinned_base: str
-    # Where the change is, as the header says it: the repository's name and
-    # what its working tree had checked out as the review opened
-    at: RepositoryAt
+    # What its working tree had checked out as the review opened: the branch,
+    # or the commit on none
+    checkout: Checkout
+
+    @property
+    def name(self) -> str:
+        """What the repository is called: its root's name, or the whole path where the root has none, as `/` does."""
+        return self.root.name or str(self.root)
+
+    @property
+    def where(self) -> RepositoryAt:
+        """Where the change is, as the header says it: the repository, by its name, and what it had checked out."""
+        return RepositoryAt(name=self.name, checkout=self.checkout)
 
 
 class ReviewOpening(BaseModel):
@@ -93,7 +103,7 @@ class ReviewOpening(BaseModel):
     @property
     def repository_at(self) -> RepositoryAt | None:
         """Where the change under review is: None for a review of files or of a conversation, of no repository."""
-        return self.repository.at if self.repository is not None else None
+        return self.repository.where if self.repository is not None else None
 
 
 async def open_diff(location: Path, base: str | None, repository: Repository) -> ReviewOpening:
@@ -113,13 +123,18 @@ async def open_diff(location: Path, base: str | None, repository: Repository) ->
         pinned_base = await _pinned_base(repository, resolved_location, base)
         diff_files = await read_diff(staged, base=pinned_base, ignore_whitespace=False)
     root = await repository.top_level(resolved_location) or resolved_location
-    at = RepositoryAt(name=_repository_name(root), checkout=await repository.checkout(resolved_location))
+    opened = OpenedRepository(
+        root=root,
+        named_base=base,
+        pinned_base=pinned_base,
+        checkout=await repository.checked_out(resolved_location),
+    )
     return ReviewOpening(
         mode=ReviewMode.DIFF,
         diff_files=diff_files,
-        title=_diff_title(at.name, base),
+        title=_diff_title(opened.name, base),
         identity=IDENTITY_SEPARATOR.join((str(root), base or NO_BASE)),
-        repository=OpenedRepository(root=root, named_base=base, pinned_base=pinned_base, at=at),
+        repository=opened,
     )
 
 
@@ -181,14 +196,9 @@ def changes_since(base: str | None) -> str:
     return SINCE_A_BASE.format(base=base) if base else UNCOMMITTED
 
 
-def _repository_name(root: Path) -> str:
-    """What a repository is called: its root's name, or the whole path where the root has none, as `/` does."""
-    return root.name or str(root)
-
-
-def _diff_title(repository: str, base: str | None) -> str:
+def _diff_title(repository_name: str, base: str | None) -> str:
     """Name the repository under review and what it is compared against."""
-    return DIFF_TITLE.format(repository=repository, against=changes_since(base))
+    return DIFF_TITLE.format(repository=repository_name, against=changes_since(base))
 
 
 def _files_title(paths: list[Path]) -> str:

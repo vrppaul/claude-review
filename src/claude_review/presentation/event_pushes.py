@@ -56,7 +56,7 @@ def push_of(event: PageEvent) -> ServerPush:
         case AgentSaid():
             return ChatPush(said_id=event.said_id, message_id=event.message_id, body=event.body, files=event.files)
         case WorkReported():
-            return ProgressPush(work=AgentWork.of(event.work) if event.work is not None else None)
+            return ProgressPush(work=AgentWork.of_maybe(event.work))
         case FileShown():
             return ShowPush(file=event.file)
         case StatusReported():
@@ -77,7 +77,7 @@ def push_of(event: PageEvent) -> ServerPush:
         case StoryTold():
             return StoryPush()
         case StoryAskingChanged():
-            return StoryAskingPush(asking=StoryAsking.of(event.asking) if event.asking is not None else None)
+            return StoryAskingPush(asking=StoryAsking.of_maybe(event.asking))
         case ReviewEnded():
             return EndedPush(finished=event.finished)
         case _:

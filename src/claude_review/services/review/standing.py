@@ -14,7 +14,7 @@ class ReviewStanding(BaseModel):
     title: str
     # Where the change is: its repository and what was checked out there, or
     # None for a review of files or of a conversation
-    repository: RepositoryAt | None
+    repository_at: RepositoryAt | None
     # What makes it the same review when it is opened again, in short: the
     # name its page keeps the reader's unsent work under
     identity: str

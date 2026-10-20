@@ -8,13 +8,17 @@ from claude_review.domain.exceptions import UnknownVersionError
 from claude_review.domain.models import OnBranch, OnCommit, RepositoryAt, ReviewMode
 from claude_review.repositories.git_repository import GitRepository
 from claude_review.services.review_opening import open_diff, open_files, open_transcript
-from tests.helpers import git
+from tests.helpers import committed_repository, git
 
 # More files than a title names before it counts the rest
 FIVE_FILES = ("e.md", "d.md", "c.md", "b.md", "a.md")
-# A branch the change is made on, and how short git writes a commit's id in a repository this small
+# A branch the change is made on, the branch every test repository starts on, and how short git writes a
+# commit's id in a repository this small
 FEATURE_BRANCH = "feature/where-the-change-is"
+DEFAULT_BRANCH = "main"
 SHORT_ID_LENGTH = 7
+# A file committed in a repository, and changed after
+CHANGED = {"initial.txt": "initial content\n"}
 
 
 @pytest.fixture
@@ -38,17 +42,30 @@ async def test_a_diff_is_named_by_its_repository_and_what_it_is_compared_against
     assert since_a_commit.title == f"{changed_repo.name}: changes since HEAD"
 
 
-async def test_a_diff_says_the_branch_checked_out_or_on_none_the_commit(changed_repo: Path) -> None:
-    git(changed_repo, "switch", "--quiet", "--create", FEATURE_BRANCH)
-    on_a_branch = await open_diff(changed_repo, None, GitRepository(objects=None))
-    git(changed_repo, "switch", "--quiet", "--detach")
-    on_no_branch = await open_diff(changed_repo, None, GitRepository(objects=None))
-    commit = git(changed_repo, "rev-parse", "HEAD").strip()
+async def test_a_diff_says_the_branch_checked_out_or_on_none_the_commit(tmp_path: Path) -> None:
+    """A branch by its whole name, whatever a tag is called and before anything is committed; on none, the commit."""
+    on_a_branch = committed_repository(tmp_path / "on-a-branch", CHANGED)
+    git(on_a_branch, "switch", "--quiet", "--create", FEATURE_BRANCH)
+    beside_a_tag_of_its_name = committed_repository(tmp_path / "beside-a-tag", CHANGED)
+    git(beside_a_tag_of_its_name, "tag", DEFAULT_BRANCH)
+    nothing_committed = tmp_path / "nothing-committed"
+    nothing_committed.mkdir()
+    git(nothing_committed, "init", "--quiet", "--initial-branch", DEFAULT_BRANCH)
+    on_no_branch = committed_repository(tmp_path / "on-no-branch", CHANGED)
+    git(on_no_branch, "switch", "--quiet", "--detach")
+    commit = git(on_no_branch, "rev-parse", "HEAD").strip()
 
-    assert on_a_branch.repository_at == RepositoryAt(name=changed_repo.name, checkout=OnBranch(branch=FEATURE_BRANCH))
-    assert on_no_branch.repository_at == RepositoryAt(
-        name=changed_repo.name, checkout=OnCommit(commit=commit[:SHORT_ID_LENGTH])
-    )
+    opened = [
+        (await open_diff(repository, None, GitRepository(objects=None))).repository_at
+        for repository in (on_a_branch, beside_a_tag_of_its_name, nothing_committed, on_no_branch)
+    ]
+
+    assert opened == [
+        RepositoryAt(name=on_a_branch.name, checkout=OnBranch(branch=FEATURE_BRANCH)),
+        RepositoryAt(name=beside_a_tag_of_its_name.name, checkout=OnBranch(branch=DEFAULT_BRANCH)),
+        RepositoryAt(name=nothing_committed.name, checkout=OnBranch(branch=DEFAULT_BRANCH)),
+        RepositoryAt(name=on_no_branch.name, checkout=OnCommit(commit=commit[:SHORT_ID_LENGTH])),
+    ]
 
 
 async def test_a_diff_opened_from_a_subdirectory_is_the_whole_repository(changed_repo: Path) -> None:

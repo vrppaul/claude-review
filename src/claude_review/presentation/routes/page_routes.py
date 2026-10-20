@@ -83,15 +83,15 @@ async def get_the_review(
     told = broadcast.position()
     return ReviewResponse(
         title=standing.title,
-        repository=RepositoryAt.of(standing.repository) if standing.repository is not None else None,
+        repository=RepositoryAt.of_maybe(standing.repository_at),
         identity=standing.identity,
         mode=standing.mode,
         round=standing.round,
         answerer_attached=standing.answerer_attached,
         agent=AgentStatus.of(standing.agent),
-        work=AgentWork.of(work) if work is not None else None,
+        work=AgentWork.of_maybe(work),
         takes_a_story=standing.takes_a_story,
-        story_asking=StoryAsking.of(standing.story_asking) if standing.story_asking is not None else None,
+        story_asking=StoryAsking.of_maybe(standing.story_asking),
         limits=SEND_LIMITS,
         release=release,
         instance=told.instance,
@@ -134,7 +134,7 @@ async def held_story(review: Review = Depends(get_review)) -> StoryResponse:
     had got.
     """
     held = review.story_held()
-    return StoryResponse(held=StoryHeld.of(held) if held is not None else None)
+    return StoryResponse(held=StoryHeld.of_maybe(held))
 
 
 @router.post(

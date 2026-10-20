@@ -47,6 +47,11 @@ class WireModel(BaseModel):
         """The wire's form of one of the review's own models, read field by field."""
         return cls.model_validate(source, from_attributes=True)
 
+    @classmethod
+    def of_maybe(cls, source: BaseModel | None) -> Self | None:
+        """The wire's form of one of the review's own models where there may be none: none on the wire too."""
+        return cls.of(source) if source is not None else None
+
 
 # The most one thing said may hold: a comment, a turn, a panel message
 MAX_TEXT_LENGTH = 50_000

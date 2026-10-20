@@ -76,7 +76,7 @@ class Repository(ABC):
         """Return the id of the tree with nothing in it: what a repository with nothing committed is read against."""
 
     @abstractmethod
-    async def checkout(self, path: Path) -> Checkout:
+    async def checked_out(self, path: Path) -> Checkout:
         """Return what the working tree has checked out: its branch, or the commit HEAD names when it is on none."""
 
     @abstractmethod

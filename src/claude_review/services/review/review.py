@@ -140,7 +140,7 @@ class Review:
         """What the review is and where it has got to, in one piece."""
         return ReviewStanding(
             title=self._title,
-            repository=self._repository_at,
+            repository_at=self._repository_at,
             identity=self._identity,
             mode=self._mode,
             opened_against=self._opened_against,

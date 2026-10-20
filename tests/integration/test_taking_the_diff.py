@@ -31,7 +31,6 @@ from claude_review.domain.models import (
     DiffFile,
     GitRef,
     OnBranch,
-    RepositoryAt,
     ReviewMode,
 )
 from claude_review.services.review.review import Review
@@ -123,7 +122,7 @@ class RepositoryBeingWorkedOn(ReviewedRepository):
         return "empty-tree"
 
     @override
-    async def checkout(self, path: Path) -> Checkout:
+    async def checked_out(self, path: Path) -> Checkout:
         return CHECKED_OUT
 
     @override
@@ -155,7 +154,7 @@ async def _opened(reviews: ReviewFactory, repository: RepositoryBeingWorkedOn, r
             root=ROOT,
             named_base=None,
             pinned_base=OPENED_ON,
-            at=RepositoryAt(name=ROOT.name, checkout=CHECKED_OUT),
+            checkout=CHECKED_OUT,
         ),
     )
     review = reviews.hosted(opening, clock=FixedClock(MARKED_AT), repository=repository).review

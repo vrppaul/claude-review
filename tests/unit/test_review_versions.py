@@ -19,7 +19,6 @@ from claude_review.domain.models import (
     DiffFile,
     GitRef,
     OnBranch,
-    RepositoryAt,
     RoundKey,
     VersionOnOffer,
 )
@@ -97,7 +96,7 @@ class RepositoryThatMoves(Repository):
         return "empty-tree"
 
     @override
-    async def checkout(self, path: Path) -> Checkout:
+    async def checked_out(self, path: Path) -> Checkout:
         return CHECKED_OUT
 
     @override
@@ -117,7 +116,7 @@ class MarkingReview:
                 root=ROOT,
                 named_base=None,
                 pinned_base=OPENED_ON,
-                at=RepositoryAt(name=ROOT.name, checkout=CHECKED_OUT),
+                checkout=CHECKED_OUT,
             ),
         )
 

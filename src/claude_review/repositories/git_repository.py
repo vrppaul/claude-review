@@ -42,9 +42,9 @@ COMMIT_TYPE = "commit"
 AS_COMMIT = "^{commit}"
 # What an option begins with, which no revision a review reads against may
 OPTION_MARK = "-"
-# What git says HEAD is on: the branch, by its short name and nothing printed on none; and the commit it names,
-# its id as short as still names it alone
-BRANCH_CHECKED_OUT = ["symbolic-ref", "--quiet", "--short", HEAD]
+# What git says HEAD is on: the branch, by its plain name, nothing printed on none; and the commit it names, its
+# id as short as still names it alone. `symbolic-ref --short` would say `heads/main` where a tag is named `main`
+BRANCH_CHECKED_OUT = ["branch", "--show-current"]
 COMMIT_CHECKED_OUT = ["rev-parse", "--short", HEAD]
 # Git dates a ref in seconds, and the review says every time in milliseconds
 MILLISECONDS_PER_SECOND = 1000
@@ -360,18 +360,18 @@ class GitRepository(ReviewedRepository):
         return [ref for line in listed.splitlines() if (ref := _offered_ref(line)) is not None]
 
     @override
-    async def checkout(self, path: Path) -> Checkout:
+    async def checked_out(self, path: Path) -> Checkout:
         """What the working tree has checked out: the branch HEAD is on, or the commit it names on none.
 
         A branch with nothing committed on it yet is still the branch checked
         out: git names it all the same.
 
         Raises:
-            GitError: if HEAD is on no branch and names no commit, or git fails.
+            GitError: if git fails, or HEAD is on no branch and names no commit.
         """
-        branch = await _execute(path, BRANCH_CHECKED_OUT)
-        if branch.exit_code == 0:
-            return OnBranch(branch=branch.output.strip())
+        branch = (await _run(path, BRANCH_CHECKED_OUT)).strip()
+        if branch:
+            return OnBranch(branch=branch)
         return OnCommit(commit=(await _run(path, COMMIT_CHECKED_OUT)).strip())
 
     @override

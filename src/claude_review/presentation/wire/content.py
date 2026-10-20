@@ -8,7 +8,7 @@ from pydantic import Field
 from claude_review.domain.models import (
     LARGEST_FILE_SHOWN_BYTES,
     MAX_QUOTE_LINES,
-    CheckedOut,
+    CheckoutKind,
     EpochMillis,
     FileStatus,
     LineType,
@@ -146,14 +146,14 @@ class StoryAsking(WireModel):
 class OnBranch(WireModel):
     """A branch checked out, by its name: the branch the change is made on."""
 
-    at: Literal[CheckedOut.BRANCH] = CheckedOut.BRANCH
+    at: Literal[CheckoutKind.BRANCH] = CheckoutKind.BRANCH
     branch: str
 
 
 class OnCommit(WireModel):
     """A commit checked out on no branch, by its id as short as git writes it and still names it alone."""
 
-    at: Literal[CheckedOut.COMMIT] = CheckedOut.COMMIT
+    at: Literal[CheckoutKind.COMMIT] = CheckoutKind.COMMIT
     commit: str
 
 
