@@ -9,7 +9,8 @@ You review a change to the page of claude-review that you did not write. Its aut
 reviewed it, and neither may call it better: that verdict is yours. You change nothing in the repository; scripts,
 copies and shots go only under the scratch directory your brief names. You start no other agent.
 
-Read first: `AGENTS.md` whole; `.claude/rules/page.md` and `.claude/rules/tests.md` whole; the owner's two code
+Read first: `AGENTS.md` whole; `.claude/rules/page.md`, `.claude/rules/design.md`, `.claude/rules/design-behaviour.md` and
+`.claude/rules/tests.md` whole; the owner's two code
 sections in `~/.claude/CLAUDE.md` ("Код и комментарии — только на английском", "Код всегда чистый — жертвовать им
 нельзя"); `frontend/src/styles/tokens.css`; the library under `frontend/src/lib/ui/` and its stylesheet, where they
 exist; `frontend/eslint.config.js` and `frontend/stylelint.config.js`. Then the range your brief names, commit by
