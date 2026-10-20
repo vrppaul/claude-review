@@ -2,24 +2,25 @@
 	import type { Snippet } from 'svelte';
 	import type { TurnAuthor } from '$lib/types';
 	import { tourStop, type TourTarget } from '$lib/guide/tour';
-	import Icon from '$lib/ui/Icon.svelte';
-	import type { IconName } from '$lib/ui/icons';
+	import Avatar from '$lib/ui/Avatar.svelte';
+	import type { AvatarTone } from '$lib/ui/avatar';
 	import { AGENT, READER } from '$lib/utils/speakers';
 
 	/** Who a turn is drawn as: whoever said it, or the reader about to say something in the field to reply in. */
 	type Voice = TurnAuthor | 'reply';
 
-	/** How a voice is drawn: the name its turns are headed with, if they have a head, its avatar's icon, and its look. */
+	/** How a voice is drawn: the name its turns are headed with, if they have a head, and its avatar. */
 	interface Speaker {
 		name: string | null;
-		icon: IconName;
-		look: string;
+		avatar: AvatarTone;
+		/** The class of its row, where its turns look their own: the agent's, named in its colour. */
+		look: string | null;
 	}
 
 	const SPEAKERS: Record<Voice, Speaker> = {
-		[READER]: { name: 'You', icon: 'person', look: 'cr-turn-reader' },
-		[AGENT]: { name: 'Agent', icon: 'story', look: 'cr-turn-agent' },
-		reply: { name: null, icon: 'person', look: 'cr-turn-reply' }
+		[READER]: { name: 'You', avatar: 'reader', look: null },
+		[AGENT]: { name: 'Agent', avatar: 'agent', look: 'cr-turn-agent' },
+		reply: { name: null, avatar: 'unsaid', look: null }
 	};
 
 	interface Props {
@@ -47,7 +48,7 @@
 	data-tour={tour && tourStop(tour)}
 	class={['cr-thread-row cr-thread-turn', speaker.look, landing && 'cr-answer-new']}
 >
-	<span class="cr-avatar"><Icon name={speaker.icon} size="xs" /></span>
+	<Avatar tone={speaker.avatar} />
 	<div data-testid="turn-body" class="cr-turn-body">
 		{#if speaker.name !== null}
 			<div data-testid="turn-head" class="cr-turn-head">

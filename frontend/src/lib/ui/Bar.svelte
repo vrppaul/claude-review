@@ -10,14 +10,17 @@
 	 *   is said and offered beside it wrapping as the page's do
 	 * - column: a column beside what is read, above what scrolls in it, as tall as a small button with room
 	 *   round it
+	 * - chapter: a chapter of a story, read under it, as tall as the room the page keeps for it over the story,
+	 *   which the story is laid out round
 	 */
-	type Heads = 'page' | 'section' | 'column';
+	type Heads = 'page' | 'section' | 'column' | 'chapter';
 
 	// The class of each in the library's stylesheet
 	const HEADS: Record<Heads, string> = {
 		page: 'cr-ui-bar-page',
 		section: 'cr-ui-bar-section',
-		column: 'cr-ui-bar-column'
+		column: 'cr-ui-bar-column',
+		chapter: 'cr-ui-bar-chapter'
 	};
 
 	/** Whether the reader has finished with what it heads, a file viewed, whose bar steps back: a section's alone. */

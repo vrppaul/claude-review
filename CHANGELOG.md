@@ -230,9 +230,9 @@
   narrow to keep it beside; the panel's field to write in stands at its
   foot. The review's header, a file's and a story piece's, and a column's
   are one bar, the review's and a file's at one room; a file's bar steps
-  back once the file is viewed. eslint refuses a raised ground ruled off
-  above or below in markup outside the library. A chapter's bar stays the
-  story's own drawing, as the story's area lays out round its height.
+  back once the file is viewed, and a chapter's fills the room the story
+  keeps for it over its top. eslint refuses a raised ground ruled off above
+  or below in markup outside the library.
 - **Images, links and a file's letter are the library's.** An image pasted
   into what is said is one thumbnail, uploading, lost or shown, a shown one
   opening at its full size or taken off by its cross; the news's picture
@@ -240,9 +240,9 @@
   the library's link: the reader's control colour at the weight of its
   line, underlined under the pointer, where the typography plugin drew it
   underlined and heavier. What became of a file is its letter of the
-  library's. eslint refuses an `<img>` or an `<a>` drawn outside it. A
-  turn's avatar stays the thread's own drawing: the turn and the thread's
-  spine are laid out from its size.
+  library's, and so is the avatar of who says a turn, as wide as the room
+  the thread keeps for it. eslint refuses an `<img>` or an `<a>` drawn
+  outside it.
 - **Everything that folds folds one way.** A thread folded to a line is
   one row of the library's that opens it again pressed anywhere, its
   chevron at the row's end, where the line and the chevron were two buttons

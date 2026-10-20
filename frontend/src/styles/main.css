@@ -389,6 +389,7 @@
 	bottom: auto;
 	height: calc(var(--cr-avatar-size) / 2);
 }
+/* The avatar (lib/ui Avatar) fills the first column: the thread sets how wide it is, and the spine stands by that */
 .cr-thread-turn {
 	display: grid;
 	grid-template-columns: var(--cr-avatar-size) minmax(0, 1fr);
@@ -398,33 +399,6 @@
 /* A row with no speaker — where a round ended, the offer to ask — stands in the column of what was said */
 .cr-thread-aside {
 	padding-left: calc(var(--cr-avatar-size) + var(--cr-turn-gap));
-}
-/*
- * Who said a turn, round: the thread's own drawing, as the turn's grid and the spine are laid out from its size.
- * Positioned, and drawn after its row's piece of the spine, so it lies over the spine
- */
-.cr-avatar {
-	position: relative;
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	width: var(--cr-avatar-size);
-	height: var(--cr-avatar-size);
-	border-radius: 50%;
-	box-shadow: var(--cr-shadow-avatar-ring);
-}
-.cr-turn-reader .cr-avatar {
-	background: var(--cr-avatar-reader);
-	color: var(--cr-mark);
-}
-.cr-turn-agent .cr-avatar {
-	background: var(--cr-avatar-agent);
-	color: var(--cr-agent);
-}
-/* The reader's turn not said yet, in the field to reply in: grey */
-.cr-turn-reply .cr-avatar {
-	background: var(--color-base-300);
-	color: var(--cr-faint);
 }
 .cr-turn-body {
 	display: flex;
@@ -766,18 +740,14 @@
 	z-index: var(--cr-layer-over-headers);
 }
 /*
- * The bar: one row on the ground a file's header stands on, a line under
- * it. It takes no room of the story, which never moves as the bar comes and
- * goes: its foot is drawn back up by its own height, and the slot's with it.
- * The story's own drawing, not a Bar of the library: the story's area lays
- * out round its height (--cr-top-room, below), as a thread does round its
- * avatar, which the library's rooms keep from the page
+ * The room the bar (lib/ui Bar, a chapter's) fills: as tall as the room the
+ * story's area lays out round under it (--cr-top-room, below), and none of
+ * the story's, which never moves as the bar comes and goes: its foot is
+ * drawn back up by its own height, and the slot's with it
  */
-.cr-chapter-bar {
+.cr-chapter-bar-room {
 	height: var(--cr-chapter-bar-height);
 	margin-bottom: calc(-1 * var(--cr-chapter-bar-height));
-	border-bottom: var(--cr-line) solid var(--color-base-300);
-	background: var(--color-base-200);
 }
 /* A chapter is read under its bar: the headers of its pieces stick under the bar, and a step gone to lands under it */
 .cr-story-chapter {

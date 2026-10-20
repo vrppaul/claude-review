@@ -216,8 +216,9 @@ of it is built yet.
       colour `tokens.css` never wrote); a mark whose corner and ground are
       split over two strings, or over a class and a stylesheet rule; a role
       or an element in a spread of attributes; a mark, a question or a
-      heading drawn by `main.css` or by utilities; the stylesheet's round
-      drawings (avatars, a story's nodes); the story contents' axis laid
+      heading drawn by `main.css` or by utilities; a round drawing of
+      `main.css`, an avatar drawn there anew as much as a story's nodes;
+      the story contents' axis laid
       out in `main.css` from Row's tokens; utilities held in a script's
       string and handed to `class={…}`, which no gate of a class list
       reads; a list's or a view's "nothing here" drawn by hand rather than

@@ -327,10 +327,9 @@ const A_MARK_OF_ITS_OWN =
 	'/(^|\\s)([^\\s:]+:)*(cr-tag|cr-pill|cr-severity-[a-z]*|cr-raised-tag|cr-thread-chip(-[a-z]+)?|cr-chip-drop|cr-dot(-[a-z]+)?|cr-contents-dot|cr-guide-hint-dot|cr-guide-key|cr-guide-release)(\\s|$)/';
 // A mark drawn anew is round, as a dot or a pill is, and only the library's Dot is drawn round: a corner made round
 // by a utility — `rounded-full` on any side or corner, or any radius written in place, `rounded-[100%]` as much as
-// `rounded-[999px]` — is refused outside the library, behind any variants. Nothing in markup is round now. The
-// page's own round drawings — a thread's avatars, a story's nodes, the cross on the news card's drawing of a pasted
-// image — are drawn by main.css, which no rule here reads. An avatar is the thread's, not a part of the library:
-// the turn's grid and the thread's spine are laid out from its size (--cr-avatar-size)
+// `rounded-[999px]` — is refused outside the library, behind any variants. Nothing in markup is made round by a
+// utility now, and a thread's avatars are the library's (Avatar). The page's own round drawings — a story's nodes,
+// the cross on the news card's drawing of a pasted image — are drawn by main.css, which no rule here reads
 const A_ROUND_CORNER = '/(^|\\s)([^\\s:]+:)*rounded(-[a-z]{1,2})?-(full|\\[[^\\]\\s]*\\])(\\s|$)/';
 // A mark drawn anew need not be round: a corner made round at any radius on a ground laid by a utility is one,
 // `h-1.5 w-1.5 rounded bg-(--cr-unread)` a dot and `rounded bg-(--cr-mark) px-1.5 font-semibold` a count. So a

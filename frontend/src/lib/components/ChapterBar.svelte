@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { KEPT_IN_SIGHT_ROLE } from '$lib/dom/in-sight';
 	import { useReview } from '$lib/review/context';
+	import Bar from '$lib/ui/Bar.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import { chapterByNumber, chapterNumber, stepAmong } from './story-words';
@@ -31,30 +32,33 @@
 		<!-- The chapters beside it: none before the first, none after the last -->
 		{@const before = contents.chapters[chapter.place - 1]}
 		{@const after = contents.chapters[chapter.place + 1]}
-		<div data-testid="chapter-bar" class="cr-chapter-bar">
-			<div class="cr-story-gutter flex h-full items-center gap-3">
-				<span data-testid="chapter-bar-number" class="cr-chapter-number text-xs">{chapterNumber(chapter.place)}</span>
-				<span data-testid="chapter-bar-title" class="truncate text-sm font-semibold">{chapter.told.title}</span>
-				<!-- None while why the changes belong together is read, before the first step -->
-				{#if stepRead !== null && chapter.steps.includes(stepRead)}
-					<span data-testid="chapter-bar-step" class="cr-muted shrink-0 text-xs">
-						{stepAmong(stepRead.place, chapter.steps.length)}
-					</span>
-				{/if}
-				<div class="flex-1"></div>
-				{#if before}
-					<Button tone="quiet" size="sm" testId="go-to-chapter-before" onclick={() => review.parts.goTo(before.part)}>
-						<Icon name="chevron" size="xs" pointing="left" />
-						{chapterByNumber(before.place)}
-					</Button>
-				{/if}
-				{#if after}
-					<Button tone="quiet" size="sm" testId="go-to-chapter-after" onclick={() => review.parts.goTo(after.part)}>
-						{chapterByNumber(after.place)}
-						<Icon name="chevron" size="xs" pointing="right" />
-					</Button>
-				{/if}
-			</div>
+		<!-- The room the story keeps for the bar over its top, which the bar fills -->
+		<div data-testid="chapter-bar-room" class="cr-chapter-bar-room">
+			<Bar heads="chapter" testId="chapter-bar">
+				<div class="cr-story-gutter flex h-full min-w-0 flex-1 items-center gap-3">
+					<span data-testid="chapter-bar-number" class="cr-chapter-number text-xs">{chapterNumber(chapter.place)}</span>
+					<span data-testid="chapter-bar-title" class="truncate text-sm font-semibold">{chapter.told.title}</span>
+					<!-- None while why the changes belong together is read, before the first step -->
+					{#if stepRead !== null && chapter.steps.includes(stepRead)}
+						<span data-testid="chapter-bar-step" class="cr-muted shrink-0 text-xs">
+							{stepAmong(stepRead.place, chapter.steps.length)}
+						</span>
+					{/if}
+					<div class="flex-1"></div>
+					{#if before}
+						<Button tone="quiet" size="sm" testId="go-to-chapter-before" onclick={() => review.parts.goTo(before.part)}>
+							<Icon name="chevron" size="xs" pointing="left" />
+							{chapterByNumber(before.place)}
+						</Button>
+					{/if}
+					{#if after}
+						<Button tone="quiet" size="sm" testId="go-to-chapter-after" onclick={() => review.parts.goTo(after.part)}>
+							{chapterByNumber(after.place)}
+							<Icon name="chevron" size="xs" pointing="right" />
+						</Button>
+					{/if}
+				</div>
+			</Bar>
 		</div>
 	{/if}
 </div>

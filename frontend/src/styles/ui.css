@@ -5,12 +5,11 @@
  * of one is a tone, a size or a variant written here, with the reason a
  * reader needs it. Outside of the library the page draws its own drawings —
  * code rows, the gaps above, between and below pieces of code, the controls
- * in those rows and gaps, a thread's spine and avatars, a story's contents,
- * sketch and chapter bar — and takes three things of this stylesheet for
- * them: the states of whatever can be pressed (cr-pressable), a comment's
- * reading face (cr-comment-body), and what is kept in sight (data-role
- * kept-in-sight). No other stylesheet selects any of them or a class of this
- * one (stylelint).
+ * in those rows and gaps, a thread's spine, a story's contents and sketch —
+ * and takes three things of this stylesheet for them: the states of whatever
+ * can be pressed (cr-pressable), a comment's reading face (cr-comment-body),
+ * and what is kept in sight (data-role kept-in-sight). No other stylesheet
+ * selects any of them or a class of this one (stylelint).
  *
  * Outside Tailwind's layers, as the review's own classes are, so they win
  * over any utility on the same element.
@@ -628,7 +627,8 @@
  * under what stands over the top of it where the section is drawn, which
  * says how much room that takes (--cr-top-room), and stepping back once the
  * reader is done with its file; a column's, as tall as a small button with
- * room round it.
+ * room round it; a chapter's, as tall as the room it stands in, which the
+ * story lays out round.
  */
 .cr-ui-bar {
 	display: flex;
@@ -655,6 +655,9 @@
 	gap: --spacing(2);
 	min-height: calc(var(--cr-button-xs) + --spacing(3));
 	padding-inline: --spacing(3);
+}
+.cr-ui-bar-chapter {
+	height: 100%;
 }
 .cr-ui-bar-viewed {
 	color: var(--cr-faint);
@@ -1251,6 +1254,36 @@
 /* In the colour of what it stands in, as an icon is drawn in the colour of its words */
 .cr-ui-dot-inherited {
 	background-color: currentColor;
+}
+
+/*
+ * Who says a turn (Avatar, lib/ui/avatar.ts): round, as wide as the room it
+ * stands in, its glyph on a ground of its colour laid opaque over a card's,
+ * ringed in the card's ground. Positioned, so it lies over whatever its row
+ * draws behind it: a thread's spine
+ */
+.cr-ui-avatar {
+	position: relative;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	aspect-ratio: 1;
+	border-radius: 50%;
+	box-shadow: var(--cr-shadow-avatar-ring);
+}
+.cr-ui-avatar-reader {
+	background-color: var(--cr-avatar-reader);
+	color: var(--cr-mark);
+}
+.cr-ui-avatar-agent {
+	background-color: var(--cr-avatar-agent);
+	color: var(--cr-agent);
+}
+/* The reader's turn not said yet, in the field to reply in: grey */
+.cr-ui-avatar-unsaid {
+	background-color: var(--color-base-300);
+	color: var(--cr-faint);
 }
 /*
  * One that breathes while what it marks is on its way, as a line that never
