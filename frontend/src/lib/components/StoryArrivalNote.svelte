@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { useReview } from '$lib/review/context';
+	import Actions from '$lib/ui/Actions.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import IconButton from '$lib/ui/IconButton.svelte';
@@ -30,9 +31,15 @@
 	onGone={() => review.story.putOfferAway()}
 >
 	{#snippet children(putAway: () => void)}
-		<div class="flex flex-wrap items-center gap-x-3 gap-y-2 py-2 pr-2 pl-3 text-sm">
-			<span>The story is ready: {chaptersIn(review.story.contents.chapters.length)}.</span>
-			<Button tone="primary" size="xs" testId="open-story" onclick={onOpen}>Open it</Button>
+		<div class="flex items-center gap-2 py-2 pr-2 pl-3 text-sm">
+			<Actions testId="story-ready-actions">
+				{#snippet aside()}
+					<span>The story is ready: {chaptersIn(review.story.contents.chapters.length)}.</span>
+				{/snippet}
+				{#snippet main()}
+					<Button tone="primary" size="sm" testId="open-story" onclick={onOpen}>Open it</Button>
+				{/snippet}
+			</Actions>
 			<IconButton tone="quiet" size="xs" label="Close" testId="story-ready-close" onclick={putAway}>
 				<Icon name="cross" size="xs" />
 			</IconButton>

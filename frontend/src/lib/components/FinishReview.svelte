@@ -68,7 +68,7 @@
 
 <!-- A summary, and the two ways out: at the pane's foot, in sight however far what was written scrolls -->
 {#snippet sending()}
-	<div class="flex flex-col gap-2 p-3">
+	<div class="p-3">
 		<Field
 			{@attach focusOnDraw}
 			holds="message"
@@ -81,40 +81,44 @@
 			oninput={(event: Event & { currentTarget: HTMLTextAreaElement }) => submission.setBody(event.currentTarget.value)}
 		/>
 
-		<Actions testId="finish-actions">
-			{#snippet aside()}
-				<span class="cr-faint hidden text-xs lg:inline">{FINISH_KEYS} sends</span>
-			{/snippet}
-			{#snippet others()}
-				{#if inRounds}
+		<div class="mt-2">
+			<Actions testId="finish-actions">
+				{#snippet aside()}
+					<span class="cr-faint hidden text-xs lg:inline">{FINISH_KEYS} sends</span>
+				{/snippet}
+				{#snippet others()}
+					{#if inRounds}
+						<Button
+							tone="quiet"
+							size="sm"
+							testId="end-review"
+							disabled={!submission.canEnd}
+							onclick={() => submission.end()}
+						>
+							End review
+						</Button>
+					{/if}
+				{/snippet}
+				{#snippet main()}
 					<Button
-						tone="quiet"
+						tone="primary"
 						size="sm"
-						testId="end-review"
-						disabled={!submission.canEnd}
-						onclick={() => submission.end()}
+						testId="modal-submit"
+						disabled={!submission.canSend}
+						onclick={() => submission.send()}
 					>
-						End review
+						{#if submission.sending}
+							<BreathingDots tone="inherited" testId="pane-sending-dots" />
+							Sending
+						{:else if inRounds}
+							Send round {review.rounds.current}
+						{:else}
+							Send review
+						{/if}
 					</Button>
-				{/if}
-			{/snippet}
-			<Button
-				tone="primary"
-				size="sm"
-				testId="modal-submit"
-				disabled={!submission.canSend}
-				onclick={() => submission.send()}
-			>
-				{#if submission.sending}
-					<BreathingDots tone="inherited" testId="pane-sending-dots" />
-					Sending
-				{:else if inRounds}
-					Send round {review.rounds.current}
-				{:else}
-					Send review
-				{/if}
-			</Button>
-		</Actions>
+				{/snippet}
+			</Actions>
+		</div>
 	</div>
 {/snippet}
 

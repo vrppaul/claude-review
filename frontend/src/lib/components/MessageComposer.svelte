@@ -179,14 +179,16 @@
 					<Failure stands="inline" testId="panel-error" said={whatWentWrong} />
 				{/if}
 			{/snippet}
-			<Button tone="primary" size="sm" testId="send-message" disabled={!canSend} onclick={send}>
-				{#if review.conversation.sending}
-					<BreathingDots tone="inherited" testId="message-sending-dots" />
-					Sending
-				{:else}
-					Send
-				{/if}
-			</Button>
+			{#snippet main()}
+				<Button tone="primary" size="sm" testId="send-message" disabled={!canSend} onclick={send}>
+					{#if review.conversation.sending}
+						<BreathingDots tone="inherited" testId="message-sending-dots" />
+						Sending
+					{:else}
+						Send
+					{/if}
+				</Button>
+			{/snippet}
 		</Actions>
 	</div>
 </div>

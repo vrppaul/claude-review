@@ -235,7 +235,9 @@
 				<Button tone="asking" size="sm" testId="ask-now" disabled={!sayable} onclick={ask}>Ask now</Button>
 			{/if}
 		{/snippet}
-		<Button tone="primary" size="sm" testId="save-comment" disabled={!sayable} onclick={save}>Add to review</Button>
+		{#snippet main()}
+			<Button tone="primary" size="sm" testId="save-comment" disabled={!sayable} onclick={save}>Add to review</Button>
+		{/snippet}
 	</Actions>
 	<p class="cr-faint text-xs">
 		{#if onAsk}

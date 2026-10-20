@@ -420,16 +420,33 @@ const NO_ELEMENTS_HANDED_THEIR_KIND = [
 // nothing else is
 const PRESSED_IN_THE_CODE = ['src/lib/components/LineGutter.svelte', 'src/lib/components/HunkGap.svelte'];
 const BUTTON_IN_THE_LIBRARY = { elements: ['button'], message: PRESSED_IN_THE_LIBRARY };
-// The acts that end a pane, a card, a question or a field being written stand in one row, lib/ui Actions, alike
-// everywhere: the page laid its nine such rows out by hand, the main act first in four and last in five, at the
-// start of the row in four, an act beside it edged in two, at 24 px in two and 32 in seven.
-// Inside one, every button is sm, the acts beside the main one are quiet, or asking where they ask the agent now,
-// and a primary or danger button, the act the row leads to, is never one of them: it is the row's own content,
-// drawn last. A size or a tone handed in by an expression passes
+// The acts that end a pane, a card, a question, a field being written or a view's wait stand in one row, lib/ui
+// Actions, alike everywhere: the page laid its nine such rows out by hand, the main act first in four and last in
+// five, at the start of the row in four, an act beside it edged in two, at 24 px in two and 32 in seven. Inside
+// one, every button is sm; the acts beside the main one are quiet, or asking where they ask the agent now; and the
+// main act, the row's `main`, is its one primary or danger button. Outside one, an element of the page's own that
+// holds a primary or danger button among other acts, as its child or in a branch of a condition, is such a row
+// laid out by hand. A size or a tone handed in by an expression passes, and a button in a pane opened from inside
+// a row would be held as the row's own: none stands there
 const IN_A_ROW_OF_ACTIONS = "SvelteElement[kind='component'][name.name='Actions']";
 const A_BUTTON_OF_THE_LIBRARY = "SvelteElement[kind='component'][name.name=/^(Button|IconButton)$/]";
+// A start tag naming the tone of a main act: the act a row leads to, or one that loses what was written
+const OF_A_MAIN_TONE =
+	"SvelteStartTag:has(> SvelteAttribute[key.name='tone']:has(> SvelteLiteral[value=/^(primary|danger)$/]))";
+const A_MAIN_ACT = `SvelteElement[kind='component'][name.name='Button']:has(> ${OF_A_MAIN_TONE})`;
+const ANOTHER_ACT = `SvelteElement[kind='component'][name.name=/^(Button|IconButton|ConfirmPopover)$/]:not(:has(> ${OF_A_MAIN_TONE}))`;
+const THE_MAIN_ACT = `${IN_A_ROW_OF_ACTIONS} > SvelteSnippetBlock[id.name='main']`;
+const BESIDE_THE_MAIN_ACT = `${IN_A_ROW_OF_ACTIONS} > SvelteSnippetBlock[id.name!='main']`;
 const ONE_ROW_OF_ACTIONS_MESSAGE =
-	"In lib/ui Actions every button is sm, the others are quiet or asking, and a primary or danger act is the row's content, drawn last.";
+	"In lib/ui Actions every button is sm, the others are quiet or asking, and the row's main is its one primary or danger act.";
+const A_ROW_LAID_OUT_BY_HAND =
+	'Stand a main act among other acts in a row of lib/ui Actions, not one laid out by hand.';
+
+/** The selectors of an act an element holds as its own: its child, or a child of a branch of a condition that is. */
+function heldAsItsOwn(act) {
+	return `> ${act}, > SvelteIfBlock:has(> ${act}), > SvelteIfBlock:has(> SvelteElseBlock:has(> ${act}))`;
+}
+
 const ONE_ROW_OF_ACTIONS = [
 	{
 		selector: `${IN_A_ROW_OF_ACTIONS} ${A_BUTTON_OF_THE_LIBRARY} > SvelteStartTag > SvelteAttribute[key.name='size'] > SvelteLiteral[value!='sm']`,
@@ -439,9 +456,15 @@ const ONE_ROW_OF_ACTIONS = [
 		selector: `${IN_A_ROW_OF_ACTIONS} ${A_BUTTON_OF_THE_LIBRARY} > SvelteStartTag > SvelteAttribute[key.name='tone'] > SvelteLiteral[value=/^(secondary|marked)$/]`,
 		message: ONE_ROW_OF_ACTIONS_MESSAGE
 	},
+	{ selector: `${BESIDE_THE_MAIN_ACT} ${A_MAIN_ACT}`, message: ONE_ROW_OF_ACTIONS_MESSAGE },
 	{
-		selector: `${IN_A_ROW_OF_ACTIONS} SvelteSnippetBlock ${A_BUTTON_OF_THE_LIBRARY} > SvelteStartTag > SvelteAttribute[key.name='tone'] > SvelteLiteral[value=/^(primary|danger)$/]`,
+		selector: `${THE_MAIN_ACT} ${A_BUTTON_OF_THE_LIBRARY} > SvelteStartTag > SvelteAttribute[key.name='tone'] > SvelteLiteral:not([value=/^(primary|danger)$/])`,
 		message: ONE_ROW_OF_ACTIONS_MESSAGE
+	},
+	{ selector: `${THE_MAIN_ACT} ${A_MAIN_ACT} ~ ${A_MAIN_ACT}`, message: ONE_ROW_OF_ACTIONS_MESSAGE },
+	{
+		selector: `SvelteElement[kind='html']:has(${heldAsItsOwn(A_MAIN_ACT)}):has(${heldAsItsOwn(ANOTHER_ACT)})`,
+		message: A_ROW_LAID_OUT_BY_HAND
 	}
 ];
 // A field is drawn by the library (Field, Filter, Checkbox), and nothing outside it draws one: the page drew its

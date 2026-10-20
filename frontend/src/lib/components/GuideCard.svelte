@@ -124,11 +124,13 @@
 							<Button tone="quiet" size="sm" testId="guide-back" onclick={() => review.guide.back()}>Back</Button>
 						{/if}
 					{/snippet}
-					{#if !waiting}
-						<Button tone="primary" size="sm" testId="guide-next" onclick={goOn}>
-							{review.guide.isLastStep ? 'Done' : 'Next'}
-						</Button>
-					{/if}
+					{#snippet main()}
+						{#if !waiting}
+							<Button tone="primary" size="sm" testId="guide-next" onclick={goOn}>
+								{review.guide.isLastStep ? 'Done' : 'Next'}
+							</Button>
+						{/if}
+					{/snippet}
 				</Actions>
 			</div>
 		</Pane>
@@ -154,15 +156,17 @@
 					{#snippet others()}
 						<Button tone="quiet" size="sm" testId="guide-not-now" onclick={putAway}>Not now</Button>
 					{/snippet}
-					<Button
-						bind:element={mainAction}
-						tone="primary"
-						size="sm"
-						testId="guide-start"
-						onclick={() => review.guide.startTour()}
-					>
-						Show me around
-					</Button>
+					{#snippet main()}
+						<Button
+							bind:element={mainAction}
+							tone="primary"
+							size="sm"
+							testId="guide-start"
+							onclick={() => review.guide.startTour()}
+						>
+							Show me around
+						</Button>
+					{/snippet}
 				</Actions>
 				<p class="cr-faint text-xs">You can take it later from the <Key keys="?" testId="guide-help-key" /> list.</p>
 			</div>
@@ -206,15 +210,17 @@
 							Take the tour
 						</Button>
 					{/snippet}
-					{#if offersStory}
-						<Button bind:element={mainAction} tone="primary" size="sm" testId="guide-try-story" onclick={tryStory}>
-							Try Story
-						</Button>
-					{:else}
-						<Button bind:element={mainAction} tone="primary" size="sm" testId="guide-got-it" onclick={putAway}>
-							Got it
-						</Button>
-					{/if}
+					{#snippet main()}
+						{#if offersStory}
+							<Button bind:element={mainAction} tone="primary" size="sm" testId="guide-try-story" onclick={tryStory}>
+								Try Story
+							</Button>
+						{:else}
+							<Button bind:element={mainAction} tone="primary" size="sm" testId="guide-got-it" onclick={putAway}>
+								Got it
+							</Button>
+						{/if}
+					{/snippet}
 				</Actions>
 			</div>
 		</Pane>

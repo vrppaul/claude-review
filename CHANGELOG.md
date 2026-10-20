@@ -147,16 +147,20 @@
   that id as `said_id`.
 
 ### Changed
-- **One row of acts.** The acts that end a pane, a card, a question or a
-  field being written stand in one row, `Actions`, alike everywhere: the
-  act it leads to last, at the row's far end, the others before it, quiet
-  but for Ask now, and every button in it 32 px tall. The page laid its nine such rows out
-  by hand: the main act first in four and last in five, at the row's start
-  in four, the act beside it edged in two, and at 24 px under a comment
-  being written and under a message to the agent. eslint holds a row to
-  it. In the question before stories are turned on, the way on now stands
-  last: it still takes the keyboard as the question opens, and Not now is
-  a Shift+Tab away.
+- **One row of acts.** The acts that end a pane, a card, a question, a
+  field being written, a note or a view's wait stand in one row,
+  `Actions`, alike everywhere: the act it leads to last, at the row's far
+  end, the others before it, quiet but for Ask now, and every button in it
+  32 px tall. The page laid its nine such rows out by hand: the main act
+  first in four and last in five, at the row's start in four, the act
+  beside it edged in two, and at 24 px under a comment being written and
+  under a message to the agent. A note's act and the waiting story's way
+  to the files stand in such a row too, as the act each leads to. eslint
+  holds a row to it, and refuses a main act laid out among other acts by
+  hand. Where a row takes the keyboard as it opens — the question before
+  stories are turned on, the guide's welcome and its news, Story's
+  introduction — its main act still takes it, now last, and the act beside
+  it is a Shift+Tab away.
 - **Tests hold what someone can name, and run when their part changed.**
   A test is written for a behaviour — what the command line prints or
   refuses, what a route answers, what the reader sees or where the keyboard

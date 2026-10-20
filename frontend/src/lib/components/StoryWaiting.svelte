@@ -2,6 +2,7 @@
 	import { focusWhatRemains } from '$lib/dom/keyboard';
 	import { useReview } from '$lib/review/context';
 	import type { StoryWait } from '$lib/review/story-wait';
+	import Actions from '$lib/ui/Actions.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import Card from '$lib/ui/Card.svelte';
 	import Heading from '$lib/ui/Heading.svelte';
@@ -55,23 +56,29 @@
 				Attach one with <code class="font-mono text-base-content">/review-ui</code> in that session; the story starts as soon
 				as it joins.
 			</p>
-			{@render readFilesMeanwhile()}
+			<Actions testId="story-unattached-actions">
+				{#snippet main()}
+					{@render readFilesMeanwhile()}
+				{/snippet}
+			</Actions>
 		</div>
 	{:else if wait.kind === 'stopped'}
 		<div class="flex flex-col items-center gap-3 text-center">
 			<p>The story was not finished: you stopped it.</p>
-			<div class="flex flex-wrap items-center justify-center gap-3">
-				<Button
-					bind:element={takesKeyboard}
-					tone="primary"
-					size="sm"
-					testId="write-story-again"
-					onclick={() => review.story.askFor()}
-				>
-					Write it again
-				</Button>
-				<span class="cr-muted">or read the files</span>
-			</div>
+			<Actions testId="story-stopped-actions">
+				{#snippet main()}
+					<Button
+						bind:element={takesKeyboard}
+						tone="primary"
+						size="sm"
+						testId="write-story-again"
+						onclick={() => review.story.askFor()}
+					>
+						Write it again
+					</Button>
+				{/snippet}
+			</Actions>
+			<p class="cr-muted">or read the files</p>
 		</div>
 	{:else}
 		<!-- What is left is a story on its way: its request not landed yet, or being written -->
@@ -95,21 +102,25 @@
 				{/each}
 			</ul>
 		</Card>
-		<div class="flex flex-wrap justify-center gap-2">
-			{@render readFilesMeanwhile()}
-			{#if wait.kind === 'writing'}
-				<Button tone="quiet" size="sm" testId="stop-writing" onclick={() => review.story.stop()}>Stop writing</Button>
-			{/if}
-		</div>
+		<Actions testId="story-waiting-actions">
+			{#snippet others()}
+				{#if wait.kind === 'writing'}
+					<Button tone="quiet" size="sm" testId="stop-writing" onclick={() => review.story.stop()}>Stop writing</Button>
+				{/if}
+			{/snippet}
+			{#snippet main()}
+				{@render readFilesMeanwhile()}
+			{/snippet}
+		</Actions>
 	{/if}
 </section>
 
-<!-- The way to the files while the story is not there: offered wherever one is still awaited, and the
-	control that takes the keyboard there -->
+<!-- The way to the files while the story is not there: offered wherever one is still awaited, the act the
+	wait leads to, and the control that takes the keyboard there -->
 {#snippet readFilesMeanwhile()}
 	<Button
 		bind:element={takesKeyboard}
-		tone="secondary"
+		tone="primary"
 		size="sm"
 		testId="read-files-meanwhile"
 		onclick={() => review.views.showFiles()}

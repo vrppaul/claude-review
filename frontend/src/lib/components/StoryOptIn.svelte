@@ -57,10 +57,12 @@
 				{#snippet others()}
 					<Button tone="quiet" size="sm" testId="stories-not-now" onclick={close}>Not now</Button>
 				{/snippet}
-				<!-- The control a modal gives the keyboard to as it opens, by the browser's own word for it -->
-				<Button autofocus tone="primary" size="sm" testId="turn-on-stories" onclick={() => closeThen(onTurnOn)}>
-					Turn on stories
-				</Button>
+				{#snippet main()}
+					<!-- The control a modal gives the keyboard to as it opens, by the browser's own word for it -->
+					<Button autofocus tone="primary" size="sm" testId="turn-on-stories" onclick={() => closeThen(onTurnOn)}>
+						Turn on stories
+					</Button>
+				{/snippet}
 			</Actions>
 		</div>
 	{/snippet}

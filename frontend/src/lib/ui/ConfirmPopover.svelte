@@ -42,7 +42,9 @@
 			{#snippet others()}
 				<Button tone="quiet" size="sm" testId="confirm-keep" onclick={() => (open = false)}>{keep}</Button>
 			{/snippet}
-			<Button tone="danger" size="sm" testId="confirm-go-ahead" onclick={goAheadNow}>{goAhead}</Button>
+			{#snippet main()}
+				<Button tone="danger" size="sm" testId="confirm-go-ahead" onclick={goAheadNow}>{goAhead}</Button>
+			{/snippet}
 		</Actions>
 	</div>
 </Popover>

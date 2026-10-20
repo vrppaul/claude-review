@@ -85,7 +85,9 @@
 						Don't show again
 					</Button>
 				{/snippet}
-				<Button bind:element={tryStory} tone="primary" size="sm" testId="try-story" onclick={onTry}>Try Story</Button>
+				{#snippet main()}
+					<Button bind:element={tryStory} tone="primary" size="sm" testId="try-story" onclick={onTry}>Try Story</Button>
+				{/snippet}
 			</Actions>
 		</div>
 	</PopoverPanel>
@@ -98,12 +100,18 @@
 		testId="story-introduction-hidden"
 		onGone={() => (hiddenForGood = false)}
 	>
-		<div class="flex flex-wrap items-center gap-x-3 gap-y-2 py-2 pr-2 pl-3 text-sm">
-			<Icon name="check" size="sm" tone="done" />
-			<span>Won't show again, in any review. Story is still in the header.</span>
-			<Button bind:element={undo} tone="secondary" size="xs" testId="story-introduction-undo" onclick={showAgain}>
-				Undo
-			</Button>
+		<div class="py-2 pr-2 pl-3 text-sm">
+			<Actions testId="story-introduction-hidden-actions">
+				{#snippet aside()}
+					<Icon name="check" size="sm" tone="done" />
+					<span>Won't show again, in any review. Story is still in the header.</span>
+				{/snippet}
+				{#snippet main()}
+					<Button bind:element={undo} tone="primary" size="sm" testId="story-introduction-undo" onclick={showAgain}>
+						Undo
+					</Button>
+				{/snippet}
+			</Actions>
 		</div>
 	</PassingNote>
 {/if}

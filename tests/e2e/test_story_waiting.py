@@ -56,7 +56,7 @@ class Answered(BaseModel):
     then_on_screen: str
 
 
-# The question opens with the keyboard on the way to turn stories on; the way to put it off comes next
+# The question opens with the keyboard on the way to turn stories on; the way to put it off stands before it
 ANSWERS_BY_KEY = [
     Answered(how="stories turned on", keys=("Enter",), then_on_screen="story-view"),
     Answered(how="not now", keys=("Shift+Tab", "Enter"), then_on_screen="diff-view"),
@@ -177,14 +177,6 @@ async def test_a_story_told_under_the_keyboard_puts_the_keyboard_on_its_head(rev
     await _the_agent_tells_the_story(review)
 
     await expect(page.get_by_test_id("part-head").first).to_be_focused()
-
-
-async def test_the_question_before_stories_opens_with_the_keyboard_on_turning_them_on(
-    review: RunningReview, page: Page
-) -> None:
-    await _ask_to_read_the_story(page, review)
-
-    await expect(page.get_by_test_id("turn-on-stories")).to_be_focused()
 
 
 async def test_the_question_before_stories_holds_the_keyboard_until_it_is_answered(

@@ -19,6 +19,12 @@ let review: Review;
 
 // The release whose news introduces Story
 const STORY_RELEASE = '1.6.0';
+// The release a reader was last shown, and the act of the card they meet that takes the keyboard: the welcome for
+// somebody who has never opened a review, the news of 1.5.0 for somebody who last saw 1.4.2
+const CARDS_TAKING_THE_KEYBOARD = [
+	{ seen: null, mainAct: 'guide-start' },
+	{ seen: '1.4.2', mainAct: 'guide-got-it' }
+];
 
 beforeEach(() => {
 	review = openReview();
@@ -165,6 +171,20 @@ describe('what the guide shows a reader arriving', () => {
 
 		expect(heading).toBe('First time here?');
 		expect(review.guide.card).toBeNull();
+	});
+
+	it('gives the keyboard to the act the welcome or the news leads to, as either appears', async () => {
+		const tookIt = [];
+		for (const card of CARDS_TAKING_THE_KEYBOARD) {
+			guideServer(card.seen);
+			await arriveAt('1.5.0');
+			const { unmount } = render(Guide, inReview(review));
+			await tick();
+			tookIt.push(document.activeElement?.getAttribute('data-testid'));
+			unmount();
+		}
+
+		expect(tookIt).toEqual(CARDS_TAKING_THE_KEYBOARD.map((card) => card.mainAct));
 	});
 
 	it('heads the news as every pane is headed: what is new, and the way to put it away', async () => {

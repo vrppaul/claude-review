@@ -6,15 +6,15 @@
  * A button of the page is one of these, drawn by `Button` or `IconButton`,
  * and nothing outside the library lays a look over it: a look the page needs
  * is a tone or a size here, with the reason a reader needs it. The acts that
- * end a pane, a card, a question or a field being written stand in a row of
- * them, `Actions`, the act it leads to last.
+ * end a pane, a card, a question, a field being written, a note or a view's
+ * wait stand in one row, `Actions`, the act it leads to last.
  */
 
 /**
- * - primary: the one act a pane, a card or a field leads to, filled with the
- *   control's blue.
+ * - primary: the one act a pane, a card, a field, a note or a wait leads to,
+ *   filled with the control's blue.
  * - quiet: an act that must not outweigh the words beside it, or the main
- *   act of a row of them, beside which it stands.
+ *   act it stands beside in a row of acts.
  * - secondary: an act on what is read — a thread, a block of the story's
  *   words — which would read as part of it were it quiet: edged, on the
  *   page's own ground.
