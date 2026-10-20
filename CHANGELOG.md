@@ -168,8 +168,9 @@
   beside it edged in two, and at 24 px under a comment being written and
   under a message to the agent. The story-ready note's Open it, its close
   beside it, and the waiting story's way to the files stand in such a row
-  too; the Undo in Story's note is quiet among its words, where it was
-  edged. eslint holds a row to it, and refuses a main act laid out among
+  too, Read the files meanwhile now the act the wait leads to, filled
+  where it was edged; the Undo in Story's note is quiet among its words,
+  where it was edged. eslint holds a row to it, and refuses a main act laid out among
   other acts by hand. Where a row takes the keyboard as it opens — the
   question before stories are turned on, the guide's welcome and its news,
   Story's introduction — its main act still takes it, now last, and the act
