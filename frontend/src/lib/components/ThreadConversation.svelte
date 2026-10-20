@@ -9,10 +9,11 @@
 	import { splitSuggestions } from '$lib/utils/suggestion';
 	import { exchangesOf } from '$lib/utils/thread-exchanges';
 	import { timeAgo } from '$lib/utils/time';
-	import AwaitingAnswer from './AwaitingAnswer.svelte';
+	import AgentOnItsWay from './AgentOnItsWay.svelte';
 	import MarkdownRenderer from './MarkdownRenderer.svelte';
 	import SaidImages from './SaidImages.svelte';
 	import SuggestionDiff from './SuggestionDiff.svelte';
+	import ThreadActions from './ThreadActions.svelte';
 	import ThreadHeading from './ThreadHeading.svelte';
 	import { TURN_VOICES } from './thread-voice';
 
@@ -66,6 +67,11 @@
 				<ThreadHeading {thread} />
 			{/if}
 		{/snippet}
+		{#snippet headEnd()}
+			{#if opening}
+				<ThreadActions {thread} />
+			{/if}
+		{/snippet}
 		{#if opening && thread.anchor.outdated && writtenAgainst.length > 0}
 			<!-- One that has lost its place keeps its own copy of what was there -->
 			<div class="my-1">
@@ -108,6 +114,12 @@
 	{/each}
 
 	{#if waitedOn !== undefined}
-		<AwaitingAnswer threadId={thread.id} questionId={exchange.id} askedAt={waitedOn} />
+		<!-- The answer still awaited: the agent's turn, on its way -->
+		<AgentOnItsWay
+			testId="awaiting-answer"
+			tour="awaited-answer"
+			waited={`asked ${howLongAgo(waitedOn)} — keep reading, the answer lands here`}
+			takeBack={() => review.threads.takeBack(thread.id, exchange.id)}
+		/>
 	{/if}
 {/each}

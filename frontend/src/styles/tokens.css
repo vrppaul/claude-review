@@ -96,12 +96,11 @@
 	--cr-overview-columns: 4rem minmax(0, 1fr);
 
 	/*
-	 * A card (lib/ui Card) — a thread, a comment being written, every turn of
-	 * the panel, the facts of a story on its way: how far what it holds
-	 * stands in from its edge, the same on every side, so the turns of the
-	 * panel line their words up. And, where it hangs under what it is about,
-	 * how far in from its left edge its tail points up at that: under a line,
-	 * or under a block of a story's words, where the block's heading is.
+	 * A card (lib/ui Card) — a thread, a comment being written, the facts of a
+	 * story on its way: how far what it holds stands in from its edge, the
+	 * same on every side. And, where it hangs under what it is about, how far
+	 * in from its left edge its tail points up at that: under a line, or under
+	 * a block of a story's words, where the block's heading is.
 	 */
 	--cr-card-room: --spacing(4);
 	--cr-card-tail-under-a-line: 6rem;

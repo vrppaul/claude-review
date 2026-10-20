@@ -266,7 +266,7 @@ describe('the agent panel', () => {
 		await user.click(getByTestId('send-message'));
 
 		expect(getByTestId('panel-working')).toBeTruthy();
-		await user.click(getByTestId('stop-message'));
+		await user.click(getByTestId('panel-working-take-back'));
 
 		expect(server.bodiesSentTo('POST /api/cancel')).toEqual([{ message_id: review.conversation.turns[0].id }]);
 		expect(getByTestId('panel-cancelled')).toBeTruthy();
@@ -285,7 +285,7 @@ describe('the agent panel', () => {
 		const row = getByTestId('panel-working').textContent;
 		expect(row).toContain(AGENT_STOPPED_LISTENING);
 		expect(row).not.toContain('working');
-		expect(getByTestId('stop-message').textContent).toContain(TAKE_BACK);
+		expect(getByTestId('panel-working-take-back').textContent).toContain(TAKE_BACK);
 	});
 
 	it('brings a new turn into view', async () => {

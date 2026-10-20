@@ -112,7 +112,7 @@ describe('a thread is a conversation', () => {
 		const { getByTestId, queryByTestId } = render(DiffView, inReview(review));
 		await user.click(getByTestId('ask-now-thread'));
 
-		await user.click(getByTestId('take-back-question'));
+		await user.click(getByTestId('awaiting-answer-take-back'));
 
 		expect(server.bodiesSentTo('POST /api/cancel')).toEqual([{ message_id: id }]);
 		expect(queryByTestId('awaiting-answer')).toBeNull();
@@ -127,10 +127,10 @@ describe('a thread is a conversation', () => {
 		const { getByTestId, findByTestId } = render(DiffView, inReview(review));
 		await user.click(getByTestId('ask-now-thread'));
 
-		await user.click(getByTestId('take-back-question'));
+		await user.click(getByTestId('awaiting-answer-take-back'));
 
 		// In the words of the button that was pressed
-		expect((await findByTestId('take-back-error')).textContent).toContain('Could not take it back');
+		expect((await findByTestId('awaiting-answer-take-back-error')).textContent).toContain('Could not take it back');
 		expect(getByTestId('awaiting-answer')).toBeTruthy();
 	});
 

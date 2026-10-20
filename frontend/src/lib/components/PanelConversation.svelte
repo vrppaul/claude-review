@@ -40,11 +40,6 @@
 		return review.threads.all.find((thread) => thread.id === threadId);
 	}
 
-	/** How long ago a turn was said, by the review's clock, which ticks while it is drawn: as a thread says it. */
-	function howLongAgo(at: number): string {
-		return timeAgo(at, review.clock.now);
-	}
-
 	/** Near enough to the bottom that the conversation should keep following. */
 	function onScroll() {
 		if (stream) atFoot = stream.scrollHeight - stream.scrollTop - stream.clientHeight < FOOT_SLACK;
@@ -133,7 +128,7 @@
 				{:else if turn.author === READER}
 					<Turn speaker="reader" testId="panel-said">
 						{#snippet head()}
-							<span>{howLongAgo(turn.at)}</span>
+							<span>{timeAgo(turn.at, review.clock.now)}</span>
 						{/snippet}
 						<div class={[turn.cancelled && 'cr-faint']}>
 							{#if turn.body}
@@ -153,7 +148,7 @@
 				{:else}
 					<Turn speaker="agent" testId="panel-answer">
 						{#snippet head()}
-							<span>{howLongAgo(turn.at)}</span>
+							<span>{timeAgo(turn.at, review.clock.now)}</span>
 						{/snippet}
 						<MarkdownRenderer text={turn.body} dense />
 						{#if turn.threads && turn.threads.length > 0}

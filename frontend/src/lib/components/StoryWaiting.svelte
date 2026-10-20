@@ -56,11 +56,7 @@
 				Attach one with <code class="font-mono text-base-content">/review-ui</code> in that session; the story starts as soon
 				as it joins.
 			</p>
-			<Actions testId="story-unattached-actions">
-				{#snippet main()}
-					{@render readFilesMeanwhile()}
-				{/snippet}
-			</Actions>
+			{@render waysOn(false)}
 		</div>
 	{:else if wait.kind === 'stopped'}
 		<div class="flex flex-col items-center gap-3 text-center">
@@ -102,29 +98,32 @@
 				{/each}
 			</ul>
 		</Card>
+		{@render waysOn(wait.kind === 'writing')}
+	{/if}
+</section>
+
+<!-- What can be done while a story is still awaited, under the words, in the middle of the column: read the
+	files meanwhile, the act the wait leads to and the control that takes the keyboard there; and stop the
+	writing, while it is being written -->
+{#snippet waysOn(stoppable: boolean)}
+	<div class="flex justify-center">
 		<Actions testId="story-waiting-actions">
 			{#snippet others()}
-				{#if wait.kind === 'writing'}
+				{#if stoppable}
 					<Button tone="quiet" size="sm" testId="stop-writing" onclick={() => review.story.stop()}>Stop writing</Button>
 				{/if}
 			{/snippet}
 			{#snippet main()}
-				{@render readFilesMeanwhile()}
+				<Button
+					bind:element={takesKeyboard}
+					tone="primary"
+					size="sm"
+					testId="read-files-meanwhile"
+					onclick={() => review.views.showFiles()}
+				>
+					Read the files meanwhile
+				</Button>
 			{/snippet}
 		</Actions>
-	{/if}
-</section>
-
-<!-- The way to the files while the story is not there: offered wherever one is still awaited, the act the
-	wait leads to, and the control that takes the keyboard there -->
-{#snippet readFilesMeanwhile()}
-	<Button
-		bind:element={takesKeyboard}
-		tone="primary"
-		size="sm"
-		testId="read-files-meanwhile"
-		onclick={() => review.views.showFiles()}
-	>
-		Read the files meanwhile
-	</Button>
+	</div>
 {/snippet}

@@ -151,13 +151,14 @@
   a thread's does: a turn to a row, each by the avatar of who said it,
   their name and how long ago it was said — "2m ago", where the panel said
   the time of day — the avatars joined by a thin line, and what the review
-  did said across it, as a round's end is in a thread. The panel drew each
-  turn on a card of its own, with no avatar, and the agent at work on
-  another; at work, the agent is now a turn on its way, as an answer
-  awaited in a thread is, its dots, how long it has worked and Take back
-  in its head. `Turn`, `TurnAside` and `Conversation` draw both, and
-  eslint refuses an avatar drawn outside the library. "Ask about this" in
-  a thread stands as tall as the reply's Ask now, 32 px.
+  did written across the column between two rules, as a round's end is in
+  a thread. The panel drew each turn on a card of its own, with no avatar,
+  and the agent at work on another; at work, the agent is now a turn on
+  its way, drawn as an answer awaited in a thread is, its dots, how long
+  it has worked and Take back in its head. `Turn`, `TurnAside` and
+  `Conversation` draw both, and eslint refuses an avatar drawn outside the
+  library. "Ask about this" in a thread stands as tall as the reply's Ask
+  now, 32 px.
 - **One row of acts.** The acts that end a pane, a card, a question, a
   field being written, a note or a view's wait stand in one row,
   `Actions`, alike everywhere: the act it leads to last, at the row's far
@@ -165,10 +166,11 @@
   32 px tall. The page laid its nine such rows out by hand: the main act
   first in four and last in five, at the row's start in four, the act
   beside it edged in two, and at 24 px under a comment being written and
-  under a message to the agent. A note's act and the waiting story's way
-  to the files stand in such a row too, as the act each leads to. eslint
-  holds a row to it, and refuses a main act laid out among other acts by
-  hand. Where a row takes the keyboard as it opens — the question before
+  under a message to the agent. The story-ready note's Open it, its close
+  beside it, and the waiting story's way to the files stand in such a row
+  too; the Undo in Story's note is quiet among its words, where it was
+  edged. eslint holds a row to it, and refuses a main act laid out among
+  other acts by hand. Where a row takes the keyboard as it opens — the question before
   stories are turned on, the guide's welcome and its news, Story's
   introduction — its main act still takes it, now last, and the act beside
   it is a Shift+Tab away.
@@ -645,10 +647,10 @@
   is, at one corner — 6 pixels, where a thread's was 8 — with one room
   round what it holds, 16 pixels on every side. Code set apart, the
   commands to attach an agent and the source of a diagram that did not
-  draw, stands on a quiet card at the code's size. A hanging card points up at what it is about
-  with the arrow a pane points with. The agent's violet moves a shade,
-  lighter in the dark theme and darker in the light, so its chip reads at
-  4.5:1 on a card, under the pointer too.
+  draw, stands on a quiet card at the code's size. A hanging card points
+  up at what it is about with the arrow a pane points with. The agent's
+  violet moves a shade, lighter in the dark theme and darker in the light,
+  so its chip reads at 4.5:1 on a card, under the pointer too.
 - **Every notice is one bar**: the code moved on, the diff taken again,
   what was not sent brought back, the review out of reach or over, a part
   that could not be drawn, a file's notes. Each is as tall as one with a

@@ -222,8 +222,12 @@ of it is built yet.
       (`bg-(color:--color-base-200)`, `text-(length:--cr-comment-size)`); a
       row of acts with no primary or danger act laid out by hand rather
       than with `Actions`, which no pattern tells from a bar's controls (the
-      chapter bar's ways, a thread's own). A rule that each look class has
-      one owner is to hold them.
+      chapter bar's ways, a thread's own); in a row of `Actions`, a button a
+      snippet rendered into it draws, which the row's rules do not reach;
+      a main act laid out by hand among other acts under an `{:else if}`,
+      an `{#each}` or a `{#key}`; a turn of a conversation drawn with no
+      avatar, as the panel's were on cards, which no import tells. A rule
+      that each look class has one owner is to hold them.
 - [ ] `refactor(ui)`: the colours DaisyUI's themes named keep its names:
       the three grounds, `--color-base-100`, `-200` and `-300` (the last
       the line between surfaces too), the page's words,

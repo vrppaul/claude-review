@@ -1344,8 +1344,9 @@
  * name, how long ago, and what was said; and rows nobody says (TurnAside).
  * A spine joins the avatars down the conversation. Each row draws its own
  * piece of it, from its top into the room before the next row, so the spine
- * holds whatever a row's height: it begins at the first row's avatar and
- * ends at the last's.
+ * holds whatever a row's height: it begins half an avatar down the first row
+ * and ends half an avatar down the last, at their avatars where those rows
+ * are turns.
  */
 .cr-ui-conversation {
 	display: flex;
@@ -1396,6 +1397,14 @@
 .cr-ui-turn-name {
 	font-weight: var(--font-weight-semibold);
 	color: var(--color-base-content);
+}
+/* What can be done to the turn, or how long it has been waited on, at the head's far end */
+.cr-ui-turn-head-end {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: --spacing(2);
+	margin-inline-start: auto;
 }
 .cr-ui-turn-agent .cr-ui-turn-name {
 	color: var(--cr-agent);

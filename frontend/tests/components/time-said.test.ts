@@ -2,6 +2,7 @@ import { describe, it, expect, afterEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import { flushSync } from 'svelte';
+import AgentPanel from '$lib/components/AgentPanel.svelte';
 import DiffView from '$lib/components/DiffView.svelte';
 import ReviewHeader from '$lib/components/ReviewHeader.svelte';
 import { contextLine, diffFile, diffResponse, hunk } from '../diff';
@@ -9,6 +10,7 @@ import { said } from '../elements';
 import { fakeServer } from '../fake-server';
 import { newComment } from '../new-comment';
 import { inReview, openReview } from '../review';
+import type { SaidInPanel } from '$lib/types';
 
 const A_MINUTE_AND_A_BIT = 61_000;
 const TWELVE_SECONDS = 12_000;
@@ -23,6 +25,15 @@ const file = diffFile({
 afterEach(() => {
 	vi.useRealTimers();
 });
+
+/** What was said in the panel: the reader's message two minutes before `now`, and the agent's answer forty seconds before. */
+function saidInThePanel(now: number): SaidInPanel[] {
+	const asked = { said_id: 'panel-1', message_id: 'panel-1', images: [], threads: [], files: [], taken_back: false };
+	return [
+		{ ...asked, author: 'reader', body: 'Run the tests.', at: now - TWO_MINUTES },
+		{ ...asked, said_id: 'answer-1', author: 'author', body: 'All green.', at: now - FORTY_SECONDS }
+	];
+}
 
 /** A review with a question on each of these lines, every one still with the agent. */
 function waitingOn(lines: number[]) {
@@ -61,6 +72,16 @@ describe('who said each turn of a thread, and how long ago', () => {
 
 		expect(said(screen.getByTestId('thread-question'))).toMatch(/^You 2m ago/);
 		expect(said(screen.getByTestId('thread-answer'))).toMatch(/^Agent answered 40s ago/);
+	});
+
+	it('says it in the panel as in a thread: the reader two minutes ago, the agent forty seconds ago', () => {
+		vi.useFakeTimers();
+		const review = openReview({ said: saidInThePanel(Date.now()) });
+
+		render(AgentPanel, inReview(review));
+
+		expect(said(screen.getByTestId('panel-said'))).toMatch(/^You 2m ago/);
+		expect(said(screen.getByTestId('panel-answer'))).toMatch(/^Agent 40s ago/);
 	});
 
 	it('names the reader on a comment nobody has answered yet', () => {

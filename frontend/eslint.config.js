@@ -420,21 +420,23 @@ const NO_ELEMENTS_HANDED_THEIR_KIND = [
 // nothing else is
 const PRESSED_IN_THE_CODE = ['src/lib/components/LineGutter.svelte', 'src/lib/components/HunkGap.svelte'];
 const BUTTON_IN_THE_LIBRARY = { elements: ['button'], message: PRESSED_IN_THE_LIBRARY };
-// The acts that end a pane, a card, a question, a field being written or a view's wait stand in one row, lib/ui
-// Actions, alike everywhere: the page laid its nine such rows out by hand, the main act first in four and last in
-// five, at the start of the row in four, an act beside it edged in two, at 24 px in two and 32 in seven. Inside
-// one, every button is sm; the acts beside the main one are quiet, or asking where they ask the agent now; and the
-// main act, the row's `main`, is its one primary or danger button. Outside one, an element of the page's own that
-// holds a primary or danger button among other acts, as its child or in a branch of a condition, is such a row
-// laid out by hand. A size or a tone handed in by an expression passes, and a button in a pane opened from inside
-// a row would be held as the row's own: none stands there
+// The acts that end a pane, a card, a question, a field being written, a note or a view's wait stand in one row,
+// lib/ui Actions, alike everywhere: the page laid its nine such rows out by hand, the main act first in four and
+// last in five, at the start of the row in four, an act beside it edged in two, at 24 px in two and 32 in seven.
+// Inside one, every button is sm; the acts beside the main one are quiet, or asking where they ask the agent now;
+// and the main act, the row's `main`, is its one primary or danger button. Outside one, an element of the page's
+// own that holds a primary or danger button among other acts, as its child or as a child of an {#if} or its
+// {:else}, is such a row laid out by hand. What these read past: a size or a tone handed in by an expression, a
+// button a snippet rendered into the row draws, an act under an {:else if}, an {#each} or a {#key}; and a button
+// in a pane opened from inside a row would be held as the row's own, though none stands there
 const IN_A_ROW_OF_ACTIONS = "SvelteElement[kind='component'][name.name='Actions']";
 const A_BUTTON_OF_THE_LIBRARY = "SvelteElement[kind='component'][name.name=/^(Button|IconButton)$/]";
 // A start tag naming the tone of a main act: the act a row leads to, or one that loses what was written
 const OF_A_MAIN_TONE =
 	"SvelteStartTag:has(> SvelteAttribute[key.name='tone']:has(> SvelteLiteral[value=/^(primary|danger)$/]))";
 const A_MAIN_ACT = `SvelteElement[kind='component'][name.name='Button']:has(> ${OF_A_MAIN_TONE})`;
-const ANOTHER_ACT = `SvelteElement[kind='component'][name.name=/^(Button|IconButton|ConfirmPopover)$/]:not(:has(> ${OF_A_MAIN_TONE}))`;
+const AN_ACT = "SvelteElement[kind='component'][name.name=/^(Button|IconButton|ConfirmPopover)$/]";
+const ANOTHER_ACT = `${AN_ACT}:not(:has(> ${OF_A_MAIN_TONE}))`;
 const THE_MAIN_ACT = `${IN_A_ROW_OF_ACTIONS} > SvelteSnippetBlock[id.name='main']`;
 const BESIDE_THE_MAIN_ACT = `${IN_A_ROW_OF_ACTIONS} > SvelteSnippetBlock[id.name!='main']`;
 const ONE_ROW_OF_ACTIONS_MESSAGE =
@@ -442,7 +444,7 @@ const ONE_ROW_OF_ACTIONS_MESSAGE =
 const A_ROW_LAID_OUT_BY_HAND =
 	'Stand a main act among other acts in a row of lib/ui Actions, not one laid out by hand.';
 
-/** The selectors of an act an element holds as its own: its child, or a child of a branch of a condition that is. */
+/** The selectors of an act an element holds as its own: its child, or a child of an {#if} or its {:else} that is. */
 function heldAsItsOwn(act) {
 	return `> ${act}, > SvelteIfBlock:has(> ${act}), > SvelteIfBlock:has(> SvelteElseBlock:has(> ${act}))`;
 }
@@ -623,7 +625,7 @@ const DRAWN_BY_THE_LIBRARY_ALONE = [
 // library a name is written as a tourStop(…) call, or as such a call in a branch of a condition whose other branch is
 // undefined, or after an `&&`; written any other way — words, a string, a constant, a member, a prop typed string,
 // after `||` or `??` — it is refused. A component of the page handing on a name it was handed typed TourTarget writes
-// it through tourStop too (ThreadTurn), as the rule reads no type; inside the library a part hands on the name it
+// it through tourStop too (AgentOnItsWay), as the rule reads no type; inside the library a part hands on the name it
 // was handed as it is
 const NAMED_THROUGH_THE_TOUR =
 	"Name a place for the tour with tourStop(…) from lib/guide/tour.ts, which holds the name to the tour's stops.";
@@ -666,14 +668,16 @@ function refusedSyntax(...besides) {
 // by its button could hold
 const MODALS = ['src/lib/components/StoryOptIn.svelte', 'src/lib/components/StoryDiagram.svelte'];
 
-// A turn of a conversation is drawn by lib/ui Turn, the one part that stands an avatar by what was said: the
-// thread drew its turns by their avatars and the panel drew its own as cards, each headed its own way
-const AVATAR_OF_A_TURN = {
-	name: '$lib/ui/Avatar.svelte',
-	message: 'Draw a turn of a conversation with lib/ui Turn, which stands the avatar by what was said.'
-};
 const A_PANE_OF_A_CONTROL =
 	'A pane opened from a control is a Popover: a modal (Dialog) is only for what MODALS in eslint.config.js lists, with why.';
+
+// A turn of a conversation is drawn by lib/ui Turn, the one part that stands an avatar by what was said, so a page
+// that imports the avatar, by whatever path, draws a turn by hand. A turn drawn with no avatar, as the panel drew
+// its turns on cards before Turn drew them, is no import's to tell
+const AVATAR_OF_A_TURN = {
+	regex: String.raw`(^|/)ui/Avatar\.svelte$`,
+	message: 'Draw a turn of a conversation with lib/ui Turn, which stands the avatar by what was said.'
+};
 
 // Every drawing is drawn in its one component: an icon as a row of ICONS that
 // Icon draws by name, the sketch of a story by StorySketch. A review found a
@@ -840,10 +844,10 @@ export default tseslint.config(
 		rules: { 'prefer-const': 'off', 'svelte/prefer-const': 'error' }
 	},
 	{
-		// Everywhere else — the components, the page's entry — a part is named plainly too;
-		// each part of src/lib below says so again with what it may not reach
+		// Everywhere else — the components, the page's entry — a part is named plainly too, and draws no avatar
+		// of its own; each part of src/lib below says so again with what it may not reach
 		files: ['src/**'],
-		rules: { 'no-restricted-imports': ['error', { paths: [AVATAR_OF_A_TURN], patterns: [PLAINLY_NAMED] }] }
+		rules: { 'no-restricted-imports': ['error', { patterns: [PLAINLY_NAMED, AVATAR_OF_A_TURN] }] }
 	},
 	{
 		// A modal only where MODALS says why: every other component opens its panes by their controls
@@ -853,8 +857,8 @@ export default tseslint.config(
 			'no-restricted-imports': [
 				'error',
 				{
-					paths: [{ name: '$lib/ui/Dialog.svelte', message: A_PANE_OF_A_CONTROL }, AVATAR_OF_A_TURN],
-					patterns: [PLAINLY_NAMED]
+					paths: [{ name: '$lib/ui/Dialog.svelte', message: A_PANE_OF_A_CONTROL }],
+					patterns: [PLAINLY_NAMED, AVATAR_OF_A_TURN]
 				}
 			]
 		}

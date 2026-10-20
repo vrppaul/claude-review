@@ -2,16 +2,16 @@
 	import type { Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
 	import Avatar from './Avatar.svelte';
-	import type { AvatarTone } from './avatar';
+	import type { Speaker } from './avatar';
 
-	/** How a speaker's turns are headed: the name, where they have a head, and the class of the row, where it looks its own. */
-	interface Heading {
+	/** A speaker's name at the head of their turns, where they have one, and their row's class where it looks its own. */
+	interface Named {
 		name: string | null;
 		look: string | null;
 	}
 
 	// The agent's name is said in its colour; the reader about to say something has no head yet
-	const HEADINGS: Record<AvatarTone, Heading> = {
+	const NAMED: Record<Speaker, Named> = {
 		reader: { name: 'You', look: null },
 		agent: { name: 'Agent', look: 'cr-ui-turn-agent' },
 		unsaid: { name: null, look: null }
@@ -19,35 +19,40 @@
 
 	interface Props extends Omit<HTMLAttributes<HTMLDivElement>, 'class' | 'style' | 'children'> {
 		/** Who says it: the reader, the agent, or the reader about to say something in the field it holds. */
-		speaker: AvatarTone;
+		speaker: Speaker;
 		testId: string;
 		/** Whether it has just landed: an answer nobody has looked at yet, which arrives in the agent's colour. */
 		landing?: boolean;
 		/** What its head says after who said it: how long ago, and whatever else it says of the turn. */
 		head?: Snippet | undefined;
+		/** What stands at the far end of its head: what can be done to the turn, or how long it has been waited on. */
+		headEnd?: Snippet | undefined;
 		/** What was said, or the field to say it in. */
 		children: Snippet;
 	}
 
-	let { speaker, testId, landing = false, head, children, ...attributes }: Props = $props();
+	let { speaker, testId, landing = false, head, headEnd, children, ...attributes }: Props = $props();
 
-	const heading = $derived(HEADINGS[speaker]);
+	const named = $derived(NAMED[speaker]);
 </script>
 
 <!-- One turn of a conversation, a thread's or the panel's: the avatar of who says it, beside their name, the
-	rest of the head and what they said. The row draws its own piece of the spine that joins the avatars down
-	the conversation (Conversation) -->
+	rest of the head, its far end, and what they said. The row draws its own piece of the spine that joins the
+	avatars down the conversation (Conversation) -->
 <div
 	{...attributes}
 	data-testid={testId}
-	class={['cr-ui-turn-row cr-ui-turn', heading.look, landing && 'cr-ui-turn-landing']}
+	class={['cr-ui-turn-row cr-ui-turn', named.look, landing && 'cr-ui-turn-landing']}
 >
-	<Avatar tone={speaker} />
+	<Avatar {speaker} />
 	<div data-testid="turn-body" class="cr-ui-turn-body">
-		{#if heading.name !== null}
+		{#if named.name !== null}
 			<div data-testid="turn-head" class="cr-ui-turn-head">
-				<strong class="cr-ui-turn-name">{heading.name}</strong>
+				<strong class="cr-ui-turn-name">{named.name}</strong>
 				{@render head?.()}
+				{#if headEnd}
+					<span class="cr-ui-turn-head-end">{@render headEnd()}</span>
+				{/if}
 			</div>
 		{/if}
 		{@render children()}
