@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { flushSync, tick } from 'svelte';
 import { render, screen, within } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
+import { lineAnchor } from '$lib/anchors/line';
 import ReviewHeader from '$lib/components/ReviewHeader.svelte';
 import ReviewScreen from '$lib/components/ReviewScreen.svelte';
 import type { Review } from '$lib/review/review.svelte';
@@ -12,6 +13,8 @@ import { newComment } from '../new-comment';
 import { inReview, openReview } from '../review';
 
 const file = diffFile({ path: 'test.py', hunks: [hunk([contextLine(1, 1, 'hello')])] });
+// Where the author raises a thread: the file's one line
+const RAISED_ON = lineAnchor('test.py', 'new', 1, 1, ['hello']);
 // A review of files compared against nothing: the header names it rather
 // than offering bases
 const READ_WHOLE = { base: null };
@@ -23,29 +26,32 @@ describe('sending the review', () => {
 		review = openReview({ files: [file], diff: READ_WHOLE });
 	});
 
-	it('counts on Send the comments that go with it, saying how many on the pointer, and nothing with none', () => {
+	it("names on Send how many comments go with it, apart from the round's number, and never the author's", () => {
 		// A round sent to an agent there, and the end of a review with none, each a review of its own, which keeps a
-		// draft of its own; how many comments each holds, how many of them went in a round before, and what its count
-		// says: its figure, and its words on the pointer. A round takes what is unsent; the end takes everything
+		// draft of its own; how many comments each holds, how many of them went in a round before, how many threads
+		// the author raised, and what Send is called. A round takes the reader's unsent; the end takes everything
 		const sends = [
 			{
 				review: 'a-round',
 				attached: true,
 				comments: 2,
 				sentBefore: 1,
-				said: [{ figure: '1', pointer: '1 comment goes with it' }]
+				raised: 0,
+				named: 'Send round 1 (1 comment goes with it)'
 			},
 			{
 				review: 'the-end',
 				attached: false,
 				comments: 2,
 				sentBefore: 1,
-				said: [{ figure: '2', pointer: '2 comments go with it' }]
+				raised: 0,
+				named: 'Finish review (2 comments go with it)'
 			},
-			{ review: 'nothing-written', attached: false, comments: 0, sentBefore: 0, said: [] }
+			{ review: 'a-raised-thread', attached: true, comments: 0, sentBefore: 0, raised: 1, named: 'Send round 1' },
+			{ review: 'nothing-written', attached: false, comments: 0, sentBefore: 0, raised: 0, named: 'Finish review' }
 		];
 
-		const said = sends.map(({ review: identity, attached, comments, sentBefore }) => {
+		const namedSo = sends.map(({ review: identity, attached, comments, sentBefore, raised, named }) => {
 			const sending = openReview({
 				files: [file],
 				diff: READ_WHOLE,
@@ -54,14 +60,15 @@ describe('sending the review', () => {
 			Array.from({ length: comments }, (_, index) =>
 				sending.threads.add(newComment({ file: 'test.py', startLine: index + 1, body: 'fix' }))
 			);
+			Array.from({ length: raised }, (_, index) =>
+				sending.threads.raise(`raised-${index + 1}`, RAISED_ON, 'Kept on purpose', 'note')
+			);
 			sending.threads.markSent(sending.threads.carry(sending.threads.all.slice(0, sentBefore)), 1);
-			const { container } = render(ReviewHeader, inReview(sending));
-			return within(container)
-				.queryAllByTestId('unsent-count')
-				.map((count) => ({ figure: count.textContent?.trim(), pointer: count.title }));
+			const sent = within(render(ReviewHeader, inReview(sending)).container);
+			return sent.queryByRole('button', { name: named }) === sent.getByTestId('quick-submit');
 		});
 
-		expect(said).toEqual(sends.map(({ said }) => said));
+		expect(namedSo).toEqual(sends.map(() => true));
 	});
 
 	it('can be opened once something is written', () => {

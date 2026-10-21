@@ -45,10 +45,11 @@ const AN_ALPHA_WRITTEN = ['/(rgb|hsl|hwb|lab|lch|oklab|oklch)a?\\([^)]*\\//'];
 // Every property but those that may hold an alpha of their own: a shadow, and the shade laid behind a modal
 const HOLDS_NO_ALPHA = '/^(?!--cr-(shadow-[a-z-]+|shade)$)/';
 // The rules that move something, each by its whole selector, and no other: a button's or a segment's state
-// easing in, a chevron turning, a pane fading, work breathing, what arrived lit, the tour's light gliding, and
-// where a reader asked for less motion all of it stopped. Whatever else is selected holds none, a row and a band
-// the keys move above all, however they are selected: the keys outrun it, and two rows would stand lit at once.
-// Motion written as a utility in the markup is past what this reads
+// easing in, a chevron turning, a pane fading, work breathing, what arrived lit, the tour's light gliding.
+// Whatever else is selected holds none, a row and a band the keys move above all, however a stylesheet selects
+// them: the keys outrun it, and two rows would stand lit at once. Where a reader asked for less motion it all
+// stops, in a stylesheet of its own that may say `none` and nothing else of motion; and eslint refuses motion
+// written in the markup (MOTION_UTILITY, eslint.config.js)
 const WHAT_MOVES = [
 	'\\.cr-ui-button,\\s*\\.cr-ui-segment',
 	'\\.cr-ui-icon',
@@ -58,8 +59,7 @@ const WHAT_MOVES = [
 	'\\.cr-sketch-writing',
 	'\\.cr-marked',
 	'\\.cr-note-time-left',
-	'\\.cr-guide-spot-gliding',
-	':root \\*,\\s*:root \\*::before,\\s*:root \\*::after'
+	'\\.cr-guide-spot-gliding'
 ];
 const MOTION_ELSEWHERE = { [`/^(?!(${WHAT_MOVES.join('|')})$)/`]: ['/^transition/', '/^animation/'] };
 // Every size is taken off one scale, which tokens.css sets out: a number with a unit, either way up and in any
@@ -145,6 +145,14 @@ export default {
 					...SCROLLS_DOWN
 				},
 				'selector-disallowed-list': null
+			}
+		},
+		{
+			// Where a reader asked for less motion: every element selected, and of motion only `none` said
+			files: ['src/styles/less-motion.css'],
+			rules: {
+				'rule-selector-property-disallowed-list': null,
+				'declaration-property-value-allowed-list': { '/^(transition|animation)$/': ['none'] }
 			}
 		}
 	]

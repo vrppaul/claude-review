@@ -1,4 +1,6 @@
 import './styles/main.css';
+// After every other stylesheet, so a reader who asked for less motion is given none (less-motion.css)
+import './styles/less-motion.css';
 import { mount } from 'svelte';
 
 import App from './App.svelte';

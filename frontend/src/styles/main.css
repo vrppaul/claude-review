@@ -973,22 +973,3 @@
 	/* stylelint-disable-next-line declaration-property-value-disallowed-list -- the reading area, the box of what is read */
 	overflow: auto;
 }
-
-/*
- * Motion, for a reader who asked their system for less of it: every
- * animation and every transition on the page stops, here and nowhere else.
- * Last in the stylesheet and as specific as one class, it wins over each
- * rule above that moves something — a rule more specific than one class
- * that adds motion must not be written — and over Tailwind's, which sit in
- * layers under it. A scroll the page starts itself never glides, for any
- * reader (dom/jump.ts).
- */
-@media (prefers-reduced-motion: reduce) {
-	:root *,
-	:root *::before,
-	:root *::after {
-		animation: none;
-		transition: none;
-		scroll-behavior: auto;
-	}
-}

@@ -202,6 +202,12 @@ const SCROLLING_UTILITY = `/${UTILITY_START}overflow-(y-)?(auto|scroll)${UTILITY
 // token being named instead, as a colour is (`grid-cols-(--cr-…)`)
 const ON_THE_SCALE =
 	'Take the size off the scale (tokens.css): a spacing step it has, a size and weight of its words, or a token by name.';
+// What moves is a rule of a stylesheet stylelint names by its selector (WHAT_MOVES, stylelint.config.js), where a
+// reader who asked for less motion stops it: never a utility in markup, `transition-colors`, `animate-spin`, nor
+// Svelte's `transition:`, `in:`, `out:` and `animate:`
+const MOVED_BY_A_NAMED_RULE =
+	'Move it in a rule stylelint names by its selector (WHAT_MOVES, stylelint.config.js), never from the markup.';
+const MOTION_UTILITY = `/${UTILITY_START}(transition(-[a-z]+)?|animate-[a-z-]+)${UTILITY_END}/`;
 // A utility of room or of where a thing stands at a step off the scale or a hairline, behind any variants and its
 // sign: `gap-2.5`, `md:pl-3.5`, `-mt-5`, `top-5`, `-translate-y-2.5`, `scroll-mt-5`, `indent-5`, `p-px`; a share
 // of what it stands in, `left-1/2`, is a place, no size
@@ -252,7 +258,9 @@ const NO_INLINE_STYLING = [
 	...inClassLists(SIZE_OFF_THE_SCALE, SIZED_BY_A_TOKEN),
 	...inClassLists(ARBITRARY_VALUE, ON_THE_SCALE),
 	...inClassLists(WORDS_OFF_THE_SCALE, ON_THE_SCALE),
-	...inClassLists(MEASURE_OFF_THE_SCALE, ON_THE_SCALE)
+	...inClassLists(MEASURE_OFF_THE_SCALE, ON_THE_SCALE),
+	...inClassLists(MOTION_UTILITY, MOVED_BY_A_NAMED_RULE),
+	{ selector: "SvelteDirective[kind='Transition'], SvelteDirective[kind='Animation']", message: MOVED_BY_A_NAMED_RULE }
 ];
 
 // A class of the library's own is its parts' alone, refused outside it in a class list and in any string a component
