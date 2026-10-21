@@ -213,7 +213,7 @@ export interface Thread {
  */
 export type ThreadDraft = Schemas['ThreadDraft-Input'];
 /** A turn as it goes back: what was said, with the images as ids. */
-export type TurnDraft = Schemas['TurnDraft-Input'];
+export type TurnDraft = Schemas['TurnDraft'];
 /**
  * A thread the review holds, as a page last said it — every field there:
  * what a page that opens with no draft of the review takes in.

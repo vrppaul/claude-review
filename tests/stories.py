@@ -160,13 +160,18 @@ def _overview() -> StoryOverview:
                 text=(
                     "Base64 in the message. It would ride every round"
                     " and fill the agent's context with pixels it cannot read."
-                )
+                ),
+                chapter=None,
             ),
             OverviewItem(
-                text="An upload widget per field. The panel and the comments share one class and two components instead."
+                text="An upload widget per field. The panel and the comments share one class and two components instead.",
+                chapter=None,
             ),
         ],
-        later=[OverviewItem(text="Drag and drop. Only paste works."), OverviewItem(text="Images in transcript mode.")],
+        later=[
+            OverviewItem(text="Drag and drop. Only paste works.", chapter=None),
+            OverviewItem(text="Images in transcript mode.", chapter=None),
+        ],
     )
 
 
@@ -179,6 +184,7 @@ def _paste_chapter() -> Chapter[Step]:
             " The reader sees what the agent will get while still writing,"
             " and the message carries ids instead of bytes."
         ),
+        doubt=None,
         steps=[
             Step(
                 file=IMAGES_MODULE,
@@ -359,7 +365,7 @@ def rows_of(file: DiffFile) -> list[str]:
 
 def step(file: str, first: int, last: int) -> Step:
     """A step told of lines of a file, with no reason given."""
-    return Step(file=file, lines=LineSpan(first=first, last=last))
+    return Step(file=file, lines=LineSpan(first=first, last=last), reason=None)
 
 
 def chapter_of(chapter_id: str, *steps: Step) -> Chapter[Step]:
@@ -376,7 +382,9 @@ def story_of_chapters(
     return Story[Step](
         title="A change",
         told_from=told_from,
-        overview=StoryOverview(task="Change it.", done="It is changed.", decisions=[], turned_down=[], later=[]),
+        overview=StoryOverview(
+            task="Change it.", done="It is changed.", doubt=None, diagram=None, decisions=[], turned_down=[], later=[]
+        ),
         chapters=list(chapters),
         housekeeping=list(housekeeping),
     )

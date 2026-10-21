@@ -13,14 +13,13 @@ from claude_review.domain.models import (
     OverviewText,
     ReviewMode,
     ReviewResult,
-    StoryAnchor,
     Thread,
     Turn,
     TurnAuthor,
 )
 from claude_review.services.anchor_service import AnchorService, LineAnchorHandler, StoryAnchorHandler
 from claude_review.services.round_formatter import RoundFormatter
-from tests.helpers import line_anchor, thread
+from tests.helpers import line_anchor, story_anchor, thread
 
 # What the threads hang on: a diff review files them by place, and needs none of it
 NO_CONTENT = AnchorService(lines=LineAnchorHandler([]), story=StoryAnchorHandler(None))
@@ -49,7 +48,7 @@ def test_a_comment_is_filed_under_its_file_and_line() -> None:
 
 def test_a_comment_on_the_story_is_filed_under_its_block_and_quotes_the_words_it_is_on() -> None:
     """The agent has the files in front of it, not the story it told: the words come with the thread."""
-    on_the_doubt = StoryAnchor(block=OverviewBlock(text=OverviewText.DOUBT), quote=[DOUBT_SAID])
+    on_the_doubt = story_anchor(OverviewBlock(text=OverviewText.DOUBT), quote=[DOUBT_SAID])
 
     result = _formatted([thread(on_the_doubt, "Is it given back on every path?")])
 

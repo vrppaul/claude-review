@@ -38,7 +38,12 @@ ANCHOR = {**line_json("src/a.py", 42), "quote": [QUOTED]}
 A_THREAD = thread_json(ANCHOR, OPENING)
 # The overview's doubt, and a thread's anchor on it as the page sends one
 DOUBT_SAID = "Whether a timeout of zero still times out."
-ON_THE_DOUBT = {"kind": "story", "block": {"at": "overview", "text": "doubt"}, "quote": [DOUBT_SAID]}
+ON_THE_DOUBT = {
+    "kind": "story",
+    "block": {"at": "overview", "text": "doubt"},
+    "quote": [DOUBT_SAID],
+    "outdated": False,
+}
 # What the agent answered, and what the reader asked next
 ANSWER_ID = "turn-1"
 FOLLOW_UP_ID = "turn-2"

@@ -562,7 +562,7 @@ async def test_a_story_the_reader_asks_for_is_handed_to_an_agent_that_waits(agen
 
     await agent.post(STORY_REQUEST_ROUTE)
 
-    assert EVENTS.validate_json((await waiting).content) == StoryRequestEvent()
+    assert EVENTS.validate_json((await waiting).content) == StoryRequestEvent(stale=None)
 
 
 def test_a_story_stopped_after_an_agent_took_the_request_tells_the_agent_to_stop(
@@ -653,7 +653,7 @@ def test_a_story_asked_for_again_after_it_was_stopped_reaches_the_agent_after_th
 
     assert [agent_waits(page_of_the_change), agent_waits(page_of_the_change)] == [
         StoryCancelEvent(),
-        StoryRequestEvent(),
+        StoryRequestEvent(stale=None),
     ]
 
 

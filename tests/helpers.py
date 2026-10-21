@@ -14,7 +14,7 @@ import queue
 import subprocess
 import threading
 import time
-from collections.abc import AsyncGenerator, Iterator, Mapping
+from collections.abc import AsyncGenerator, Iterator, Mapping, Sequence
 from pathlib import Path
 from typing import override
 from urllib.parse import urlencode
@@ -42,6 +42,8 @@ from claude_review.domain.models import (
     LineSide,
     LineType,
     ReviewMode,
+    StoryAnchor,
+    StoryBlock,
     Thread,
     Turn,
     TurnAuthor,
@@ -232,6 +234,11 @@ def line_anchor(
     )
 
 
+def story_anchor(block: StoryBlock, *, quote: Sequence[str] = (), outdated: bool = False) -> StoryAnchor:
+    """A block of the story's words; quoting nothing, for the review to fill in, unless a quote is given."""
+    return StoryAnchor(block=block, quote=list(quote), outdated=outdated)
+
+
 def thread(
     anchor: Anchor,
     body: str,
@@ -259,13 +266,18 @@ def thread(
 def line_json(
     file: str, start_line: int, end_line: int | None = None, *, side: LineSide = LineSide.NEW
 ) -> dict[str, object]:
-    """Lines of one side of a file, as the page names them; a single line unless an end is given."""
+    """Lines of one side of a file, as the page names them; a single line unless an end is given.
+
+    Its quote sent empty, for the review to fill in from its diff.
+    """
     return {
         "kind": AnchorKind.LINE,
         "file": file,
         "side": side,
         "start_line": start_line,
         "end_line": end_line or start_line,
+        "quote": [],
+        "outdated": False,
     }
 
 

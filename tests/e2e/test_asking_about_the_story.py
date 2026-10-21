@@ -32,7 +32,7 @@ DECISION = "The second line is changed where it stands, not removed and written 
 A_STORY = planted(
     planted(story_of(step(TOLD_FILE, 2, 2)), ("overview", "doubt"), DOUBT),
     ("overview", "decisions"),
-    [{"text": DECISION}],
+    [{"text": DECISION, "chapter": None}],
 )
 # The same change told again, with nothing to doubt
 TOLD_AGAIN = story_of(step(TOLD_FILE, 2, 2))

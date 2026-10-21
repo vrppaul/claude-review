@@ -49,7 +49,7 @@ from tests.helpers import (
     until_the_review_holds_threads,
 )
 
-MESSAGE = {"message_id": "panel-1", "body": "Run the tests and say what fails."}
+MESSAGE = {"message_id": "panel-1", "body": "Run the tests and say what fails.", "images": []}
 
 # A moment on the review's clock, in epoch milliseconds
 A_MOMENT = 1_791_000_000_000
@@ -67,7 +67,12 @@ QUESTION = {"question_id": FIRST_THREAD_ID, "thread": THREAD}
 
 POINT_ROUTE = "/api/point"
 # A block of the story's words, as an agent would name it: what the overview says to doubt
-ON_THE_DOUBT = {"kind": AnchorKind.STORY, "block": {"at": StoryBlockKind.OVERVIEW, "text": OverviewText.DOUBT}}
+ON_THE_DOUBT = {
+    "kind": AnchorKind.STORY,
+    "block": {"at": StoryBlockKind.OVERVIEW, "text": OverviewText.DOUBT},
+    "quote": [],
+    "outdated": False,
+}
 
 
 def _pointing(anchor: dict[str, object], body: str) -> dict[str, object]:
@@ -319,7 +324,7 @@ def test_work_that_branched_is_reported_as_branches(review_page: TestClient) -> 
             "/api/progress",
             json={
                 "text": "looking for other callers",
-                "steps": [{"text": "ran the tests", "done": True}, {"text": "three subagents out"}],
+                "steps": [{"text": "ran the tests", "done": True}, {"text": "three subagents out", "done": False}],
             },
         )
         work = work_pushed(socket)

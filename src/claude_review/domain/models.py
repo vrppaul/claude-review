@@ -281,9 +281,9 @@ class AnchorBase(BaseModel):
     about once that place is gone.
     """
 
-    quote: list[str] = Field(default_factory=list, max_length=MAX_QUOTE_LINES)
+    quote: list[str] = Field(max_length=MAX_QUOTE_LINES)
     # What it was made on is gone from what the review now holds
-    outdated: bool = False
+    outdated: bool
 
 
 def check_line_span(start_line: int, end_line: int) -> None:
@@ -625,7 +625,7 @@ class ProgressStep(BaseModel):
     """One branch of the work: something being done, or something done."""
 
     text: StepText
-    done: bool = False
+    done: bool
 
 
 class AgentWork(BaseModel):

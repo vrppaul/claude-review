@@ -56,7 +56,7 @@ QuoteLine = Annotated[str, Field(max_length=MAX_QUOTE_LINE_LENGTH)]
 class LineAnchor(Schema):
     """Lines of one side of a file in the review's own diff, as the page and the agent name them.
 
-    A quote left out is filled in by the review from its diff.
+    A quote sent empty is filled in by the review from its diff.
     """
 
     kind: Literal[AnchorKind.LINE] = AnchorKind.LINE
@@ -64,8 +64,8 @@ class LineAnchor(Schema):
     side: LineSide
     start_line: StrictInt = Field(ge=FIRST_LINE)
     end_line: StrictInt = Field(ge=FIRST_LINE)
-    quote: list[QuoteLine] = Field(default_factory=list, max_length=MAX_QUOTE_LINES)
-    outdated: StrictBool = False
+    quote: list[QuoteLine] = Field(max_length=MAX_QUOTE_LINES)
+    outdated: StrictBool
 
     @model_validator(mode="after")
     def start_before_end(self) -> Self:
@@ -181,13 +181,13 @@ QuotedWords = Annotated[str, Field(max_length=MAX_TEXT_LENGTH)]
 class StoryAnchor(Schema):
     """A block of the words of the story told of the change, as the page and the agent name it.
 
-    A quote left out is filled in by the review from the story it holds.
+    A quote sent empty is filled in by the review from the story it holds.
     """
 
     kind: Literal[AnchorKind.STORY] = AnchorKind.STORY
     block: StoryBlock
-    quote: list[QuotedWords] = Field(default_factory=list, max_length=STORY_QUOTE_TEXTS)
-    outdated: StrictBool = False
+    quote: list[QuotedWords] = Field(max_length=STORY_QUOTE_TEXTS)
+    outdated: StrictBool
 
     @classmethod
     def from_domain(cls, anchor: models.StoryAnchor) -> Self:
@@ -268,7 +268,7 @@ class SaysSomething(Schema):
     """Something said: words, screenshots, or both — but never neither."""
 
     body: str = Field(max_length=MAX_TEXT_LENGTH)
-    images: ImageIds = Field(default_factory=list)
+    images: ImageIds
 
     @model_validator(mode="after")
     def says_something(self) -> Self:
@@ -310,7 +310,7 @@ class ThreadDraft(SaysSomething):
     thread_id: SafeId
     anchor: Anchor
     severity: CommentSeverity
-    turns: list[TurnDraft] = Field(default_factory=list, max_length=MAX_TURNS)
+    turns: list[TurnDraft] = Field(max_length=MAX_TURNS)
     # Who opened it. Sent back so a thread the author raised is not read as
     # something the reader wrote.
     raised_by: TurnAuthor

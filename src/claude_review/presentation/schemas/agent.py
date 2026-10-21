@@ -57,7 +57,7 @@ class ProgressStep(Schema):
     """One branch of the work: something being done, or something done."""
 
     text: StepText
-    done: StrictBool = False
+    done: StrictBool
 
     @classmethod
     def from_domain(cls, step: models.ProgressStep) -> Self:
@@ -419,7 +419,7 @@ class StoryWentStale(Schema):
 class StoryRequestEvent(Schema):
     type: Literal[EventKind.STORY_REQUEST] = EventKind.STORY_REQUEST
     # What went stale of the story told before, to tell it again; None for a first story
-    stale: StoryWentStale | None = None
+    stale: StoryWentStale | None
 
     @classmethod
     def from_domain(cls, requested: models.StoryRequested) -> Self:

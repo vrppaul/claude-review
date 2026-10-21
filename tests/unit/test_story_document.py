@@ -14,7 +14,7 @@ from hypothesis import given, strategies as strategy
 from pydantic import BaseModel, ConfigDict, JsonValue
 
 from claude_review.domain.exceptions import FieldFault, FieldPath
-from claude_review.domain.models import CHAPTER_ID_RULE, MAX_ID_LENGTH, LineSpan
+from claude_review.domain.models import CHAPTER_ID_RULE, MAX_ID_LENGTH
 from claude_review.domain.story import TEXT_LIMITS, Step, Story, StoryText
 from claude_review.services.story_checks import document_faults
 from tests.stories import (
@@ -26,6 +26,7 @@ from tests.stories import (
     chapter_of,
     field_at,
     planted,
+    step,
     story_of_chapters,
 )
 
@@ -310,11 +311,8 @@ def work_of_checking(story: Story[Step]) -> int:
 
 def story_with_one_step_across_the_rest(steps: int) -> Story[Step]:
     """A story of this many steps of one file: narrow ones that stand apart, and a last one told across them all."""
-    narrow = [
-        Step(file=IMAGE_SERVICE, lines=LineSpan(first=place * STRIDE + 1, last=place * STRIDE + 2))
-        for place in range(steps - 1)
-    ]
-    across_them_all = Step(file=IMAGE_SERVICE, lines=LineSpan(first=1, last=steps * STRIDE))
+    narrow = [step(IMAGE_SERVICE, place * STRIDE + 1, place * STRIDE + 2) for place in range(steps - 1)]
+    across_them_all = step(IMAGE_SERVICE, 1, steps * STRIDE)
     return story_of_chapters(chapter_of(KEEPING_CHAPTER, *narrow, across_them_all))
 
 

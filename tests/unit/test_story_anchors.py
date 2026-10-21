@@ -21,13 +21,12 @@ from claude_review.domain.models import (
     OverviewList,
     OverviewText,
     ReasonBlock,
-    StoryAnchor,
     StoryBlock,
 )
 from claude_review.domain.story import Step
 from claude_review.services.anchor_service import StoryAnchorHandler
 from claude_review.services.story_telling import follow, tell
-from tests.helpers import added_line, removed_line
+from tests.helpers import added_line, removed_line, story_anchor
 from tests.stories import (
     IMAGE_SERVICE,
     KEEPING_CHAPTER,
@@ -99,15 +98,15 @@ BLOCKS_NOT_SAID: list[StoryBlock] = [
 
 @pytest.mark.parametrize(("block", "said_at"), BLOCKS_AND_THEIR_WORDS)
 def test_a_thread_on_a_block_quotes_the_words_the_story_says_there(block: StoryBlock, said_at: FieldPath) -> None:
-    quoted = HELD.quote(StoryAnchor(block=block))
+    quoted = HELD.quote(story_anchor(block))
 
-    assert quoted == StoryAnchor(block=block, quote=[field_at(STORY, said_at)])
+    assert quoted == story_anchor(block, quote=[field_at(STORY, said_at)])
 
 
 @pytest.mark.parametrize("block", BLOCKS_NOT_SAID)
 def test_a_thread_on_words_the_story_does_not_say_is_refused(block: StoryBlock) -> None:
     with pytest.raises(UnknownStoryBlockError):
-        HELD.quote(StoryAnchor(block=block))
+        HELD.quote(story_anchor(block))
 
 
 def test_a_story_that_tells_a_file_no_thread_could_name_still_takes_threads_on_its_other_words() -> None:
@@ -115,7 +114,7 @@ def test_a_story_that_tells_a_file_no_thread_could_name_still_takes_threads_on_i
     named_oddly = planted(STORY, ("chapters", 0, "steps", 0, "file"), "images\tts")
     held = StoryAnchorHandler(told_as_written(named_oddly))
 
-    assert held.quote(StoryAnchor(block=THE_DOUBT)).quote == [field_at(STORY, THE_DOUBT_SAID)]
+    assert held.quote(story_anchor(THE_DOUBT)).quote == [field_at(STORY, THE_DOUBT_SAID)]
 
 
 def test_the_reason_of_a_step_that_stands_nowhere_may_still_be_asked_about() -> None:
@@ -124,43 +123,41 @@ def test_the_reason_of_a_step_that_stands_nowhere_may_still_be_asked_about() -> 
     told = tell(story_of(Step(file=REWRITTEN, lines=FIRST_LINE, reason=WHY_REWRITTEN)), REWRITTEN_ONCE)
     held = StoryAnchorHandler(follow(told, REWRITTEN_AGAIN, None))
 
-    assert held.quote(StoryAnchor(block=ReasonBlock(file=REWRITTEN, first_line=FIRST_LINE.first))).quote == [
-        WHY_REWRITTEN
-    ]
+    assert held.quote(story_anchor(ReasonBlock(file=REWRITTEN, first_line=FIRST_LINE.first))).quote == [WHY_REWRITTEN]
 
 
 def test_a_thread_on_a_steps_reason_keeps_its_block_once_a_round_moves_the_steps_code() -> None:
     """A step is known by where it was told: its code two lines down, its reason is still where the thread hangs."""
     told = tell(story_of(Step(file=REWRITTEN, lines=FIRST_LINE, reason=WHY_REWRITTEN)), REWRITTEN_ONCE)
     held = StoryAnchorHandler(follow(told, PUSHED_DOWN, [diff_of(REWRITTEN, ["A"], ["x", "y", "A"])]))
-    on_the_reason = StoryAnchor(block=ReasonBlock(file=REWRITTEN, first_line=FIRST_LINE.first), quote=[WHY_REWRITTEN])
+    on_the_reason = story_anchor(ReasonBlock(file=REWRITTEN, first_line=FIRST_LINE.first), quote=[WHY_REWRITTEN])
 
     assert held.follow(on_the_reason) == on_the_reason
 
 
 def test_a_thread_on_the_story_is_refused_while_no_story_is_told() -> None:
     with pytest.raises(UnknownStoryBlockError):
-        NO_STORY.quote(StoryAnchor(block=THE_DOUBT))
+        NO_STORY.quote(story_anchor(THE_DOUBT))
 
 
 def test_a_thread_whose_block_still_says_its_words_stays_on_it() -> None:
     """Even one marked outdated by a story told between: told once more, the words are back."""
-    said = StoryAnchor(block=THE_DOUBT, quote=[field_at(STORY, THE_DOUBT_SAID)], outdated=True)
+    said = story_anchor(THE_DOUBT, quote=[field_at(STORY, THE_DOUBT_SAID)], outdated=True)
 
-    assert HELD.follow(said) == StoryAnchor(block=THE_DOUBT, quote=said.quote)
+    assert HELD.follow(said) == story_anchor(THE_DOUBT, quote=said.quote)
 
 
 def test_a_thread_on_words_the_story_says_nowhere_now_is_outdated_where_it_hangs() -> None:
-    written = StoryAnchor(block=THE_DOUBT, quote=[OTHER_WORDS])
+    written = story_anchor(THE_DOUBT, quote=[OTHER_WORDS])
 
-    assert HELD.follow(written) == StoryAnchor(block=THE_DOUBT, quote=[OTHER_WORDS], outdated=True)
+    assert HELD.follow(written) == story_anchor(THE_DOUBT, quote=[OTHER_WORDS], outdated=True)
 
 
 def test_a_thread_on_a_chapter_the_story_no_longer_tells_is_outdated_where_it_hangs() -> None:
     gone = ChapterBlock(chapter="ch-9", text=ChapterText.WHY)
 
-    assert HELD.follow(StoryAnchor(block=gone, quote=[OTHER_WORDS])) == StoryAnchor(
-        block=gone, quote=[OTHER_WORDS], outdated=True
+    assert HELD.follow(story_anchor(gone, quote=[OTHER_WORDS])) == story_anchor(
+        gone, quote=[OTHER_WORDS], outdated=True
     )
 
 
@@ -170,11 +167,11 @@ def test_a_thread_follows_its_item_moved_down_the_list() -> None:
     swapped = planted(
         planted(STORY, ("overview", "decisions", 0, "text"), second_words), ("overview", "decisions", 1, "text"), words
     )
-    written = StoryAnchor(block=ItemBlock(list=OverviewList.DECISIONS, item=0), quote=[words])
+    written = story_anchor(ItemBlock(list=OverviewList.DECISIONS, item=0), quote=[words])
 
     followed = StoryAnchorHandler(told_as_written(swapped)).follow(written)
 
-    assert followed == StoryAnchor(block=ItemBlock(list=OverviewList.DECISIONS, item=1), quote=[words])
+    assert followed == story_anchor(ItemBlock(list=OverviewList.DECISIONS, item=1), quote=[words])
 
 
 def test_a_thread_follows_its_words_to_another_block_and_another_chapter() -> None:
@@ -182,48 +179,48 @@ def test_a_thread_follows_its_words_to_another_block_and_another_chapter() -> No
     doubt = field_at(STORY, THE_DOUBT_SAID)
     moved = planted(planted(STORY, THE_DOUBT_SAID, None), ("chapters", 0, "doubt"), doubt)
 
-    followed = StoryAnchorHandler(told_as_written(moved)).follow(StoryAnchor(block=THE_DOUBT, quote=[doubt]))
+    followed = StoryAnchorHandler(told_as_written(moved)).follow(story_anchor(THE_DOUBT, quote=[doubt]))
 
-    assert followed == StoryAnchor(block=ChapterBlock(chapter=PASTE_CHAPTER, text=ChapterText.DOUBT), quote=[doubt])
+    assert followed == story_anchor(ChapterBlock(chapter=PASTE_CHAPTER, text=ChapterText.DOUBT), quote=[doubt])
 
 
 def test_a_thread_whose_words_its_block_and_another_both_say_stays_on_its_own() -> None:
     doubt = field_at(STORY, THE_DOUBT_SAID)
     said_twice = planted(STORY, ("chapters", 0, "doubt"), doubt)
 
-    followed = StoryAnchorHandler(told_as_written(said_twice)).follow(StoryAnchor(block=THE_DOUBT, quote=[doubt]))
+    followed = StoryAnchorHandler(told_as_written(said_twice)).follow(story_anchor(THE_DOUBT, quote=[doubt]))
 
-    assert followed == StoryAnchor(block=THE_DOUBT, quote=[doubt])
+    assert followed == story_anchor(THE_DOUBT, quote=[doubt])
 
 
 def test_a_thread_whose_words_two_other_blocks_say_moves_to_the_first_the_story_tells() -> None:
     task = field_at(STORY, ("overview", "task"))
     said_twice = planted(planted(STORY, ("chapters", 1, "why"), task), ("chapters", 0, "why"), task)
-    elsewhere = StoryAnchor(block=ChapterBlock(chapter="ch-9", text=ChapterText.WHY), quote=[task])
+    elsewhere = story_anchor(ChapterBlock(chapter="ch-9", text=ChapterText.WHY), quote=[task])
 
     followed = StoryAnchorHandler(told_as_written(said_twice)).follow(elsewhere)
 
-    assert followed == StoryAnchor(block=OverviewBlock(text=OverviewText.TASK), quote=[task])
+    assert followed == story_anchor(OverviewBlock(text=OverviewText.TASK), quote=[task])
 
 
 def test_a_thread_on_the_story_is_left_as_it_is_while_no_story_is_held() -> None:
     """A review restarted holds no story until one is told again: nothing says the words changed."""
-    written = StoryAnchor(block=THE_DOUBT, quote=[OTHER_WORDS], outdated=True)
+    written = story_anchor(THE_DOUBT, quote=[OTHER_WORDS], outdated=True)
 
     assert NO_STORY.follow(written) == written
 
 
 def test_a_thread_on_the_story_that_never_kept_its_words_is_left_as_it_is() -> None:
     """With nothing quoted there is nothing to look for, and nothing says the words changed."""
-    unquoted = StoryAnchor(block=THE_DOUBT)
+    unquoted = story_anchor(THE_DOUBT)
 
     assert HELD.follow(unquoted) == unquoted
 
 
 def test_a_thread_on_the_story_is_taken_with_the_words_the_page_showed() -> None:
     """No suggestion replaces a story's words, so nothing holds the quote to them: the page quotes what it drew."""
-    HELD.check_quote(StoryAnchor(block=THE_DOUBT, quote=[OTHER_WORDS]))
+    HELD.check_quote(story_anchor(THE_DOUBT, quote=[OTHER_WORDS]))
 
 
 def test_what_a_thread_on_the_story_is_on_is_the_words_it_quotes() -> None:
-    assert HELD.excerpt(StoryAnchor(block=THE_DOUBT, quote=[OTHER_WORDS])) == [OTHER_WORDS]
+    assert HELD.excerpt(story_anchor(THE_DOUBT, quote=[OTHER_WORDS])) == [OTHER_WORDS]

@@ -14,11 +14,10 @@ from claude_review.domain.models import (
     OverviewList,
     OverviewText,
     ReasonBlock,
-    StoryAnchor,
     StoryBlock,
 )
 from claude_review.services.place_words import line_span, lines_named, place_in_markdown, place_in_words
-from tests.helpers import line_anchor
+from tests.helpers import line_anchor, story_anchor
 
 FILE = "a.py"
 # The largest number a line is written with: ten digits
@@ -60,7 +59,7 @@ def test_a_place_is_named_the_same_way_in_words_and_in_markdown(
 def test_a_block_of_the_story_is_named_the_same_way_in_words_and_in_markdown(
     block: StoryBlock, in_words: str, in_markdown: str
 ) -> None:
-    anchor = StoryAnchor(block=block)
+    anchor = story_anchor(block)
 
     assert place_in_words(anchor) == in_words
     assert place_in_markdown(anchor) == in_markdown

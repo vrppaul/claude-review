@@ -110,7 +110,7 @@ async def test_a_file_the_agent_names_is_one_line(client: AsyncClient, route: st
         ("/api/progress", {"text": "renaming", "files": ["src/a.py", "src/a.py"]}, "src/a.py"),
         (
             "/api/progress",
-            {"text": "checking", "steps": [{"text": "the tests", "done": True}, {"text": "the tests"}]},
+            {"text": "checking", "steps": [{"text": "the tests", "done": True}, {"text": "the tests", "done": False}]},
             "the tests",
         ),
     ],

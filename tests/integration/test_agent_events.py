@@ -37,7 +37,7 @@ from tests.helpers import (
 from tests.stories import ONLY_CHAPTER, as_the_agent_writes, step, story_of
 
 A_THREAD = thread_json(line_json(REVIEWED_FILE, 1), "Still reads oddly.")
-A_MESSAGE = {"message_id": "panel-1", "body": "Is the retry still needed?"}
+A_MESSAGE = {"message_id": "panel-1", "body": "Is the retry still needed?", "images": []}
 
 # Far longer than the test waits for anything, so a poll that is still
 # waiting when the test looks is one that never noticed its caller leave

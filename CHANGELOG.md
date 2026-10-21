@@ -147,6 +147,16 @@
   that id as `said_id`.
 
 ### Changed
+- **The API takes every field it reads, written out.** An anchor's quote
+  and whether it is outdated, a thread's or a message's images, a
+  thread's turns and a step of the agent's work done or not are sent
+  every time, empty or false where there is nothing, where a field left
+  out was taken as empty; a quote sent empty is still filled in by the
+  review. The story-request event says `"stale": null` for a first
+  story. No model of the review's own stands a default in for a missing
+  value, so a field a constructor leaves out is a type error, not a
+  silent empty one. A story's document is unchanged: what it may leave
+  out, it still may.
 - **The header says where the change is.** In place of the word "Review",
   the repository's name over the branch it had checked out, or the
   commit's short id where it was on none, each by its mark, the branch cut

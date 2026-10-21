@@ -61,7 +61,7 @@ class Step(StoryPart):
     # still told
     file: str
     lines: LineSpan
-    reason: str | None = None
+    reason: str | None
 
     def told(self, piece: DiffFile) -> ToldStep:
         """The step as it is told: everything it says, and the piece of its file it shows."""
@@ -92,7 +92,7 @@ class Chapter[StepKind: Step](StoryPart):
     # Why these changes belong together
     why: str
     # Where the reader should look hardest, when there is such a place
-    doubt: str | None = None
+    doubt: str | None
     steps: list[StepKind]
 
     def told(self, steps: list[ToldStep]) -> Chapter[ToldStep]:
@@ -114,7 +114,7 @@ class OverviewItem(StoryPart):
 
     text: str
     # The chapter that shows it, by its id, when one does
-    chapter: str | None = None
+    chapter: str | None
 
 
 class Diagram(StoryPart):
@@ -123,7 +123,7 @@ class Diagram(StoryPart):
     # The drawing, as Mermaid writes one. Whether it draws only a browser can
     # say; that an empty one does not, the review can
     mermaid: str
-    caption: str | None = None
+    caption: str | None
     # The chapter each part leads to, by the name the drawing gives the part
     links: dict[str, str]
 
@@ -133,8 +133,8 @@ class StoryOverview(StoryPart):
 
     task: str
     done: str
-    doubt: str | None = None
-    diagram: Diagram | None = None
+    doubt: str | None
+    diagram: Diagram | None
     decisions: list[OverviewItem]
     turned_down: list[OverviewItem]
     later: list[OverviewItem]

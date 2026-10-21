@@ -733,7 +733,7 @@ export interface components {
             /** Files */
             files: string[];
             /** Steps */
-            steps: components["schemas"]["ProgressStep-Output"][];
+            steps: components["schemas"]["ProgressStep"][];
             /** At */
             at: number;
         };
@@ -1179,7 +1179,7 @@ export interface components {
          * LineAnchor
          * @description Lines of one side of a file in the review's own diff, as the page and the agent name them.
          *
-         *     A quote left out is filled in by the review from its diff.
+         *     A quote sent empty is filled in by the review from its diff.
          */
         "LineAnchor-Input": {
             /**
@@ -1195,18 +1195,15 @@ export interface components {
             /** End Line */
             end_line: number;
             /** Quote */
-            quote?: string[];
-            /**
-             * Outdated
-             * @default false
-             */
+            quote: string[];
+            /** Outdated */
             outdated: boolean;
         };
         /**
          * LineAnchor
          * @description Lines of one side of a file in the review's own diff, as the page and the agent name them.
          *
-         *     A quote left out is filled in by the review from its diff.
+         *     A quote sent empty is filled in by the review from its diff.
          */
         "LineAnchor-Output": {
             /**
@@ -1223,10 +1220,7 @@ export interface components {
             end_line: number;
             /** Quote */
             quote: string[];
-            /**
-             * Outdated
-             * @default false
-             */
+            /** Outdated */
             outdated: boolean;
         };
         /**
@@ -1292,7 +1286,7 @@ export interface components {
              */
             body: string;
             /** Images */
-            images?: string[];
+            images: string[];
             /** Message Id */
             message_id: string;
             /** Threads */
@@ -1458,32 +1452,16 @@ export interface components {
             /** Files */
             files?: string[];
             /** Steps */
-            steps?: components["schemas"]["ProgressStep-Input"][];
+            steps?: components["schemas"]["ProgressStep"][];
         };
         /**
          * ProgressStep
          * @description One branch of the work: something being done, or something done.
          */
-        "ProgressStep-Input": {
+        ProgressStep: {
             /** Text */
             text: string;
-            /**
-             * Done
-             * @default false
-             */
-            done: boolean;
-        };
-        /**
-         * ProgressStep
-         * @description One branch of the work: something being done, or something done.
-         */
-        "ProgressStep-Output": {
-            /** Text */
-            text: string;
-            /**
-             * Done
-             * @default false
-             */
+            /** Done */
             done: boolean;
         };
         /** QuestionEvent */
@@ -1823,7 +1801,7 @@ export interface components {
          * StoryAnchor
          * @description A block of the words of the story told of the change, as the page and the agent name it.
          *
-         *     A quote left out is filled in by the review from the story it holds.
+         *     A quote sent empty is filled in by the review from the story it holds.
          */
         "StoryAnchor-Input": {
             /**
@@ -1833,18 +1811,15 @@ export interface components {
             kind: "story";
             block: components["schemas"]["StoryBlock-Input"];
             /** Quote */
-            quote?: string[];
-            /**
-             * Outdated
-             * @default false
-             */
+            quote: string[];
+            /** Outdated */
             outdated: boolean;
         };
         /**
          * StoryAnchor
          * @description A block of the words of the story told of the change, as the page and the agent name it.
          *
-         *     A quote left out is filled in by the review from the story it holds.
+         *     A quote sent empty is filled in by the review from the story it holds.
          */
         "StoryAnchor-Output": {
             /**
@@ -1855,10 +1830,7 @@ export interface components {
             block: components["schemas"]["StoryBlock-Output"];
             /** Quote */
             quote: string[];
-            /**
-             * Outdated
-             * @default false
-             */
+            /** Outdated */
             outdated: boolean;
         };
         /**
@@ -2066,13 +2038,13 @@ export interface components {
             /** Body */
             body: string;
             /** Images */
-            images?: string[];
+            images: string[];
             /** Thread Id */
             thread_id: string;
             anchor: components["schemas"]["Anchor-Input"];
             severity: components["schemas"]["CommentSeverity"];
             /** Turns */
-            turns?: components["schemas"]["TurnDraft-Input"][];
+            turns: components["schemas"]["TurnDraft"][];
             raised_by: components["schemas"]["TurnAuthor"];
             /** Resolved */
             resolved: boolean;
@@ -2097,7 +2069,7 @@ export interface components {
             anchor: components["schemas"]["Anchor-Output"];
             severity: components["schemas"]["CommentSeverity"];
             /** Turns */
-            turns: components["schemas"]["TurnDraft-Output"][];
+            turns: components["schemas"]["TurnDraft"][];
             raised_by: components["schemas"]["TurnAuthor"];
             /** Resolved */
             resolved: boolean;
@@ -2211,22 +2183,7 @@ export interface components {
          * TurnDraft
          * @description One turn of a thread the page holds, its screenshots by their ids.
          */
-        "TurnDraft-Input": {
-            /** Body */
-            body: string;
-            /** Images */
-            images?: string[];
-            /** Turn Id */
-            turn_id: string;
-            author: components["schemas"]["TurnAuthor"];
-            /** Round */
-            round: number;
-        };
-        /**
-         * TurnDraft
-         * @description One turn of a thread the page holds, its screenshots by their ids.
-         */
-        "TurnDraft-Output": {
+        TurnDraft: {
             /** Body */
             body: string;
             /** Images */

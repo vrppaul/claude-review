@@ -23,7 +23,6 @@ from claude_review.domain.models import (
     OverviewText,
     ReaderSettings,
     SaidInPanel,
-    StoryAnchor,
     Theme,
     TurnAuthor,
     Unshown,
@@ -31,7 +30,7 @@ from claude_review.domain.models import (
 from claude_review.domain.story import Chapter, LeftOut, Step, StepNow, StoryAsking
 from claude_review.presentation.schemas.records import GuideChange, SettingsChange
 from claude_review.presentation.schemas.refusal import FieldRefusal
-from tests.helpers import line_anchor
+from tests.helpers import line_anchor, story_anchor
 from tests.stories import canvas_story, hunk
 
 
@@ -64,8 +63,8 @@ ANCHOR = line_anchor("src/moved.py", 11, 12, side=LineSide.OLD, quote=QUOTE)
 OUTDATED_ANCHOR = line_anchor("src/moved.py", 11, 12, side=LineSide.OLD, quote=QUOTE, outdated=True)
 # An anchor on what a chapter of the story says of itself, and the same one marked outdated
 CHAPTER_DOUBT = ChapterBlock(chapter="ch-1", text=ChapterText.DOUBT)
-STORY_ANCHOR = StoryAnchor(block=CHAPTER_DOUBT, quote=["Whether a cancelled reply still closes it."])
-OUTDATED_STORY_ANCHOR = StoryAnchor(block=CHAPTER_DOUBT, quote=STORY_ANCHOR.quote, outdated=True)
+STORY_ANCHOR = story_anchor(CHAPTER_DOUBT, quote=["Whether a cancelled reply still closes it."])
+OUTDATED_STORY_ANCHOR = story_anchor(CHAPTER_DOUBT, quote=STORY_ANCHOR.quote, outdated=True)
 SAID = SaidInPanel(
     said_id="message-1",
     message_id="message-1",

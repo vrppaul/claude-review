@@ -53,7 +53,7 @@ SAME_PAGE = "same-origin"
 NO_PAGE = "none"
 
 # What the reader typed in the panel, for the agent to pick up
-A_MESSAGE = {"message_id": "panel-1", "body": "Is the retry still needed?"}
+A_MESSAGE = {"message_id": "panel-1", "body": "Is the retry still needed?", "images": []}
 # A file the page's build might have put beside it
 A_PAGE_FILE = "/assets/index.js"
 
