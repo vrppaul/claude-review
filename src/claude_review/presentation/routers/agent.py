@@ -206,7 +206,7 @@ async def raise_a_thread(request: PointRequest, review: ReviewDep) -> PointRespo
     thread: the reader answers it, settles it or removes it. It is drawn as
     the author's, though, and it is never counted as the reader's own work.
     """
-    raised = review.raise_thread(request.anchor.to_domain(), body=request.body, severity=request.severity)
+    raised = review.raise_thread(request.lines.to_domain(), body=request.body, severity=request.severity)
     return PointResponse(thread_id=raised)
 
 

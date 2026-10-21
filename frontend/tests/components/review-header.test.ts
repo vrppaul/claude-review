@@ -10,9 +10,8 @@ import type { ReviewResponse } from '$lib/types';
 import { contextLine, diffFile, hunk, OF_A_CONVERSATION, OF_FILES } from '../diff';
 import { fakeServer, SERVER_ERROR } from '../fake-server';
 import { newComment } from '../new-comment';
-import { A_SECOND, NOTE_STANDS_FOR } from '../passing-note';
+import { NOTE_STANDS_FOR } from '../passing-note';
 import { inReview, openReview } from '../review';
-import { settled } from '../settled';
 
 const file = diffFile({ path: 'test.py', hunks: [hunk([contextLine(1, 1, 'hello')])] });
 // Where the author raises a thread: the file's one line
@@ -23,7 +22,7 @@ const READ_WHOLE = { base: null };
 
 /**
  * A send that did not go, with the clock in the test's hands: a review in rounds on screen, its pane opened and
- * sent from, and the server failing it.
+ * sent from, the server failing it, and why said under Send.
  */
 async function sendFailedOnTheClock(): Promise<void> {
 	vi.useFakeTimers({ shouldAdvanceTime: true });
@@ -34,7 +33,7 @@ async function sendFailedOnTheClock(): Promise<void> {
 	render(ReviewScreen, { props: { review } });
 	await user.click(screen.getByTestId('quick-submit'));
 	await user.click(screen.getByTestId('modal-submit'));
-	await settled();
+	await screen.findByTestId('submit-error');
 }
 
 describe('sending the review', () => {
@@ -369,13 +368,16 @@ describe('the pane the review is sent from', () => {
 		expect(screen.queryByTestId('submit-error')).toBeNull();
 	});
 
-	it('says why a send did not go until its four seconds are out', async () => {
-		await sendFailedOnTheClock();
+	it('says under Send why the end did not go, its pane put away', async () => {
+		const user = userEvent.setup();
+		fakeServer().fail('POST /api/end', SERVER_ERROR);
+		onScreen(openReview({ files: [file], facts: { answerer_attached: true } }));
+		await user.click(screen.getByTestId('quick-submit'));
 
-		vi.advanceTimersByTime(NOTE_STANDS_FOR - A_SECOND);
-		flushSync();
+		await user.click(screen.getByTestId('end-review'));
 
-		expect(screen.getByTestId('submit-error')).toBeTruthy();
+		expect(screen.queryByTestId('finish-review')).toBeNull();
+		expect(screen.getByTestId('submit-error').textContent).toContain(SERVER_ERROR);
 	});
 
 	it('stops saying why a send did not go once its four seconds are out', async () => {

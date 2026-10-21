@@ -20,7 +20,7 @@
  * a segment of a track, a fold, a box around a checkbox. Not while it
  * cannot be pressed; and of no weight, so a rule that says otherwise wins.
  */
-:where(button, summary, [role='button'], label:has(> input[type='checkbox'])):not(:disabled, [aria-disabled='true']) {
+:where(button, summary, [role='button'], label:has(input[type='checkbox'])):not(:disabled, [aria-disabled='true']) {
 	cursor: pointer;
 }
 
@@ -531,8 +531,11 @@
  * lib/ui/pane.ts.
  */
 .cr-ui-pane {
+	/* Its own edge's colour, which its arrow and a note's time left take too; the theme's, unless it says more */
+	--cr-this-pane-edge: var(--cr-pane-edge);
+
 	box-sizing: border-box;
-	border: var(--cr-line) solid var(--cr-pane-edge);
+	border: var(--cr-line) solid var(--cr-this-pane-edge);
 	border-radius: var(--radius-box);
 	background: var(--color-base-200);
 	color: var(--color-base-content);
@@ -558,13 +561,13 @@
  * that colour
  */
 .cr-ui-pane-agent {
-	--cr-pane-edge: var(--cr-agent);
+	--cr-this-pane-edge: var(--cr-agent);
 }
 .cr-ui-pane-unread {
-	--cr-pane-edge: var(--cr-unread);
+	--cr-this-pane-edge: var(--cr-unread);
 }
 .cr-ui-pane-failure {
-	--cr-pane-edge: var(--color-error);
+	--cr-this-pane-edge: var(--color-error);
 }
 /*
  * What heads a pane (PaneHead): its name at the one size a pane's heading
@@ -712,7 +715,7 @@
  */
 .cr-ui-note-time-left {
 	height: var(--cr-line-strong);
-	background: var(--cr-pane-edge);
+	background: var(--cr-this-pane-edge);
 	transform-origin: left;
 	animation: cr-run-out var(--cr-note-lasts) linear forwards;
 }

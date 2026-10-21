@@ -40,6 +40,7 @@ from tests.helpers import (
     SESSION_ROUTE,
     git,
     line_json,
+    message_json,
     message_said,
     next_push,
     thread_json,
@@ -524,7 +525,7 @@ def test_what_the_agent_never_took_is_written_out_when_the_review_ends(
     """The process stops a moment after the last send; a message still waiting must not go with it."""
     review = cli.review(changed_repo, port)
 
-    _post(port, "/api/message", {"message_id": "panel-1", "body": "Also check the docs.", "images": [], "threads": []})
+    _post(port, "/api/message", message_json("Also check the docs.", images=[]))
     _post(port, "/api/submit", {"threads": [], "body": "Rename the helper.", "end": True})
     printed = review.printed()
 

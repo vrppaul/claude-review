@@ -277,7 +277,7 @@ async def _raise_a_thread(client: AsyncClient) -> dict[str, object]:
     """The agent raises a thread on the reviewed line; the thread as the page then holds and sends it."""
     raised = await client.post(
         "/api/point",
-        json={"anchor": pointed_json(REVIEWED_FILE, 1), "body": RAISED_BODY, "severity": CommentSeverity.NOTE},
+        json={"lines": pointed_json(REVIEWED_FILE, 1), "body": RAISED_BODY, "severity": CommentSeverity.NOTE},
     )
     anchor = {**line_json(REVIEWED_FILE, 1), "quote": [REVIEWED_LINE]}
     return thread_json(anchor, RAISED_BODY, thread_id=raised.json()["thread_id"], raised_by=TurnAuthor.AUTHOR)

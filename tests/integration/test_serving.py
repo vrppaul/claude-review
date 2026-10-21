@@ -37,6 +37,7 @@ from tests.helpers import (
     SETTLE_SECONDS,
     ReviewFactory,
     committed_repository,
+    message_json,
     next_push,
 )
 from tests.page_socket import page_socket_held
@@ -340,7 +341,7 @@ async def test_images_never_sent_go_with_the_review_and_those_sent_stay_for_the_
             (await page.post(IMAGES_ROUTE, content=PNG, headers={"Content-Type": "image/png"})).json()["image_id"]
             for _ in range(2)
         ]
-        await page.post(MESSAGE_ROUTE, json={"message_id": "panel-1", "body": "", "images": pasted[:1], "threads": []})
+        await page.post(MESSAGE_ROUTE, json=message_json("", images=pasted[:1]))
         await page.post(SUBMIT_ROUTE, json=LAST_ROUND)
     await asyncio.wait_for(serving, timeout=SETTLE_SECONDS)
 

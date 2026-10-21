@@ -12,13 +12,7 @@ import pytest
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
 
-from claude_review.domain.models import (
-    AnchorKind,
-    CommentSeverity,
-    OverviewText,
-    StoryBlockKind,
-    TurnAuthor,
-)
+from claude_review.domain.models import CommentSeverity, TurnAuthor
 from claude_review.presentation.schemas.agent import ProgressStep
 from claude_review.presentation.schemas.pushes import ChatPush, PointPush, ProgressPush, ShowPush, StatusPush
 from tests.helpers import (
@@ -34,6 +28,7 @@ from tests.helpers import (
     ReviewFactory,
     http_client,
     line_json,
+    message_json,
     next_push,
     work_pushed,
     one_line_file,
@@ -49,7 +44,7 @@ from tests.helpers import (
     until_the_review_holds_threads,
 )
 
-MESSAGE = {"message_id": "panel-1", "body": "Run the tests and say what fails.", "images": [], "threads": []}
+MESSAGE = message_json("Run the tests and say what fails.", images=[])
 
 # A moment on the review's clock, in epoch milliseconds
 A_MOMENT = 1_791_000_000_000
@@ -66,18 +61,11 @@ THREAD = thread_json(
 QUESTION = {"question_id": FIRST_THREAD_ID, "thread": THREAD}
 
 POINT_ROUTE = "/api/point"
-# A block of the story's words, as an agent would name it: what the overview says to doubt
-ON_THE_DOUBT = {
-    "kind": AnchorKind.STORY,
-    "block": {"at": StoryBlockKind.OVERVIEW, "text": OverviewText.DOUBT},
-    "quote": [],
-    "outdated": False,
-}
 
 
-def _pointing(anchor: dict[str, object], body: str) -> dict[str, object]:
+def _pointing(lines: dict[str, object], body: str) -> dict[str, object]:
     """A thread the author raises, as its command sends it: an ordinary note."""
-    return {"anchor": anchor, "body": body, "severity": CommentSeverity.NOTE}
+    return {"lines": lines, "body": body, "severity": CommentSeverity.NOTE}
 
 
 async def test_a_message_reaches_whoever_is_waiting(client: AsyncClient) -> None:
@@ -210,7 +198,7 @@ def test_the_author_can_raise_a_thread_on_a_line(review_page: TestClient) -> Non
         response = review_page.post(
             POINT_ROUTE,
             json={
-                "anchor": pointed_json(REVIEWED_FILE, 1),
+                "lines": pointed_json(REVIEWED_FILE, 1),
                 "body": "I did this differently from what was asked, because...",
                 "severity": CommentSeverity.QUESTION,
             },
@@ -241,14 +229,6 @@ async def test_raised_threads_are_numbered_apart_from_the_readers(client: AsyncC
 
     assert first.json()["thread_id"] == "raised-1"
     assert second.json()["thread_id"] == "raised-2"
-
-
-async def test_a_thread_on_a_block_of_the_storys_words_is_refused_for_the_author_points_at_lines_alone(
-    client: AsyncClient,
-) -> None:
-    response = await client.post(POINT_ROUTE, json=_pointing(ON_THE_DOUBT, "Doubt this"))
-
-    assert response.status_code == HTTPStatus.UNPROCESSABLE_CONTENT
 
 
 async def test_a_thread_on_a_file_not_under_review_is_refused(client: AsyncClient) -> None:

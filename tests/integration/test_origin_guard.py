@@ -27,6 +27,7 @@ from tests.helpers import (
     REVIEW_ROUTE,
     REVIEWED_FILE,
     ReviewFactory,
+    message_json,
     next_push,
     one_line_file,
     open_session,
@@ -52,7 +53,7 @@ SAME_PAGE = "same-origin"
 NO_PAGE = "none"
 
 # What the reader typed in the panel, for the agent to pick up
-A_MESSAGE = {"message_id": "panel-1", "body": "Is the retry still needed?", "images": [], "threads": []}
+A_MESSAGE = message_json("Is the retry still needed?", images=[])
 # A file the page's build might have put beside it
 A_PAGE_FILE = "/assets/index.js"
 

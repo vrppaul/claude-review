@@ -1189,16 +1189,11 @@ export interface components {
         };
         /**
          * LineAnchor
-         * @description Lines of one side of a file in the review's own diff, as the page and the agent name them.
+         * @description The lines a comment hangs on, as the page names them: where they are, and what they said.
          *
          *     A quote sent empty is filled in by the review from its diff.
          */
         "LineAnchor-Input": {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            kind: "line";
             /** File */
             file: string;
             side: components["schemas"]["LineSide"];
@@ -1206,6 +1201,11 @@ export interface components {
             start_line: number;
             /** End Line */
             end_line: number;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "line";
             /** Quote */
             quote: string[];
             /** Outdated */
@@ -1213,16 +1213,11 @@ export interface components {
         };
         /**
          * LineAnchor
-         * @description Lines of one side of a file in the review's own diff, as the page and the agent name them.
+         * @description The lines a comment hangs on, as the page names them: where they are, and what they said.
          *
          *     A quote sent empty is filled in by the review from its diff.
          */
         "LineAnchor-Output": {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            kind: "line";
             /** File */
             file: string;
             side: components["schemas"]["LineSide"];
@@ -1230,6 +1225,11 @@ export interface components {
             start_line: number;
             /** End Line */
             end_line: number;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "line";
             /** Quote */
             quote: string[];
             /** Outdated */
@@ -1451,7 +1451,7 @@ export interface components {
          *     alone: the agent points at no block of the story's words.
          */
         PointRequest: {
-            anchor: components["schemas"]["PointedLines"];
+            lines: components["schemas"]["PointedLines"];
             /** Body */
             body: string;
             severity: components["schemas"]["CommentSeverity"];

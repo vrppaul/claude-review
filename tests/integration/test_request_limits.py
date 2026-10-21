@@ -171,7 +171,7 @@ FORGING_THREAD = thread_json(FORGING_ANCHOR, "looks fine")
     ("route", "payload"),
     [
         ("/api/submit", {"threads": [FORGING_THREAD], "end": True}),
-        ("/api/point", {"anchor": pointed_json(FORGING_PATH, 1), "body": "mine", "severity": CommentSeverity.NOTE}),
+        ("/api/point", {"lines": pointed_json(FORGING_PATH, 1), "body": "mine", "severity": CommentSeverity.NOTE}),
         ("/api/ask", {"question_id": FIRST_THREAD_ID, "thread": FORGING_THREAD}),
     ],
     ids=["submit", "point", "ask"],

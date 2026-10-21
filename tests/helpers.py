@@ -123,6 +123,8 @@ def thread_route(thread_id: str) -> str:
 # The file most reviews here hold, and the one line it shows
 REVIEWED_FILE = "src/a.py"
 REVIEWED_LINE = "x = 1"
+# The id the page gives the first thing the reader says in the panel
+PANEL_MESSAGE_ID = "panel-1"
 # A hunk header, for hunks whose header nothing reads
 HUNK_HEADER = "@@ -1 +1 @@"
 
@@ -281,6 +283,11 @@ def line_json(
         "quote": [],
         "outdated": False,
     }
+
+
+def message_json(body: str, *, images: list[str]) -> dict[str, object]:
+    """What the reader says in the panel, as the page sends it: words, screenshots, and no thread with them."""
+    return {"message_id": PANEL_MESSAGE_ID, "body": body, "images": images, "threads": []}
 
 
 def pointed_json(file: str, line: int) -> dict[str, object]:

@@ -291,7 +291,7 @@ def point_command(
     thread was given. BODY given as - is read from stdin.
     """
     pointed = PointedLines(file=path, side=side, start_line=lines.first, end_line=lines.last)
-    raised = client.point(PointRequest(anchor=pointed, body=body, severity=severity))
+    raised = client.point(PointRequest(lines=pointed, body=body, severity=severity))
     click.echo(raised.model_dump_json())
 
 

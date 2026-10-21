@@ -1,10 +1,23 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import { focusWhatRemains } from '$lib/dom/keyboard';
+	import Actions from './Actions.svelte';
+	import Icon from './Icon.svelte';
+	import IconButton from './IconButton.svelte';
 	import { arrowOffsetTo, type PaneEdge, type Placement } from './pane';
 	import PopoverPanel from './PopoverPanel.svelte';
 
-	interface Props {
+	/**
+	 * How its time runs out:
+	 * - fading: it fades as its time runs out, and says and offers what it does, handed the way to put it away
+	 * - lasting: whole until its time is out, which a bar along its foot shows; it says its words in a row of acts,
+	 *   its own cross among them and the act it leads to last, where it leads to one
+	 */
+	type Lasts =
+		| { fades: true; children: Snippet<[putAway: () => void]>; says?: never; main?: never }
+		| { fades: false; says: Snippet; main?: Snippet | undefined; children?: never };
+
+	type Props = Lasts & {
 		/** The control the note stands under, which the keyboard goes back to as the note goes. */
 		pointsAt: HTMLElement | undefined;
 		/** What the note is called, said to whoever cannot see it. */
@@ -15,24 +28,20 @@
 		arrow: boolean;
 		/** What it says by its edge, where it says anything by it. */
 		edge?: PaneEdge | undefined;
-		/** Whether it fades as its time runs out; one that does not shows the time left by a bar along its foot. */
-		fades: boolean;
 		testId: string;
 		/** Called once the note goes, by itself or as it is put away, for whoever drew it to stop drawing it. */
 		onGone: () => void;
-		/** What the note says and offers, handed the way to put it away at once. */
-		children: Snippet<[putAway: () => void]>;
-	}
+	};
 
 	// How long a note stands before it puts itself away, the mouse over it or not. Whatever shows the time
 	// running out reads it as --cr-note-lasts; the note goes by this clock, not by what shows it, which
 	// runs for no reader who asked for less motion
 	const STANDS_FOR_MS = 4_000;
 
-	let { pointsAt, label, placement, arrow, edge, fades, testId, onGone, children }: Props = $props();
+	let { pointsAt, label, placement, arrow, edge, testId, onGone, ...lasts }: Props = $props();
 
 	let pane: HTMLDivElement | undefined = $state();
-	// How far in from its left edge the note points at the control, where it draws an arrow
+	// How far in from the edge it lines up with the note points at the control, where it draws an arrow
 	const arrowOffset = $derived(arrowOffsetTo(pointsAt));
 
 	// Started as the note is drawn, and let go with it: put away before, it puts nothing away
@@ -48,6 +57,13 @@
 	}
 </script>
 
+<!-- The way a lasting note is put away for now, as any row of acts puts a thing off -->
+{#snippet cross()}
+	<IconButton tone="quiet" size="sm" shape="square" label="Close" testId="{testId}-close" onclick={putAway}>
+		<Icon name="cross" size="xs" />
+	</IconButton>
+{/snippet}
+
 <!-- Said under a control by the page, of something that happened: a note, and no popover, for it opens from no
 	control and takes the keyboard from nothing the reader is doing. It lies over what is under it, so it goes
 	by itself in a few seconds, or at once as it is put away -->
@@ -61,11 +77,15 @@
 		{arrow}
 		{arrowOffset}
 		{edge}
-		fading={fades}
+		fading={lasts.fades}
 		{testId}
 	>
-		{@render children(putAway)}
-		{#if !fades}
+		{#if lasts.fades}
+			{@render lasts.children(putAway)}
+		{:else}
+			<div class="py-2 pr-2 pl-3 text-sm">
+				<Actions testId="{testId}-actions" aside={lasts.says} others={cross} main={lasts.main} />
+			</div>
 			<div data-testid="{testId}-time-left" class="cr-ui-note-time-left" aria-hidden="true"></div>
 		{/if}
 	</PopoverPanel>

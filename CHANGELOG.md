@@ -153,9 +153,9 @@
   step of the agent's work done or not are sent every time, empty or
   false where there is nothing, where a field left out was taken as
   empty; a quote sent empty is still filled in by the review. The agent
-  points at lines by where they are alone (`POST /api/point`), the
-  review quoting them, where it sent a quote and whether it was outdated
-  that the review threw away. The story-request event says `"stale": null` for a first
+  points at lines by where they are alone, as `lines` (`POST /api/point`),
+  the review quoting them, where it sent an `anchor` with a quote and
+  whether it was outdated that the review threw away. The story-request event says `"stale": null` for a first
   story. No model of the review's own stands a default in for a missing
   value, so a field a constructor leaves out is a type error, not a
   silent empty one. A story's document is unchanged: what it may leave

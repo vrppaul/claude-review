@@ -36,6 +36,7 @@ from claude_review.domain.models import (
     Anchor,
     CommentSeverity,
     FilePath,
+    LineAnchor,
     PanelCancel,
     PanelEntry,
     PanelMessage,
@@ -350,16 +351,15 @@ class Review:
         self._page.tell(FileShown(file=file))
         log.info("file_shown", file=file)
 
-    def raise_thread(self, anchor: Anchor, *, body: str, severity: CommentSeverity) -> str:
-        """Put the agent's own thread on what the anchor names, and say its id.
+    def raise_thread(self, anchor: LineAnchor, *, body: str, severity: CommentSeverity) -> str:
+        """Put the agent's own thread on the lines the anchor names, and say its id.
 
         The anchor is checked against the content on screen and quoted from
         it, because the quote is what lets the thread find its code again.
 
         Raises:
             UnknownAnchorFileError, AnchorLinesNotShownError, AnchorTooLongError:
-                if the anchor names something the content does not show.
-            UnknownStoryBlockError: if it names a block of words the story told does not say.
+                if the anchor names lines the content does not show.
         """
         quoted = self._anchors.quote(anchor)
         thread_id = self._threads.raise_id()
