@@ -71,9 +71,9 @@
 .cr-pressable:is([aria-pressed='true'], [aria-haspopup][aria-expanded='true']) .cr-ui-dot {
 	background-color: currentColor;
 }
-/* A count drawn in it reversed in turn: on its words, its figure in its ground */
+/* A count drawn in it reversed in turn: on the reversed control's words, its figure in the control's ground */
 .cr-pressable:is([aria-pressed='true'], [aria-haspopup][aria-expanded='true']) .cr-ui-count {
-	background-color: currentColor;
+	background-color: var(--cr-on-ink);
 	color: var(--color-base-content);
 }
 /*
@@ -341,9 +341,12 @@
 .cr-ui-segment[aria-pressed='true'] {
 	font-weight: var(--font-weight-semibold);
 }
-/* A track among the header's controls, as tall as they are: its segments' words at a control's size */
+/* A track among the header's controls, as tall as they are, words or none: its segments' words at a control's size */
+.cr-ui-segmented-sm {
+	height: var(--cr-button-sm);
+}
 .cr-ui-segmented-sm .cr-ui-segment {
-	padding: --spacing(1.5) --spacing(3);
+	padding: 0 --spacing(3);
 	font-size: var(--text-xs);
 	line-height: var(--text-xs--line-height);
 }
@@ -1122,8 +1125,8 @@
 	font-weight: var(--font-weight-semibold);
 	font-variant-numeric: tabular-nums;
 }
-/* How many go with what a filled button does: reversed on its fill, the fill's words its ground */
-.cr-ui-count-on-fill {
+/* A count in a filled button, how many go with what it does: reversed on its fill, the fill's words its ground */
+.cr-ui-primary .cr-ui-count {
 	background-color: var(--cr-on-control);
 	color: var(--cr-control-fill);
 }

@@ -25,15 +25,27 @@ describe('sending the review', () => {
 
 	it('counts on Send the comments that go with it, saying how many on the pointer, and nothing with none', () => {
 		// A round sent to an agent there, and the end of a review with none, each a review of its own, which keeps a
-		// draft of its own; how many comments each holds, and what its count says: its figure, and its words on the
-		// pointer
+		// draft of its own; how many comments each holds, how many of them went in a round before, and what its count
+		// says: its figure, and its words on the pointer. A round takes what is unsent; the end takes everything
 		const sends = [
-			{ review: 'a-round', attached: true, comments: 2, said: [{ figure: '2', pointer: '2 comments go with it' }] },
-			{ review: 'the-end', attached: false, comments: 1, said: [{ figure: '1', pointer: '1 comment goes with it' }] },
-			{ review: 'nothing-written', attached: false, comments: 0, said: [] }
+			{
+				review: 'a-round',
+				attached: true,
+				comments: 2,
+				sentBefore: 1,
+				said: [{ figure: '1', pointer: '1 comment goes with it' }]
+			},
+			{
+				review: 'the-end',
+				attached: false,
+				comments: 2,
+				sentBefore: 1,
+				said: [{ figure: '2', pointer: '2 comments go with it' }]
+			},
+			{ review: 'nothing-written', attached: false, comments: 0, sentBefore: 0, said: [] }
 		];
 
-		const said = sends.map(({ review: identity, attached, comments }) => {
+		const said = sends.map(({ review: identity, attached, comments, sentBefore }) => {
 			const sending = openReview({
 				files: [file],
 				diff: READ_WHOLE,
@@ -42,6 +54,7 @@ describe('sending the review', () => {
 			Array.from({ length: comments }, (_, index) =>
 				sending.threads.add(newComment({ file: 'test.py', startLine: index + 1, body: 'fix' }))
 			);
+			sending.threads.markSent(sending.threads.carry(sending.threads.all.slice(0, sentBefore)), 1);
 			const { container } = render(ReviewHeader, inReview(sending));
 			return within(container)
 				.queryAllByTestId('unsent-count')

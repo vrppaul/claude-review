@@ -59,9 +59,8 @@
 {#if over}
 	<NoticeBar tone={over.tone} icon={over.icon} testId={over.testId}>{over.said}</NoticeBar>
 {:else}
-	<!-- One row whatever the width, its controls as tall as a small button: as the window narrows, Help keeps its
-		key (below xl), Story, Files and the base their marks (below lg), and where the change is drops its branch
-		and Send its round's number (below md), each name said on the pointer -->
+	<!-- One row whatever the width, its controls as tall as a small button: as the window narrows, each control's
+		words give way to its mark at a breakpoint of its own, kept for a screen reader and on the pointer -->
 	<Bar heads="page" testId="top-bar">
 		<WhereTheChangeIs />
 		<HelpMenu />
@@ -82,7 +81,7 @@
 					title={SHOW_WHITESPACE_AGAIN}
 					onclick={() => review.setIgnoreWhitespace(false)}
 				>
-					No whitespace
+					<span class="max-xl:sr-only">No whitespace</span>
 					<Icon name="cross" size="xs" />
 				</Button>
 			{/if}
@@ -132,7 +131,7 @@
 			onclick={() => review.layout.agentPanel.toggle()}
 		>
 			<PresenceDot />
-			Agent
+			<span class="max-lg:sr-only">Agent</span>
 			{#if review.layout.agentPanel.unread > 0}
 				<Dot tone="unread" testId="panel-unread" /><span class="sr-only">new answers</span>
 			{/if}

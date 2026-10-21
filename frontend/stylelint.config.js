@@ -39,7 +39,7 @@ const WRITTEN_IN_THE_TOKENS = [
 // strength written anywhere in it, in any order and any space, is a step of its own; so is a colour made from one
 // by the relative syntax. A colour written as numbers holds no alpha but a shadow's and the shade's, so no hue is
 // written at a strength of its own that way either
-const A_HUE = 'var\\(--(cr-(mark|agent|done|control|focus|unread|add|del)|color-(warning|error))[a-z-]*\\)';
+const A_HUE = 'var\\(\\s*--(cr-(mark|agent|done|control|focus|unread|add|del)|color-(warning|error))[a-z-]*\\s*[,)]';
 const A_HUE_AT_A_WRITTEN_STRENGTH = [`/color-mix\\((?=.*${A_HUE})(?=.*[\\d.]+%)/`, `/[a-z]+\\(from ${A_HUE}/`];
 const AN_ALPHA_WRITTEN = ['/(rgb|hsl|hwb|lab|lch|oklab|oklch)a?\\([^)]*\\//'];
 // Every property but those that may hold an alpha of their own: a shadow, and the shade laid behind a modal

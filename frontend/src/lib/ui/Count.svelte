@@ -1,18 +1,14 @@
 <script lang="ts">
 	/**
-	 * Whose the figure is, and what it stands on:
-	 * - reader: how many of the reader's threads hang on what it stands beside, on the control's fill
-	 * - on-fill: how many go with what a filled button does, standing in it, reversed on its fill
+	 * Whose the figure is, which sets its colour; where it stands sets the rest (ui.css): in a filled button
+	 * it is reversed on the fill, in a control pressed or open on the control's words
+	 * - reader: how many of the reader's threads, or of their comments, on the control's fill
 	 * - unread: how many of the agent's answers wait unread, in the colour of what is unread
 	 */
-	type CountTone = 'reader' | 'on-fill' | 'unread';
+	type CountTone = 'reader' | 'unread';
 
 	// The class of each in the library's stylesheet, over the one every count has
-	const TONES: Record<CountTone, string | null> = {
-		reader: null,
-		'on-fill': 'cr-ui-count-on-fill',
-		unread: 'cr-ui-count-unread'
-	};
+	const TONES: Record<CountTone, string | null> = { reader: null, unread: 'cr-ui-count-unread' };
 
 	interface Props {
 		tone: CountTone;

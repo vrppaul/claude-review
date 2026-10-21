@@ -7,7 +7,7 @@
 	 * - page: the review, across the whole page, as tall as a row of its controls, which never wrap: their
 	 *   words give way to their icons as the window narrows
 	 * - section: a section of a file's lines, kept in sight while the lines scroll under it, its name and what
-	 *   is said and offered beside it wrapping as the page's do
+	 *   is said and offered beside it wrapping onto another row where the line is too short
 	 * - column: a column beside what is read, above what scrolls in it, as tall as a small button with room
 	 *   round it
 	 * - chapter: a chapter of a story, read under it, as tall as the room the page keeps for it over the story,

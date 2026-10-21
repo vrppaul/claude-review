@@ -316,7 +316,8 @@ describe('the tour', () => {
 
 	it('keeps one count of its stops, from before the tour to after a comment field opens', () => {
 		review.answerer.setAttached(true);
-		pageWith('review-base', 'file-tree', 'line-number', 'unsent-count', 'agent-panel', 'send');
+		// The page before the reader has written anything: Send counts nothing yet
+		pageWith('review-base', 'file-tree', 'line-number', 'agent-panel', 'send');
 		const announced = review.guide.stepCount;
 		review.guide.startTour();
 		const { getByText } = render(GuideCard, inReview(review));
@@ -363,8 +364,9 @@ describe('the tour', () => {
 
 		expect(review.guide.stepPosition).toBe(0);
 		expect(review.guide.canGoBack).toBe(false);
-		// The files, a line to comment on, and the field the reader opens there to write in
-		expect(review.guide.stepCount).toBe(3);
+		// The files, a line to comment on, the field the reader opens there to write in, and the count on Send their
+		// comment brings
+		expect(review.guide.stepCount).toBe(4);
 	});
 
 	it('moves on from a step it landed on before the page said what it has drawn', () => {

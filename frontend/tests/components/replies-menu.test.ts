@@ -24,16 +24,18 @@ describe('the list of replies', () => {
 		expect(getByTestId('reply-row').textContent).toContain('Because 1 is taken.');
 	});
 
-	it('shows how many answers are unread on its mark, until they are read', async () => {
+	it('shows how many answers are unread on its mark and in its name, until they are read', async () => {
 		const user = userEvent.setup({ delay: null });
 		const review = answered('Because 1 is taken.');
 
-		const { getByTestId, queryByTestId } = render(RepliesMenu, inReview(review));
+		const { getByRole, getByTestId, queryByTestId } = render(RepliesMenu, inReview(review));
 		expect(getByTestId('unread-count').textContent?.trim()).toBe('1');
+		expect(getByRole('button', { name: 'Replies, 1 unread' })).toBe(getByTestId('replies-menu'));
 		await user.click(getByTestId('replies-menu'));
 		await user.click(getByTestId('mark-all-read'));
 
 		expect(queryByTestId('unread-count')).toBeNull();
+		expect(getByRole('button', { name: 'Replies' })).toBe(getByTestId('replies-menu'));
 	});
 
 	it('offers to mark everything read only while something is unread', async () => {

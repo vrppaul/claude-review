@@ -162,9 +162,12 @@
 - **The header is one row at any width.** Its controls stand as tall as a
   small button (32 px), Story and Files with them. Where it wrapped onto a
   second row, its words now give way to their marks as the window
-  narrows, each name said on the pointer: below 1280 px Help keeps its
-  key, below 1024 Story, Files and the base keep their marks, below 768
-  the branch goes and Send keeps its word and its count.
+  narrows, each name kept for a screen reader and said on the pointer:
+  below 1280 px Help keeps its key and the note that whitespace is hidden
+  its cross; below 1024 Story, Files, the base and Agent keep their marks,
+  the branch goes, and Send keeps its word and its count. Where the change
+  is gives up room before anything else, down to 4rem, so the row stays
+  inside the window down to about 700 px with every control it can hold.
 - **What is chosen is drawn in ink.** A segment pressed, a toggle on and a
   button whose pane is open are reversed, the page's words their ground
   and what is drawn in them in those words, where they stood on the

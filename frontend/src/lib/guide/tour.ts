@@ -39,12 +39,17 @@ export function tourStop(target: TourTarget): TourTarget {
 
 /**
  * The places the tour has the reader draw: the comment field they open on a
- * line, and the question they ask in it, with its answer. A step lighting one
- * is among the tour's stops before it is drawn — the step before it is what
- * draws it — so the count of stops does not change as the reader does what
- * the tour asks.
+ * line, the count on Send their first comment brings, and the question they
+ * ask in it, with its answer. A step lighting one is among the tour's stops
+ * before it is drawn — the step before it is what draws it — so the count of
+ * stops does not change as the reader does what the tour asks.
  */
-export const DRAWN_BY_THE_READER: ReadonlySet<TourTarget> = new Set(['comment-field', 'awaited-answer', 'answer']);
+export const DRAWN_BY_THE_READER: ReadonlySet<TourTarget> = new Set([
+	'comment-field',
+	'unsent-count',
+	'awaited-answer',
+	'answer'
+]);
 
 /** Where a comment went when the reader chose. */
 export type CommentRoute = 'review' | 'ask';

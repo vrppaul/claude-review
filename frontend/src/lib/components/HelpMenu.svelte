@@ -59,9 +59,9 @@
 			data-role={HELP_BUTTON_ROLE}
 			title="The tour, what is new, and the keys (?)"
 		>
-			<!-- Its key alone once the window narrows, its name on the pointer -->
+			<!-- Its key alone once the window narrows, its name kept for a screen reader and on the pointer -->
 			<Key keys="?" testId="help-key" />
-			<span class="max-xl:hidden">Help</span>
+			<span class="max-xl:sr-only">Help</span>
 		</Button>
 	{/snippet}
 

@@ -34,6 +34,7 @@
 	const unsent = $derived(review.threads.unsent.length);
 	// What goes with what the button sends: what is unsent, with a round; everything, with the end
 	const going = $derived(inRounds ? unsent : review.threads.count);
+	const goingSaid = $derived(counted(going, GOING_WITH_IT));
 	// Comments still open in their fields, which go with whatever is sent
 	const open = $derived(review.threads.open);
 
@@ -152,16 +153,19 @@
 				<BreathingDots tone="inherited" testId="sending-dots" />
 				Sending
 			{:else if inRounds}
-				<!-- The round's number gives way last of all the header's words; Send keeps its word and its count -->
+				<!-- The round's number gives way last of all the header's words, kept in Send's name; Send keeps its
+					word and its count -->
 				Send
-				<span class="max-md:hidden">round {review.rounds.current}</span>
+				<span class="max-lg:sr-only">round {review.rounds.current}</span>
 			{:else}
 				Finish review
 			{/if}
 			{#if going > 0}
+				<!-- The figure seen, its words in Send's name and on the pointer -->
 				<span data-tour={tourStop('unsent-count')} class="flex">
-					<Count tone="on-fill" count={going} title={counted(going, GOING_WITH_IT)} testId="unsent-count" />
+					<Count tone="reader" count={going} title={goingSaid} aria-hidden testId="unsent-count" />
 				</span>
+				<span class="sr-only">{goingSaid}</span>
 			{/if}
 			<Icon name="chevron" size="xs" />
 		</Button>

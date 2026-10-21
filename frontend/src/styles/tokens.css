@@ -73,8 +73,13 @@
 	--cr-comment-leading: 1.6;
 	/* How wide written words run before they wrap, prose rendered from Markdown as a comment's */
 	--cr-prose-measure: 72ch;
-	/* The widest the header says the branch or the commit checked out, cut short past it, its whole name on the pointer */
-	--cr-checkout-widest: 10rem;
+	/*
+	 * How wide the header says where the change is, its repository and what it
+	 * had checked out, cut short past it: at the most, and at the least it
+	 * gives way to the controls beside it
+	 */
+	--cr-where-widest: 10rem;
+	--cr-where-least: 4rem;
 	/*
 	 * A field (lib/ui/field.ts): the tallest one being written in grows with
 	 * its text, before it scrolls instead; the least each stands while
@@ -193,7 +198,7 @@
 	 * line under it. What is read under it stands that far down.
 	 */
 	--cr-chapter-bar-height: calc(var(--cr-button-sm) + --spacing(4) + var(--cr-line));
-	/* The review's header at its least: one row of its controls, which wraps onto more on a narrow screen */
+	/* The review's header at its least: one row of its controls, which never wraps */
 	--cr-header-least-height: 3rem;
 
 	/*
