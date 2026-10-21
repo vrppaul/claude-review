@@ -18,13 +18,13 @@
 
 /**
  * Whose or what the framed words are, and the ground the tone lays:
- * - reader: a thread of the reader's folded away; on the raised surface, as
+ * - reader: a thread of the reader's folded away; on a card's ground, as
  *   their mark's own wash is the tint of the one they are at
  * - agent: what the agent says, in a story or in a thread it raised; on its
  *   wash
  * - warning: what the review warns about, where to doubt it, what it costs;
  *   on its wash
- * - quiet: something settled, stepping back; on the raised surface
+ * - quiet: something settled, stepping back; on a card's ground
  * - stale: a copy of lines a thread has lost; on the page's own ground,
  *   inside the card
  */

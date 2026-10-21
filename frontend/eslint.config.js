@@ -310,8 +310,8 @@ const NO_CODE_BOXES_OF_ITS_OWN = [
 // centred. A notice is words on its tone's ground: the grounds of its tones that are washes of a colour — the
 // warning's tint and the reader's — are laid by the library alone, so one named in markup or in any string is
 // refused, as are the classes the page drew its notices with; stylelint holds every stylesheet but the library's
-// to the same. A quiet or a done notice stands on the raised surface every header of the page stands on, which no
-// rule here tells from a header's
+// to the same. A quiet or a done notice stands on the ground every bar of the page stands on, which no rule here
+// tells from a bar's
 const DRAWN_AS_A_NOTICE = 'Draw a notice with lib/ui NoticeBar, in its tone, not on a wash or with classes of its own.';
 // The washes a notice's tones stand on, and the classes the page drew its notices with, behind any variants
 const A_NOTICE_OF_ITS_OWN =
@@ -598,16 +598,16 @@ const NO_FAILURES_OF_ITS_OWN = [
 
 // A bar across what it heads is drawn by the library (Bar), and nothing outside it draws one: the page drew the
 // review's header and a file section's as two of its own, beside the library's bar of a column, at two rooms. A bar
-// drawn anew is a raised ground ruled off above or below, so the raised ground and a rule among the classes of one
+// drawn anew is the bars' ground ruled off above or below, so that ground and a rule among the classes of one
 // element are refused outside the library
 const DRAWN_AS_A_BAR =
-	'Draw a bar across what it heads with lib/ui Bar, not with a raised ground and a rule of its own.';
-// The raised ground, by its utility or its token named: `bg-base-200`, `bg-(--color-base-200)`
-const A_RAISED_GROUND = '/(^|\\s)([^\\s:]+:)*bg-(base-200|\\(--color-base-200\\))(\\s|$)/';
+	"Draw a bar across what it heads with lib/ui Bar, not with the bars' ground and a rule of its own.";
+// The ground every bar stands on, by its utility or its token named: `bg-base-200`, `bg-(--color-base-200)`
+const THE_BARS_GROUND = '/(^|\\s)([^\\s:]+:)*bg-(base-200|\\(--color-base-200\\))(\\s|$)/';
 const A_RULE_ACROSS = '/(^|\\s)([^\\s:]+:)*border-[bty](\\s|$)/';
 const NO_BARS_OF_ITS_OWN = [
 	{
-		selector: `SvelteStartTag:has(${amongItsClasses(A_RAISED_GROUND)}):has(${amongItsClasses(A_RULE_ACROSS)})`,
+		selector: `SvelteStartTag:has(${amongItsClasses(THE_BARS_GROUND)}):has(${amongItsClasses(A_RULE_ACROSS)})`,
 		message: DRAWN_AS_A_BAR
 	}
 ];

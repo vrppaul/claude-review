@@ -18,10 +18,10 @@
  *   on under them, a draft set aside, a part that could not be drawn, a
  *   review that cannot be reached or ended under them — on the warning's
  *   wash, marked in it
- * - done: the review sent, nothing left to do — on a raised surface, marked
+ * - done: the review sent, nothing left to do — on the bars' ground, marked
  *   in the colour of what is done
  * - quiet: a fact of a file that its lines cannot show — that it cannot be
- *   commented on, that its mode changed — no news, so on a raised surface in
+ *   commented on, that its mode changed — no news, so on the bars' ground in
  *   muted words, and unmarked
  */
 export type NoticeTone = 'reader' | 'warning' | 'done' | 'quiet';

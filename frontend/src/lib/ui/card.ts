@@ -1,7 +1,7 @@
 /**
  * A card (Card): what it holds boxed apart from what stands round it — a
  * thread, a comment being written as the card it becomes, the facts of a
- * story on its way. Every one on a raised surface, edged by a line in its
+ * story on its way. Every one on a card's ground, edged by a line in its
  * tone's colour, at the box's corner, with one room round what it holds
  * (styles/ui.css). How what it holds is laid out inside is its holder's.
  * Code set apart to read or copy (CodeBox) stands on a quiet one.

@@ -32,13 +32,20 @@ const WRITTEN_IN_THE_TOKENS = [
 	'color-mix',
 	'cubic-bezier'
 ];
-// Every hue that says whose a thing is or what it means — the reader's, under its names as a control too, the
-// agent's, under its name as what is unread, done's, a warning's, an error's, what the diff added and removed — is
-// drawn at a step of tokens.css's one ladder of strengths, named as that step: one mixed at a strength written in,
-// before or after it and in any space, is a step of its own, as the reader's mark was drawn at five strengths and
-// the agent's at four
-const A_HUE = 'var\\(--(cr-(mark|agent|done|control|unread|add|del)|color-(warning|error))\\)';
-const A_HUE_AT_A_WRITTEN_STRENGTH = [`/color-mix\\(in [a-z]+, (${A_HUE}\\s+\\d|\\d[\\d.]*%\\s+${A_HUE})/`];
+// Every hue that says whose a thing is or what it means — the reader's, under every name it goes by (its mark, what
+// they marked, a control, the keyboard's ring), the agent's, under its name as what is unread, done's, a warning's,
+// an error's, what the diff added and removed — is drawn at a step of tokens.css's one ladder of strengths, named as
+// that step, as the reader's mark was drawn at five strengths and the agent's at four. A mix naming one with a
+// strength written anywhere in it, in any order and any space, is a step of its own; so is a colour made from one
+// by the relative syntax. A colour written as numbers holds no alpha but a shadow's and the shade's, so no hue is
+// written at a strength of its own that way either
+const A_HUE = 'var\\(--(cr-(mark|agent|done|control|focus|unread|add|del)|color-(warning|error))[a-z-]*\\)';
+const A_HUE_AT_A_WRITTEN_STRENGTH = [`/color-mix\\((?=.*${A_HUE})(?=.*[\\d.]+%)/`, `/[a-z]+\\(from ${A_HUE}/`];
+const AN_ALPHA_WRITTEN = ['/(rgb|hsl|hwb|lab|lch|oklab|oklch)a?\\([^)]*\\//'];
+// Every property but those that may hold an alpha of their own: a shadow, and the shade laid behind a modal
+const HOLDS_NO_ALPHA = '/^(?!--cr-(shadow-[a-z-]+|shade)$)/';
+// A row and a band the keys move hold no motion of their own: the keys outrun it, and two rows stand lit at once
+const MOVED_BY_THE_KEYS = { '/\\.cr-ui-(row|band)/': ['/^transition/', '/^animation/'] };
 // Every size is taken off one scale, which tokens.css sets out: a number with a unit, either way up and in any
 // case, is named there once and named everywhere else — every unit but those of a turn and of a grid's share,
 // which are no size. Nothing is no size in any unit
@@ -96,7 +103,8 @@ export default {
 		},
 		'no-duplicate-selectors': true,
 		'declaration-no-important': true,
-		'selector-disallowed-list': SELECTORS_OF_THE_LIBRARY
+		'selector-disallowed-list': SELECTORS_OF_THE_LIBRARY,
+		'rule-selector-property-disallowed-list': MOVED_BY_THE_KEYS
 	},
 	overrides: [
 		{
@@ -107,7 +115,8 @@ export default {
 				'color-no-hex': null,
 				'function-disallowed-list': null,
 				'declaration-property-value-disallowed-list': {
-					'/.*/': [...OFF_THE_SCALE, ...A_HUE_AT_A_WRITTEN_STRENGTH]
+					'/.*/': [...OFF_THE_SCALE, ...A_HUE_AT_A_WRITTEN_STRENGTH],
+					[HOLDS_NO_ALPHA]: AN_ALPHA_WRITTEN
 				}
 			}
 		},

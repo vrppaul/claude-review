@@ -35,7 +35,7 @@
 	let { heads, viewed = false, testId, children }: Props = $props();
 </script>
 
-<!-- A bar across the top of what it heads, the same for each of a kind: on a raised ground, ruled off from what
+<!-- A bar across the top of what it heads, the same for each of a kind: on the bars' ground, ruled off from what
 	is under it. A section's bar is kept in sight as the section scrolls (dom/in-sight.ts) -->
 <header
 	data-testid={testId}

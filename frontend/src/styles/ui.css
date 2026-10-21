@@ -227,7 +227,7 @@
 	max-width: var(--cr-prose-measure);
 }
 /*
- * Code in a line of words: on a raised ground at a box's corner, in a line
+ * Code in a line of words: on the bars' ground at a box's corner, in a line
  * round it, at the weight of its line, and with no backticks round it
  */
 .cr-ui-prose :not(pre) > code {
@@ -663,7 +663,7 @@
 }
 
 /*
- * A bar across the top of what it heads (Bar): on a raised ground, ruled off
+ * A bar across the top of what it heads (Bar): on the bars' ground, ruled off
  * from what is under it. The review's, at least as tall as a row of its
  * controls and wrapping them onto another on a narrow screen; a section's,
  * kept in sight as the lines under it scroll, at the top of the area or
