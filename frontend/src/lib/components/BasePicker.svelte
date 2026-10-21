@@ -86,14 +86,15 @@
 		<Button
 			{...control}
 			tone={review.diff.narrowed ? 'marked' : 'quiet'}
-			size="xs"
+			size="sm"
 			testId="base-picker"
 			data-tour={tourStop('review-base')}
 			title="What the working tree is compared against"
 		>
 			<Icon name="compare" size="xs" />
-			<!-- What it is read against, named as the bases listed are: in the code's face -->
-			<span data-testid="base-named" class="font-mono">{review.diff.phrase}</span>
+			<!-- What it is read against, named as the bases listed are: in the code's face, given way to its mark and
+				its arrow as the window narrows -->
+			<span data-testid="base-named" class="font-mono max-lg:hidden">{review.diff.phrase}</span>
 			<Icon name="chevron" size="xs" />
 		</Button>
 	{/snippet}

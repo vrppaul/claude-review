@@ -152,7 +152,9 @@
 				<BreathingDots tone="inherited" testId="sending-dots" />
 				Sending
 			{:else if inRounds}
-				Send round {review.rounds.current}
+				<!-- The round's number gives way last of all the header's words; Send keeps its word and its count -->
+				Send
+				<span class="max-md:hidden">round {review.rounds.current}</span>
 			{:else}
 				Finish review
 			{/if}

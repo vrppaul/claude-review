@@ -11,6 +11,11 @@
 	import StoryIntroduction from './StoryIntroduction.svelte';
 	import StoryOptIn from './StoryOptIn.svelte';
 
+	// What each view is called, on its segment and on the pointer, where its words give way first
+	const STORY = 'Story';
+	const STORY_BEING_WRITTEN = 'Story · writing';
+	const FILES = 'Files';
+
 	const review = useReview();
 
 	// The button of each view, as it is drawn: the keyboard goes to the one on screen, and the note of a
@@ -70,21 +75,23 @@
 	then a stack of files. While the agent writes the story, dots that breathe stand for its book -->
 {#if review.story.canBeTold}
 	<div class="relative">
-		<Segmented label="How to read this review" testId="reading-view">
+		<!-- As the window narrows, each segment's words give way to its icon, said on the pointer -->
+		<Segmented label="How to read this review" size="sm" testId="reading-view">
 			<Segment
 				bind:element={buttons.story}
 				testId="read-as-story"
 				pressed={onScreen === 'story'}
 				written={storySays === 'writing'}
 				calling={storyCalling}
+				title={storySays === 'writing' ? STORY_BEING_WRITTEN : STORY}
 				onclick={() => review.wayIntoStory.readAsStory()}
 			>
 				{#if storySays === 'writing'}
 					<BreathingDots tone="agent" testId="story-writing-dots" />
-					Story · writing
+					<span class="max-lg:hidden">{STORY_BEING_WRITTEN}</span>
 				{:else}
 					<Icon name="story" size="sm" />
-					Story
+					<span class="max-lg:hidden">{STORY}</span>
 				{/if}
 				{#if storySays === 'unread'}
 					<!-- Unsaid to a screen reader, as every dot is: the note under the switch said it -->
@@ -95,10 +102,11 @@
 				bind:element={buttons.files}
 				testId="read-as-files"
 				pressed={readingFiles}
+				title={FILES}
 				onclick={() => review.views.choose('files')}
 			>
 				<Icon name="files" size="sm" />
-				Files
+				<span class="max-lg:hidden">{FILES}</span>
 			</Segment>
 		</Segmented>
 		{#if storyOffered}

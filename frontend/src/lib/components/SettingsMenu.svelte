@@ -40,7 +40,7 @@
 	<div class="flex flex-col gap-2 p-3 text-xs">
 		{#if review.mode === 'diff'}
 			<Setting label="Diff layout" testId="diff-layout-setting">
-				<Segmented label="Diff layout" testId="diff-layout-toggle">
+				<Segmented label="Diff layout" size="xs" testId="diff-layout-toggle">
 					{#each layouts as layout (layout.value)}
 						<Segment
 							testId={layout.testId}
@@ -64,7 +64,7 @@
 		{/if}
 
 		<Setting label="Theme" testId="theme-setting">
-			<Segmented label="Theme" testId="theme-toggle">
+			<Segmented label="Theme" size="xs" testId="theme-toggle">
 				{#each themes as choice (choice.value)}
 					<Segment
 						testId={choice.testId}

@@ -54,12 +54,14 @@
 		<Button
 			{...control}
 			tone="quiet"
-			size="xs"
+			size="sm"
 			testId="open-help"
 			data-role={HELP_BUTTON_ROLE}
 			title="The tour, what is new, and the keys (?)"
 		>
-			<Key keys="?" testId="help-key" /> Help
+			<!-- Its key alone once the window narrows, its name on the pointer -->
+			<Key keys="?" testId="help-key" />
+			<span class="max-xl:hidden">Help</span>
 		</Button>
 	{/snippet}
 

@@ -26,8 +26,8 @@
 </script>
 
 <!-- Where the change is, in place of the tool's name: the repository over what it had checked out, two small
-	lines in a control's height, the branch cut short and whole on the pointer; a review of no repository, its
-	mark and what it is called on one line -->
+	lines in a control's height, the branch cut short and whole on the pointer, and the first thing to give way in
+	a narrow window; a review of no repository, its mark and what it is called on one line -->
 {#if review.repository}
 	{@const checkedOut = CHECKED_OUT[review.repository.checkout.at]}
 	{@const name = nameOf(review.repository.checkout)}
@@ -37,7 +37,10 @@
 		title="{review.repository.name}, {checkedOut.said} {name}"
 	>
 		<span data-testid="where-line" class="max-w-full truncate text-xs font-semibold">{review.repository.name}</span>
-		<span data-testid="where-line" class="cr-muted flex max-w-(--cr-checkout-widest) min-w-0 items-center gap-1">
+		<span
+			data-testid="where-line"
+			class="cr-muted flex max-w-(--cr-checkout-widest) min-w-0 items-center gap-1 max-md:hidden"
+		>
 			<Icon name={checkedOut.mark} size="xs" />
 			<span class="truncate font-mono text-2xs">{name}</span>
 		</span>

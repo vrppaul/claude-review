@@ -59,7 +59,9 @@
 {#if over}
 	<NoticeBar tone={over.tone} icon={over.icon} testId={over.testId}>{over.said}</NoticeBar>
 {:else}
-	<!-- One row while it fits; on a narrow screen the controls wrap onto another, none cut off -->
+	<!-- One row whatever the width, its controls as tall as a small button: as the window narrows, Help keeps its
+		key (below xl), Story, Files and the base their marks (below lg), and where the change is drops its branch
+		and Send its round's number (below md), each name said on the pointer -->
 	<Bar heads="page" testId="top-bar">
 		<WhereTheChangeIs />
 		<HelpMenu />
@@ -74,7 +76,7 @@
 					narrower base is, since it narrows the diff too. Pressed, it shows them again -->
 				<Button
 					tone="marked"
-					size="xs"
+					size="sm"
 					testId="whitespace-hidden"
 					aria-label={SHOW_WHITESPACE_AGAIN}
 					title={SHOW_WHITESPACE_AGAIN}
@@ -100,7 +102,7 @@
 			<div class="flex">
 				<IconButton
 					tone="quiet"
-					size="xs"
+					size="sm"
 					label="Previous comment"
 					testId="prev-comment"
 					onclick={() => review.navigator.step(-1)}
@@ -109,7 +111,7 @@
 				</IconButton>
 				<IconButton
 					tone="quiet"
-					size="xs"
+					size="sm"
 					label="Next comment"
 					testId="next-comment"
 					onclick={() => review.navigator.step(1)}
@@ -121,7 +123,7 @@
 
 		<Button
 			tone="quiet"
-			size="xs"
+			size="sm"
 			testId="toggle-panel"
 			data-role={PANEL_TOGGLE_ROLE}
 			data-tour={tourStop('agent-panel-toggle')}

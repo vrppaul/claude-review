@@ -178,7 +178,7 @@
 		{/if}
 		<div class="flex-1"></div>
 		{#if severityPicker}
-			<Segmented label="What the comment asks for" testId="severity-picker">
+			<Segmented label="What the comment asks for" size="xs" testId="severity-picker">
 				{#each SEVERITIES as choice (choice.value)}
 					<Segment
 						testId="severity-{choice.value}"

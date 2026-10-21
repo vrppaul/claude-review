@@ -69,7 +69,7 @@
 	testId="replies-list"
 >
 	{#snippet trigger(control)}
-		<IconButton {...control} tone="quiet" size="xs" label={repliesNamed} testId="replies-menu">
+		<IconButton {...control} tone="quiet" size="sm" label={repliesNamed} testId="replies-menu">
 			<Icon name="reply" size="sm" />
 			{#snippet corner()}
 				{#if unread > 0}

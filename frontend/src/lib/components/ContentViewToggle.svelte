@@ -13,7 +13,7 @@
 	];
 </script>
 
-<Segmented label="How to show this file" testId="content-view-toggle">
+<Segmented label="How to show this file" size="xs" testId="content-view-toggle">
 	{#each modes as mode (mode.value)}
 		<Segment
 			testId={mode.testId}

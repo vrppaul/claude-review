@@ -4,8 +4,8 @@
 
 	/**
 	 * What a bar heads, which sets its room:
-	 * - page: the review, across the whole page, at least as tall as a row of its controls, which wrap onto
-	 *   another row on a narrow screen rather than be cut off
+	 * - page: the review, across the whole page, as tall as a row of its controls, which never wrap: their
+	 *   words give way to their icons as the window narrows
 	 * - section: a section of a file's lines, kept in sight while the lines scroll under it, its name and what
 	 *   is said and offered beside it wrapping as the page's do
 	 * - column: a column beside what is read, above what scrolls in it, as tall as a small button with room
