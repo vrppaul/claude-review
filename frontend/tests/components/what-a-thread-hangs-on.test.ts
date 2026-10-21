@@ -37,7 +37,7 @@ describe('a thread whatever it hangs on', () => {
 
 		const { getByTestId } = render(CommentThread, inReview(review, { thread, hangs: 'line' }));
 
-		expect(getByTestId('stale-quote').textContent).toContain(viewSays.writtenAgainst[0]);
+		expect(getByTestId('written-against').textContent).toContain(viewSays.writtenAgainst[0]);
 		expect(getByTestId('comment-suggestion').textContent).toContain(viewSays.replaces[0]);
 		expect(getByTestId('comment-thread').textContent).not.toContain('the quote on the anchor');
 	});

@@ -212,12 +212,12 @@ describe('a thread is a conversation', () => {
 		review.threads.receiveReply(id, 'It moved into the config default', null);
 		const { getByTestId } = render(DiffView, inReview(review));
 
-		getByTestId('edit-comment').focus();
+		getByTestId('resolve-comment').focus();
 
 		expect(review.threads.unread).toHaveLength(0);
 	});
 
-	it('offers no edit of a thread the agent raised: the reader answers its words, never rewrites them', () => {
+	it('offers no menu on a thread the agent raised: the reader answers its words and settles it, never rewrites or deletes it', () => {
 		const { anchor } = onTheAddedLine('');
 		review.threads.raise('raised-1', anchor, 'Kept the old name on purpose', 'note');
 		review.threads.add(onTheAddedLine('Why 3?'));
@@ -225,8 +225,9 @@ describe('a thread is a conversation', () => {
 		const { getAllByTestId } = render(DiffView, inReview(review));
 
 		expect(getAllByTestId('comment-thread')).toHaveLength(2);
-		expect(getAllByTestId('edit-comment')).toHaveLength(1);
+		expect(getAllByTestId('thread-menu')).toHaveLength(1);
 		expect(getAllByTestId('open-reply')).toHaveLength(2);
+		expect(getAllByTestId('resolve-comment')).toHaveLength(2);
 	});
 
 	it('opens a thread the agent raised with the agent speaking', () => {
@@ -246,31 +247,46 @@ describe('a thread is a conversation', () => {
 		expect(said(getByTestId('open-reply'))).toBe('Reply…');
 	});
 
-	it('offers no delete of a thread the agent raised, which the review keeps whatever a page says, but lets it be settled', () => {
-		const { anchor } = onTheAddedLine('');
-		review.threads.raise('raised-1', anchor, 'Kept the old name on purpose', 'note');
-		review.threads.add(onTheAddedLine('Why 3?'));
-
-		const { getAllByTestId } = render(DiffView, inReview(review));
-
-		expect(getAllByTestId('delete-comment')).toHaveLength(1);
-		expect(getAllByTestId('resolve-comment')).toHaveLength(2);
-	});
-
-	it('asks before a thread is deleted, and deletes it only on yes', async () => {
+	it('asks, from its menu, before a thread is deleted, and deletes it only on yes', async () => {
 		const user = userEvent.setup({ delay: null });
 		review.threads.add(onTheAddedLine('Why 3?'));
 		const { getByTestId, queryByTestId } = render(DiffView, inReview(review));
 
+		await user.click(getByTestId('thread-menu'));
 		await user.click(getByTestId('delete-comment'));
-		expect(getByTestId('delete-dialog').textContent).toContain('Delete this comment?');
+		expect(getByTestId('delete-dialog-question').textContent).toBe('Delete this comment?');
 		await user.click(getByTestId('confirm-keep'));
 		expect(review.threads.count).toBe(1);
-		expect(queryByTestId('delete-dialog')).toBeNull();
+		expect(queryByTestId('delete-dialog-question')).toBeNull();
 
+		await user.click(getByTestId('thread-menu'));
 		await user.click(getByTestId('delete-comment'));
 		await user.click(getByTestId('confirm-go-ahead'));
 		expect(review.threads.count).toBe(0);
+	});
+
+	it('names, in the question before a thread is deleted, the replies that go with it', async () => {
+		const user = userEvent.setup({ delay: null });
+		const id = review.threads.add(onTheAddedLine('Why 3?'));
+		review.threads.receiveReply(id, 'It moved into the config default', null);
+		review.threads.receiveReply(id, 'And the old one is gone', null);
+		const { getByTestId } = render(DiffView, inReview(review));
+
+		await user.click(getByTestId('thread-menu'));
+		await user.click(getByTestId('delete-comment'));
+
+		expect(getByTestId('delete-dialog-question').textContent).toBe('Delete this comment and its 2 replies?');
+	});
+
+	it('rewrites the comment where it stands, from its menu', async () => {
+		const user = userEvent.setup({ delay: null });
+		review.threads.add(onTheAddedLine('Why 3?'));
+		const { getByTestId } = render(DiffView, inReview(review));
+
+		await user.click(getByTestId('thread-menu'));
+		await user.click(getByTestId('edit-comment'));
+
+		expect((getByTestId('comment-input') as HTMLTextAreaElement).value).toBe('Why 3?');
 	});
 
 	it('keeps every turn rather than overwriting the last one', () => {
@@ -418,45 +434,30 @@ describe('a thread is a conversation', () => {
 	});
 });
 
-describe('the head of the first turn of a thread', () => {
+describe('the bar of a thread', () => {
 	beforeEach(() => {
 		review = openReview({ files: [file] });
 	});
 
-	/** The first turn of the review's first thread, drawn open as the page draws it, under its line. */
-	function firstTurn() {
-		const { getByTestId } = render(CommentThread, inReview(review, { thread: review.threads.all[0], hangs: 'line' }));
-		return getByTestId('thread-question');
+	/** The review's first thread, drawn as the page draws it, under its line. */
+	function firstThread() {
+		return within(render(CommentThread, inReview(review, { thread: review.threads.all[0], hangs: 'line' })).container);
 	}
 
-	it('holds what can be done to the thread: resolve, edit, delete and fold', () => {
+	it('holds what can be done to the thread: resolve, the menu of the reader’s own, and fold', () => {
 		review.threads.add(onTheAddedLine('Why 3?'));
 
-		const opening = within(firstTurn());
+		const bar = within(firstThread().getByTestId('thread-bar'));
 
-		expect(opening.getByTestId('resolve-comment')).toBeTruthy();
-		expect(opening.getByRole('button', { name: 'Edit' })).toBe(opening.getByTestId('edit-comment'));
-		expect(opening.getByRole('button', { name: 'Delete' })).toBe(opening.getByTestId('delete-comment'));
-		expect(opening.getByTestId('fold-comment')).toBeTruthy();
+		expect(bar.getByTestId('resolve-comment')).toBeTruthy();
+		expect(bar.getByRole('button', { name: 'Edit or delete' })).toBe(bar.getByTestId('thread-menu'));
+		expect(bar.getByTestId('fold-comment')).toBeTruthy();
 	});
 
-	it("is the first turn's alone: a question asked after it holds nothing to do to the thread", () => {
-		const id = review.threads.add(onTheAddedLine('Why 3?'));
-		review.threads.addTurn(id, { author: 'reader', body: 'And where did 2 go?', images: [] });
-
-		const { getAllByTestId } = render(
-			CommentThread,
-			inReview(review, { thread: review.threads.all[0], hangs: 'line' })
-		);
-		const [, second] = getAllByTestId('thread-question');
-
-		expect(within(second).queryByTestId('resolve-comment')).toBeNull();
-	});
-
-	it('names the place the thread hangs on after how long ago it was said', () => {
+	it('names the place the thread hangs on, first', () => {
 		review.threads.add(onTheAddedLine('Why 3?'));
 
-		expect(said(firstTurn())).toMatch(/^You \d+s ago \+ Line 2 /);
+		expect(said(firstThread().getByTestId('thread-bar'))).toMatch(/^\+ Line 2 /);
 	});
 
 	it('says what the thread asks for, that it is outdated, and the round it went out in', () => {
@@ -464,21 +465,37 @@ describe('the head of the first turn of a thread', () => {
 		review.threads.add({ ...onTheAddedLine('Why 3?'), severity: 'question', anchor: { ...anchor, outdated: true } });
 		review.threads.markSent(review.threads.carry(review.threads.all), 1);
 
-		const opening = within(firstTurn());
+		const bar = within(firstThread().getByTestId('thread-bar'));
 
-		expect(said(opening.getByTestId('comment-severity'))).toBe('question');
-		expect(opening.getByTestId('comment-outdated')).toBeTruthy();
-		expect(said(opening.getByTestId('comment-sent'))).toBe('sent · round 1');
+		expect(said(bar.getByTestId('comment-severity'))).toBe('question');
+		expect(bar.getByTestId('comment-outdated')).toBeTruthy();
+		expect(said(bar.getByTestId('comment-sent'))).toBe('sent in round 1');
+	});
+
+	it('says, folded, that the agent is answering and that a reply is new, and no longer the round it went out in', () => {
+		const id = review.threads.add(onTheAddedLine('Why 3?'));
+		review.threads.markSent(review.threads.carry(review.threads.all), 1);
+		review.threads.receiveReply(id, 'It moved into the config default', null);
+		review.threads.reading.asked(id, 'turn-asked');
+		review.threads.reading.setFolded(id, true);
+
+		const bar = within(firstThread().getByTestId('thread-bar'));
+
+		expect(said(bar.getByTestId('comment-answering'))).toBe('answering');
+		expect(said(bar.getByTestId('comment-unread'))).toBe('new reply');
+		expect(bar.queryByTestId('comment-sent')).toBeNull();
 	});
 
 	it('is followed, on an outdated thread, by what it was written against, and then by its words', () => {
 		const { anchor } = onTheAddedLine('');
 		review.threads.add({ ...onTheAddedLine('Why 3?'), anchor: { ...anchor, outdated: true } });
 
-		const opening = within(firstTurn());
+		const opening = within(firstThread().getByTestId('thread-question'));
 
 		const words = opening.getByTestId('markdown-content');
-		expect(opening.getByTestId('stale-quote').compareDocumentPosition(words)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+		expect(opening.getByTestId('written-against').compareDocumentPosition(words)).toBe(
+			Node.DOCUMENT_POSITION_FOLLOWING
+		);
 	});
 });
 

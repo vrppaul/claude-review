@@ -1,10 +1,10 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import type { Speaker } from './avatar';
+	import type { Voice } from './voice';
 	import Avatar from './Avatar.svelte';
 
 	interface Props {
-		speaker: Speaker;
+		speaker: Voice;
 		/** What stands on its corner, ringed in the ground round it: whether the agent is there, at work or listening. */
 		corner?: Snippet | undefined;
 	}

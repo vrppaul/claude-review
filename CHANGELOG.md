@@ -242,6 +242,24 @@
   keyboard on nothing once the panel was put away. The heads of the row
   under the header, a column's bar, a rail's and a file's, stand one
   height, 40 px.
+- **A thread is a card headed by a bar, the same open and folded.** The bar
+  says where the thread hangs, in the page's own words, what it asks for,
+  that it is outdated, whether it is settled or the round it went out in,
+  whether the agent is answering and whether a reply is new; then Resolve
+  or Reopen, three dots on the reader's own thread for Edit and Delete,
+  and the fold's chevron. Folded, the card is its bar alone, which says
+  who began the thread, their first words and how many replies are under
+  it, and still says the agent is answering and a reply is new; the round
+  it went out in drops, as the grey says it. Deleting asks in the menu's
+  own pane and names the replies that go with the comment: "Delete this
+  comment and its 2 replies?". A settled thread is green, its bar on the
+  tint of what is done; the agent's on its violet wash, the reader's on
+  their blue's, one sent on grey. The "from the agent" tag is gone, the
+  violet card says it. The field to reply in stands at the card's foot. A
+  thread whose place is gone shows what it was written against in a
+  figure captioned "Written against". The keyboard brought to a thread by
+  n or p turns its edge blue, as a field's, where it ringed the space
+  round it.
 - **Taking back asks first.** A message or a question the agent is still on
   is taken back by a red cross at its turn's head, which asks "Take it
   back?" on one line, Keep waiting or Take back; where taking it back

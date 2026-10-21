@@ -42,6 +42,16 @@ export const ICONS = {
 	},
 	// A pencil: rewriting what was said
 	pencil: { viewBox: '0 0 16 16', paths: ['M10.5 3 13 5.5 6 12.5H3.5V10z'], drawn: TRACED_FINE },
+	// Three dots in a row: more that can be done to a thing, in a menu
+	more: {
+		viewBox: '0 0 16 16',
+		paths: [
+			'M2.3 8a1.2 1.2 0 1 0 2.4 0a1.2 1.2 0 1 0 -2.4 0',
+			'M6.8 8a1.2 1.2 0 1 0 2.4 0a1.2 1.2 0 1 0 -2.4 0',
+			'M11.3 8a1.2 1.2 0 1 0 2.4 0a1.2 1.2 0 1 0 -2.4 0'
+		],
+		drawn: FILLED
+	},
 	// A bin: deleting what was said
 	trash: { viewBox: '0 0 16 16', paths: ['M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.7 8.5h5.6l.7-8.5'], drawn: TRACED_FINE },
 	// A stack of files: the change read file by file

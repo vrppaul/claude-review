@@ -437,20 +437,6 @@
 }
 
 /*
- * A thread the agent raised.
- *
- * Not the reader's mark colour: the marks in a review are theirs, and one
- * that arrived from the other side has to say so before it is read. Violet
- * is the agent's, and nothing else's. Its card says so by its edge, its
- * folded line by its frame in the agent's tone and the place it hangs on in
- * the agent's colour, and the field to reply in by its voice
- * (lib/ui/field.ts).
- */
-.cr-raised .cr-comment-ref {
-	color: var(--cr-agent);
-}
-
-/*
  * What the agent is doing, while it does it: what heads its checklist of
  * the work, so in ink and bold, over the steps it lists.
  */

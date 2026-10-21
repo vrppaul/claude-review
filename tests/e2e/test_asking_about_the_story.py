@@ -83,7 +83,8 @@ async def test_a_thread_on_the_story_deleted_gives_the_keyboard_back_to_what_off
     doubt = await _read_as_story(page, review)
     await _ask_about(page, doubt, "Was it needed?")
 
-    await doubt.get_by_test_id("delete-comment").click()
+    await doubt.get_by_test_id("thread-menu").click()
+    await page.get_by_test_id("delete-comment").click()
     await page.click('[data-testid="confirm-go-ahead"]')
 
     await expect(doubt.get_by_test_id("ask-about-this")).to_be_focused()
@@ -182,7 +183,8 @@ async def test_a_thread_at_the_head_of_the_story_deleted_gives_the_keyboard_to_t
     await _tell(review, TOLD_AGAIN)
     at_the_head = page.get_by_test_id("unplaced-threads")
 
-    await at_the_head.get_by_test_id("delete-comment").click()
+    await at_the_head.get_by_test_id("thread-menu").click()
+    await page.get_by_test_id("delete-comment").click()
     await page.click('[data-testid="confirm-go-ahead"]')
 
     await expect(page.get_by_test_id("story-overview").get_by_test_id("part-head")).to_be_focused()

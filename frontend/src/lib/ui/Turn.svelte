@@ -2,24 +2,14 @@
 	import type { Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
 	import Avatar from './Avatar.svelte';
-	import type { Speaker } from './avatar';
+	import { VOICE_NAMES, type Voice } from './voice';
 
-	/** How a speaker's turns are headed: their name, where they have a head, and their row's class, if its own. */
-	interface Headed {
-		name: string | null;
-		look: string | null;
-	}
-
-	// The agent's name is said in its colour; the reader about to say something has no head yet
-	const HEADED: Record<Speaker, Headed> = {
-		reader: { name: 'You', look: null },
-		agent: { name: 'Agent', look: 'cr-ui-turn-agent' },
-		unsaid: { name: null, look: null }
-	};
+	// Each speaker's row's class, where it has its own: the agent's name is said in its colour
+	const LOOKS: Record<Voice, string | null> = { reader: null, agent: 'cr-ui-turn-agent' };
 
 	interface Props extends Omit<HTMLAttributes<HTMLDivElement>, 'class' | 'style' | 'children'> {
-		/** Who says it: the reader, the agent, or the reader about to say something in the field it holds. */
-		speaker: Speaker;
+		/** Who says it: the reader or the agent. */
+		speaker: Voice;
 		testId: string;
 		/** Whether it has just landed: an answer nobody has looked at yet, which arrives in the agent's colour. */
 		landing?: boolean;
@@ -29,13 +19,11 @@
 		head?: Snippet | undefined;
 		/** What stands at the far end of its head: what can be done to the turn, or how long it has been waited on. */
 		headEnd?: Snippet | undefined;
-		/** What was said, or the field to say it in. */
+		/** What was said, or the field it is rewritten in. */
 		children: Snippet;
 	}
 
 	let { speaker, testId, landing = false, takenBack = false, head, headEnd, children, ...attributes }: Props = $props();
-
-	const headed = $derived(HEADED[speaker]);
 </script>
 
 <!-- One turn of a conversation, a thread's or the panel's: the avatar of who says it, beside their name, the
@@ -46,22 +34,20 @@
 	data-testid={testId}
 	class={[
 		'cr-ui-turn-row cr-ui-turn',
-		headed.look,
+		LOOKS[speaker],
 		landing && 'cr-ui-turn-landing',
 		takenBack && 'cr-ui-turn-taken-back'
 	]}
 >
 	<Avatar {speaker} />
 	<div data-testid="turn-body" class="cr-ui-turn-body">
-		{#if headed.name !== null}
-			<div data-testid="turn-head" class="cr-ui-turn-head">
-				<strong class="cr-ui-turn-name">{headed.name}</strong>
-				{@render head?.()}
-				{#if headEnd}
-					<div data-testid="turn-head-end" class="cr-ui-turn-head-end">{@render headEnd()}</div>
-				{/if}
-			</div>
-		{/if}
+		<div data-testid="turn-head" class="cr-ui-turn-head">
+			<strong class="cr-ui-turn-name">{VOICE_NAMES[speaker]}</strong>
+			{@render head?.()}
+			{#if headEnd}
+				<div data-testid="turn-head-end" class="cr-ui-turn-head-end">{@render headEnd()}</div>
+			{/if}
+		</div>
 		{@render children()}
 	</div>
 </div>

@@ -1,9 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import Actions from './Actions.svelte';
-	import Button from './Button.svelte';
+	import Confirmation from './Confirmation.svelte';
 	import type { Placement, TriggerProps } from './pane';
-	import PaneQuestion from './PaneQuestion.svelte';
 	import Popover from './Popover.svelte';
 
 	interface Props {
@@ -33,19 +31,7 @@
 	}
 </script>
 
-<!-- A question before something written is lost, by the control that asked it, on one line that never wraps.
-	Its answers are its ways out, closer to one another than to the question: the safe one first, which takes the
-	keyboard; the other loses what was written, drawn as what destroys -->
+<!-- A question before something is lost, in a pane by the control that asked it (Confirmation) -->
 <Popover bind:open label={question} {placement} width="fitted" {testId} {trigger}>
-	<div class="flex items-center gap-4 py-2 pr-2 pl-3 whitespace-nowrap">
-		<PaneQuestion {question} testId="{testId}-question" />
-		<Actions testId="{testId}-actions">
-			{#snippet others()}
-				<Button tone="quiet" size="sm" testId="confirm-keep" onclick={() => (open = false)}>{keep}</Button>
-			{/snippet}
-			{#snippet main()}
-				<Button tone="danger" size="sm" testId="confirm-go-ahead" onclick={goAheadNow}>{goAhead}</Button>
-			{/snippet}
-		</Actions>
-	</div>
+	<Confirmation {question} {goAhead} {keep} onKeep={() => (open = false)} onGoAhead={goAheadNow} {testId} />
 </Popover>

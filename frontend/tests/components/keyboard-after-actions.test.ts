@@ -99,6 +99,7 @@ describe('where the keyboard is after a comment field goes', () => {
 		review.threads.add(newComment({ file: file.path, startLine: 2, body: 'why two' }));
 		render(DiffView, inReview(review));
 
+		await user.click(screen.getByTestId('thread-menu'));
 		await user.click(screen.getByTestId('edit-comment'));
 		await user.click(screen.getByTestId('cancel-comment'));
 		await drawn();
@@ -143,6 +144,7 @@ describe('where the keyboard is after a thread changes', () => {
 		const user = userEvent.setup();
 		render(DiffView, inReview(review));
 
+		await user.click(screen.getByTestId('thread-menu'));
 		await user.click(screen.getByTestId('delete-comment'));
 		await user.click(screen.getByTestId('confirm-go-ahead'));
 		await drawn();
@@ -158,6 +160,7 @@ describe('where the keyboard is after a thread drawn at the head of its file goe
 		review.threads.add(newComment({ file: file.path, startLine: 9, body: 'a line no longer here' }));
 		render(DiffView, inReview(review));
 
+		await user.click(screen.getByTestId('thread-menu'));
 		await user.click(screen.getByTestId('delete-comment'));
 		await user.click(screen.getByTestId('confirm-go-ahead'));
 		await drawn();
@@ -177,6 +180,7 @@ describe('where the keyboard is after a thread on a file the diff no longer has 
 		await review.diff.take();
 		await drawn();
 
+		await user.click(screen.getByTestId('thread-menu'));
 		await user.click(screen.getByTestId('delete-comment'));
 		await user.click(screen.getByTestId('confirm-go-ahead'));
 		await drawn();

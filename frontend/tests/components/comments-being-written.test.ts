@@ -220,6 +220,7 @@ describe('a reply or an edit being written in a thread', () => {
 		render(DiffView, inReview(review));
 		await user.click(screen.getByTestId('open-reply'));
 		await user.type(screen.getByTestId('comment-input'), 'my reply');
+		await user.click(screen.getByTestId('thread-menu'));
 		await user.click(screen.getByTestId('edit-comment'));
 		await user.type(screen.getAllByTestId('comment-input')[0], ', and three');
 
@@ -239,6 +240,7 @@ describe('a reply or an edit being written in a thread', () => {
 		await paste(screen.getByTestId('comment-input'), screenshot());
 		await screen.findByTestId('attached-image');
 
+		await user.click(screen.getByTestId('thread-menu'));
 		await user.click(screen.getByTestId('delete-comment'));
 		await user.click(screen.getByTestId('confirm-go-ahead'));
 
@@ -271,6 +273,7 @@ describe('a comment with images of its own', () => {
 		review.threads.add(newComment({ file: file.path, startLine: 2, body: 'see this', images: ['kept.png'] }));
 		const server = fakeServer();
 		render(DiffView, inReview(review));
+		await user.click(screen.getByTestId('thread-menu'));
 		await user.click(screen.getByTestId('edit-comment'));
 
 		await user.click(screen.getByTestId('cancel-comment'));
@@ -283,6 +286,7 @@ describe('a comment with images of its own', () => {
 		review.threads.add(newComment({ file: file.path, startLine: 2, body: 'see this', images: ['kept.png'] }));
 		const server = fakeServer();
 		render(DiffView, inReview(review));
+		await user.click(screen.getByTestId('thread-menu'));
 		await user.click(screen.getByTestId('edit-comment'));
 
 		await user.click(screen.getByTestId('detach-image'));

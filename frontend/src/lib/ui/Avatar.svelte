@@ -1,10 +1,10 @@
 <script lang="ts">
-	import type { Speaker } from './avatar';
 	import Icon from './Icon.svelte';
 	import type { IconName } from './icons';
+	import type { Voice } from './voice';
 
 	interface Props {
-		speaker: Speaker;
+		speaker: Voice;
 	}
 
 	let { speaker }: Props = $props();
@@ -15,15 +15,14 @@
 		look: string;
 	}
 
-	const DRAWN_AS: Record<Speaker, Drawn> = {
+	const DRAWN_AS: Record<Voice, Drawn> = {
 		reader: { icon: 'person', look: 'cr-ui-avatar-reader' },
-		agent: { icon: 'story', look: 'cr-ui-avatar-agent' },
-		unsaid: { icon: 'person', look: 'cr-ui-avatar-unsaid' }
+		agent: { icon: 'story', look: 'cr-ui-avatar-agent' }
 	};
 
 	const drawn = $derived(DRAWN_AS[speaker]);
 </script>
 
-<!-- Who says a turn, round (lib/ui/avatar.ts): as wide as the room it stands in, which lays out round it: its turn's
-	first column (Turn), or the mark on a rail of who is behind it (SpeakerMark) -->
+<!-- Who says a turn, round, by their glyph on a ground of their colour: as wide as the room it stands in, which lays
+	out round it: its turn's first column (Turn), or the mark on a rail of who is behind it (SpeakerMark) -->
 <span class={['cr-ui-avatar', drawn.look]}><Icon name={drawn.icon} size="xs" /></span>

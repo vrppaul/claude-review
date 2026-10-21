@@ -9,22 +9,29 @@
 	import Failure from '$lib/ui/Failure.svelte';
 	import FieldButton from '$lib/ui/FieldButton.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
-	import Turn from '$lib/ui/Turn.svelte';
 	import TurnAside from '$lib/ui/TurnAside.svelte';
 	import { messageOf } from '$lib/utils/errors';
 	import { AGENT, raisedByAgent } from '$lib/utils/speakers';
 	import CommentBox from './CommentBox.svelte';
 	import { PLACEHOLDERS } from './placeholders';
+	import ThreadBar from './ThreadBar.svelte';
 	import ThreadConversation from './ThreadConversation.svelte';
 	import { threadVoice } from './thread-voice';
+
+	/** How the card is drawn, which the tests know it by: open, folded by hand, or folded by settling it. */
+	type Drawn = 'open' | 'folded' | 'settled';
+
+	const TEST_IDS: Record<Drawn, string> = { open: 'thread-card', folded: 'folded-thread', settled: 'resolved-thread' };
 
 	interface Props {
 		thread: Thread;
 		/** Where its card hangs: under its line, under a block of the story's words, or at the head of what it lost its place in. */
 		hangs: CardHanging;
+		/** Whether it is folded to its bar, the conversation under it put away. */
+		folded: boolean;
 	}
 
-	let { thread, hangs }: Props = $props();
+	let { thread, hangs, folded }: Props = $props();
 	const review = useReview();
 	const writing = review.threads.writing;
 
@@ -39,18 +46,23 @@
 	// is already the agent's word.
 	const lastWord = $derived(thread.turns.at(-1)?.author ?? thread.raised_by);
 	const askable = $derived(review.canAsk && awaiting.length === 0 && lastWord !== AGENT);
-	const raised = $derived(raisedByAgent(thread));
 	// The field to reply in is edged in the colour of whose thread it is
 	const voice = $derived(threadVoice(thread));
 	// What has gone out with a round reads as read by the other side; what is
 	// still unsent keeps the mark colour
 	const sent = $derived(review.threads.sentInRound(thread.id) !== undefined);
-	// Its card's edge says where it stands: the agent's colour when the agent raised it, quieter once it went
-	// out with a round, faint once what it was written on is gone, and the reader's mark while in their hands
+	// Its card's edge and bar say where it stands: settled in the colour of what is done, the agent's colour when the
+	// agent raised it, quieter once it went out with a round, faint once what it was written on is gone, and the
+	// reader's mark while in their hands
 	const tone = $derived.by<CardTone>(() => {
-		if (raised) return 'agent';
+		if (thread.resolved) return 'done';
+		if (raisedByAgent(thread)) return 'agent';
 		if (sent) return 'quiet';
 		return thread.anchor.outdated ? 'stale' : 'reader';
+	});
+	const drawn = $derived.by<Drawn>(() => {
+		if (!folded) return 'open';
+		return thread.resolved ? 'settled' : 'folded';
 	});
 
 	/** Looking at the thread — clicking in it, or moving the keyboard into it — is what makes its answer read. */
@@ -88,8 +100,24 @@
 	}
 </script>
 
-<!-- One card, its turns a row each -->
-<Card {tone} {hangs} testId="thread-card" role="presentation" onclick={markRead} onfocusin={markRead}>
+<!-- One card: its bar, the same open and folded; open, its turns a row each under the bar, and the reader's next
+	turn at its foot — a field to begin it in, the field itself once begun -->
+<Card
+	{tone}
+	{hangs}
+	testId={TEST_IDS[drawn]}
+	role="presentation"
+	onclick={markRead}
+	onfocusin={markRead}
+	children={folded ? undefined : conversation}
+	foot={folded ? undefined : nextTurn}
+>
+	{#snippet bar()}
+		<ThreadBar {thread} {folded} />
+	{/snippet}
+</Card>
+
+{#snippet conversation()}
 	<Conversation testId="thread-turns">
 		<ThreadConversation {thread} />
 
@@ -108,27 +136,26 @@
 				{/if}
 			</TurnAside>
 		{/if}
-
-		<!-- The reader's next turn, the last of the thread: a field to begin it in, the field itself once begun -->
-		<Turn speaker="unsaid" testId="reply-turn">
-			{#if replying}
-				<CommentBox
-					field={replying}
-					onSave={() => reply(replying)}
-					onAsk={review.canAsk ? () => replyAndAsk(replying) : undefined}
-					onCancel={() => putAway(replying)}
-					severityPicker={false}
-					hangs="in-its-thread"
-					{voice}
-				/>
-			{:else}
-				<FieldButton
-					placeholder={PLACEHOLDERS.reply}
-					{voice}
-					testId="open-reply"
-					onclick={() => writing.openReply(thread.id)}
-				/>
-			{/if}
-		</Turn>
 	</Conversation>
-</Card>
+{/snippet}
+
+{#snippet nextTurn()}
+	{#if replying}
+		<CommentBox
+			field={replying}
+			onSave={() => reply(replying)}
+			onAsk={review.canAsk ? () => replyAndAsk(replying) : undefined}
+			onCancel={() => putAway(replying)}
+			severityPicker={false}
+			hangs="in-its-thread"
+			{voice}
+		/>
+	{:else}
+		<FieldButton
+			placeholder={PLACEHOLDERS.reply}
+			{voice}
+			testId="open-reply"
+			onclick={() => writing.openReply(thread.id)}
+		/>
+	{/if}
+{/snippet}

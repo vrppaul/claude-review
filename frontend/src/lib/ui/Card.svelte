@@ -8,18 +8,37 @@
 		/** Where it hangs under what it is about; none for a card that stands where it is drawn. */
 		hangs?: CardHanging | undefined;
 		testId: string;
-		children: Snippet;
+		/** The bar that heads it (CardBar), the same open and folded; none for a card with one room round what it holds. */
+		bar?: Snippet | undefined;
+		/** What it holds; none for a card folded to its bar. */
+		children?: Snippet | undefined;
+		/** What stands at its foot, under what it holds: a card headed by a bar alone has one. */
+		foot?: Snippet | undefined;
 	}
 
-	let { tone, hangs, testId, children, ...attributes }: Props = $props();
+	let { tone, hangs, testId, bar, children, foot, ...attributes }: Props = $props();
 </script>
 
 <!-- What it holds boxed apart from what stands round it, edged in its tone's colour (lib/ui/card.ts); where it
-	hangs under what it is about, lifted off that and pointing up at it -->
+	hangs under what it is about, lifted off that and pointing up at it. Headed by a bar, it is laid out by its
+	parts, each on the card's room either side; else one room round what it holds -->
 <div
 	{...attributes}
 	data-testid={testId}
-	class={['cr-ui-card cr-ui-card-content', CARD_TONES[tone], hangs && CARD_HANGINGS[hangs]]}
+	class={[
+		'cr-ui-card',
+		bar ? 'cr-ui-card-barred' : 'cr-ui-card-content',
+		CARD_TONES[tone],
+		hangs && CARD_HANGINGS[hangs]
+	]}
 >
-	{@render children()}
+	{@render bar?.()}
+	{#if bar && children}
+		<div class="cr-ui-card-body">{@render children()}</div>
+	{:else}
+		{@render children?.()}
+	{/if}
+	{#if foot}
+		<div class="cr-ui-card-foot">{@render foot()}</div>
+	{/if}
 </div>

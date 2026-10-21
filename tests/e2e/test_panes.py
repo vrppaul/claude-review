@@ -91,12 +91,13 @@ async def test_the_question_before_a_comment_is_deleted_leaves_the_rest_of_the_p
     await _open(page, review)
     await _comment_on_the_first_line(page, SAVED_WORDS)
     await page.keyboard.press("Control+Enter")
+    await page.get_by_test_id("thread-menu").click()
     await page.get_by_test_id("delete-comment").click()
 
     await page.get_by_test_id(SETTINGS_TOGGLE).click()
 
     await page.get_by_test_id(SETTINGS_MENU).wait_for()
-    await page.get_by_test_id("delete-dialog").wait_for(state="detached")
+    await page.get_by_test_id("thread-menu-pane").wait_for(state="detached")
 
 
 @in_the_browsers_loop
@@ -140,13 +141,13 @@ async def test_the_question_before_a_comment_is_discarded_asked_just_under_the_f
 
 
 async def _bin_at_the_foot(page: Page, review: RunningReview) -> None:
-    """A comment saved deep in the long file, its bin scrolled to stand at the foot of the reading area."""
+    """A comment saved deep in the long file, its menu scrolled to stand at the foot of the reading area."""
     await _open(page, review)
     await _comment_deep_in_the_file(page, SAVED_WORDS)
     await page.keyboard.press("Control+Enter")
-    bin_button = page.get_by_test_id("delete-comment")
-    await bin_button.wait_for()
-    await bin_button.evaluate(AT_THE_FOOT)
+    menu_button = page.get_by_test_id("thread-menu")
+    await menu_button.wait_for()
+    await menu_button.evaluate(AT_THE_FOOT)
 
 
 async def test_the_question_before_a_comment_is_deleted_asked_at_the_foot_of_the_reading_area_is_answered_where_it_opens(
@@ -156,11 +157,12 @@ async def test_the_question_before_a_comment_is_deleted_asked_at_the_foot_of_the
     await _bin_at_the_foot(page, long_change)
     area = page.get_by_test_id("diff-view")
     scrolled_to = await area.evaluate(SCROLLED)
+    await page.get_by_test_id("thread-menu").click()
     await page.get_by_test_id("delete-comment").click()
 
     await page.get_by_test_id("confirm-keep").click()
 
-    await page.get_by_test_id("delete-dialog").wait_for(state="detached")
+    await page.get_by_test_id("thread-menu-pane").wait_for(state="detached")
     assert await area.evaluate(SCROLLED) == scrolled_to
 
 
@@ -171,7 +173,8 @@ async def test_the_question_taking_the_keyboard_leaves_the_reading_area_where_th
     area = page.get_by_test_id("diff-view")
     scrolled_to = await area.evaluate(SCROLLED)
 
+    await page.get_by_test_id("thread-menu").click()
     await page.get_by_test_id("delete-comment").click()
 
-    await page.get_by_test_id("delete-dialog").wait_for()
+    await page.get_by_test_id("delete-dialog-question").wait_for()
     assert (await page.evaluate(FOCUSED_TEST_ID), await area.evaluate(SCROLLED)) == ("confirm-keep", scrolled_to)

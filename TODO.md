@@ -220,8 +220,6 @@ of it is built yet.
       status line alone, so what an agent passes to `status --context` is
       its own words, or a guess. Until then the line stands under the
       panel's head.
-- [ ] `feat(ui)`: a new look for a folded thread's line (its words are in
-      the code's face today).
 - [ ] `feat(ui)`: a new look for the rows of the tree of files, and a new
       design of the tree itself.
 - [ ] `feat(ui)`: a new look for the buttons under a comment being written

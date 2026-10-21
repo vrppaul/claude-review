@@ -4,8 +4,7 @@
 	import { useReview } from '$lib/review/context';
 	import type { CardHanging } from '$lib/ui/card';
 	import CommentBox from './CommentBox.svelte';
-	import FoldedThread from './FoldedThread.svelte';
-	import OpenThread from './OpenThread.svelte';
+	import ThreadCard from './ThreadCard.svelte';
 
 	interface Props {
 		thread: Thread;
@@ -51,9 +50,7 @@
 			label={anchorLabel(thread.anchor)}
 			{hangs}
 		/>
-	{:else if review.threads.reading.isFolded(thread.id)}
-		<FoldedThread {thread} />
 	{:else}
-		<OpenThread {thread} {hangs} />
+		<ThreadCard {thread} {hangs} folded={review.threads.reading.isFolded(thread.id)} />
 	{/if}
 </div>

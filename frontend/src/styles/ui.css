@@ -1122,6 +1122,207 @@
 .cr-ui-card-stale {
 	border-color: var(--cr-faint);
 }
+.cr-ui-card-done {
+	border-color: var(--cr-done-border);
+}
+/*
+ * A card headed by a bar (CardBar), laid out by its parts: the bar on the
+ * tone's wash over the card's ground, and its tail with it; under it what
+ * the card holds, and its foot, each on the card's room either side
+ */
+.cr-ui-card-barred {
+	--cr-card-bar-wash: var(--cr-ink-wash);
+	font-family: var(--font-sans);
+}
+.cr-ui-card-barred.cr-ui-card-reader {
+	--cr-card-bar-wash: var(--cr-mark-wash);
+}
+.cr-ui-card-barred.cr-ui-card-agent {
+	--cr-card-bar-wash: var(--cr-agent-wash);
+}
+.cr-ui-card-barred.cr-ui-card-done {
+	--cr-card-bar-wash: var(--cr-done-tint);
+}
+.cr-ui-card-barred.cr-ui-card-tailed::before {
+	background-image: linear-gradient(var(--cr-card-bar-wash), var(--cr-card-bar-wash));
+}
+.cr-ui-card-body {
+	padding: --spacing(3) var(--cr-card-room) 0;
+}
+.cr-ui-card-foot {
+	display: flex;
+	align-items: center;
+	gap: --spacing(2);
+	padding: --spacing(3) var(--cr-card-room);
+}
+/* What stands at the foot fills it: the field to begin the next turn in, or the field itself once begun */
+.cr-ui-card-foot > * {
+	flex: 1 1 0;
+	min-width: 0;
+}
+/* A card the keyboard was brought to, its holder having it: its edge in the keyboard's blue, as a field's */
+:focus-visible:has(> .cr-ui-card) {
+	outline: none;
+}
+:focus-visible > .cr-ui-card {
+	border-color: var(--cr-focus-ring);
+	box-shadow: var(--cr-shadow-focused-edge);
+}
+:focus-visible > .cr-ui-card-hanging {
+	box-shadow: var(--cr-shadow-hanging-focused);
+}
+/*
+ * The bar heading a card (CardBar): as tall as every head on the row under
+ * the header, on the card's room either side, the card's corners at its top;
+ * ruled off from what is under it while the card is open, and alone in it,
+ * round all its corners, once the card is folded to it
+ */
+.cr-ui-card-bar {
+	display: flex;
+	align-items: center;
+	gap: --spacing(2);
+	height: var(--cr-head-row);
+	padding-inline: var(--cr-card-room);
+	border-radius: calc(var(--radius-box) - var(--cr-line)) calc(var(--radius-box) - var(--cr-line)) 0 0;
+	background-color: var(--cr-card-bar-wash);
+	font-size: var(--text-sm);
+	line-height: var(--text-sm--line-height);
+	box-shadow: var(--cr-shadow-bar-rule);
+}
+.cr-ui-card-bar:only-child {
+	border-radius: calc(var(--radius-box) - var(--cr-line));
+	box-shadow: none;
+}
+/* Where what the card holds hangs, a small label's weight, never wrapped */
+.cr-ui-card-bar-place {
+	white-space: nowrap;
+	font-weight: var(--font-weight-medium);
+}
+/* What can be done to it, together at the bar's end; a button with words stands a step off the icons after it */
+.cr-ui-card-bar-end {
+	display: flex;
+	align-items: center;
+	gap: --spacing(0.5);
+	margin-left: auto;
+	padding-left: --spacing(2);
+}
+.cr-ui-card-bar-end > .cr-ui-secondary {
+	margin-right: --spacing(1);
+}
+/*
+ * What a card folded to its bar holds (FoldedSummary): who began it, the
+ * agent in its colour, and their first words, cut where the bar runs out
+ */
+.cr-ui-folded-summary {
+	display: flex;
+	flex: 1 1 0;
+	align-items: baseline;
+	gap: --spacing(1.5);
+	min-width: 0;
+	margin-left: --spacing(1);
+}
+.cr-ui-folded-summary strong {
+	white-space: nowrap;
+	font-weight: var(--font-weight-semibold);
+}
+.cr-ui-folded-summary-agent {
+	color: var(--cr-agent);
+}
+.cr-ui-folded-summary-words {
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+	color: var(--cr-muted);
+}
+/* A few small words of where a thing stands (Standing), in the colour of what they say */
+.cr-ui-standing {
+	display: inline-flex;
+	align-items: center;
+	gap: --spacing(1);
+	white-space: nowrap;
+	font-size: var(--text-xs);
+	line-height: var(--text-xs--line-height);
+}
+.cr-ui-standing-quiet {
+	color: var(--cr-muted);
+}
+.cr-ui-standing-done {
+	color: var(--cr-done);
+	font-weight: var(--font-weight-semibold);
+}
+.cr-ui-standing-agent {
+	gap: --spacing(1.5);
+	color: var(--cr-agent);
+}
+.cr-ui-standing-unread {
+	color: var(--cr-unread);
+}
+.cr-ui-standing-faint {
+	color: var(--cr-faint);
+}
+/*
+ * A menu (Menu): its acts (MenuItem) one under another, each as tall as a
+ * list's row, in the page's own words, room left after the longest name
+ */
+.cr-ui-menu {
+	display: flex;
+	flex-direction: column;
+	width: max-content;
+	padding: --spacing(1);
+}
+.cr-ui-menu-item {
+	display: flex;
+	align-items: center;
+	gap: var(--cr-list-row-gap);
+	height: var(--cr-list-row-height);
+	padding-inline: var(--cr-list-row-room) --spacing(6);
+	border-radius: var(--radius-field);
+	font-size: var(--text-sm);
+	line-height: var(--text-sm--line-height);
+	text-align: left;
+}
+.cr-ui-menu-item-danger {
+	color: var(--color-error);
+}
+/*
+ * A copy kept of what something was written on (KeptQuote): a figure on the
+ * reading ground, edged as a pane, its caption ruled off above its lines,
+ * quieter than what is said under it
+ */
+.cr-ui-kept-quote {
+	margin: 0 0 --spacing(2);
+	overflow: hidden;
+	border: var(--cr-line) solid var(--cr-pane-edge);
+	border-radius: var(--radius-box);
+	background: var(--cr-ground-reading);
+}
+.cr-ui-kept-quote figcaption {
+	padding: --spacing(1) --spacing(3);
+	border-bottom: var(--cr-line) solid var(--cr-pane-edge);
+	color: var(--cr-muted);
+	font-size: var(--text-xs);
+	line-height: var(--text-xs--line-height);
+}
+.cr-ui-kept-quote-code,
+.cr-ui-kept-quote-words {
+	margin: 0;
+	padding: --spacing(1.5) --spacing(3);
+	color: var(--cr-muted);
+}
+.cr-ui-kept-quote-code {
+	overflow-x: auto;
+	font-family: var(--font-mono);
+	font-size: var(--cr-code-size);
+	line-height: var(--cr-code-leading);
+}
+/* A question before something is lost (Confirmation), on one line, its answers a step closer to each other */
+.cr-ui-confirmation {
+	display: flex;
+	align-items: center;
+	gap: --spacing(4);
+	padding: --spacing(2) --spacing(2) --spacing(2) --spacing(3);
+	white-space: nowrap;
+}
 /* A card hanging under what it is about, lifted off it */
 .cr-ui-card-hanging {
 	position: relative;
@@ -1718,11 +1919,6 @@
 .cr-ui-avatar-agent {
 	background-color: var(--cr-avatar-agent);
 	color: var(--cr-agent);
-}
-/* The reader's turn not said yet, in the field to reply in: grey */
-.cr-ui-avatar-unsaid {
-	background-color: var(--color-base-300);
-	color: var(--cr-faint);
 }
 /*
  * What the reader asked for and took back: its words muted and struck

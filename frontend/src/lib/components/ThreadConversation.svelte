@@ -3,7 +3,7 @@
 	import { anchorQuoteReads, anchorReplaces, anchorWrittenAgainst } from '$lib/anchors/views';
 	import { tourStop } from '$lib/guide/tour';
 	import { useReview } from '$lib/review/context';
-	import EdgeFrame from '$lib/ui/EdgeFrame.svelte';
+	import KeptQuote from '$lib/ui/KeptQuote.svelte';
 	import Turn from '$lib/ui/Turn.svelte';
 	import TurnAside from '$lib/ui/TurnAside.svelte';
 	import { splitSuggestions } from '$lib/utils/suggestion';
@@ -13,9 +13,10 @@
 	import MarkdownRenderer from './MarkdownRenderer.svelte';
 	import SaidImages from './SaidImages.svelte';
 	import SuggestionDiff from './SuggestionDiff.svelte';
-	import ThreadHeadEnd from './ThreadHeadEnd.svelte';
-	import ThreadHeading from './ThreadHeading.svelte';
 	import { TURN_VOICES } from './thread-voice';
+
+	// What the copy kept of what a thread lost its place in says it is
+	const WRITTEN_AGAINST = 'Written against';
 
 	interface Props {
 		thread: Thread;
@@ -45,8 +46,8 @@
 </script>
 
 <!-- A thread reads as a conversation, a turn to a row: each question, the answers held to it, and the answer
-	still awaited. A turn kept from an older version may not say when it was said. The head of the first
-	turn says what the thread hangs on and holds what can be done to it, and under it stands what an
+	still awaited. A turn kept from an older version may not say when it was said. What the thread hangs on and
+	what can be done to it stand on its card's bar (ThreadBar); in the first turn, over its words, stands what an
 	outdated thread was written against -->
 {#each exchanges as exchange, index (exchange.id)}
 	{@const waitedOn = askedAt(exchange.id)}
@@ -58,29 +59,15 @@
 			<span class="cr-faint text-xs">round {exchange.round}</span>
 		</TurnAside>
 	{/if}
-	<Turn speaker={TURN_VOICES[exchange.by]} testId="thread-question" headEnd={opening ? threadHeadEnd : undefined}>
+	<Turn speaker={TURN_VOICES[exchange.by]} testId="thread-question">
 		{#snippet head()}
 			{#if exchange.at !== undefined}
 				<span>{howLongAgo(exchange.at)}</span>
 			{/if}
-			{#if opening}
-				<ThreadHeading {thread} />
-			{/if}
 		{/snippet}
 		{#if opening && thread.anchor.outdated && writtenAgainst.length > 0}
 			<!-- One that has lost its place keeps its own copy of what was there -->
-			<div class="my-1">
-				<EdgeFrame tone="stale" ground="tint" testId="stale-quote">
-					<p class="cr-muted mb-1 text-xs">what it was written against</p>
-					{#each writtenAgainst as line, lineIndex (lineIndex)}
-						{#if quoteReads === 'code'}
-							<pre class="cr-code cr-muted overflow-x-auto font-mono">{line}</pre>
-						{:else}
-							<p class="cr-muted">{line}</p>
-						{/if}
-					{/each}
-				</EdgeFrame>
-			</div>
+			<KeptQuote caption={WRITTEN_AGAINST} lines={writtenAgainst} reads={quoteReads} testId="written-against" />
 		{/if}
 		{#each splitSuggestions(exchange.asked) as part, partIndex (partIndex)}
 			{#if part.kind === 'suggestion'}
@@ -118,8 +105,3 @@
 		/>
 	{/if}
 {/each}
-
-<!-- The far end of the head of the first turn alone: whose the thread is, and what can be done to it -->
-{#snippet threadHeadEnd()}
-	<ThreadHeadEnd {thread} />
-{/snippet}

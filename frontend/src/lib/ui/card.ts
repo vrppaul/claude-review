@@ -9,17 +9,23 @@
  * A card that hangs under what it is about is lifted off it, and points up
  * at it with a tail where it hangs: the card places its tail itself, from
  * where it is told it hangs, and nothing outside the library reaches into it.
+ *
+ * A card headed by a bar (CardBar) is laid out by its parts: the bar, what
+ * it holds under the bar, and its foot, each keeping the card's room either
+ * side, so all three start and end on one edge. Folded, the bar stands alone.
+ * The bar's ground is the tone's wash over the card's, and so is its tail's.
  */
 
 /**
- * Whose the card is, or where what it holds stands, said by its edge:
+ * Whose the card is, or where what it holds stands, said by its edge and its bar:
  * - quiet: a line between surfaces, saying nothing more; a thread that went
  *   out with a round, quieter than one still in the reader's hands
  * - reader: a thread in the reader's hands, a comment they are writing
  * - agent: a thread the agent raised
  * - stale: a thread whose lines are gone
+ * - done: a thread settled, its bar on the tint of what is done
  */
-export type CardTone = 'quiet' | 'reader' | 'agent' | 'stale';
+export type CardTone = 'quiet' | 'reader' | 'agent' | 'stale' | 'done';
 
 /**
  * Where a card hangs, lifted off what it is about:
@@ -35,7 +41,8 @@ export const CARD_TONES: Record<CardTone, string> = {
 	quiet: 'cr-ui-card-quiet',
 	reader: 'cr-ui-card-reader',
 	agent: 'cr-ui-card-agent',
-	stale: 'cr-ui-card-stale'
+	stale: 'cr-ui-card-stale',
+	done: 'cr-ui-card-done'
 };
 
 export const CARD_HANGINGS: Record<CardHanging, string> = {
