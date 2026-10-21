@@ -8,17 +8,15 @@ from claude_review.domain.exceptions import UnknownVersionError
 from claude_review.domain.models import OnBranch, OnCommit, RepositoryAt, ReviewMode
 from claude_review.repositories.git_repository import GitRepository
 from claude_review.services.review_opening import open_diff, open_files, open_transcript
-from tests.helpers import committed_repository, git
+from tests.helpers import DEFAULT_BRANCH, INITIAL_FILES, committed_repository, git
 
 # More files than a title names before it counts the rest
 FIVE_FILES = ("e.md", "d.md", "c.md", "b.md", "a.md")
-# A branch the change is made on, the branch every test repository starts on, and how short git writes a
-# commit's id in a repository this small
+# A branch the change is made on, and how short git writes a commit's id in a repository this small
 FEATURE_BRANCH = "feature/where-the-change-is"
-DEFAULT_BRANCH = "main"
 SHORT_ID_LENGTH = 7
-# A file committed in a repository, and changed after
-CHANGED = {"initial.txt": "initial content\n"}
+# A ref HEAD may point at outside the branches: a remote's, whose name git says whole
+REMOTE_REF = "refs/remotes/origin/main"
 
 
 @pytest.fixture
@@ -43,27 +41,32 @@ async def test_a_diff_is_named_by_its_repository_and_what_it_is_compared_against
 
 
 async def test_a_diff_says_the_branch_checked_out_or_on_none_the_commit(tmp_path: Path) -> None:
-    """A branch by its whole name, whatever a tag is called and before anything is committed; on none, the commit."""
-    on_a_branch = committed_repository(tmp_path / "on-a-branch", CHANGED)
+    """A branch by its whole name, whatever a tag is called, before anything is committed and outside the branches;
+    on none, the commit."""
+    on_a_branch = committed_repository(tmp_path / "on-a-branch", INITIAL_FILES)
     git(on_a_branch, "switch", "--quiet", "--create", FEATURE_BRANCH)
-    beside_a_tag_of_its_name = committed_repository(tmp_path / "beside-a-tag", CHANGED)
+    beside_a_tag_of_its_name = committed_repository(tmp_path / "beside-a-tag", INITIAL_FILES)
     git(beside_a_tag_of_its_name, "tag", DEFAULT_BRANCH)
     nothing_committed = tmp_path / "nothing-committed"
     nothing_committed.mkdir()
     git(nothing_committed, "init", "--quiet", "--initial-branch", DEFAULT_BRANCH)
-    on_no_branch = committed_repository(tmp_path / "on-no-branch", CHANGED)
+    outside_the_branches = committed_repository(tmp_path / "outside-the-branches", INITIAL_FILES)
+    git(outside_the_branches, "update-ref", REMOTE_REF, "HEAD")
+    git(outside_the_branches, "symbolic-ref", "HEAD", REMOTE_REF)
+    on_no_branch = committed_repository(tmp_path / "on-no-branch", INITIAL_FILES)
     git(on_no_branch, "switch", "--quiet", "--detach")
     commit = git(on_no_branch, "rev-parse", "HEAD").strip()
 
     opened = [
         (await open_diff(repository, None, GitRepository(objects=None))).repository_at
-        for repository in (on_a_branch, beside_a_tag_of_its_name, nothing_committed, on_no_branch)
+        for repository in (on_a_branch, beside_a_tag_of_its_name, nothing_committed, outside_the_branches, on_no_branch)
     ]
 
     assert opened == [
         RepositoryAt(name=on_a_branch.name, checkout=OnBranch(branch=FEATURE_BRANCH)),
         RepositoryAt(name=beside_a_tag_of_its_name.name, checkout=OnBranch(branch=DEFAULT_BRANCH)),
         RepositoryAt(name=nothing_committed.name, checkout=OnBranch(branch=DEFAULT_BRANCH)),
+        RepositoryAt(name=outside_the_branches.name, checkout=OnBranch(branch=REMOTE_REF)),
         RepositoryAt(name=on_no_branch.name, checkout=OnCommit(commit=commit[:SHORT_ID_LENGTH])),
     ]
 

@@ -16,6 +16,7 @@ from claude_review.services.review_opening import ReviewOpening, open_diff
 from claude_review.services.text_files import read_text_files
 from claude_review.services.transcript import read_transcript
 from tests.helpers import (
+    DEFAULT_BRANCH,
     DIFF_ROUTE,
     EVENTS_ROUTE,
     IMAGES_ROUTE,
@@ -287,7 +288,10 @@ async def test_the_review_of_a_repository_says_its_name_and_the_branch_checked_o
     async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as client:
         response = await client.get(REVIEW_ROUTE)
 
-    assert response.json()["repository"] == {"name": tmp_git_repo.name, "checkout": {"at": "branch", "branch": "main"}}
+    assert response.json()["repository"] == {
+        "name": tmp_git_repo.name,
+        "checkout": {"at": "branch", "branch": DEFAULT_BRANCH},
+    }
 
 
 async def _identity_of(reviews: ReviewFactory, opening: ReviewOpening) -> str:

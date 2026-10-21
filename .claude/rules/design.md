@@ -40,7 +40,7 @@ A part is held to these once it is moved to them, or once a change touches its l
 - A thread hangs the full width of what it is under, with the page's own inset.
 - Items of a list stand apart, a hairline or a gap between them, never touching.
 - Things of one group stand closer together than the groups do.
-- A light round words — the pointer's, the reader's place — reaches `--spacing(1.5)` past them above and below and `--spacing(2)` either side, and stands at least that far from anything else.
+- In the story's overview lists, a light round words — the pointer's, the reader's place — reaches `--spacing(1.5)` past them above and below and `--spacing(2)` either side, and stands at least that far from anything else.
 - The rows of a list stand on the edges of the field that filters it.
 - Keys listed against their words stand in two columns, the keys right-aligned and the words left-aligned, close together.
 - Chips and tags on a heading's line are centred on it.

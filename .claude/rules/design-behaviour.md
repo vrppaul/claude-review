@@ -10,9 +10,9 @@ From the owner's design canvas of 2026-10-20. How the page looks: `.claude/rules
 ## Folded and put away
 
 - A thing that folds keeps its head the same open and folded. Folded, the head alone says what is under it — who, the first words, how many — and whatever is still happening there.
-- A list whose one item fits the line it would fold to is that item, drawn whole, with nothing to fold; any other list folds to that line, cut with an ellipsis.
+- A list of the story's overview whose one item fits the line it would fold to is that item, drawn whole, with nothing to fold; any other folds to that line, cut with an ellipsis.
 - Nothing folded offers to be asked about: a comment is about what the reader sees whole.
-- A list a thread hangs in stays open while it does: its fold is off.
+- A list of the story's overview a thread hangs in stays open while it does: its fold is off.
 - An arrow is a line chevron: down while folded, up while open. A chevron only folds; any other icon draws the thing it names.
 - A toggle's icon shows the state it is in.
 - The button that puts a thing away brings it back, from the same spot.

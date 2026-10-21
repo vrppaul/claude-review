@@ -30,6 +30,7 @@ from claude_review.repositories.git_repository import GitRepository, GitStagedTr
 from claude_review.services.review_opening import ReviewOpening, open_diff
 from tests.helpers import (
     IMAGES_ROUTE,
+    INITIAL_FILES,
     LOOK_EVERY_SECONDS,
     PNG,
     SETTLE_SECONDS,
@@ -199,7 +200,7 @@ async def test_a_file_changed_under_the_review_is_said_to_the_review_on_screen(
     The repository stands apart from the test's directory, where the review keeps what it writes: nothing but the
     file changed moves in it.
     """
-    repository = committed_repository(tmp_path_factory.mktemp("apart"), {"initial.txt": "initial content\n"})
+    repository = committed_repository(tmp_path_factory.mktemp("apart"), INITIAL_FILES)
     (repository / "initial.txt").write_text("changed\n")
     opened = await open_diff(repository, None, GitRepository(objects=None))
     serving = asyncio.ensure_future(_served(reviews.hosted(opened), announcer))

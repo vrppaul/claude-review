@@ -78,6 +78,10 @@ ANY_PORT = 0
 ASGI_VERSION = "3.0"
 HTTP_VERSION = "1.1"
 
+# The branch every test repository starts on, and the file its first commit holds
+DEFAULT_BRANCH = "main"
+INITIAL_FILES = {"initial.txt": "initial content\n"}
+
 SESSION_ROUTE = "/api/session"
 # Reads what the server says down the session socket, as the page does
 SESSION_MESSAGES = TypeAdapter[SessionMessage](SessionMessage)
@@ -164,7 +168,7 @@ def write_files(root: Path, files: dict[str, str]) -> None:
 def committed_repository(root: Path, files: dict[str, str]) -> Path:
     """A repository at `root` whose first commit holds these files, made the one way every test makes one."""
     root.mkdir(parents=True, exist_ok=True)
-    git(root, "init", "-b", "main")
+    git(root, "init", "-b", DEFAULT_BRANCH)
     git(root, "config", "user.email", "test@test.com")
     git(root, "config", "user.name", "Test")
     write_files(root, files)

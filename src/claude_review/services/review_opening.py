@@ -69,7 +69,7 @@ class OpenedRepository(BaseModel):
         return self.root.name or str(self.root)
 
     @property
-    def where(self) -> RepositoryAt:
+    def repository_at(self) -> RepositoryAt:
         """Where the change is, as the header says it: the repository, by its name, and what it had checked out."""
         return RepositoryAt(name=self.name, checkout=self.checkout)
 
@@ -103,7 +103,7 @@ class ReviewOpening(BaseModel):
     @property
     def repository_at(self) -> RepositoryAt | None:
         """Where the change under review is: None for a review of files or of a conversation, of no repository."""
-        return self.repository.where if self.repository is not None else None
+        return self.repository.repository_at if self.repository is not None else None
 
 
 async def open_diff(location: Path, base: str | None, repository: Repository) -> ReviewOpening:

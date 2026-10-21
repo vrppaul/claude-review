@@ -16,6 +16,7 @@ from claude_review.domain.models import GuideState
 from claude_review.hosting.workspace import ReaderFiles, ReviewWorkspace
 from tests.helpers import (
     GIT_YES,
+    INITIAL_FILES,
     ReviewFactory,
     ReviewServers,
     committed_repository,
@@ -30,7 +31,7 @@ from tests.helpers import (
 @pytest.fixture
 def tmp_git_repo(tmp_path: Path) -> Path:
     """Create a temporary git repo with an initial commit."""
-    return committed_repository(tmp_path, {"initial.txt": "initial content\n"})
+    return committed_repository(tmp_path, INITIAL_FILES)
 
 
 @pytest.fixture
