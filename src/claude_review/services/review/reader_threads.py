@@ -55,6 +55,8 @@ class ReaderThreads:
         self._held: list[ThreadDraft] = []
         # The ids of threads the page holds that this review could not read
         self._unreadable_ids: list[str] = []
+        # How many threads the page holds of which not even an id could be read
+        self._unnamed_count = 0
         # Threads the agent has raised. Numbered apart from the reader's,
         # whose ids are minted in the page, so the two cannot collide.
         self._raised = 0
@@ -98,12 +100,13 @@ class ReaderThreads:
         """Note a thread the agent was handed, which it may answer in from now on."""
         self._known_to_the_agent.add(thread_id)
 
-    def hold(self, readable: list[ThreadDraft], unreadable_ids: list[str]) -> None:
+    def hold(self, readable: list[ThreadDraft], unreadable_ids: list[str], *, unnamed_count: int) -> None:
         """Take the threads the page holds, keep the agent's own it leaves out, and never hand out an id one has.
 
         A review restarted mid-way starts counting again from nothing, while
         the page still holds the threads the agent raised before — the ones
-        this review could not read included.
+        this review could not read included. Of those, the ones whose id it
+        could read are held by it; of the rest, only how many there are.
         """
         said_ids = {*(thread.thread_id for thread in readable), *unreadable_ids}
         left_out = [thread for thread in self._held if _is_raised(thread) and thread.thread_id not in said_ids]
@@ -112,9 +115,10 @@ class ReaderThreads:
         self._raised = max([self._raised, *(_raised_number(thread_id) for thread_id in held_ids)])
         # Said when it changes rather than on every hello, which comes as
         # often as once a second while the reader types
-        if unreadable_ids != self._unreadable_ids:
-            log.warning("threads_left_out", thread_ids=unreadable_ids)
+        if unreadable_ids != self._unreadable_ids or unnamed_count != self._unnamed_count:
+            log.warning("threads_left_out", thread_ids=unreadable_ids, unnamed_count=unnamed_count)
         self._unreadable_ids = unreadable_ids
+        self._unnamed_count = unnamed_count
 
     def raise_id(self) -> str:
         """The id of the next thread the agent raises."""

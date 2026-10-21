@@ -193,7 +193,9 @@ async def test_waiting_until_an_event_waits_through_the_timeouts(review: Running
     # Long enough for the first wait to have timed out
     await asyncio.sleep(PAST_THE_SHORTEST_WAIT_SECONDS)
     async with AsyncClient(base_url=review.url) as page:
-        await page.post(MESSAGE_ROUTE, json={"message_id": "panel-1", "body": "Still there?", "images": []})
+        await page.post(
+            MESSAGE_ROUTE, json={"message_id": "panel-1", "body": "Still there?", "images": [], "threads": []}
+        )
 
     assert json.loads((await waiting).output)["type"] == "message"
 
@@ -224,7 +226,7 @@ async def test_what_the_reader_wrote_is_printed_to_be_read_never_obeyed(
 ) -> None:
     """Pasted from a terminal, it may hold what a terminal acts on: shown, it cannot write the agent's clipboard."""
     async with AsyncClient(base_url=review.url) as page:
-        await page.post(MESSAGE_ROUTE, json={"message_id": "panel-1", "body": HOSTILE, "images": []})
+        await page.post(MESSAGE_ROUTE, json={"message_id": "panel-1", "body": HOSTILE, "images": [], "threads": []})
 
     result = await _run(review, *command)
 
@@ -236,7 +238,7 @@ async def test_what_the_reader_wrote_is_printed_to_be_read_never_obeyed(
 async def test_what_is_handed_over_as_json_says_what_was_written(review: RunningReview) -> None:
     """Made safe for the terminal, it is still the JSON of what the reader wrote."""
     async with AsyncClient(base_url=review.url) as page:
-        await page.post(MESSAGE_ROUTE, json={"message_id": "panel-1", "body": HOSTILE, "images": []})
+        await page.post(MESSAGE_ROUTE, json={"message_id": "panel-1", "body": HOSTILE, "images": [], "threads": []})
 
     result = await _run(review, "wait", "--seconds", "5")
 

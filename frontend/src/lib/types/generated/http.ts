@@ -1292,17 +1292,14 @@ export interface components {
          *     the whole question.
          */
         MessageRequest: {
-            /**
-             * Body
-             * @default
-             */
+            /** Body */
             body: string;
             /** Images */
             images: string[];
             /** Message Id */
             message_id: string;
             /** Threads */
-            threads?: components["schemas"]["ThreadDraft-Input"][];
+            threads: components["schemas"]["ThreadDraft-Input"][];
         };
         /**
          * OfConversation
@@ -1449,12 +1446,12 @@ export interface components {
          * PointRequest
          * @description Request body for POST /api/point — the author raising a thread.
          *
-         *     The same anchor a reader's comment on lines carries, because it becomes
-         *     exactly that: a thread on a line, which the reader answers, settles or
-         *     removes. Lines alone: the agent points at no block of the story's words.
+         *     The lines a reader's comment hangs on, because it becomes exactly that:
+         *     a thread on a line, which the reader answers, settles or removes. Lines
+         *     alone: the agent points at no block of the story's words.
          */
         PointRequest: {
-            anchor: components["schemas"]["LineAnchor-Input"];
+            anchor: components["schemas"]["PointedLines"];
             /** Body */
             body: string;
             severity: components["schemas"]["CommentSeverity"];
@@ -1466,6 +1463,21 @@ export interface components {
         PointResponse: {
             /** Thread Id */
             thread_id: string;
+        };
+        /**
+         * PointedLines
+         * @description Lines of one side of a file in the review's own diff, as the agent points at them: where, and no more.
+         *
+         *     The review quotes them itself, from its diff, as it raises the thread.
+         */
+        PointedLines: {
+            /** File */
+            file: string;
+            side: components["schemas"]["LineSide"];
+            /** Start Line */
+            start_line: number;
+            /** End Line */
+            end_line: number;
         };
         /**
          * ProgressRequest

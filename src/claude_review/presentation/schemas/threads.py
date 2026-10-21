@@ -96,6 +96,35 @@ class LineAnchor(Schema):
         )
 
 
+class PointedLines(Schema):
+    """Lines of one side of a file in the review's own diff, as the agent points at them: where, and no more.
+
+    The review quotes them itself, from its diff, as it raises the thread.
+    """
+
+    file: FilePath
+    side: LineSide
+    start_line: StrictInt = Field(ge=FIRST_LINE)
+    end_line: StrictInt = Field(ge=FIRST_LINE)
+
+    @model_validator(mode="after")
+    def start_before_end(self) -> Self:
+        models.check_line_span(self.start_line, self.end_line)
+        return self
+
+    def to_domain(self) -> models.LineAnchor:
+        # Not quoted yet, and so not out of date: the review quotes it from the diff on screen
+        return models.LineAnchor(
+            kind=AnchorKind.LINE,
+            file=self.file,
+            side=self.side,
+            start_line=self.start_line,
+            end_line=self.end_line,
+            quote=[],
+            outdated=False,
+        )
+
+
 class OverviewBlock(Schema):
     """One of the overview's three lines, by its name."""
 
@@ -490,12 +519,12 @@ class ThreadSummary(Schema):
 class PointRequest(Schema):
     """Request body for POST /api/point — the author raising a thread.
 
-    The same anchor a reader's comment on lines carries, because it becomes
-    exactly that: a thread on a line, which the reader answers, settles or
-    removes. Lines alone: the agent points at no block of the story's words.
+    The lines a reader's comment hangs on, because it becomes exactly that:
+    a thread on a line, which the reader answers, settles or removes. Lines
+    alone: the agent points at no block of the story's words.
     """
 
-    anchor: LineAnchor
+    anchor: PointedLines
     body: AgentText
     severity: CommentSeverity
 

@@ -283,6 +283,11 @@ def line_json(
     }
 
 
+def pointed_json(file: str, line: int) -> dict[str, object]:
+    """A line of a file as the change leaves it, as the agent points at it: where, and no more."""
+    return {"file": file, "side": LineSide.NEW, "start_line": line, "end_line": line}
+
+
 def turn_json(
     author: TurnAuthor,
     body: str,

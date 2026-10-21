@@ -111,7 +111,8 @@ async def test_a_message_carries_no_more_images_than_it_may(client: AsyncClient)
     image_id = await _upload(client, PNG)
 
     response = await client.post(
-        "/api/message", json={"message_id": "panel-1", "body": "These", "images": [image_id] * ONE_TOO_MANY}
+        "/api/message",
+        json={"message_id": "panel-1", "body": "These", "images": [image_id] * ONE_TOO_MANY, "threads": []},
     )
 
     assert response.status_code == HTTPStatus.UNPROCESSABLE_CONTENT
@@ -159,7 +160,9 @@ async def test_an_upload_the_browser_breaks_off_is_dropped_without_a_refusal(
 async def test_a_message_hands_the_agent_a_file_it_can_open(client: AsyncClient) -> None:
     """The agent reads files, so the image travels as a path to one."""
     image_id = await _upload(client, PNG)
-    await client.post("/api/message", json={"message_id": "panel-1", "body": "This", "images": [image_id]})
+    await client.post(
+        "/api/message", json={"message_id": "panel-1", "body": "This", "images": [image_id], "threads": []}
+    )
 
     event = (await client.post(EVENTS_ROUTE, params=WAIT_FOR_EVENT)).json()
 
@@ -171,19 +174,23 @@ async def test_a_message_hands_the_agent_a_file_it_can_open(client: AsyncClient)
 async def test_an_image_can_be_the_whole_message(client: AsyncClient) -> None:
     image_id = await _upload(client, PNG)
 
-    response = await client.post("/api/message", json={"message_id": "panel-1", "images": [image_id]})
+    response = await client.post(
+        "/api/message", json={"message_id": "panel-1", "body": "", "images": [image_id], "threads": []}
+    )
 
     assert response.status_code == HTTPStatus.NO_CONTENT
 
 
 async def test_a_message_with_neither_words_nor_images_is_refused(client: AsyncClient) -> None:
-    response = await client.post("/api/message", json={"message_id": "panel-1", "body": "  "})
+    response = await client.post(
+        "/api/message", json={"message_id": "panel-1", "body": "  ", "images": [], "threads": []}
+    )
 
     assert response.status_code == HTTPStatus.UNPROCESSABLE_CONTENT
 
 
 async def test_a_message_naming_an_image_never_kept_is_refused(client: AsyncClient) -> None:
-    message = {"message_id": "panel-1", "body": "This", "images": [NEVER_KEPT]}
+    message = {"message_id": "panel-1", "body": "This", "images": [NEVER_KEPT], "threads": []}
 
     response = await client.post("/api/message", json=message)
 
@@ -198,7 +205,9 @@ async def test_an_image_never_kept_is_not_there(client: AsyncClient) -> None:
 async def test_the_catch_up_lists_the_images_said_in_the_panel(client: AsyncClient) -> None:
     """An agent arriving late finds the screenshot along with the words."""
     image_id = await _upload(client, PNG)
-    await client.post("/api/message", json={"message_id": "panel-1", "body": "This", "images": [image_id]})
+    await client.post(
+        "/api/message", json={"message_id": "panel-1", "body": "This", "images": [image_id], "threads": []}
+    )
 
     context = (await client.get("/api/catch-up")).json()
 
@@ -209,7 +218,9 @@ async def test_the_catch_up_lists_the_images_said_in_the_panel(client: AsyncClie
 async def test_a_page_opening_draws_an_image_said_in_the_panel_by_the_id_it_is_kept_under(client: AsyncClient) -> None:
     """The page asks the review for it by that id, as it drew it the moment it was sent."""
     image_id = await _upload(client, PNG)
-    await client.post("/api/message", json={"message_id": "panel-1", "body": "This", "images": [image_id]})
+    await client.post(
+        "/api/message", json={"message_id": "panel-1", "body": "This", "images": [image_id], "threads": []}
+    )
 
     [said] = (await client.get(CONVERSATION_ROUTE)).json()["said"]
 
@@ -230,7 +241,7 @@ async def test_an_image_taken_off_before_sending_is_removed(client: AsyncClient,
 async def test_an_image_already_sent_stays(client: AsyncClient) -> None:
     """The agent may not have opened it yet."""
     image_id = await _upload(client, PNG)
-    await client.post("/api/message", json={"message_id": "panel-1", "images": [image_id]})
+    await client.post("/api/message", json={"message_id": "panel-1", "body": "", "images": [image_id], "threads": []})
 
     response = await client.delete(f"/api/images/{image_id}")
 

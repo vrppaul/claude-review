@@ -450,7 +450,7 @@ class StoryAnchor(AnchorBase):
     kind: Literal[AnchorKind.STORY] = AnchorKind.STORY
     block: StoryBlock
     # The block's words, as one text; none while the review has not quoted them yet
-    quote: list[str] = Field(default_factory=list, max_length=STORY_QUOTE_TEXTS)
+    quote: list[str] = Field(max_length=STORY_QUOTE_TEXTS)
 
     def quoting(self, words: str) -> StoryAnchor:
         """The anchor quoting the block's words, read off the story the review holds: it is not outdated."""
@@ -705,7 +705,7 @@ class SaidInPanel(BaseModel):
 class PanelEntry(BaseModel):
     """One thing said in the panel, as an agent catching up reads it: its screenshots as files to open."""
 
-    message_id: str | None = None
+    message_id: str | None
     author: TurnAuthor
     body: str
     at: EpochMillis

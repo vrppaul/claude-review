@@ -10,6 +10,8 @@
  * wait stand in one row, `Actions`, the act it leads to last.
  */
 
+import type { Snippet } from 'svelte';
+
 /**
  * - primary: the one act a pane, a card, a field, a note or a wait leads to,
  *   filled with the control's blue.
@@ -49,9 +51,13 @@ export const BUTTON_SIZES: Record<ButtonSize, string> = { xs: 'cr-ui-xs', sm: 'c
  * - notification: a mark with a figure on its corner, how many of what it
  *   opens wait: a button's room either side of its icon, so the figure
  *   stands over its edge and not over the icon, and as wide with no figure
- *   on it as with one.
+ *   on it as with one, the figure a Count handed to it while there is one.
+ *   A square has no corner to hold one, so it is handed none.
  */
-export type IconButtonShape = 'square' | 'notification';
+export type IconButtonShaped =
+	| { shape: 'square'; corner?: never }
+	| { shape: 'notification'; corner: Snippet | undefined };
+export type IconButtonShape = IconButtonShaped['shape'];
 
 export const ICON_BUTTON_SHAPES: Record<IconButtonShape, string> = {
 	square: 'cr-ui-icon-button',

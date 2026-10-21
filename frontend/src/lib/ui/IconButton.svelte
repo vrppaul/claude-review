@@ -1,16 +1,17 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import type { HTMLButtonAttributes } from 'svelte/elements';
-	import { BUTTON_SIZES, BUTTON_TONES, ICON_BUTTON_SHAPES, type ButtonSize, type ButtonTone } from './button';
-
-	/**
-	 * Its shape (button.ts), and what only a notification holds: a figure on its corner, how many of what it
-	 * opens wait (a Count), while there is one. A square has no corner to hold one, so it is handed none.
-	 */
-	type Shaped = { shape: 'square'; corner?: never } | { shape: 'notification'; corner: Snippet | undefined };
+	import {
+		BUTTON_SIZES,
+		BUTTON_TONES,
+		ICON_BUTTON_SHAPES,
+		type ButtonSize,
+		type ButtonTone,
+		type IconButtonShaped
+	} from './button';
 
 	type Props = Omit<HTMLButtonAttributes, 'class' | 'style' | 'type' | 'children' | 'aria-label' | 'title'> &
-		Shaped & {
+		IconButtonShaped & {
 			tone: ButtonTone;
 			size: ButtonSize;
 			/** What it does, in words: said to whoever cannot see its icon, and shown under the pointer. */

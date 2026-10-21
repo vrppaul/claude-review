@@ -264,8 +264,8 @@ class MessageRequest(SaysSomething):
     """
 
     message_id: SafeId
-    body: str = Field(default="", max_length=MAX_TEXT_LENGTH)
-    threads: list[ThreadDraft] = Field(default_factory=list, max_length=MAX_THREADS_IN_MESSAGE)
+    body: str = Field(max_length=MAX_TEXT_LENGTH)
+    threads: list[ThreadDraft] = Field(max_length=MAX_THREADS_IN_MESSAGE)
 
 
 class ImageResponse(Schema):

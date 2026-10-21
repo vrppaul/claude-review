@@ -82,7 +82,8 @@
 					onclick={() => review.setIgnoreWhitespace(false)}
 				>
 					<span class="hidden max-cr-header-narrow:flex"><Icon name="pilcrow" size="xs" /></span>
-					<span class="max-cr-header-narrow:sr-only">No whitespace</span>
+					<!-- Seen, not read: its name says what a press does, and says it in place of these -->
+					<span class="max-cr-header-narrow:hidden">No whitespace</span>
 					<Icon name="cross" size="xs" />
 				</Button>
 			{/if}

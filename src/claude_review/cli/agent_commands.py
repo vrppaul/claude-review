@@ -37,13 +37,11 @@ from claude_review.presentation.schemas.agent import (
 )
 from claude_review.presentation.schemas.base import DEFAULT_WAIT_SECONDS, MAX_WAIT_SECONDS
 from claude_review.presentation.schemas.story import StoryRequest
-from claude_review.presentation.schemas.threads import LineAnchor, PointRequest
+from claude_review.presentation.schemas.threads import PointedLines, PointRequest
 from claude_review.services.place_words import LINES_EXAMPLE
 
 # How a refusal lists the steps both --did and --step name
 STEPS_SEPARATOR = ", "
-# The quote a thread the agent points with is sent with: none, for the review to fill in from its diff
-NO_QUOTE: list[str] = []
 
 
 def _client_for(_context: click.Context, _parameter: click.Parameter, port: int) -> ReviewClient:
@@ -292,10 +290,8 @@ def point_command(
     as yours, and it is not counted as their unsent work. Prints the id the
     thread was given. BODY given as - is read from stdin.
     """
-    anchor = LineAnchor(
-        file=path, side=side, start_line=lines.first, end_line=lines.last, quote=NO_QUOTE, outdated=False
-    )
-    raised = client.point(PointRequest(anchor=anchor, body=body, severity=severity))
+    pointed = PointedLines(file=path, side=side, start_line=lines.first, end_line=lines.last)
+    raised = client.point(PointRequest(anchor=pointed, body=body, severity=severity))
     click.echo(raised.model_dump_json())
 
 

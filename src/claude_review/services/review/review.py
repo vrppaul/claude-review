@@ -174,9 +174,9 @@ class Review:
         """Take the round a page says it had got to, never going back."""
         self._rounds.catch_up(number)
 
-    def page_holds(self, threads: list[ThreadDraft], unreadable_ids: list[str]) -> None:
-        """Take the threads a page says it holds, and the ids of those it could not say."""
-        self._threads.hold(threads, unreadable_ids)
+    def page_holds(self, threads: list[ThreadDraft], unreadable_ids: list[str], *, unnamed_count: int) -> None:
+        """Take the threads a page says it holds, the ids of those it could not say, and how many had not even an id."""
+        self._threads.hold(threads, unreadable_ids, unnamed_count=unnamed_count)
 
     def threads_held(self) -> list[ThreadDraft]:
         """The threads the review holds: as a page last said them, and the agent's own however a page left them."""

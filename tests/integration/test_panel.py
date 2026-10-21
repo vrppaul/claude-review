@@ -39,6 +39,7 @@ from tests.helpers import (
     one_line_file,
     open_session,
     page_client,
+    pointed_json,
     pushes_until,
     repository_opening,
     review_facts,
@@ -48,7 +49,7 @@ from tests.helpers import (
     until_the_review_holds_threads,
 )
 
-MESSAGE = {"message_id": "panel-1", "body": "Run the tests and say what fails.", "images": []}
+MESSAGE = {"message_id": "panel-1", "body": "Run the tests and say what fails.", "images": [], "threads": []}
 
 # A moment on the review's clock, in epoch milliseconds
 A_MOMENT = 1_791_000_000_000
@@ -209,7 +210,7 @@ def test_the_author_can_raise_a_thread_on_a_line(review_page: TestClient) -> Non
         response = review_page.post(
             POINT_ROUTE,
             json={
-                "anchor": line_json(REVIEWED_FILE, 1),
+                "anchor": pointed_json(REVIEWED_FILE, 1),
                 "body": "I did this differently from what was asked, because...",
                 "severity": CommentSeverity.QUESTION,
             },
@@ -226,7 +227,7 @@ def test_the_author_can_raise_a_thread_on_a_line(review_page: TestClient) -> Non
 
 async def test_a_thread_the_agent_raised_can_be_answered_in(client: AsyncClient) -> None:
     """The reader may ask about it like any other, and the review knows it before the page says it holds it."""
-    raised = await client.post(POINT_ROUTE, json=_pointing(line_json(REVIEWED_FILE, 1), "Kept on purpose"))
+    raised = await client.post(POINT_ROUTE, json=_pointing(pointed_json(REVIEWED_FILE, 1), "Kept on purpose"))
 
     response = await client.post("/api/reply", json={"thread_id": raised.json()["thread_id"], "body": "Because"})
 
@@ -235,8 +236,8 @@ async def test_a_thread_the_agent_raised_can_be_answered_in(client: AsyncClient)
 
 async def test_raised_threads_are_numbered_apart_from_the_readers(client: AsyncClient) -> None:
     """The browser mints its own ids; two sides must not collide."""
-    first = await client.post(POINT_ROUTE, json=_pointing(line_json(REVIEWED_FILE, 1), "one"))
-    second = await client.post(POINT_ROUTE, json=_pointing(line_json(REVIEWED_FILE, 1), "two"))
+    first = await client.post(POINT_ROUTE, json=_pointing(pointed_json(REVIEWED_FILE, 1), "one"))
+    second = await client.post(POINT_ROUTE, json=_pointing(pointed_json(REVIEWED_FILE, 1), "two"))
 
     assert first.json()["thread_id"] == "raised-1"
     assert second.json()["thread_id"] == "raised-2"
@@ -252,7 +253,7 @@ async def test_a_thread_on_a_block_of_the_storys_words_is_refused_for_the_author
 
 async def test_a_thread_on_a_file_not_under_review_is_refused(client: AsyncClient) -> None:
     """Silently accepting it shows the reader a thread about nothing."""
-    response = await client.post(POINT_ROUTE, json=_pointing(line_json("src/elsewhere.py", 1), "here"))
+    response = await client.post(POINT_ROUTE, json=_pointing(pointed_json("src/elsewhere.py", 1), "here"))
 
     assert response.status_code == HTTPStatus.NOT_FOUND
     assert "not in this review" in response.json()["detail"]
@@ -261,7 +262,7 @@ async def test_a_thread_on_a_file_not_under_review_is_refused(client: AsyncClien
 
 async def test_a_thread_on_a_line_the_diff_does_not_show_is_refused(client: AsyncClient) -> None:
     """The quote would come back empty and go outdated at the next retake."""
-    response = await client.post(POINT_ROUTE, json=_pointing(line_json(REVIEWED_FILE, 900), "far away"))
+    response = await client.post(POINT_ROUTE, json=_pointing(pointed_json(REVIEWED_FILE, 900), "far away"))
 
     assert response.status_code == HTTPStatus.UNPROCESSABLE_CONTENT
     assert "does not show new line 900" in response.json()["detail"]

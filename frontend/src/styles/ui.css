@@ -36,19 +36,18 @@
 		[aria-pressed='true'],
 		[aria-haspopup][aria-expanded='true']
 	):hover {
-	background-image: linear-gradient(var(--cr-hover), var(--cr-hover));
+	background-image: linear-gradient(var(--cr-pointer-light), var(--cr-pointer-light));
 }
 /*
- * A filled button is lit under the same conditions by the stronger light
- * every fill takes: its saturated ground moves too little under the other
- * (tokens.css)
+ * Which light that is: the pointer's own, or on a filled button the stronger
+ * light every fill takes, its saturated ground moving too little under the
+ * other (tokens.css)
  */
-.cr-ui-filled.cr-pressable:not(:disabled, [aria-disabled='true']):not(
-		.cr-ui-row-current,
-		[aria-pressed='true'],
-		[aria-haspopup][aria-expanded='true']
-	):hover {
-	background-image: linear-gradient(var(--cr-hover-on-fill), var(--cr-hover-on-fill));
+.cr-pressable {
+	--cr-pointer-light: var(--cr-hover);
+}
+.cr-ui-filled {
+	--cr-pointer-light: var(--cr-hover-on-fill);
 }
 /*
  * A control pressed down — a segment of a track, a toggle that is on — or
@@ -476,11 +475,18 @@
 	border-color: var(--color-base-content);
 	background-color: var(--color-base-content);
 }
+/*
+ * Under the pointer, on its words as on it, since a press on either ticks it:
+ * lit as any pressable thing is, but for a box ticked, chosen and so unlit
+ */
+.cr-ui-setting:hover .cr-ui-checkbox-box:not(:checked) {
+	background-image: linear-gradient(var(--cr-hover), var(--cr-hover));
+}
 .cr-ui-checkbox-check {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	color: var(--color-base-100);
+	color: var(--cr-on-ink);
 	transform: scale(0);
 	transition: transform var(--cr-state-change) ease;
 	pointer-events: none;

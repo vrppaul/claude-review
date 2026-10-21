@@ -128,9 +128,6 @@ def _take_the_hello(review: Review, said: str) -> None:
     if heard.threads is not None:
         drafts = [thread for thread in heard.threads if isinstance(thread, ThreadDraft)]
         named_ids = [thread.thread_id for thread in heard.threads if isinstance(thread, NamedThread)]
-        unnamed = len(heard.threads) - len(drafts) - len(named_ids)
-        if unnamed:
-            # Not even an id could be read of these, so nothing of them is held: said, as the review says the
-            # ids of those it holds by their id alone
-            log.warning("hello_threads_unread", count=unnamed)
-        review.page_holds([draft.to_domain() for draft in drafts], named_ids)
+        # Not even an id could be read of the rest, so nothing of them is held but how many there are
+        unnamed_count = len(heard.threads) - len(drafts) - len(named_ids)
+        review.page_holds([draft.to_domain() for draft in drafts], named_ids, unnamed_count=unnamed_count)

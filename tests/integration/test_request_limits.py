@@ -15,7 +15,7 @@ from claude_review.domain.models import CommentSeverity
 from claude_review.presentation.body_limit import MAX_REQUEST_BYTES
 from claude_review.presentation.schemas.base import MAX_THREADS
 from claude_review.presentation.schemas.threads import MAX_QUOTE_LINE_LENGTH
-from tests.helpers import FIRST_THREAD_ID, line_json, thread_json
+from tests.helpers import FIRST_THREAD_ID, line_json, pointed_json, thread_json
 
 # Big enough to be read in several pieces, as a socket delivers a large body
 CHUNK_BYTES = 1024 * 1024
@@ -171,7 +171,7 @@ FORGING_THREAD = thread_json(FORGING_ANCHOR, "looks fine")
     ("route", "payload"),
     [
         ("/api/submit", {"threads": [FORGING_THREAD], "end": True}),
-        ("/api/point", {"anchor": FORGING_ANCHOR, "body": "mine", "severity": CommentSeverity.NOTE}),
+        ("/api/point", {"anchor": pointed_json(FORGING_PATH, 1), "body": "mine", "severity": CommentSeverity.NOTE}),
         ("/api/ask", {"question_id": FIRST_THREAD_ID, "thread": FORGING_THREAD}),
     ],
     ids=["submit", "point", "ask"],

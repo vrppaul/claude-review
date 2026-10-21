@@ -29,6 +29,7 @@ from tests.helpers import (
     next_push,
     open_session,
     open_session_at,
+    pointed_json,
     review_facts,
     thread_json,
     thread_route,
@@ -267,7 +268,7 @@ def test_a_thread_the_server_cannot_read_still_keeps_its_id_from_being_handed_ou
 
     raised = review_page.post(
         "/api/point",
-        json={"anchor": line_json(REVIEWED_FILE, 1), "body": "And", "severity": CommentSeverity.NOTE},
+        json={"anchor": pointed_json(REVIEWED_FILE, 1), "body": "And", "severity": CommentSeverity.NOTE},
     )
 
     assert raised.json()["thread_id"] == "raised-8"
@@ -322,7 +323,7 @@ def test_a_restarted_server_does_not_hand_out_an_id_a_thread_already_has(review_
 
     raised = review_page.post(
         "/api/point",
-        json={"anchor": line_json(REVIEWED_FILE, 1), "body": "And", "severity": CommentSeverity.NOTE},
+        json={"anchor": pointed_json(REVIEWED_FILE, 1), "body": "And", "severity": CommentSeverity.NOTE},
     )
 
     assert raised.json()["thread_id"] == "raised-4"
@@ -335,7 +336,7 @@ def _raised(page: TestClient, body: str) -> str:
     """Raise a thread on the review's one line, as the agent does, and say its id."""
     raised = page.post(
         "/api/point",
-        json={"anchor": line_json(REVIEWED_FILE, 1), "body": body, "severity": CommentSeverity.NOTE},
+        json={"anchor": pointed_json(REVIEWED_FILE, 1), "body": body, "severity": CommentSeverity.NOTE},
     )
     return raised.json()["thread_id"]
 

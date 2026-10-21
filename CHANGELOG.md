@@ -149,10 +149,13 @@
 ### Changed
 - **The API takes every field it reads, written out.** An anchor's quote
   and whether it is outdated, a thread's or a message's images, a
-  thread's turns and a step of the agent's work done or not are sent
-  every time, empty or false where there is nothing, where a field left
-  out was taken as empty; a quote sent empty is still filled in by the
-  review. The story-request event says `"stale": null` for a first
+  message's words and the threads it carries, a thread's turns and a
+  step of the agent's work done or not are sent every time, empty or
+  false where there is nothing, where a field left out was taken as
+  empty; a quote sent empty is still filled in by the review. The agent
+  points at lines by where they are alone (`POST /api/point`), the
+  review quoting them, where it sent a quote and whether it was outdated
+  that the review threw away. The story-request event says `"stale": null` for a first
   story. No model of the review's own stands a default in for a missing
   value, so a field a constructor leaves out is a type error, not a
   silent empty one. A story's document is unchanged: what it may leave
@@ -202,7 +205,8 @@
   is rounded at a box's corner, under the pointer as where the reader is.
   A setting's box is the page's own, 16 px on the plainest ground: ticked,
   it fills with ink and its check is drawn in over 150 ms, where it was
-  the browser's. The lines the reader marked to comment on keep their
+  the browser's; unticked, it is lit as any pressable thing is while the
+  pointer is on it or on its words. The lines the reader marked to comment on keep their
   blue. A field the keyboard is in is edged twice as strong in blue, with
   no ring outside it, and a column's edge to drag shows in grey under the
   pointer. A button or a segment eases into its pressed or open look over
