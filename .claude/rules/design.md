@@ -15,7 +15,8 @@ A part is held to these once it is moved to them, or once a change touches its l
 - Green and red are the change (added and removed, done and failed); yellow what to look at (a doubt, a blocker, out of date); red also danger (what cannot be undone, a failure).
 - Words — plain, muted, faint — and the pointer's light are ink.
 - No state is a hue: what is chosen, current or under the pointer is drawn in ink. Only the keyboard is blue, and only as its ring or an edge.
-- Every hue climbs one ladder in both themes: solid, its words, border 35%, chip 18%, tint 12%, wash 6%. No other strength is used.
+- Every hue climbs one ladder in both themes: solid, its words, border 35%, chip 18%, tint 12%, wash 6%. No other strength of a hue is used.
+- The ink climbs the same ladder, and keeps besides the strengths the board draws it at: the pointer's light, and prose's words, marks and rules.
 - Every step comes from its hue's one base value, so a theme sets one value per hue.
 - A chip's ground is its hue mixed with the reading ground, not laid over what is under it, so a chip is one colour wherever it stands.
 - A tag is its hue's chip under its hue's words, with no edge.
