@@ -88,10 +88,10 @@
 			>
 				{#if storySays === 'writing'}
 					<BreathingDots tone="agent" testId="story-writing-dots" />
-					<span class="max-cr-header-bare:sr-only">{STORY_BEING_WRITTEN}</span>
+					<span class="max-cr-header-narrower:sr-only">{STORY_BEING_WRITTEN}</span>
 				{:else}
 					<Icon name="story" size="sm" />
-					<span class="max-cr-header-bare:sr-only">{STORY}</span>
+					<span class="max-cr-header-narrower:sr-only">{STORY}</span>
 				{/if}
 				{#if storySays === 'unread'}
 					<!-- Unsaid to a screen reader, as every dot is: the note under the switch said it -->
@@ -106,7 +106,7 @@
 				onclick={() => review.views.choose('files')}
 			>
 				<Icon name="files" size="sm" />
-				<span class="max-cr-header-bare:sr-only">{FILES}</span>
+				<span class="max-cr-header-narrower:sr-only">{FILES}</span>
 			</Segment>
 		</Segmented>
 		{#if storyOffered}

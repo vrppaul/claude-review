@@ -64,8 +64,8 @@ describe('sending the review', () => {
 				sending.threads.raise(`raised-${index + 1}`, RAISED_ON, 'Kept on purpose', 'note')
 			);
 			sending.threads.markSent(sending.threads.carry(sending.threads.all.slice(0, sentBefore)), 1);
-			const sent = within(render(ReviewHeader, inReview(sending)).container);
-			return sent.queryByRole('button', { name: named }) === sent.getByTestId('quick-submit');
+			const header = within(render(ReviewHeader, inReview(sending)).container);
+			return header.queryByRole('button', { name: named }) === header.getByTestId('quick-submit');
 		});
 
 		expect(namedSo).toEqual(sends.map(() => true));

@@ -498,14 +498,15 @@
 	/* The least side column and the least diff, the panel lying over it: 10 + 36 */
 	--breakpoint-cr-side-column-beside: 46rem;
 	/*
-	 * Where the header's words give way, as the design board draws it at 1200,
-	 * 960 and 760 px, each width drawn already narrowed, so each takes in its
-	 * own pixel: Help keeps only its key; Story, Files and the base keep their
-	 * marks; the branch and the round's number go
+	 * Where the header narrows, step by step, as the design board draws it at
+	 * 1200, 960 and 760 px, each width drawn already narrowed, so each takes
+	 * in its own pixel: narrow, Help keeps only its key; narrower, Story,
+	 * Files and the base keep their marks; narrowest, the branch and the
+	 * round's number go
 	 */
-	--breakpoint-cr-header-help: 75.0625rem;
-	--breakpoint-cr-header-bare: 60.0625rem;
-	--breakpoint-cr-header-repository: 47.5625rem;
+	--breakpoint-cr-header-narrow: 75.0625rem;
+	--breakpoint-cr-header-narrower: 60.0625rem;
+	--breakpoint-cr-header-narrowest: 47.5625rem;
 }
 
 [data-theme='dark'] {

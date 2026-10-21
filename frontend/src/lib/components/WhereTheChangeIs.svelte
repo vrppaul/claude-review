@@ -42,7 +42,7 @@
 		<span data-testid="where-line" class="truncate text-xs font-semibold">{review.repository.name}</span>
 		<span
 			data-testid="where-line"
-			class="cr-muted flex max-w-(--cr-branch-widest) min-w-0 items-center gap-1 max-cr-header-repository:sr-only"
+			class="cr-muted flex max-w-(--cr-branch-widest) min-w-0 items-center gap-1 max-cr-header-narrowest:sr-only"
 		>
 			<Icon name={checkedOut.mark} size="xs" />
 			<span class="truncate font-mono text-2xs">{name}</span>

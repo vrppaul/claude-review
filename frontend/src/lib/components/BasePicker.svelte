@@ -94,7 +94,7 @@
 			<Icon name="compare" size="xs" />
 			<!-- What it is read against, named as the bases listed are: in the code's face, given way to its mark and
 				its arrow as the window narrows, as the board draws it, and still said to a screen reader -->
-			<span data-testid="base-named" class="font-mono max-cr-header-bare:sr-only">{review.diff.phrase}</span>
+			<span data-testid="base-named" class="font-mono max-cr-header-narrower:sr-only">{review.diff.phrase}</span>
 			<Icon name="chevron" size="xs" />
 		</Button>
 	{/snippet}

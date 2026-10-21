@@ -61,7 +61,7 @@
 		>
 			<!-- Its key alone once the window narrows, its name kept for a screen reader and on the pointer -->
 			<Key keys="?" testId="help-key" />
-			<span class="max-cr-header-help:sr-only">Help</span>
+			<span class="max-cr-header-narrow:sr-only">Help</span>
 		</Button>
 	{/snippet}
 
