@@ -262,30 +262,56 @@
 	--cr-ground-card: var(--cr-ground-column);
 
 	/*
-	 * One ladder of strengths every hue that says whose a thing is or what it
-	 * means is drawn at, in both themes: its edge, its chip and its tint, each
-	 * made from the hue's one value, so a theme sets one value per hue.
-	 * stylelint refuses the reader's, the agent's, done's, a warning's, an
-	 * error's or the diff's added or removed colour mixed at a strength
+	 * One ladder of strengths, in both themes, for every colour the design
+	 * board's Colours gives a role: the reader's blue, the agent's violet,
+	 * the diff's green and red, a warning's yellow, an error's red, and the
+	 * ink of the words. Each is drawn solid, as its words, and at the four
+	 * steps below, every step made from the colour's one value, so a theme
+	 * sets one value per colour. stylelint refuses a hue mixed at a strength
 	 * written in.
 	 */
 	--cr-strength-border: 35%;
 	--cr-strength-chip: 18%;
 	--cr-strength-tint: 12%;
+	--cr-strength-wash: 6%;
 	/*
-	 * The reader's mark and the agent's colour at each step they are drawn
-	 * at. A chip is mixed with the reading ground rather than laid over what
-	 * is under it, so it is one colour wherever it stands.
+	 * Each colour at each step: its edge, its chip, its tint and its wash. A
+	 * chip is mixed with the reading ground rather than laid over what is
+	 * under it, so it is one colour wherever it stands; the other steps are
+	 * laid over their ground.
 	 */
-	--cr-mark-tint: color-mix(in srgb, var(--cr-mark) var(--cr-strength-tint), transparent);
-	--cr-mark-chip: color-mix(in srgb, var(--cr-mark) var(--cr-strength-chip), var(--cr-ground-reading));
 	--cr-mark-border: color-mix(in srgb, var(--cr-mark) var(--cr-strength-border), transparent);
-	--cr-agent-tint: color-mix(in srgb, var(--cr-agent) var(--cr-strength-tint), transparent);
-	--cr-agent-chip: color-mix(in srgb, var(--cr-agent) var(--cr-strength-chip), var(--cr-ground-reading));
+	--cr-mark-chip: color-mix(in srgb, var(--cr-mark) var(--cr-strength-chip), var(--cr-ground-reading));
+	--cr-mark-tint: color-mix(in srgb, var(--cr-mark) var(--cr-strength-tint), transparent);
+	--cr-mark-wash: color-mix(in srgb, var(--cr-mark) var(--cr-strength-wash), transparent);
 	--cr-agent-border: color-mix(in srgb, var(--cr-agent) var(--cr-strength-border), transparent);
-	/* What the diff added and removed: a changed row on its hue's tint, with the hue itself at its edge */
+	--cr-agent-chip: color-mix(in srgb, var(--cr-agent) var(--cr-strength-chip), var(--cr-ground-reading));
+	--cr-agent-tint: color-mix(in srgb, var(--cr-agent) var(--cr-strength-tint), transparent);
+	--cr-agent-wash: color-mix(in srgb, var(--cr-agent) var(--cr-strength-wash), transparent);
+	/* What the diff added and removed: a changed row on its colour's tint, with the colour itself at its edge */
+	--cr-add-border: color-mix(in srgb, var(--cr-add) var(--cr-strength-border), transparent);
+	--cr-add-chip: color-mix(in srgb, var(--cr-add) var(--cr-strength-chip), var(--cr-ground-reading));
 	--cr-add-tint: color-mix(in srgb, var(--cr-add) var(--cr-strength-tint), transparent);
+	--cr-add-wash: color-mix(in srgb, var(--cr-add) var(--cr-strength-wash), transparent);
+	--cr-del-border: color-mix(in srgb, var(--cr-del) var(--cr-strength-border), transparent);
+	--cr-del-chip: color-mix(in srgb, var(--cr-del) var(--cr-strength-chip), var(--cr-ground-reading));
 	--cr-del-tint: color-mix(in srgb, var(--cr-del) var(--cr-strength-tint), transparent);
+	--cr-del-wash: color-mix(in srgb, var(--cr-del) var(--cr-strength-wash), transparent);
+	/* Something the review warns about */
+	--cr-warning-border: color-mix(in srgb, var(--color-warning) var(--cr-strength-border), transparent);
+	--cr-warning-chip: color-mix(in srgb, var(--color-warning) var(--cr-strength-chip), var(--cr-ground-reading));
+	--cr-warning-tint: color-mix(in srgb, var(--color-warning) var(--cr-strength-tint), transparent);
+	--cr-warning-wash: color-mix(in srgb, var(--color-warning) var(--cr-strength-wash), transparent);
+	/* Danger, and what failed */
+	--cr-error-border: color-mix(in srgb, var(--color-error) var(--cr-strength-border), transparent);
+	--cr-error-chip: color-mix(in srgb, var(--color-error) var(--cr-strength-chip), var(--cr-ground-reading));
+	--cr-error-tint: color-mix(in srgb, var(--color-error) var(--cr-strength-tint), transparent);
+	--cr-error-wash: color-mix(in srgb, var(--color-error) var(--cr-strength-wash), transparent);
+	/* The ink of the words: what is chosen, and what says nothing of whose it is */
+	--cr-ink-border: color-mix(in srgb, var(--color-base-content) var(--cr-strength-border), transparent);
+	--cr-ink-chip: color-mix(in srgb, var(--color-base-content) var(--cr-strength-chip), var(--cr-ground-reading));
+	--cr-ink-tint: color-mix(in srgb, var(--color-base-content) var(--cr-strength-tint), transparent);
+	--cr-ink-wash: color-mix(in srgb, var(--color-base-content) var(--cr-strength-wash), transparent);
 	/*
 	 * The ground of the avatar the reader, and the agent, speak by in a
 	 * thread: their tint over the card's ground, opaque, so the spine behind
@@ -352,7 +378,7 @@
 	 * move does not, since it would trail them.
 	 */
 	--cr-on-ink: var(--color-base-100);
-	--cr-selected: color-mix(in srgb, var(--color-base-content) var(--cr-strength-tint), transparent);
+	--cr-selected: var(--cr-ink-tint);
 	--cr-state-change: 150ms;
 	/*
 	 * What the reader marked in the code, the lines they picked to comment
@@ -373,9 +399,11 @@
 	--cr-on-unread: var(--color-base-100);
 	/* Something done, or ready: a thread settled, a branch of work finished, a file viewed, an agent listening */
 	--cr-done: var(--cr-add-text);
-	/* And at the ladder's steps, on the node and the axis of a part of a story read through */
-	--cr-done-tint: color-mix(in srgb, var(--cr-done) var(--cr-strength-tint), transparent);
+	/* And at the ladder's steps, as on the node and the axis of a part of a story read through */
 	--cr-done-border: color-mix(in srgb, var(--cr-done) var(--cr-strength-border), transparent);
+	--cr-done-chip: color-mix(in srgb, var(--cr-done) var(--cr-strength-chip), var(--cr-ground-reading));
+	--cr-done-tint: color-mix(in srgb, var(--cr-done) var(--cr-strength-tint), transparent);
+	--cr-done-wash: color-mix(in srgb, var(--cr-done) var(--cr-strength-wash), transparent);
 	/* What a field says before anything is written in it: quieter than what is written, still read at 4.5:1 */
 	--cr-placeholder: var(--cr-faint);
 
@@ -432,8 +460,6 @@
 	 */
 	--cr-absent-hatch: --spacing(3);
 	--cr-absent-strength: 0.5;
-	/* The ground of something the review warns about */
-	--cr-warning-tint: color-mix(in srgb, var(--color-warning) var(--cr-strength-tint), transparent);
 }
 
 /*
@@ -574,12 +600,7 @@
 	--cr-ground-reading: var(--color-base-100);
 	--cr-ground-column: var(--color-base-200);
 	--cr-on-control: #ffffff;
-	/*
-	 * A warning in words reads at 4.5:1 on its own tint with the place the reader is at laid over it — a chapter's
-	 * doubt a thread hangs under — at 4.8:1 under the ink's tint, with room to spare for how a browser rounds the
-	 * layers
-	 */
-	--color-warning: #6b5500;
+	--color-warning: #775e00;
 	--color-warning-content: #ffffff;
 	--color-error: #c22c37;
 	--color-error-content: #ffffff;
