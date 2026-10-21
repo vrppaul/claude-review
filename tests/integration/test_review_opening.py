@@ -143,14 +143,14 @@ async def test_files_that_start_alike_are_a_different_review(tmp_path: Path) -> 
     ).identity
 
 
-async def test_a_conversation_is_named_by_its_file(tmp_path: Path) -> None:
-    conversation = tmp_path / "abc123.jsonl"
+async def test_a_conversation_is_named_by_its_sessions_short_id(tmp_path: Path) -> None:
+    conversation = tmp_path / "63b8ade4-8f1c-4c55-9e4e-0d2a7c1b9f30.jsonl"
     conversation.write_text("")
 
     opened = await open_transcript(conversation)
 
     assert opened.mode == ReviewMode.TRANSCRIPT
-    assert opened.title == "Conversation abc123"
+    assert opened.title == "Conversation 63b8ade4"
 
 
 async def test_a_file_named_two_ways_is_one_file_and_the_same_review(tmp_path: Path) -> None:

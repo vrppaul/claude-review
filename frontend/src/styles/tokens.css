@@ -341,14 +341,15 @@
 	 * What is chosen is drawn in ink, never in a hue, and marked the more
 	 * weakly the larger it is. A small thing chosen — a segment pressed, a
 	 * toggle on, a control whose pane is open — is reversed: the page's words
-	 * its ground, the page's plainest ground its words, and whatever is drawn
-	 * in it in those words. The row or band the reader is at — the file they
-	 * are in, the option the keys lit, the block a thread of theirs hangs open
-	 * under — stands on the ink's tint, rounded, with no edge, its words in
-	 * ink. The pointer leaves either as it is. What holds the keyboard is
-	 * ringed in the control's colour, a field edged in it. A button or a
-	 * segment pressed or opened eases into its look over --cr-state-change; a
-	 * row or a band the keys move does not, since it would trail them.
+	 * its ground, the page's plainest ground its words; a dot, an icon or a
+	 * count of a colour of its own keeps it, as the design board draws them.
+	 * The row or band the reader is at — the file they are in, the option the
+	 * keys lit, the block a thread of theirs hangs open under — stands on the
+	 * ink's tint, rounded, with no edge, its words in ink. The pointer leaves
+	 * either as it is. What holds the keyboard is ringed in the control's
+	 * colour, a field edged in it. A button or a segment pressed or opened
+	 * eases into its look over --cr-state-change; a row or a band the keys
+	 * move does not, since it would trail them.
 	 */
 	--cr-on-ink: var(--color-base-100);
 	--cr-selected: color-mix(in srgb, var(--color-base-content) var(--cr-strength-tint), transparent);

@@ -61,22 +61,6 @@
 	color: var(--cr-on-ink);
 }
 /*
- * And whatever is drawn in it, in its words: a dot, an icon or a figure in a
- * hue of its own stood on the ink at under 3:1 — the agent's presence, a
- * danger's bin, the unread replies' count
- */
-.cr-pressable:is([aria-pressed='true'], [aria-haspopup][aria-expanded='true']) * {
-	color: inherit;
-}
-.cr-pressable:is([aria-pressed='true'], [aria-haspopup][aria-expanded='true']) .cr-ui-dot {
-	background-color: currentColor;
-}
-/* A count drawn in it reversed in turn: on the reversed control's words, its figure in the control's ground */
-.cr-pressable:is([aria-pressed='true'], [aria-haspopup][aria-expanded='true']) .cr-ui-count {
-	background-color: var(--cr-on-ink);
-	color: var(--color-base-content);
-}
-/*
  * A button or a segment eases into its pressed or open look, but for a
  * reader who asked for less motion (less-motion.css). A row and a band the keys
  * move do not, as nothing moves that the keys outrun

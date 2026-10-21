@@ -28,13 +28,16 @@ FILES_NAMED_IN_TITLE = 3
 
 # What each kind of review is called in its header: a repository's changes,
 # against what they are compared; files, by their names; a conversation, by
-# its file's name
+# its session's id, which Claude Code names its file by
 DIFF_TITLE = "{repository}: {against}"
 SINCE_A_BASE = "changes since {base}"
 UNCOMMITTED = "uncommitted changes"
 FILE_NAMES_SEPARATOR = ", "
 MORE_FILES = "{named} + {unnamed} more"
 CONVERSATION_TITLE = "Conversation {name}"
+# How much of a session's id a conversation's title shows: its first group of
+# hex digits, as the design board writes it
+SESSION_ID_SHOWN = 8
 # What parts the pieces an identity is made of: no path holds a line break
 IDENTITY_SEPARATOR = "\n"
 # How long a digest of an identity is, in bytes: far more than enough to tell
@@ -176,7 +179,7 @@ async def open_transcript(path: Path) -> ReviewOpening:
     return ReviewOpening(
         mode=ReviewMode.TRANSCRIPT,
         diff_files=diff_files,
-        title=CONVERSATION_TITLE.format(name=conversation.stem),
+        title=CONVERSATION_TITLE.format(name=conversation.stem[:SESSION_ID_SHOWN]),
         identity=IDENTITY_SEPARATOR.join((str(conversation), ReviewMode.TRANSCRIPT)),
         repository=None,
     )

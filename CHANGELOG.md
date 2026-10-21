@@ -152,7 +152,8 @@
   commit's short id where it was on none, each by its mark, the branch cut
   short past 10rem and said whole on the pointer. A review of files or of a
   conversation says what it is called, by its mark, where the header's
-  middle said it before.
+  middle said it before; a conversation by its session's short id,
+  "Conversation 63b8ade4", where it gave the whole id.
 - **Send counts what goes with it.** The header's "2 unsent · 5" is gone:
   how many comments go with the round, or with the end of a review with
   no agent, stands on Send itself, reversed on its fill, "2 comments go
@@ -163,21 +164,18 @@
   small button (32 px), Story and Files with them. Where it wrapped onto a
   second row, its words now give way to their marks as the window
   narrows, each name kept for a screen reader and said on the pointer:
-  below 1280 px Help keeps its key and the note that whitespace is hidden
-  its cross; below 1024 Story, Files, the base and Agent keep their marks,
-  the branch goes, and Send keeps its word and its count. Where the change
-  is gives up room before anything else, down to 4rem, so the row stays
-  inside the window down to about 700 px with every control it can hold.
+  from 1200 px down Help keeps its key; from 960 Story, Files and the base
+  keep their marks; from 760 the branch and the round's number go, and
+  Send keeps its word and its count.
 - **What is chosen is drawn in ink.** A segment pressed, a toggle on and a
   button whose pane is open are reversed, the page's words their ground
-  and what is drawn in them in those words, where they stood on the
-  reader's blue tint with a blue edge at their foot. The file the reader
-  is in, the option the keys lit and the block a thread hangs open under
-  stand on a grey tint with no edge at their start, their words in ink
-  even once viewed; a row is rounded at a box's corner, under the pointer
-  as where the reader is. A box ticks in ink. Faint words, and in the light
-  theme a modified file's letter, are a step stronger, so they read at
-  4.5:1 on that grey. The lines the reader marked to comment on keep their
+  and its plainest ground their words, where they stood on the reader's
+  blue tint with a blue edge at their foot; a dot, an icon or a count of a
+  colour of its own keeps it. The file the reader is in, the option the
+  keys lit and the block a thread hangs open under stand on a grey tint
+  with no edge at their start, their words in ink even once viewed; a row
+  is rounded at a box's corner, under the pointer as where the reader is.
+  A box ticks in ink. The lines the reader marked to comment on keep their
   blue. A field the keyboard is in is edged twice as strong in blue, with
   no ring outside it, and a column's edge to drag shows in grey under the
   pointer. A button or a segment eases into its pressed or open look over

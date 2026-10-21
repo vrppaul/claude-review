@@ -19,7 +19,6 @@ A part is held to these once it is moved to them, or once a change touches its l
 - Every step comes from its hue's one base value, so a theme sets one value per hue.
 - A chip's ground is its hue mixed with the reading ground, not laid over what is under it, so a chip is one colour wherever it stands.
 - A tag is its hue's chip under its hue's words, with no edge.
-- Contrast is measured, never judged by eye: words 4.5:1 against their ground in every state; a state the reader needs, and the focus ring, 3:1; the pointer's light 1.15:1.
 - White words go only on a fill dark enough for them: the dark theme fills a button with a darker blue than its marks.
 - A weight is one the library names, each for its use: normal for what is read, semibold for what heads it, medium for a small label.
 
