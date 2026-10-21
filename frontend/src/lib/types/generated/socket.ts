@@ -214,11 +214,16 @@ export interface components {
         };
         /**
          * LineAnchor
-         * @description The lines a comment hangs on, as the page names them: where they are, and what they said.
+         * @description Lines of one side of a file in the review's own diff, as the page names them: where, and what they said.
          *
          *     A quote sent empty is filled in by the review from its diff.
          */
         "LineAnchor-Input": {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "line";
             /** File */
             file: string;
             side: components["schemas"]["LineSide"];
@@ -226,11 +231,6 @@ export interface components {
             start_line: number;
             /** End Line */
             end_line: number;
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            kind: "line";
             /** Quote */
             quote: string[];
             /** Outdated */
@@ -238,11 +238,16 @@ export interface components {
         };
         /**
          * LineAnchor
-         * @description The lines a comment hangs on, as the page names them: where they are, and what they said.
+         * @description Lines of one side of a file in the review's own diff, as the page names them: where, and what they said.
          *
          *     A quote sent empty is filled in by the review from its diff.
          */
         "LineAnchor-Output": {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "line";
             /** File */
             file: string;
             side: components["schemas"]["LineSide"];
@@ -250,11 +255,6 @@ export interface components {
             start_line: number;
             /** End Line */
             end_line: number;
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            kind: "line";
             /** Quote */
             quote: string[];
             /** Outdated */
@@ -472,7 +472,7 @@ export interface components {
         };
         /**
          * StoryAnchor
-         * @description A block of the words of the story told of the change, as the page and the agent name it.
+         * @description A block of the words of the story told of the change, as the page names it.
          *
          *     A quote sent empty is filled in by the review from the story it holds.
          */
@@ -490,7 +490,7 @@ export interface components {
         };
         /**
          * StoryAnchor
-         * @description A block of the words of the story told of the change, as the page and the agent name it.
+         * @description A block of the words of the story told of the change, as the page names it.
          *
          *     A quote sent empty is filled in by the review from the story it holds.
          */

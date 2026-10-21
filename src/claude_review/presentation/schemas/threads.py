@@ -1,7 +1,7 @@
 """The API's threads: what they hang on, what the page sends of them, and what the agent is handed."""
 
 from pathlib import Path
-from typing import Annotated, Literal, Self, assert_never, override
+from typing import Annotated, Literal, Self, assert_never
 
 from pydantic import (
     Field,
@@ -49,8 +49,51 @@ MAX_TURNS = 200
 # shows the lines of no file larger than this many bytes, and a character
 # takes at least one
 MAX_QUOTE_LINE_LENGTH = LARGEST_FILE_SHOWN_BYTES
-# One line an anchor quotes, as the page and the agent send it
+# One line an anchor quotes, as the page sends it
 QuoteLine = Annotated[str, Field(max_length=MAX_QUOTE_LINE_LENGTH)]
+
+
+class LineAnchor(Schema):
+    """Lines of one side of a file in the review's own diff, as the page names them: where, and what they said.
+
+    A quote sent empty is filled in by the review from its diff.
+    """
+
+    kind: Literal[AnchorKind.LINE] = AnchorKind.LINE
+    file: FilePath
+    side: LineSide
+    start_line: StrictInt = Field(ge=FIRST_LINE)
+    end_line: StrictInt = Field(ge=FIRST_LINE)
+    quote: list[QuoteLine] = Field(max_length=MAX_QUOTE_LINES)
+    outdated: StrictBool
+
+    @model_validator(mode="after")
+    def start_before_end(self) -> Self:
+        models.check_line_span(self.start_line, self.end_line)
+        return self
+
+    @classmethod
+    def from_domain(cls, anchor: models.LineAnchor) -> Self:
+        return cls(
+            kind=anchor.kind,
+            file=anchor.file,
+            side=anchor.side,
+            start_line=anchor.start_line,
+            end_line=anchor.end_line,
+            quote=anchor.quote,
+            outdated=anchor.outdated,
+        )
+
+    def to_domain(self) -> models.LineAnchor:
+        return models.LineAnchor(
+            kind=self.kind,
+            file=self.file,
+            side=self.side,
+            start_line=self.start_line,
+            end_line=self.end_line,
+            quote=self.quote,
+            outdated=self.outdated,
+        )
 
 
 class PointedLines(Schema):
@@ -79,41 +122,6 @@ class PointedLines(Schema):
             end_line=self.end_line,
             quote=[],
             outdated=False,
-        )
-
-
-class LineAnchor(PointedLines):
-    """The lines a comment hangs on, as the page names them: where they are, and what they said.
-
-    A quote sent empty is filled in by the review from its diff.
-    """
-
-    kind: Literal[AnchorKind.LINE] = AnchorKind.LINE
-    quote: list[QuoteLine] = Field(max_length=MAX_QUOTE_LINES)
-    outdated: StrictBool
-
-    @classmethod
-    def from_domain(cls, anchor: models.LineAnchor) -> Self:
-        return cls(
-            kind=anchor.kind,
-            file=anchor.file,
-            side=anchor.side,
-            start_line=anchor.start_line,
-            end_line=anchor.end_line,
-            quote=anchor.quote,
-            outdated=anchor.outdated,
-        )
-
-    @override
-    def to_domain(self) -> models.LineAnchor:
-        return models.LineAnchor(
-            kind=self.kind,
-            file=self.file,
-            side=self.side,
-            start_line=self.start_line,
-            end_line=self.end_line,
-            quote=self.quote,
-            outdated=self.outdated,
         )
 
 
@@ -200,7 +208,7 @@ QuotedWords = Annotated[str, Field(max_length=MAX_TEXT_LENGTH)]
 
 
 class StoryAnchor(Schema):
-    """A block of the words of the story told of the change, as the page and the agent name it.
+    """A block of the words of the story told of the change, as the page names it.
 
     A quote sent empty is filled in by the review from the story it holds.
     """

@@ -2,6 +2,8 @@
 // colour, a layer or a shadow is written down once, in tokens.css, for both
 // themes, and named everywhere else — a token on its own, nothing added to
 // it. Formatting is Prettier's.
+
+import { readFileSync } from 'node:fs';
 const A_LAYER = ['/^var\\(--cr-layer-[a-z-]+\\)$/'];
 const A_SHADOW = ['/^var\\(--cr-shadow-[a-z-]+\\)$/', 'none'];
 // The tints a notice's tones stand on, the warning's and the reader's, are laid by the library alone (lib/ui
@@ -104,9 +106,19 @@ const SELECTORS_OF_THE_LIBRARY = [
 // A comment's reading face is written once, in the library's rule of it (cr-comment-body): another stylesheet naming
 // its size or leading writes it again, as a story's prose and its waiting room did
 const THE_COMMENT_FACE = ['/var\\(--cr-comment-(size|leading)\\)/'];
+// A token is declared once, in tokens.css: declared again under a rule of another stylesheet, it changes for all
+// that rule holds, as a pane's edge once did for every button and box inside the pane. A part's own value takes a
+// name of its own, set from the token (--cr-this-pane-edge)
+const TOKENS_STYLESHEET = readFileSync(new URL('./src/styles/tokens.css', import.meta.url), 'utf8');
+const TOKEN_NAMES = new Set(TOKENS_STYLESHEET.match(/(?<=^\s*--)[a-z][a-z0-9-]*(?=\s*:)/gm));
+const A_TOKEN = `/^--(${[...TOKEN_NAMES].join('|')})$/`;
 
 export default {
 	rules: {
+		'property-disallowed-list': [
+			[A_TOKEN],
+			{ message: (name) => `${name} is a token, declared in tokens.css: give a part's own value a name of its own.` }
+		],
 		'color-no-hex': true,
 		'color-named': 'never',
 		'function-disallowed-list': WRITTEN_IN_THE_TOKENS,
@@ -134,6 +146,7 @@ export default {
 			// terms of others, its spacing on the scale's steps, every hue on the ladder's
 			files: ['src/styles/tokens.css'],
 			rules: {
+				'property-disallowed-list': null,
 				'color-no-hex': null,
 				'function-disallowed-list': null,
 				'declaration-property-value-disallowed-list': {

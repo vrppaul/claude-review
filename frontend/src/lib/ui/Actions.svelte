@@ -7,11 +7,8 @@
 		aside?: Snippet | undefined;
 		/** What stands just before the main act: the other acts, and why the main one failed, where it did. */
 		others?: Snippet | undefined;
-		/**
-		 * The one act the row leads to, drawn last: primary, or danger where it loses what was written. A note that
-		 * only says something, put away by its cross among the others, leads to none.
-		 */
-		main?: Snippet | undefined;
+		/** The one act the row leads to, drawn last: primary, or danger where it loses what was written. */
+		main: Snippet;
 	}
 
 	let { testId, aside, others, main }: Props = $props();
@@ -26,5 +23,5 @@
 		<div class="cr-ui-actions-aside">{@render aside()}</div>
 	{/if}
 	{@render others?.()}
-	{@render main?.()}
+	{@render main()}
 </div>

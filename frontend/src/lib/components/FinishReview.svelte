@@ -10,6 +10,7 @@
 	import Failure from '$lib/ui/Failure.svelte';
 	import Field from '$lib/ui/Field.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
+	import IconButton from '$lib/ui/IconButton.svelte';
 	import PassingNote from '$lib/ui/PassingNote.svelte';
 	import Popover from '$lib/ui/Popover.svelte';
 	import Row from '$lib/ui/Row.svelte';
@@ -254,8 +255,15 @@
 			testId="send-failed"
 			onGone={() => submission.putFailureAway()}
 		>
-			{#snippet says()}
-				<Failure stands="inline" testId="submit-error" said={failed} />
+			{#snippet children(putAway: () => void)}
+				<!-- Its words and its cross, as a pane's head holds its name and its close: no act to lead to, so no row of
+					acts, whose last is always one -->
+				<div class="flex items-center gap-2 py-2 pr-2 pl-3">
+					<Failure stands="inline" testId="submit-error" said={failed} />
+					<IconButton tone="quiet" size="sm" shape="square" label="Close" testId="send-failed-close" onclick={putAway}>
+						<Icon name="cross" size="xs" />
+					</IconButton>
+				</div>
 			{/snippet}
 		</PassingNote>
 	{/if}
