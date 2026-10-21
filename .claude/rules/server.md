@@ -34,7 +34,7 @@ How a module is built is said in its docstring. The API has its own rules, `.cla
 - Every member of an interface is `@abstractmethod`. Every method an implementation writes is marked `@override`, so ty holds it to the interface where it is written.
 - A model made from another is made by a method of the model (`DiffFile.showing`, `LineAnchor.lost`, `Step.told`), which calls its constructor with every field written out: ty then holds the names, the types and the fields it must have.
 - Each such method adds its row to `tests/unit/test_models_made_from_models.py`: a field with a default left out is what ty cannot see.
-- No model is taken apart into its fields by name: `scripts/check_code_rules.py` refuses `model_copy`, `model_construct`, `model_dump`, `__dict__`, `vars` and `copy.replace`.
+- No model is taken apart into its fields by name: `scripts/check_code_rules.py` refuses `model_copy`, `model_construct`, `model_dump`, `from_attributes`, `__dict__`, `vars` and `copy.replace`.
 - What that check cannot see by a name, a model handed to `dict(…)` or walked field by field, is forbidden all the same.
 - A model leaves in a request or an answer as JSON (`model_dump_json`), never as a mapping.
 

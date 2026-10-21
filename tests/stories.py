@@ -106,7 +106,7 @@ def field_at(story: Story[Step], path: FieldPath) -> JsonValue:
 
 def as_the_agent_writes(story: Story[Step]) -> dict[str, JsonValue]:
     """A story as its document says it: JSON, each step's lines written "104-129"."""
-    return StoryRequest.from_domain(story).model_dump(mode="json")
+    return StoryRequest.model_validate(story, from_attributes=True).model_dump(mode="json")
 
 
 def without_field(document: dict[str, JsonValue], field: str) -> dict[str, JsonValue]:

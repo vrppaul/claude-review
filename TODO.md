@@ -334,10 +334,6 @@ of it is built yet.
       git reader it never calls. Making one only for a change would choose
       the source by kind in two callers, `serving.py` and the tests'
       `hosted` (`tests/helpers.py`), unless the choice moves with it.
-- [ ] `refactor(api)`: `StoryTakenResponse.summing_up` builds its
-      `LeftOutOfFile`s field by field (`presentation/schemas/story.py`), not
-      with `from_domain()` from a domain model, as api.md asks of every
-      schema the review sends.
 - [ ] `refactor(ui)`: the page still says "the wire" for what the API
       takes: `lib/api/thread-wire.ts` and its `threadOnTheWire`,
       `Threads.onTheWire`, and comments elsewhere under `frontend/src`,

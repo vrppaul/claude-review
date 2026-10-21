@@ -48,7 +48,6 @@ from claude_review.presentation.schemas.threads import (
     PointResponse,
     Thread,
     ThreadSummary,
-    anchor_to_domain,
 )
 from claude_review.services.review.agent_inbox import Silence
 from claude_review.services.review.review import Review
@@ -211,7 +210,7 @@ async def raise_a_thread(request: PointRequest, review: Review = Depends(get_rev
     thread: the reader answers it, settles it or removes it. It is drawn as
     the author's, though, and it is never counted as the reader's own work.
     """
-    raised = review.raise_thread(anchor_to_domain(request.anchor), body=request.body, severity=request.severity)
+    raised = review.raise_thread(request.anchor.to_domain(), body=request.body, severity=request.severity)
     return PointResponse(thread_id=raised)
 
 

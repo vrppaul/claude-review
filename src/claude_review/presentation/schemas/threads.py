@@ -1,7 +1,7 @@
 """The API's threads: what they hang on, what the page sends of them, and what the agent is handed."""
 
 from pathlib import Path
-from typing import Annotated, Literal, Self
+from typing import Annotated, Literal, Self, assert_never
 
 from pydantic import (
     BaseModel,
@@ -10,7 +10,6 @@ from pydantic import (
     JsonValue,
     StrictBool,
     StrictInt,
-    TypeAdapter,
     ValidationError,
     computed_field,
     model_validator,
@@ -76,12 +75,42 @@ class LineAnchor(Schema):
         models.check_line_span(self.start_line, self.end_line)
         return self
 
+    @classmethod
+    def from_domain(cls, anchor: models.LineAnchor) -> Self:
+        return cls(
+            kind=anchor.kind,
+            file=anchor.file,
+            side=anchor.side,
+            start_line=anchor.start_line,
+            end_line=anchor.end_line,
+            quote=anchor.quote,
+            outdated=anchor.outdated,
+        )
+
+    def to_domain(self) -> models.LineAnchor:
+        return models.LineAnchor(
+            kind=self.kind,
+            file=self.file,
+            side=self.side,
+            start_line=self.start_line,
+            end_line=self.end_line,
+            quote=self.quote,
+            outdated=self.outdated,
+        )
+
 
 class OverviewBlock(Schema):
     """One of the overview's three lines, by its name."""
 
     at: Literal[StoryBlockKind.OVERVIEW] = StoryBlockKind.OVERVIEW
     text: OverviewText
+
+    @classmethod
+    def from_domain(cls, block: models.OverviewBlock) -> Self:
+        return cls(at=block.at, text=block.text)
+
+    def to_domain(self) -> models.OverviewBlock:
+        return models.OverviewBlock(at=self.at, text=self.text)
 
 
 class ItemBlock(Schema):
@@ -91,6 +120,13 @@ class ItemBlock(Schema):
     list: OverviewList
     item: StrictInt = Field(ge=FIRST_ITEM)
 
+    @classmethod
+    def from_domain(cls, block: models.ItemBlock) -> Self:
+        return cls(at=block.at, list=block.list, item=block.item)
+
+    def to_domain(self) -> models.ItemBlock:
+        return models.ItemBlock(at=self.at, list=self.list, item=self.item)
+
 
 class ChapterBlock(Schema):
     """What a chapter says of itself, the chapter by its id."""
@@ -98,6 +134,13 @@ class ChapterBlock(Schema):
     at: Literal[StoryBlockKind.CHAPTER] = StoryBlockKind.CHAPTER
     chapter: ChapterId
     text: ChapterText
+
+    @classmethod
+    def from_domain(cls, block: models.ChapterBlock) -> Self:
+        return cls(at=block.at, chapter=block.chapter, text=block.text)
+
+    def to_domain(self) -> models.ChapterBlock:
+        return models.ChapterBlock(at=self.at, chapter=self.chapter, text=self.text)
 
 
 class ReasonBlock(Schema):
@@ -107,9 +150,32 @@ class ReasonBlock(Schema):
     file: FilePath
     first_line: StrictInt = Field(ge=FIRST_LINE)
 
+    @classmethod
+    def from_domain(cls, block: models.ReasonBlock) -> Self:
+        return cls(at=block.at, file=block.file, first_line=block.first_line)
+
+    def to_domain(self) -> models.ReasonBlock:
+        return models.ReasonBlock(at=self.at, file=self.file, first_line=self.first_line)
+
 
 # A block of the story's words, as the API carries it
 type StoryBlock = Annotated[OverviewBlock | ItemBlock | ChapterBlock | ReasonBlock, Field(discriminator="at")]
+
+
+def _block_from_domain(block: models.StoryBlock) -> StoryBlock:
+    """The schema of a block of the story's words, whichever it is."""
+    match block:
+        case models.OverviewBlock():
+            return OverviewBlock.from_domain(block)
+        case models.ItemBlock():
+            return ItemBlock.from_domain(block)
+        case models.ChapterBlock():
+            return ChapterBlock.from_domain(block)
+        case models.ReasonBlock():
+            return ReasonBlock.from_domain(block)
+        case _:
+            assert_never(block)
+
 
 # The words of a block a story anchor quotes: a text of the story, bounded as anything said in a review is
 QuotedWords = Annotated[str, Field(max_length=MAX_TEXT_LENGTH)]
@@ -126,24 +192,31 @@ class StoryAnchor(Schema):
     quote: list[QuotedWords] = Field(default_factory=list, max_length=STORY_QUOTE_TEXTS)
     outdated: StrictBool = False
 
+    @classmethod
+    def from_domain(cls, anchor: models.StoryAnchor) -> Self:
+        return cls(
+            kind=anchor.kind, block=_block_from_domain(anchor.block), quote=anchor.quote, outdated=anchor.outdated
+        )
+
+    def to_domain(self) -> models.StoryAnchor:
+        return models.StoryAnchor(
+            kind=self.kind, block=self.block.to_domain(), quote=self.quote, outdated=self.outdated
+        )
+
 
 # Everything a thread can hang on, as the API carries it
 type Anchor = Annotated[LineAnchor | StoryAnchor, Field(discriminator="kind")]
 
 
-# Every kind of anchor, read from the other side's form by its fields
-SCHEMA_ANCHORS: TypeAdapter[Anchor] = TypeAdapter(Anchor)
-DOMAIN_ANCHORS: TypeAdapter[models.Anchor] = TypeAdapter(models.Anchor)
-
-
-def anchor_to_domain(anchor: Anchor) -> models.Anchor:
-    """The domain's form of an anchor a request carried, whatever its kind."""
-    return DOMAIN_ANCHORS.validate_python(anchor, from_attributes=True)
-
-
 def anchor_from_domain(anchor: models.Anchor) -> Anchor:
     """The schema of one of the domain's anchors, whatever its kind."""
-    return SCHEMA_ANCHORS.validate_python(anchor, from_attributes=True)
+    match anchor:
+        case models.LineAnchor():
+            return LineAnchor.from_domain(anchor)
+        case models.StoryAnchor():
+            return StoryAnchor.from_domain(anchor)
+        case _:
+            assert_never(anchor)
 
 
 class Turn(Schema):
@@ -153,6 +226,10 @@ class Turn(Schema):
     body: str
     round: int
     images: list[Path]
+
+    @classmethod
+    def from_domain(cls, turn: models.Turn) -> Self:
+        return cls(author=turn.author, body=turn.body, round=turn.round, images=turn.images)
 
 
 class Thread(Schema):
@@ -167,6 +244,19 @@ class Thread(Schema):
     raised_by: TurnAuthor
     resolved: StrictBool
 
+    @classmethod
+    def from_domain(cls, thread: models.Thread) -> Self:
+        return cls(
+            thread_id=thread.thread_id,
+            anchor=anchor_from_domain(thread.anchor),
+            severity=thread.severity,
+            body=thread.body,
+            images=thread.images,
+            turns=[Turn.from_domain(turn) for turn in thread.turns],
+            raised_by=thread.raised_by,
+            resolved=thread.resolved,
+        )
+
     # Said from the anchor each time it is asked, never kept beside it: a thread
     # cannot say one place and hang on another, wherever it was built — by
     # itself, or inside a question or a panel message
@@ -174,7 +264,7 @@ class Thread(Schema):
     @property
     def where(self) -> str:
         """The place, in plain words, for whoever reads the thread as text."""
-        return place_in_words(anchor_to_domain(self.anchor))
+        return place_in_words(self.anchor.to_domain())
 
 
 class SaysSomething(Schema):
@@ -200,6 +290,15 @@ class TurnInput(SaysSomething):
     author: TurnAuthor
     round: int = Field(ge=FIRST_ROUND)
 
+    @classmethod
+    def from_domain(cls, turn: models.TurnDraft) -> Self:
+        return cls(body=turn.body, images=turn.images, turn_id=turn.turn_id, author=turn.author, round=turn.round)
+
+    def to_domain(self) -> models.TurnDraft:
+        return models.TurnDraft(
+            body=self.body, images=self.images, turn_id=self.turn_id, author=self.author, round=self.round
+        )
+
 
 class ThreadInput(SaysSomething):
     """A thread as the browser holds it, turns and all.
@@ -218,9 +317,31 @@ class ThreadInput(SaysSomething):
     raised_by: TurnAuthor
     resolved: StrictBool
 
+    @classmethod
+    def from_domain(cls, thread: models.ThreadDraft) -> Self:
+        return cls(
+            body=thread.body,
+            images=thread.images,
+            thread_id=thread.thread_id,
+            anchor=anchor_from_domain(thread.anchor),
+            severity=thread.severity,
+            turns=[TurnInput.from_domain(turn) for turn in thread.turns],
+            raised_by=thread.raised_by,
+            resolved=thread.resolved,
+        )
+
     def to_domain(self) -> models.ThreadDraft:
         """The thread as the review holds what the page holds."""
-        return models.ThreadDraft.model_validate(self, from_attributes=True)
+        return models.ThreadDraft(
+            body=self.body,
+            images=self.images,
+            thread_id=self.thread_id,
+            anchor=self.anchor.to_domain(),
+            severity=self.severity,
+            turns=[turn.to_domain() for turn in self.turns],
+            raised_by=self.raised_by,
+            resolved=self.resolved,
+        )
 
 
 class SubmitRequest(Schema):

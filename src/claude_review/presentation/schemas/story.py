@@ -17,10 +17,10 @@ from typing import Annotated, Self
 
 from pydantic import ConfigDict, Field, StrictBool
 
-from claude_review.domain import story
+from claude_review.domain import models, story
 from claude_review.domain.models import MAX_ID_LENGTH, MAX_PATH_LENGTH
 from claude_review.domain.story import ToldFrom
-from claude_review.presentation.schemas.base import MAX_TEXT_LENGTH, LinesWritten, Schema
+from claude_review.presentation.schemas.base import MAX_TEXT_LENGTH, LinesWritten, Schema, made_or_none
 from claude_review.presentation.schemas.content import DiffFile
 
 # The most of each thing one document may hold. A story with more is not a
@@ -56,6 +56,9 @@ class StepInput(StoryInput):
     lines: LinesWritten
     reason: StoryWords | None = None
 
+    def to_domain(self) -> story.Step:
+        return story.Step(file=self.file, lines=self.lines, reason=self.reason)
+
 
 class ChapterInput(StoryInput):
     """Changes that belong together, told one step after another."""
@@ -66,12 +69,24 @@ class ChapterInput(StoryInput):
     doubt: StoryWords | None = None
     steps: list[StepInput] = Field(max_length=MAX_STEPS_IN_CHAPTER)
 
+    def to_domain(self) -> story.Chapter[story.Step]:
+        return story.Chapter[story.Step](
+            id=self.id,
+            title=self.title,
+            why=self.why,
+            doubt=self.doubt,
+            steps=[step.to_domain() for step in self.steps],
+        )
+
 
 class OverviewItemInput(StoryInput):
     """One thing the overview lists, and the chapter that shows it, when one does."""
 
     text: StoryWords
     chapter: StoryName | None = None
+
+    def to_domain(self) -> story.OverviewItem:
+        return story.OverviewItem(text=self.text, chapter=self.chapter)
 
 
 class DiagramInput(StoryInput):
@@ -80,6 +95,9 @@ class DiagramInput(StoryInput):
     mermaid: StoryWords
     caption: StoryWords | None = None
     links: dict[StoryName, StoryName] = Field(default_factory=dict, max_length=MAX_DIAGRAM_LINKS)
+
+    def to_domain(self) -> story.Diagram:
+        return story.Diagram(mermaid=self.mermaid, caption=self.caption, links=self.links)
 
 
 class StoryOverviewInput(StoryInput):
@@ -92,6 +110,17 @@ class StoryOverviewInput(StoryInput):
     decisions: list[OverviewItemInput] = Field(default_factory=list, max_length=MAX_OVERVIEW_ITEMS)
     turned_down: list[OverviewItemInput] = Field(default_factory=list, max_length=MAX_OVERVIEW_ITEMS)
     later: list[OverviewItemInput] = Field(default_factory=list, max_length=MAX_OVERVIEW_ITEMS)
+
+    def to_domain(self) -> story.StoryOverview:
+        return story.StoryOverview(
+            task=self.task,
+            done=self.done,
+            doubt=self.doubt,
+            diagram=made_or_none(DiagramInput.to_domain, self.diagram),
+            decisions=[item.to_domain() for item in self.decisions],
+            turned_down=[item.to_domain() for item in self.turned_down],
+            later=[item.to_domain() for item in self.later],
+        )
 
 
 class StoryRequest(StoryInput):
@@ -110,7 +139,13 @@ class StoryRequest(StoryInput):
 
     def to_domain(self) -> story.Story[story.Step]:
         """The story the document writes, as the domain's models hold one."""
-        return story.Story[story.Step].model_validate(self, from_attributes=True)
+        return story.Story[story.Step](
+            title=self.title,
+            told_from=self.told_from,
+            overview=self.overview.to_domain(),
+            chapters=[chapter.to_domain() for chapter in self.chapters],
+            housekeeping=self.housekeeping,
+        )
 
 
 class LineSpan(Schema):
@@ -119,12 +154,20 @@ class LineSpan(Schema):
     first: int
     last: int
 
+    @classmethod
+    def from_domain(cls, lines: models.LineSpan) -> Self:
+        return cls(first=lines.first, last=lines.last)
+
 
 class OverviewItem(Schema):
     """One thing the overview lists, and the chapter that shows it, when one does."""
 
     text: str
     chapter: str | None
+
+    @classmethod
+    def from_domain(cls, item: story.OverviewItem) -> Self:
+        return cls(text=item.text, chapter=item.chapter)
 
 
 class Diagram(Schema):
@@ -133,6 +176,10 @@ class Diagram(Schema):
     mermaid: str
     caption: str | None
     links: dict[str, str]
+
+    @classmethod
+    def from_domain(cls, diagram: story.Diagram) -> Self:
+        return cls(mermaid=diagram.mermaid, caption=diagram.caption, links=diagram.links)
 
 
 class StoryOverview(Schema):
@@ -146,6 +193,18 @@ class StoryOverview(Schema):
     turned_down: list[OverviewItem]
     later: list[OverviewItem]
 
+    @classmethod
+    def from_domain(cls, overview: story.StoryOverview) -> Self:
+        return cls(
+            task=overview.task,
+            done=overview.done,
+            doubt=overview.doubt,
+            diagram=made_or_none(Diagram.from_domain, overview.diagram),
+            decisions=[OverviewItem.from_domain(item) for item in overview.decisions],
+            turned_down=[OverviewItem.from_domain(item) for item in overview.turned_down],
+            later=[OverviewItem.from_domain(item) for item in overview.later],
+        )
+
 
 class StepNow(Schema):
     """Where a step's code stands on the take of the change the story is on."""
@@ -156,6 +215,14 @@ class StepNow(Schema):
     piece: DiffFile
     # Whether a round's work changed them after the step was told
     changed_since_told: StrictBool
+
+    @classmethod
+    def from_domain(cls, now: story.StepNow) -> Self:
+        return cls(
+            lines=LineSpan.from_domain(now.lines),
+            piece=DiffFile.from_domain(now.piece),
+            changed_since_told=now.changed_since_told,
+        )
 
 
 class FollowedStep(Schema):
@@ -170,6 +237,16 @@ class FollowedStep(Schema):
     # Whether a thread may hang on what it says: a path holding a control character is shown, but only to be read
     commentable: StrictBool
 
+    @classmethod
+    def from_domain(cls, step: story.FollowedStep) -> Self:
+        return cls(
+            file=step.file,
+            lines=LineSpan.from_domain(step.lines),
+            reason=step.reason,
+            now=made_or_none(StepNow.from_domain, step.now),
+            commentable=step.commentable,
+        )
+
 
 class FollowedChapter(Schema):
     """A chapter on the take the story is on: why its changes belong together, where to look hardest, and its steps."""
@@ -183,6 +260,17 @@ class FollowedChapter(Schema):
     # head and in the story's contents, and counts nothing
     changed_steps: int
 
+    @classmethod
+    def from_domain(cls, chapter: story.Chapter[story.FollowedStep]) -> Self:
+        return cls(
+            id=chapter.id,
+            title=chapter.title,
+            why=chapter.why,
+            doubt=chapter.doubt,
+            steps=[FollowedStep.from_domain(step) for step in chapter.steps],
+            changed_steps=chapter.changed_steps,
+        )
+
 
 class LeftOut(Schema):
     """What the story leaves out of one file, shown beside it all the same."""
@@ -190,6 +278,10 @@ class LeftOut(Schema):
     piece: DiffFile
     # How many lines of it the change added or removed
     changed_lines: int
+
+    @classmethod
+    def from_domain(cls, left: story.LeftOut) -> Self:
+        return cls(piece=DiffFile.from_domain(left.piece), changed_lines=left.changed_lines)
 
 
 class ToldStory(Schema):
@@ -202,12 +294,27 @@ class ToldStory(Schema):
     housekeeping: list[str]
     left_out: list[LeftOut]
 
+    @classmethod
+    def from_domain(cls, told: story.ToldStory[story.FollowedStep]) -> Self:
+        return cls(
+            title=told.title,
+            told_from=told.told_from,
+            overview=StoryOverview.from_domain(told.overview),
+            chapters=[FollowedChapter.from_domain(chapter) for chapter in told.chapters],
+            housekeeping=told.housekeeping,
+            left_out=[LeftOut.from_domain(left) for left in told.left_out],
+        )
+
 
 class LeftOutChanged(Schema):
     """How many changed lines no step told when a story was told, and how many none tells now."""
 
     when_told: int
     now: int
+
+    @classmethod
+    def from_domain(cls, changed: story.LeftOutChanged) -> Self:
+        return cls(when_told=changed.when_told, now=changed.now)
 
 
 class CodeMovedOn(Schema):
@@ -217,6 +324,10 @@ class CodeMovedOn(Schema):
     round: int
     # Said only where the round changed how much is left out; None where as much is left out as when it was told
     left_out: LeftOutChanged | None
+
+    @classmethod
+    def from_domain(cls, moved_on: story.CodeMovedOn) -> Self:
+        return cls(round=moved_on.round, left_out=made_or_none(LeftOutChanged.from_domain, moved_on.left_out))
 
 
 class StoryHeld(Schema):
@@ -230,6 +341,15 @@ class StoryHeld(Schema):
     take: int
     # Set while the code under it moved on after it was told; None while it is current
     moved_on: CodeMovedOn | None
+
+    @classmethod
+    def from_domain(cls, held: story.StoryHeld) -> Self:
+        return cls(
+            story=ToldStory.from_domain(held.story),
+            round=held.round,
+            take=held.take,
+            moved_on=made_or_none(CodeMovedOn.from_domain, held.moved_on),
+        )
 
 
 class StoryResponse(Schema):
@@ -245,6 +365,10 @@ class LeftOutOfFile(Schema):
     # How many lines of it the change added or removed and no step tells:
     # none, of a file the change shows no line of
     changed_lines: int
+
+    @classmethod
+    def from_domain(cls, left: story.LeftOut) -> Self:
+        return cls(file=left.piece.path, changed_lines=left.changed_lines)
 
 
 class StoryTakenResponse(Schema):
@@ -266,5 +390,5 @@ class StoryTakenResponse(Schema):
             round=round_number,
             chapters=len(told.chapters),
             steps=sum(len(chapter.steps) for chapter in told.chapters),
-            left_out=[LeftOutOfFile(file=left.piece.path, changed_lines=left.changed_lines) for left in told.left_out],
+            left_out=[LeftOutOfFile.from_domain(left) for left in told.left_out],
         )

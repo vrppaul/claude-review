@@ -1,6 +1,6 @@
 """What every review on the machine keeps about its reader, as the page reads and changes it."""
 
-from typing import override
+from typing import Self, override
 
 from pydantic import ConfigDict, Field, StrictBool
 
@@ -25,6 +25,16 @@ class ReaderSettings(Schema):
     # Ask the agent for a story of every change reviewed
     stories: StrictBool
 
+    @classmethod
+    def from_domain(cls, settings: models.ReaderSettings) -> Self:
+        return cls(
+            theme=settings.theme,
+            diff_layout=settings.diff_layout,
+            ignore_whitespace=settings.ignore_whitespace,
+            sound_on_replies=settings.sound_on_replies,
+            stories=settings.stories,
+        )
+
 
 class GuideState(Schema):
     """What the review remembers of having shown this reader around."""
@@ -33,6 +43,10 @@ class GuideState(Schema):
     seen_release: str | None
     # Whether Story has been introduced to the reader: by its release news, at the switch, or by their trying it
     story_introduced: StrictBool
+
+    @classmethod
+    def from_domain(cls, guide: models.GuideState) -> Self:
+        return cls(seen_release=guide.seen_release, story_introduced=guide.story_introduced)
 
 
 class KeptRecord[Record: Schema](Schema):

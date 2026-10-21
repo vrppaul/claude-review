@@ -115,6 +115,14 @@ FIELDS_BY_NAME = [
         said="checked.py:3: `model_dump` writes a model out as a mapping",
     ),
     FieldsByName(
+        what="a model read off another by the names they share",
+        source="""
+            def sent(anchor: models.Anchor) -> Anchor:
+                return Anchor.model_validate(anchor, from_attributes=True)
+        """,
+        said="checked.py:3: `from_attributes` reads a model off another by the names the two share",
+    ),
+    FieldsByName(
         what="an object's fields read as a mapping",
         source="""
             def moved(anchor: Anchor, line: int) -> Anchor:

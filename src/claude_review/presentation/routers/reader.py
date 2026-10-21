@@ -5,6 +5,8 @@ kept — and changed the same way: what is sent is changed, a field sent as
 null or left out is not.
 """
 
+from collections.abc import Callable
+
 import structlog
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
@@ -33,7 +35,7 @@ async def reader_settings(
     settings: ReaderRecordService[models.ReaderSettings] = Depends(get_settings_service),
 ) -> KeptRecord[ReaderSettings]:
     """Say how this reader reads, as chosen in any review on this machine."""
-    return await _kept(settings, ReaderSettings)
+    return await _kept(settings, ReaderSettings.from_domain)
 
 
 @router.put("/settings", responses=refusals(takes=Takes.JSON_BODY))
@@ -49,7 +51,7 @@ async def guide_state(
     guide: ReaderRecordService[models.GuideState] = Depends(get_guide_service),
 ) -> KeptRecord[GuideState]:
     """Say how far this reader has been shown around, in any review on this machine."""
-    return await _kept(guide, GuideState)
+    return await _kept(guide, GuideState.from_domain)
 
 
 @router.put("/guide", responses=refusals(takes=Takes.JSON_BODY))
@@ -62,8 +64,8 @@ async def change_guide_state(
 
 
 async def _kept[Record: BaseModel, Answered: Schema](
-    service: ReaderRecordService[Record], schema: type[Answered]
+    service: ReaderRecordService[Record], answer_of: Callable[[Record], Answered]
 ) -> KeptRecord[Answered]:
     """A record as kept, or the defaults for a reader nothing has been kept about, and which it is."""
     kept = await service.read()
-    return KeptRecord(record=schema.from_domain(kept or service.defaults()), stored=kept is not None)
+    return KeptRecord(record=answer_of(kept or service.defaults()), stored=kept is not None)

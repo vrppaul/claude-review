@@ -35,7 +35,7 @@ from claude_review.presentation.schemas.agent import (
     MessageRequest,
     SaidInPanel,
 )
-from claude_review.presentation.schemas.base import SafeId
+from claude_review.presentation.schemas.base import SafeId, made_or_none
 from claude_review.presentation.schemas.content import (
     SEND_LIMITS,
     DiffFile,
@@ -57,7 +57,6 @@ from claude_review.presentation.schemas.threads import (
     ThreadInput,
     ThreadsResponse,
     anchor_from_domain,
-    anchor_to_domain,
 )
 from claude_review.presentation.version_labels import (
     changes_since_round,
@@ -83,15 +82,15 @@ async def get_the_review(
     told = broadcast.position()
     return ReviewResponse(
         title=standing.title,
-        repository=RepositoryAt.from_domain_or_none(standing.repository_at),
+        repository=made_or_none(RepositoryAt.from_domain, standing.repository_at),
         identity=standing.identity,
         mode=standing.mode,
         round=standing.round,
         answerer_attached=standing.answerer_attached,
         agent=AgentStatus.from_domain(standing.agent),
-        work=AgentWork.from_domain_or_none(work),
+        work=made_or_none(AgentWork.from_domain, work),
         takes_a_story=standing.takes_a_story,
-        story_asking=StoryAsking.from_domain_or_none(standing.story_asking),
+        story_asking=made_or_none(StoryAsking.from_domain, standing.story_asking),
         limits=SEND_LIMITS,
         release=release,
         instance=told.instance,
@@ -134,7 +133,7 @@ async def held_story(review: Review = Depends(get_review)) -> StoryResponse:
     had got.
     """
     held = review.story_held()
-    return StoryResponse(held=StoryHeld.from_domain_or_none(held))
+    return StoryResponse(held=made_or_none(StoryHeld.from_domain, held))
 
 
 @router.post(
@@ -226,7 +225,7 @@ async def follow_anchors(request: FollowRequest, review: Review = Depends(get_re
     follows them, one whose lines are gone is marked outdated and keeps its
     quote.
     """
-    followed = review.follow([anchor_to_domain(anchor) for anchor in request.anchors])
+    followed = review.follow([anchor.to_domain() for anchor in request.anchors])
     return FollowResponse(anchors=[anchor_from_domain(anchor) for anchor in followed])
 
 

@@ -25,6 +25,7 @@ from claude_review.domain.page_events import (
     WorkReported,
 )
 from claude_review.presentation.schemas.agent import AgentStatus, AgentWork
+from claude_review.presentation.schemas.base import made_or_none
 from claude_review.presentation.schemas.content import StoryAsking
 from claude_review.presentation.schemas.pushes import (
     AnswererPush,
@@ -56,7 +57,7 @@ def push_of(event: PageEvent) -> ServerPush:
         case AgentSaid():
             return ChatPush(said_id=event.said_id, message_id=event.message_id, body=event.body, files=event.files)
         case WorkReported():
-            return ProgressPush(work=AgentWork.from_domain_or_none(event.work))
+            return ProgressPush(work=made_or_none(AgentWork.from_domain, event.work))
         case FileShown():
             return ShowPush(file=event.file)
         case StatusReported():
@@ -77,7 +78,7 @@ def push_of(event: PageEvent) -> ServerPush:
         case StoryTold():
             return StoryPush()
         case StoryAskingChanged():
-            return StoryAskingPush(asking=StoryAsking.from_domain_or_none(event.asking))
+            return StoryAskingPush(asking=made_or_none(StoryAsking.from_domain, event.asking))
         case ReviewEnded():
             return EndedPush(finished=event.finished)
         case _:

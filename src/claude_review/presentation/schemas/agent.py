@@ -2,7 +2,7 @@
 
 from enum import StrEnum, auto
 from pathlib import Path
-from typing import Annotated, Literal
+from typing import Annotated, Literal, Self
 
 from pydantic import AfterValidator, Field, StrictBool
 
@@ -15,6 +15,7 @@ from claude_review.presentation.schemas.base import (
     LinesWritten,
     SafeId,
     Schema,
+    made_or_none,
 )
 from claude_review.presentation.schemas.threads import SaysSomething, Thread, ThreadInput, ThreadSummary
 
@@ -47,6 +48,10 @@ class AgentStatus(Schema):
     # When it last reported, so the panel can say how old the numbers are
     at: EpochMillis | None
 
+    @classmethod
+    def from_domain(cls, status: models.AgentStatus) -> Self:
+        return cls(model=status.model, context=status.context, at=status.at)
+
 
 class ProgressStep(Schema):
     """One branch of the work: something being done, or something done."""
@@ -54,8 +59,12 @@ class ProgressStep(Schema):
     text: StepText
     done: StrictBool = False
 
+    @classmethod
+    def from_domain(cls, step: models.ProgressStep) -> Self:
+        return cls(text=step.text, done=step.done)
+
     def to_domain(self) -> models.ProgressStep:
-        return models.ProgressStep.model_validate(self, from_attributes=True)
+        return models.ProgressStep(text=self.text, done=self.done)
 
 
 def _refuse_repeats(names: list[str]) -> None:
@@ -101,6 +110,16 @@ class AgentWork(Schema):
     # When it was reported, so a review reloaded later says how long it has gone on
     at: EpochMillis
 
+    @classmethod
+    def from_domain(cls, work: models.AgentWork) -> Self:
+        return cls(
+            message_id=work.message_id,
+            text=work.text,
+            files=work.files,
+            steps=[ProgressStep.from_domain(step) for step in work.steps],
+            at=work.at,
+        )
+
 
 class ThreadQuestion(Schema):
     """Something the reader asked in one thread, with the whole thread around it."""
@@ -112,6 +131,15 @@ class ThreadQuestion(Schema):
     images: list[Path]
     thread: Thread
 
+    @classmethod
+    def from_domain(cls, question: models.ThreadQuestion) -> Self:
+        return cls(
+            question_id=question.question_id,
+            body=question.body,
+            images=question.images,
+            thread=Thread.from_domain(question.thread),
+        )
+
 
 class PanelMessage(Schema):
     """Something the reader typed in the agent panel, with the threads it points at."""
@@ -121,11 +149,24 @@ class PanelMessage(Schema):
     threads: list[Thread]
     images: list[Path]
 
+    @classmethod
+    def from_domain(cls, message: models.PanelMessage) -> Self:
+        return cls(
+            message_id=message.message_id,
+            body=message.body,
+            threads=[Thread.from_domain(thread) for thread in message.threads],
+            images=message.images,
+        )
+
 
 class PanelCancel(Schema):
     """The reader withdrawing a panel message before it was answered."""
 
     message_id: str
+
+    @classmethod
+    def from_domain(cls, cancel: models.PanelCancel) -> Self:
+        return cls(message_id=cancel.message_id)
 
 
 class PanelEntry(Schema):
@@ -136,6 +177,10 @@ class PanelEntry(Schema):
     body: str
     at: EpochMillis
     images: list[Path]
+
+    @classmethod
+    def from_domain(cls, entry: models.PanelEntry) -> Self:
+        return cls(message_id=entry.message_id, author=entry.author, body=entry.body, at=entry.at, images=entry.images)
 
 
 class SaidInPanel(Schema):
@@ -157,6 +202,20 @@ class SaidInPanel(Schema):
     # Whether the reader took the message back before it was answered
     taken_back: StrictBool
 
+    @classmethod
+    def from_domain(cls, said: models.SaidInPanel) -> Self:
+        return cls(
+            said_id=said.said_id,
+            message_id=said.message_id,
+            author=said.author,
+            body=said.body,
+            at=said.at,
+            images=said.images,
+            threads=said.threads,
+            files=said.files,
+            taken_back=said.taken_back,
+        )
+
 
 class ConversationResponse(Schema):
     """Response for GET /api/conversation — what was said in the panel, for a page opening to draw.
@@ -175,6 +234,10 @@ class RoundSubmission(Schema):
     number: int
     markdown: str
     comment_count: int
+
+    @classmethod
+    def from_domain(cls, submission: models.RoundSubmission) -> Self:
+        return cls(number=submission.number, markdown=submission.markdown, comment_count=submission.comment_count)
 
 
 class CatchUpResponse(Schema):
@@ -330,6 +393,10 @@ class StaleStep(Schema):
     # Written as the agent writes a step's lines: "104-131"; null where its code is no longer found
     lines: LinesWritten | None
 
+    @classmethod
+    def from_domain(cls, step: models.StaleStep) -> Self:
+        return cls(chapter=step.chapter, file=step.file, lines=step.lines)
+
 
 class StoryWentStale(Schema):
     """What of the story the agent told a round moved the code on under."""
@@ -340,11 +407,23 @@ class StoryWentStale(Schema):
     # How many lines the change added or removed that no step tells now
     left_out: int
 
+    @classmethod
+    def from_domain(cls, stale: models.StoryWentStale) -> Self:
+        return cls(
+            round=stale.round,
+            steps=[StaleStep.from_domain(step) for step in stale.steps],
+            left_out=stale.left_out,
+        )
+
 
 class StoryRequestEvent(Schema):
     type: Literal[EventKind.STORY_REQUEST] = EventKind.STORY_REQUEST
     # What went stale of the story told before, to tell it again; None for a first story
     stale: StoryWentStale | None = None
+
+    @classmethod
+    def from_domain(cls, requested: models.StoryRequested) -> Self:
+        return cls(stale=made_or_none(StoryWentStale.from_domain, requested.stale))
 
 
 class StoryCancelEvent(Schema):

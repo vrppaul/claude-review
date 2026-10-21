@@ -12,7 +12,7 @@ What passes between the server, its page and its agent. How a module does its pa
 ## Schemas and routes
 
 - What a route takes and answers is a `Schema` of its own in `src/claude_review/presentation/schemas/`, apart from the domain's model.
-- A schema the review sends is made from the domain's model with `from_domain()`; one it takes becomes the domain's with `to_domain()`.
+- A schema the review sends is made from the domain's model by its `from_domain()`, and one it takes becomes the domain's by its `to_domain()`: each calls the constructor with every field written out, so ty holds the names the two share.
 - The domain never carries the API's settings.
 - A schema may implement an interface the domain holds, where a service asks for what the request carries: a change to a reader's record is a `RecordChange`.
 - A yes or a no in a request's or an answer's body is pydantic's `StrictBool`, `true` or `false` and nothing else. A query parameter is read as FastAPI reads one.

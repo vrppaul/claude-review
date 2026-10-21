@@ -8,7 +8,8 @@ but what an id may hold: the review holds a story's chapters to that as well,
 so the rule is the domain's, and the schemas bound their ids by it.
 """
 
-from typing import Annotated, Self
+from collections.abc import Callable
+from typing import Annotated
 
 from pydantic import (
     AfterValidator,
@@ -36,20 +37,17 @@ class Schema(BaseModel):
     review always writes it, so the schema of what it writes says so — and
     the browser's types, generated from that schema, do not call such a
     field maybe missing. One the review sends is made from the domain's model
-    of the same shape, field by field.
+    by its own `from_domain`, every field written out: never read off the
+    model by the names the two happen to share, which a field renamed on one
+    side would leave at its default without a word.
     """
 
-    model_config = ConfigDict(json_schema_serialization_defaults_required=True, from_attributes=True)
+    model_config = ConfigDict(json_schema_serialization_defaults_required=True)
 
-    @classmethod
-    def from_domain(cls, source: BaseModel) -> Self:
-        """The schema of one of the domain's models, read field by field."""
-        return cls.model_validate(source, from_attributes=True)
 
-    @classmethod
-    def from_domain_or_none(cls, source: BaseModel | None) -> Self | None:
-        """The schema of one of the domain's models where there may be none: none in the answer too."""
-        return cls.from_domain(source) if source is not None else None
+def made_or_none[Source, Made](make: Callable[[Source], Made], source: Source | None) -> Made | None:
+    """What `make` makes of a model that may be missing, on its way to or from the domain: nothing where it is."""
+    return None if source is None else make(source)
 
 
 # The most one thing said may hold: a comment, a turn, a panel message

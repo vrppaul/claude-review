@@ -1,10 +1,11 @@
 """What the page is served of the review: its facts, its diff, the bases it can be read against, and its limits."""
 
 from enum import StrEnum, auto
-from typing import Annotated, Literal
+from typing import Annotated, Literal, Self, assert_never
 
 from pydantic import Field, StrictBool
 
+from claude_review.domain import models, story
 from claude_review.domain.models import (
     LARGEST_FILE_SHOWN_BYTES,
     MAX_QUOTE_LINES,
@@ -29,6 +30,10 @@ class DiffLine(Schema):
     new_number: int | None
     content: str
 
+    @classmethod
+    def from_domain(cls, line: models.DiffLine) -> Self:
+        return cls(kind=line.kind, old_number=line.old_number, new_number=line.new_number, content=line.content)
+
 
 # What a hunk's start says on either side: the browser counts the lines hidden above a hunk from it
 HUNK_START_MEANING = (
@@ -45,6 +50,15 @@ class DiffHunk(Schema):
     new_start: int = Field(description=HUNK_START_MEANING)
     lines: list[DiffLine]
 
+    @classmethod
+    def from_domain(cls, hunk: models.DiffHunk) -> Self:
+        return cls(
+            header=hunk.header,
+            old_start=hunk.old_start,
+            new_start=hunk.new_start,
+            lines=[DiffLine.from_domain(line) for line in hunk.lines],
+        )
+
 
 class DiffFile(Schema):
     """A file that has been changed, and what kind of change it was when it has no lines to show."""
@@ -60,6 +74,19 @@ class DiffFile(Schema):
     new_mode: str | None
     # Whether a thread may name it: a path holding a control character is shown, but only to be read
     commentable: StrictBool
+
+    @classmethod
+    def from_domain(cls, file: models.DiffFile) -> Self:
+        return cls(
+            path=file.path,
+            old_path=file.old_path,
+            status=file.status,
+            hunks=[DiffHunk.from_domain(hunk) for hunk in file.hunks],
+            unshown=file.unshown,
+            old_mode=file.old_mode,
+            new_mode=file.new_mode,
+            commentable=file.commentable,
+        )
 
 
 class SendLimits(Schema):
@@ -142,12 +169,20 @@ class StoryAsking(Schema):
     # Whether the reader stopped it
     stopped: StrictBool
 
+    @classmethod
+    def from_domain(cls, asking: story.StoryAsking) -> Self:
+        return cls(asked_at=asking.asked_at, taken_at=asking.taken_at, stopped=asking.stopped)
+
 
 class OnBranch(Schema):
     """A branch checked out, by its name: the branch the change is made on."""
 
     at: Literal[CheckoutKind.BRANCH] = CheckoutKind.BRANCH
     branch: str
+
+    @classmethod
+    def from_domain(cls, checkout: models.OnBranch) -> Self:
+        return cls(at=checkout.at, branch=checkout.branch)
 
 
 class OnCommit(Schema):
@@ -156,9 +191,24 @@ class OnCommit(Schema):
     at: Literal[CheckoutKind.COMMIT] = CheckoutKind.COMMIT
     commit: str
 
+    @classmethod
+    def from_domain(cls, checkout: models.OnCommit) -> Self:
+        return cls(at=checkout.at, commit=checkout.commit)
+
 
 # What a working tree has checked out, told apart by `at`
 type Checkout = Annotated[OnBranch | OnCommit, Field(discriminator="at")]
+
+
+def _checkout_from_domain(checkout: models.Checkout) -> Checkout:
+    """The schema of what a working tree has checked out, whichever it is."""
+    match checkout:
+        case models.OnBranch():
+            return OnBranch.from_domain(checkout)
+        case models.OnCommit():
+            return OnCommit.from_domain(checkout)
+        case _:
+            assert_never(checkout)
 
 
 class RepositoryAt(Schema):
@@ -166,6 +216,10 @@ class RepositoryAt(Schema):
 
     name: str
     checkout: Checkout
+
+    @classmethod
+    def from_domain(cls, repository: models.RepositoryAt) -> Self:
+        return cls(name=repository.name, checkout=_checkout_from_domain(repository.checkout))
 
 
 class ReviewResponse(Schema):

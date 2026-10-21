@@ -12,13 +12,14 @@ No model is taken apart into its fields by name, or put together from
 them: a model made from another is made by a method of the model, which
 calls its constructor with every field written out, where a type checker
 reads the names. So what goes the other way is not used at all — pydantic's
-`model_copy`, `model_construct` and `model_dump`, and Python's `__dict__`,
-`vars` and `copy.replace`. A model leaves in a request or an answer as JSON
-(`model_dump_json`), never as a mapping. The check knows these by name
-alone: a model handed to `dict(…)`, or walked field by field, is past what
-it sees, and the rule holds there all the same. A name is refused whatever
-is done with it — `model_copy` also where it changes no field — since a
-name does not show which use it is.
+`model_copy`, `model_construct` and `model_dump`, its `from_attributes`
+however it is given, and Python's `__dict__`, `vars` and `copy.replace`. A
+model leaves in a request or an answer as JSON (`model_dump_json`), never as
+a mapping. The check knows these by name alone: a model handed to
+`dict(…)`, or walked field by field, is past what it sees, and the rule
+holds there all the same. A name is refused whatever is done with it —
+`model_copy` also where it changes no field — since a name does not show
+which use it is.
 
 The module `copy` is known by the names the file's own imports give it,
 wherever in the file they stand, so a file that does not import it may
@@ -82,6 +83,11 @@ FIELDS_BY_NAME = {
     "model_dump": "`model_dump` writes a model out as a mapping: hand the model on, or write it as JSON",
     "__dict__": "`__dict__` reads an object's fields as a mapping, by name: read the fields it has",
 }
+# What pydantic is told, by a call or a model's settings, to read one model off another by the names the two share
+READ_BY_SHARED_NAMES = "from_attributes"
+SHARED_NAMES_READ = (
+    "`from_attributes` reads a model off another by the names the two share: build it by its constructor"
+)
 # The builtin that does as `__dict__` does, and the module and function that copy an object by the names of its fields
 FIELDS_OF = "vars"
 VARS_READ = "`vars` reads an object's fields as a mapping, by name: read the fields it has"
@@ -268,6 +274,8 @@ def _said_of_fields_by_name(node: ast.AST, copy_module_names: frozenset[str]) ->
             return [Said(line=node.lineno, says=REPLACED_BY_NAME)]
         case ast.Attribute(attr=name) if name in FIELDS_BY_NAME:
             return [Said(line=node.lineno, says=FIELDS_BY_NAME[name])]
+        case ast.keyword(arg=name) if name == READ_BY_SHARED_NAMES:
+            return [Said(line=node.lineno, says=SHARED_NAMES_READ)]
         case ast.Name(id=name) if name == FIELDS_OF:
             return [Said(line=node.lineno, says=VARS_READ)]
         case _:
