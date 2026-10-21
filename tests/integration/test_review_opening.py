@@ -8,7 +8,7 @@ from claude_review.domain.exceptions import UnknownVersionError
 from claude_review.domain.models import OnBranch, OnCommit, RepositoryAt, ReviewMode
 from claude_review.repositories.git_repository import GitRepository
 from claude_review.services.review_opening import open_diff, open_files, open_transcript
-from tests.helpers import DEFAULT_BRANCH, INITIAL_FILES, committed_repository, git
+from tests.helpers import DEFAULT_BRANCH, INITIAL_FILE, INITIAL_FILES, committed_repository, git
 
 # More files than a title names before it counts the rest
 FIVE_FILES = ("e.md", "d.md", "c.md", "b.md", "a.md")
@@ -21,7 +21,7 @@ REMOTE_REF = "refs/remotes/origin/main"
 
 @pytest.fixture
 def changed_repo(tmp_git_repo: Path) -> Path:
-    (tmp_git_repo / "initial.txt").write_text("changed\n")
+    (tmp_git_repo / INITIAL_FILE).write_text("changed\n")
     return tmp_git_repo
 
 
@@ -93,13 +93,13 @@ async def test_a_diff_opened_from_a_subdirectory_shows_what_changed_outside_it(c
 
     opened = await open_diff(nested, None, GitRepository(objects=None))
 
-    assert sorted(changed.path for changed in opened.diff_files) == ["initial.txt", "sub/inside.py"]
+    assert sorted(changed.path for changed in opened.diff_files) == [INITIAL_FILE, "sub/inside.py"]
 
 
 @pytest.mark.parametrize("base", ["no-such-ref", "key-blob"], ids=["nothing-by-that-name", "a-tag-on-a-blob"])
 async def test_a_base_that_names_no_commit_is_refused(changed_repo: Path, base: str) -> None:
     """Nothing can be compared against it: refused as what the reader asked for, not failed as git."""
-    blob = git(changed_repo, "hash-object", "-w", "initial.txt").strip()
+    blob = git(changed_repo, "hash-object", "-w", INITIAL_FILE).strip()
     git(changed_repo, "tag", "-a", "key-blob", blob, "-m", "a key, kept as a tag")
 
     with pytest.raises(UnknownVersionError, match=base):

@@ -30,6 +30,7 @@ from claude_review.repositories.git_repository import GitRepository, GitStagedTr
 from claude_review.services.review_opening import ReviewOpening, open_diff
 from tests.helpers import (
     IMAGES_ROUTE,
+    INITIAL_FILE,
     INITIAL_FILES,
     LOOK_EVERY_SECONDS,
     PNG,
@@ -164,7 +165,7 @@ async def _opened(repo: Path, repository: GitRepository) -> ReviewOpening:
 
 @pytest.fixture
 async def opening(tmp_git_repo: Path) -> ReviewOpening:
-    (tmp_git_repo / "initial.txt").write_text("changed\n")
+    (tmp_git_repo / INITIAL_FILE).write_text("changed\n")
     return await open_diff(tmp_git_repo, None, GitRepository(objects=None))
 
 
@@ -201,14 +202,14 @@ async def test_a_file_changed_under_the_review_is_said_to_the_review_on_screen(
     file changed moves in it.
     """
     repository = committed_repository(tmp_path_factory.mktemp("apart"), INITIAL_FILES)
-    (repository / "initial.txt").write_text("changed\n")
+    (repository / INITIAL_FILE).write_text("changed\n")
     opened = await open_diff(repository, None, GitRepository(objects=None))
     serving = asyncio.ensure_future(_served(reviews.hosted(opened), announcer))
     address = await asyncio.wait_for(announcer.address, SETTLE_SECONDS)
 
     # The tree is watched only once a page is there to be told
     async with page_socket_held(_port_of(address)) as page, AsyncClient(base_url=address) as agent:
-        (repository / "initial.txt").write_text("changed again, by somebody else\n")
+        (repository / INITIAL_FILE).write_text("changed again, by somebody else\n")
         moved = await asyncio.to_thread(next_push, page, ChangedPush)
         await agent.post(SUBMIT_ROUTE, json=LAST_ROUND)
     await asyncio.wait_for(serving, timeout=SETTLE_SECONDS)

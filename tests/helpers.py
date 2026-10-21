@@ -78,9 +78,10 @@ ANY_PORT = 0
 ASGI_VERSION = "3.0"
 HTTP_VERSION = "1.1"
 
-# The branch every test repository starts on, and the file its first commit holds
+# The branch every test repository starts on, and the file its first commit holds, by its name and what is in it
 DEFAULT_BRANCH = "main"
-INITIAL_FILES = {"initial.txt": "initial content\n"}
+INITIAL_FILE = "initial.txt"
+INITIAL_FILES = {INITIAL_FILE: "initial content\n"}
 
 SESSION_ROUTE = "/api/session"
 # Reads what the server says down the session socket, as the page does

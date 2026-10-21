@@ -338,6 +338,17 @@ of it is built yet.
       `LeftOutOfFile`s field by field (`presentation/schemas/story.py`), not
       with `from_domain()` from a domain model, as api.md asks of every
       schema the review sends.
+- [ ] `refactor(ui)`: the page still says "the wire" for what the API
+      takes: `lib/api/thread-wire.ts` and its `threadOnTheWire`,
+      `Threads.onTheWire`, and comments elsewhere under `frontend/src`,
+      left when the server's layer became `presentation/schemas/`.
+- [ ] `fix(server)`: two reads of git take its failure for an answer:
+      `is_tracked` reads a GitError, or `ls-files` exiting 128, as
+      untracked, and `_commit_named` reads `rev-parse --verify` exiting
+      128, outside a repository, as naming no commit, which the reader then
+      sees as an unknown version (`repositories/git_repository.py`). Exit 1
+      is the answer in both; anything else should raise, as `checked_out`
+      does since 8800edb.
 
 ## Testing
 

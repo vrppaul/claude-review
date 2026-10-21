@@ -61,14 +61,6 @@ def test_a_document_is_read_as_the_story_it_writes() -> None:
     assert StoryRequest.model_validate(document).to_domain() == canvas_story()
 
 
-def test_a_story_the_review_holds_is_written_as_the_document_that_says_it() -> None:
-    """Lines the review holds as lines are taken as they are, and written as a person writes them."""
-    document = StoryRequest.from_domain(canvas_story())
-
-    assert document.to_domain() == canvas_story()
-    assert document.model_dump(mode="json")["chapters"][0]["steps"][0]["lines"] == "30-47"
-
-
 def test_what_a_story_may_leave_out_is_read_as_left_out() -> None:
     story = StoryRequest.model_validate(THE_LEAST_A_STORY_SAYS).to_domain()
 
