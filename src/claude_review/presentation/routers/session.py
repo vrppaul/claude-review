@@ -7,11 +7,11 @@ Both directions run side by side, and either one ending ends the socket.
 """
 
 import asyncio
-from typing import Annotated
+from typing import Annotated, Self
 
 import structlog
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
-from pydantic import ValidationError
+from pydantic import BaseModel, ConfigDict, JsonValue, ValidationError
 
 from claude_review.presentation.asgi import WEBSOCKET_DISCONNECT
 from claude_review.presentation.broadcast import BrowserBroadcast
@@ -125,7 +125,41 @@ def _take_the_hello(review: Review, said: str) -> None:
         review.page_reached_round(heard.round)
 
     if heard.threads is not None:
-        review.page_holds(
-            [thread.to_domain() for thread in heard.threads if isinstance(thread, ThreadDraft)],
-            [thread.thread_id for thread in heard.threads if isinstance(thread, NamedThread)],
-        )
+        held = HeldThreads.read(heard.threads)
+        review.page_holds([thread.to_domain() for thread in held.readable], held.unreadable_ids)
+
+
+class HeldThreads(BaseModel):
+    """The threads a hello says the page holds, as the server read them: those it can read, and the ids of the rest.
+
+    Never in a request or an answer itself: what the server made of what was.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    readable: list[ThreadDraft]
+    # A thread left out still owns its id in the browser, so the server
+    # must not hand that id out again
+    unreadable_ids: list[str]
+
+    @classmethod
+    def read(cls, threads: list[JsonValue]) -> Self:
+        """Read each thread on its own, keeping what can be read and the id of what cannot."""
+        readable: list[ThreadDraft] = []
+        unreadable_ids: list[str] = []
+        for thread in threads:
+            try:
+                readable.append(ThreadDraft.model_validate(thread))
+            except ValidationError:
+                if (thread_id := _thread_id_of(thread)) is not None:
+                    unreadable_ids.append(thread_id)
+        return cls(readable=readable, unreadable_ids=unreadable_ids)
+
+
+def _thread_id_of(thread: JsonValue) -> str | None:
+    """The id a thread the server cannot read goes by, if it names one a page could have given it."""
+    try:
+        named = NamedThread.model_validate(thread)
+    except ValidationError:
+        return None
+    return named.thread_id

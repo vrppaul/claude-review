@@ -5,7 +5,7 @@ from typing import Annotated, Literal, Self, assert_never
 
 from pydantic import (
     Field,
-    OnErrorOmit,
+    JsonValue,
     StrictBool,
     StrictInt,
     computed_field,
@@ -416,17 +416,13 @@ class NamedThread(Schema):
     thread_id: SafeId
 
 
-# A thread of a hello as the server hears it, each on its own: whole where it can be read; by its id alone where
-# only that can, since a thread left out still owns its id in the browser and must not be handed it again; left
-# out where not even that can
-type HeardThread = OnErrorOmit[Annotated[ThreadDraft | NamedThread, Field(union_mode="left_to_right")]]
+class ReceivedHello(HelloBase[JsonValue]):
+    """A hello as the server first reads it, its threads counted as sent but not yet read one by one.
 
-
-class ReceivedHello(HelloBase[HeardThread]):
-    """A hello as the server takes what the browser says (`SessionHello`).
-
-    One thread out of bounds must not cost the round and every other thread
-    with it, so each is read on its own.
+    `SessionHello` is what the browser says; this is how the server takes
+    it. One thread out of bounds must not cost the round and every other
+    thread with it, so the session's router reads each on its own afterwards
+    (`HeldThreads`).
     """
 
 
