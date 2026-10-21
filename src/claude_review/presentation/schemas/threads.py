@@ -416,13 +416,17 @@ class NamedThread(Schema):
     thread_id: SafeId
 
 
-class ReceivedHello(HelloBase[JsonValue]):
-    """A hello as the server first reads it, its threads counted as sent but not yet read one by one.
+# A hello's thread as the server hears it: whole; by its id alone, when it
+# cannot be read whole, since a thread left out still owns its id in the
+# browser; or as it came. Every one the page sent is kept, so each counts
+# against the hello's bound
+type HeardThread = Annotated[ThreadDraft | NamedThread | JsonValue, Field(union_mode="left_to_right")]
 
-    `SessionHello` is what the browser says; this is how the server takes
-    it. One thread out of bounds must not cost the round and every other
-    thread with it, so the session's router reads each on its own afterwards
-    (`HeldThreads`).
+
+class ReceivedHello(HelloBase[HeardThread]):
+    """A hello as the server takes it: one thread out of bounds costs neither the round nor any other thread.
+
+    `SessionHello` is what the browser says; this is how the server hears it.
     """
 
 
