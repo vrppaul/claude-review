@@ -112,13 +112,13 @@ const THE_COMMENT_FACE = ['/var\\(--cr-comment-(size|leading)\\)/'];
 const TOKENS_STYLESHEET = readFileSync(new URL('./src/styles/tokens.css', import.meta.url), 'utf8');
 const TOKEN_NAMES = new Set(TOKENS_STYLESHEET.match(/(?<=^\s*--)[a-z][a-z0-9-]*(?=\s*:)/gm));
 const A_TOKEN = `/^--(${[...TOKEN_NAMES].join('|')})$/`;
+const A_TOKEN_REFUSED = {
+	message: (name) => `${name} is a token, declared in tokens.css: give a part's own value a name of its own.`
+};
 
 export default {
 	rules: {
-		'property-disallowed-list': [
-			[A_TOKEN],
-			{ message: (name) => `${name} is a token, declared in tokens.css: give a part's own value a name of its own.` }
-		],
+		'property-disallowed-list': [[A_TOKEN], A_TOKEN_REFUSED],
 		'color-no-hex': true,
 		'color-named': 'never',
 		'function-disallowed-list': WRITTEN_IN_THE_TOKENS,
@@ -171,7 +171,8 @@ export default {
 			files: ['src/styles/less-motion.css'],
 			rules: {
 				'rule-selector-property-disallowed-list': null,
-				'property-disallowed-list': ['/^(transition|animation)-/'],
+				// An override takes the rule's place, so the tokens' names are refused here as everywhere
+				'property-disallowed-list': [A_TOKEN, '/^(transition|animation)-/'],
 				'declaration-property-value-allowed-list': {
 					...WHAT_A_PROPERTY_MAY_HOLD,
 					'/^(transition|animation)$/': ['none']
