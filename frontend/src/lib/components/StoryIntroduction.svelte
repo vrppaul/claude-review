@@ -95,6 +95,7 @@
 	<PassingNote
 		{pointsAt}
 		label="Story will not be shown again"
+		placement="below-start"
 		arrow={false}
 		fades
 		testId="story-introduction-hidden"

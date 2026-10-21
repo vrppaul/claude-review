@@ -28,7 +28,7 @@ export class Submission {
 	#finishing = $state(false);
 	// Something is on its way to the server: nothing more is sent until it is answered
 	#sending = $state(false);
-	// Why the last send did not go, until the next one is tried
+	// Why the last send did not go, until it has been said, the pane is opened again or the next send is tried
 	#failed = $state<string | null>(null);
 	// Settled once this page has sent the review for good, or ended it
 	readonly #over: PromiseWithResolvers<void> = Promise.withResolvers();
@@ -98,8 +98,15 @@ export class Submission {
 		return this.#finishing;
 	}
 
+	/** Open or close the pane the review is sent from; opened again, it is past a send that did not go. */
 	setFinishing(open: boolean): void {
 		this.#finishing = open;
+		if (open) this.#failed = null;
+	}
+
+	/** Let go of why the last send did not go, once that has been said. */
+	putFailureAway(): void {
+		this.#failed = null;
 	}
 
 	setBody(text: string): void {
@@ -109,7 +116,7 @@ export class Submission {
 	/**
 	 * Send what the pane offers: a round while an agent works through them,
 	 * the review for good otherwise. A failure is said, not thrown: the pane
-	 * stays open with everything in it.
+	 * is put away all the same, and opens again on everything it held.
 	 */
 	async send(): Promise<void> {
 		if (!this.canSend) return;
@@ -174,20 +181,23 @@ export class Submission {
 		if (this.#body.startsWith(written)) this.#body = this.#body.slice(written.length).trimStart();
 	}
 
-	/** Do one send, once at a time, and put the pane away if it went; whether it went. */
+	/**
+	 * Do one send, once at a time, and put the pane away whether it went or not, so why it did not is said under
+	 * Send, where the pane stood; whether it went.
+	 */
 	async #attempt(act: () => Promise<unknown>): Promise<boolean> {
 		if (this.#sending) return false;
 		this.#sending = true;
 		this.#failed = null;
 		try {
 			await act();
-			this.#finishing = false;
 			return true;
 		} catch (error) {
 			this.#failed = messageOf(error);
 			return false;
 		} finally {
 			this.#sending = false;
+			this.#finishing = false;
 		}
 	}
 

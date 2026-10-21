@@ -10,6 +10,7 @@ import { said } from '../elements';
 import { keepingSettings, takingStoryAskings, type FakeServer } from '../fake-server';
 import { guideServer, keepingTheGuide } from '../guide-server';
 import { handOverNext } from '../pushes';
+import { A_SECOND, NOTE_STANDS_FOR } from '../passing-note';
 import { openReview, settingsWithStoriesOn, type Opened } from '../review';
 import { settled } from '../settled';
 import { ASKED, STOPPED, storyHeld, storyResponse, TAKEN, toldChapter, toldStep } from '../story';
@@ -19,9 +20,6 @@ const files = [diffFile({ path: 'a.py', hunks: [hunk([addedLine(1, 'one'), added
 const IN_TWO_CHAPTERS = storyHeld({
 	chapters: [toldChapter('ch-1', [toldStep('a.py', 1)]), toldChapter('ch-2', [toldStep('a.py', 9)])]
 });
-// How long the note of a story's arrival stands before it puts itself away: four seconds, the owner's word
-const NOTE_STANDS_FOR = 4_000;
-const A_SECOND = 1_000;
 
 // The release the reader was shown last, as the guide keeps it
 const RELEASE_SEEN = '1.5.0';

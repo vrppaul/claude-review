@@ -10,6 +10,7 @@
 	import Failure from '$lib/ui/Failure.svelte';
 	import Field from '$lib/ui/Field.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
+	import PassingNote from '$lib/ui/PassingNote.svelte';
 	import Popover from '$lib/ui/Popover.svelte';
 	import Row from '$lib/ui/Row.svelte';
 	import Tag from '$lib/ui/Tag.svelte';
@@ -38,6 +39,8 @@
 	const goingSaid = $derived(counted(going, GOING_WITH_IT));
 	// Comments still open in their fields, which go with whatever is sent
 	const open = $derived(review.threads.open);
+	// The button the pane opens from, which a send that did not go is said under
+	let sendButton = $state<HTMLButtonElement>();
 
 	/** Put the pane away and go to a thread in it. */
 	function jump(thread: Thread) {
@@ -126,117 +129,130 @@
 				{/snippet}
 			</Actions>
 		</div>
-		{#if submission.failed}
-			<!-- Why the send did not go, under the acts that sent it, which stay to try again: every send is made
-				from this pane, its keys too, so this is where it failed -->
-			<div class="mt-2">
-				<Failure stands="apart" testId="submit-error" said={submission.failed} />
-			</div>
-		{/if}
 	</div>
 {/snippet}
 
-<!-- One door: what has been written, a summary, and the two ways out -->
-<Popover
-	bind:open={() => submission.finishing, (opened: boolean) => submission.setFinishing(opened)}
-	label={title}
-	heading={title}
-	aside={howMany}
-	foot={sending}
-	placement="below-end"
-	width="wide"
-	testId="finish-review"
->
-	{#snippet trigger(control)}
-		<Button
-			{...control}
-			tone="primary"
-			size="sm"
-			testId="quick-submit"
-			data-tour={tourStop('send')}
-			disabled={submission.sending}
-			title={FINISH_KEYS}
-		>
-			{#if submission.sending}
-				<BreathingDots tone="inherited" testId="sending-dots" />
-				Sending
-			{:else if inRounds}
-				<!-- The round's number gives way last, with the branch, kept in Send's name; Send keeps its word and its
+<!-- One door: what has been written, a summary, and the two ways out; and under it, the pane put away, why a send
+	through it did not go -->
+<div class="relative">
+	<Popover
+		bind:open={() => submission.finishing, (opened: boolean) => submission.setFinishing(opened)}
+		label={title}
+		heading={title}
+		aside={howMany}
+		foot={sending}
+		placement="below-end"
+		width="wide"
+		testId="finish-review"
+	>
+		{#snippet trigger(control)}
+			<Button
+				{...control}
+				bind:element={sendButton}
+				tone="primary"
+				size="sm"
+				testId="quick-submit"
+				data-tour={tourStop('send')}
+				disabled={submission.sending}
+				title={FINISH_KEYS}
+			>
+				{#if submission.sending}
+					<BreathingDots tone="inherited" testId="sending-dots" />
+					Sending
+				{:else if inRounds}
+					<!-- The round's number gives way last, with the branch, kept in Send's name; Send keeps its word and its
 					count -->
-				<!-- One run of words, as the board writes it, a word's space before the round -->
-				<span>Send <span class="max-cr-header-narrowest:sr-only">round {review.rounds.current}</span></span>
-			{:else}
-				Finish review
-			{/if}
-			{#if going > 0}
-				<!-- The figure seen, its words in Send's name, apart from the round's number, and on the pointer -->
-				<Count
-					tone="reader"
-					count={going}
-					title={goingSaid}
-					aria-hidden
-					data-tour={tourStop('unsent-count')}
-					testId="unsent-count"
-				/>
-				<span class="sr-only">({goingSaid})</span>
-			{/if}
-			<Icon name="chevron" size="xs" />
-		</Button>
-	{/snippet}
+					<!-- One run of words, as the board writes it, a word's space before the round -->
+					<span>Send <span class="max-cr-header-narrowest:sr-only">round {review.rounds.current}</span></span>
+				{:else}
+					Finish review
+				{/if}
+				{#if going > 0}
+					<!-- The figure seen, its words in Send's name, apart from the round's number, and on the pointer -->
+					<Count
+						tone="reader"
+						count={going}
+						title={goingSaid}
+						aria-hidden
+						data-tour={tourStop('unsent-count')}
+						testId="unsent-count"
+					/>
+					<span class="sr-only">({goingSaid})</span>
+				{/if}
+				<Icon name="chevron" size="xs" />
+			</Button>
+		{/snippet}
 
-	<div class="px-3 py-3">
-		{#if open.length > 0}
-			<!-- Written and not added: it goes, as a pending comment does, so it is shown before it does -->
-			<div data-testid="open-fields" class="mb-3">
-				<p class="cr-faint mb-1.5 text-xs">
-					{counted(open.length, OPEN_COMMENTS_GOING)} with the review:
-				</p>
+		<div class="px-3 py-3">
+			{#if open.length > 0}
+				<!-- Written and not added: it goes, as a pending comment does, so it is shown before it does -->
+				<div data-testid="open-fields" class="mb-3">
+					<p class="cr-faint mb-1.5 text-xs">
+						{counted(open.length, OPEN_COMMENTS_GOING)} with the review:
+					</p>
+					<ul class="flex flex-col gap-1.5">
+						{#each open as { field, anchor } (field.key)}
+							<li data-testid="open-field" class="px-2 py-1.5">
+								<span class="cr-comment-ref font-mono text-xs">{anchorPlace(anchor)}</span>
+								{@render said(field.text, anchor)}
+							</li>
+						{/each}
+					</ul>
+				</div>
+			{/if}
+			{#if review.threads.count === 0}
+				{#if open.length === 0}
+					<p class="cr-faint text-sm">Nothing written yet. A summary on its own is a review too.</p>
+				{/if}
+			{:else}
+				<!-- Each comment a row, one press to its thread, all of it: where it hangs on its line and what it says
+				in full under that; one sent with a round steps back -->
 				<ul class="flex flex-col gap-1.5">
-					{#each open as { field, anchor } (field.key)}
-						<li data-testid="open-field" class="px-2 py-1.5">
-							<span class="cr-comment-ref font-mono text-xs">{anchorPlace(anchor)}</span>
-							{@render said(field.text, anchor)}
+					{#each review.threads.all as thread (thread.id)}
+						{@const sent = review.threads.sentInRound(thread.id)}
+						<li>
+							<Row names="path" testId="finish-comment" viewed={sent !== undefined} onclick={() => jump(thread)}>
+								{#snippet label()}
+									<span data-testid="modal-comment-ref" class="cr-comment-ref">{anchorPlace(thread.anchor)}</span>
+								{/snippet}
+								{#snippet trailing()}
+									{#if thread.severity !== 'note'}
+										<Tag tone={severityTone(thread)} testId="finish-severity">{thread.severity}</Tag>
+									{/if}
+									{#if raisedByAgent(thread)}
+										<Tag tone="agent" testId="finish-raised">agent</Tag>
+									{/if}
+									{#if thread.resolved}
+										<Tag tone="quiet" testId="finish-resolved">resolved</Tag>
+									{/if}
+									{#if sent !== undefined}
+										<span class="cr-faint">round {sent}</span>
+									{/if}
+								{/snippet}
+								{#snippet below()}
+									{@render said(thread.body, thread.anchor)}
+								{/snippet}
+							</Row>
 						</li>
 					{/each}
 				</ul>
-			</div>
-		{/if}
-		{#if review.threads.count === 0}
-			{#if open.length === 0}
-				<p class="cr-faint text-sm">Nothing written yet. A summary on its own is a review too.</p>
 			{/if}
-		{:else}
-			<!-- Each comment a row, one press to its thread, all of it: where it hangs on its line and what it says
-				in full under that; one sent with a round steps back -->
-			<ul class="flex flex-col gap-1.5">
-				{#each review.threads.all as thread (thread.id)}
-					{@const sent = review.threads.sentInRound(thread.id)}
-					<li>
-						<Row names="path" testId="finish-comment" viewed={sent !== undefined} onclick={() => jump(thread)}>
-							{#snippet label()}
-								<span data-testid="modal-comment-ref" class="cr-comment-ref">{anchorPlace(thread.anchor)}</span>
-							{/snippet}
-							{#snippet trailing()}
-								{#if thread.severity !== 'note'}
-									<Tag tone={severityTone(thread)} testId="finish-severity">{thread.severity}</Tag>
-								{/if}
-								{#if raisedByAgent(thread)}
-									<Tag tone="agent" testId="finish-raised">agent</Tag>
-								{/if}
-								{#if thread.resolved}
-									<Tag tone="quiet" testId="finish-resolved">resolved</Tag>
-								{/if}
-								{#if sent !== undefined}
-									<span class="cr-faint">round {sent}</span>
-								{/if}
-							{/snippet}
-							{#snippet below()}
-								{@render said(thread.body, thread.anchor)}
-							{/snippet}
-						</Row>
-					</li>
-				{/each}
-			</ul>
-		{/if}
-	</div>
-</Popover>
+		</div>
+	</Popover>
+	{#if submission.failed}
+		{@const failed = submission.failed}
+		<PassingNote
+			pointsAt={sendButton}
+			label="The review was not sent"
+			placement="below-end"
+			arrow={false}
+			fades
+			testId="send-failed"
+			onGone={() => submission.putFailureAway()}
+		>
+			<div class="px-3 py-2">
+				<Failure stands="apart" testId="submit-error" said={failed} />
+			</div>
+		</PassingNote>
+	{/if}
+</div>

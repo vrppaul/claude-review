@@ -24,6 +24,7 @@
 <PassingNote
 	{pointsAt}
 	label="The story is ready"
+	placement="below-start"
 	arrow
 	edge="unread"
 	fades={false}

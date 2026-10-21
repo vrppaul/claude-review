@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import { focusWhatRemains } from '$lib/dom/keyboard';
-	import { arrowOffsetTo, type PaneEdge } from './pane';
+	import { arrowOffsetTo, type PaneEdge, type Placement } from './pane';
 	import PopoverPanel from './PopoverPanel.svelte';
 
 	interface Props {
@@ -9,6 +9,8 @@
 		pointsAt: HTMLElement | undefined;
 		/** What the note is called, said to whoever cannot see it. */
 		label: string;
+		/** Which of the control's edges it lines up with, as a pane opened from there would. */
+		placement: Placement;
 		/** Whether it points at the control: a note that is not about it does not. */
 		arrow: boolean;
 		/** What it says by its edge, where it says anything by it. */
@@ -27,7 +29,7 @@
 	// runs for no reader who asked for less motion
 	const STANDS_FOR_MS = 4_000;
 
-	let { pointsAt, label, arrow, edge, fades, testId, onGone, children }: Props = $props();
+	let { pointsAt, label, placement, arrow, edge, fades, testId, onGone, children }: Props = $props();
 
 	let pane: HTMLDivElement | undefined = $state();
 	// How far in from its left edge the note points at the control, where it draws an arrow
@@ -54,7 +56,7 @@
 		bind:pane
 		role="status"
 		{label}
-		placement="below-start"
+		{placement}
 		width="fitted"
 		{arrow}
 		{arrowOffset}

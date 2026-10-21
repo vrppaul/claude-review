@@ -9,6 +9,7 @@ import { said } from '../elements';
 import { keepingSettings, takingStoryAskings, type FakeServer } from '../fake-server';
 import { guideServer } from '../guide-server';
 import { handOverNext } from '../pushes';
+import { A_SECOND, NOTE_STANDS_FOR } from '../passing-note';
 import { openReview, settingsWithStoriesOn, type Opened } from '../review';
 import { settled } from '../settled';
 import { storyHeld, storyResponse, TAKEN, toldChapter, toldStep } from '../story';
@@ -16,9 +17,6 @@ import { storyHeld, storyResponse, TAKEN, toldChapter, toldStep } from '../story
 const files = [diffFile({ path: 'a.py', hunks: [hunk([addedLine(1, 'one')])] })];
 // The release serving the review, which the reader was shown already: no card of the guide's stands
 const RELEASE = '1.5.0';
-// How long the notice that Story is put away for good stands: four seconds, as every note that goes by itself
-const NOTICE_STANDS_FOR = 4_000;
-const A_SECOND = 1_000;
 // A story of the change, told already, for a reader who reads the review as its story
 const A_STORY = storyHeld({ chapters: [toldChapter('ch-1', [toldStep('a.py', 1)])] });
 
@@ -176,7 +174,7 @@ describe('Story introduced at the switch', () => {
 		await drawn();
 		await hiddenForGood(user);
 
-		vi.advanceTimersByTime(NOTICE_STANDS_FOR - A_SECOND);
+		vi.advanceTimersByTime(NOTE_STANDS_FOR - A_SECOND);
 		flushSync();
 
 		expect(screen.getByTestId('story-introduction-hidden')).toBeTruthy();
@@ -189,7 +187,7 @@ describe('Story introduced at the switch', () => {
 		await drawn();
 		await hiddenForGood(user);
 
-		vi.advanceTimersByTime(NOTICE_STANDS_FOR);
+		vi.advanceTimersByTime(NOTE_STANDS_FOR);
 		flushSync();
 
 		expect(screen.queryByTestId('story-introduction-hidden')).toBeNull();
