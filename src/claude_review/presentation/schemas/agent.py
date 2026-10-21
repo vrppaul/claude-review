@@ -199,8 +199,8 @@ class SaidInPanel(Schema):
     threads: list[str]
     # Files the agent's words name, a chip each
     files: list[FilePath]
-    # Whether the reader took the message back before it was answered
-    taken_back: StrictBool
+    # When the reader took the message back before it was answered; null while it stands
+    taken_back_at: EpochMillis | None
 
     @classmethod
     def from_domain(cls, said: models.SaidInPanel) -> Self:
@@ -213,7 +213,7 @@ class SaidInPanel(Schema):
             images=said.images,
             threads=said.threads,
             files=said.files,
-            taken_back=said.taken_back,
+            taken_back_at=said.taken_back_at,
         )
 
 

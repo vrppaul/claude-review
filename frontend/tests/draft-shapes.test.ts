@@ -203,7 +203,12 @@ const UP_TO_DATE_1_5_0: Draft = {
 	writing: [],
 	reviewBody: 'Overall fine',
 	sent: { 'comment-2': 1, 'raised-1': 2 },
-	panel: WRITTEN_BY_1_5_0.panel,
+	// The message it kept as taken back, taken back when it was said: v1.5.0 never kept when it was taken back
+	panel: [
+		WRITTEN_BY_1_5_0.panel[0],
+		WRITTEN_BY_1_5_0.panel[1],
+		{ id: 'message-3', author: 'reader', body: 'Never mind', at: 1400, takenBackAt: 1400 }
+	],
 	composer: { text: 'half a thought', images: ['pasted.png'], uploaded: [] },
 	// It kept no count: the comment ids and turn ids it holds are all there is
 	issued: { comments: 2, turns: 3 },

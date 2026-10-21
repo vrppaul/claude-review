@@ -28,8 +28,8 @@
  * Whatever can be pressed is lit under the pointer the same way: the
  * pointer's light laid over whatever it is drawn on, as an image above its
  * own ground, so a chip keeps its colour under it. Not while it cannot be
- * pressed; nor a chosen one — the one of a set the reader is at, one pressed
- * — nor one whose pane is open, which the boards draw as they stand, unlit.
+ * pressed, nor while it is chosen — the one of a set the reader is at, one
+ * pressed — or its pane is open: the boards draw each as it stands, unlit.
  */
 .cr-pressable:not(:disabled, [aria-disabled='true']):not(
 		.cr-ui-row-current,
@@ -1723,25 +1723,14 @@
 	color: var(--cr-faint);
 }
 /*
- * What the reader asked for and took back (TakenBack): its words muted and
- * struck through, and under them a line of its own on the tint of what
- * cannot be undone, its mark in that colour, saying what was done
+ * What the reader asked for and took back: its words muted and struck
+ * through in their turn (Turn), its head left as it was; the line under the
+ * turn that says so is TakenBack's
  */
-.cr-ui-taken-back-words {
+.cr-ui-turn-taken-back .cr-ui-turn-body > :not(.cr-ui-turn-head) {
 	color: var(--cr-muted);
 	text-decoration: line-through;
 	text-decoration-thickness: var(--cr-line);
-}
-.cr-ui-taken-back {
-	display: flex;
-	align-items: center;
-	gap: --spacing(2);
-	margin-top: --spacing(1);
-	padding: --spacing(1.5) --spacing(3);
-	border-radius: var(--radius-box);
-	background-color: var(--cr-error-tint);
-	font-size: var(--text-sm);
-	line-height: var(--text-sm--line-height);
 }
 .cr-ui-taken-back-what {
 	font-weight: var(--font-weight-semibold);
@@ -1880,6 +1869,25 @@
 	flex-grow: 1;
 	height: var(--cr-line);
 	background: var(--color-base-300);
+}
+/*
+ * That a turn was taken back (TakenBack): a line of its own under it on the
+ * tint of what cannot be undone, starting on the turn's words' edge, its
+ * piece of the spine kept on the avatars' line
+ */
+.cr-ui-turn-aside-taken-back {
+	display: flex;
+	align-items: center;
+	gap: --spacing(2);
+	margin-left: calc(var(--cr-turn-avatar-size) + var(--cr-turn-gap));
+	padding: --spacing(1.5) --spacing(3);
+	border-radius: var(--radius-box);
+	background-color: var(--cr-error-tint);
+	font-size: var(--text-sm);
+	line-height: var(--text-sm--line-height);
+}
+.cr-ui-turn-aside-taken-back::before {
+	left: calc(-1 * (var(--cr-turn-gap) + var(--cr-turn-avatar-size) / 2));
 }
 
 /*

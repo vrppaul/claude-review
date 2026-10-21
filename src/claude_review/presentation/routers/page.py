@@ -16,6 +16,7 @@ from claude_review.domain.exceptions import (
     ImagesNotKeptError,
     ImageTooLargeError,
     LineRangeError,
+    MessageAnsweredError,
     NoRepositoryError,
     PathOutsideRepositoryError,
     QuestionNotInThreadError,
@@ -259,9 +260,11 @@ async def take_panel_message(request: MessageRequest, review: ReviewDep) -> None
     )
 
 
-@router.post("/cancel", status_code=HTTPStatus.NO_CONTENT, responses=refusals(takes=Takes.JSON_BODY))
+@router.post(
+    "/cancel", status_code=HTTPStatus.NO_CONTENT, responses=refusals(MessageAnsweredError, takes=Takes.JSON_BODY)
+)
 async def cancel_panel_message(request: CancelRequest, review: ReviewDep) -> None:
-    """Take back a message the agent has not answered yet.
+    """Take back a message the agent has not answered yet; one it has answered is refused.
 
     A request rather than a kill: it joins the queue behind whatever else is
     waiting, and the agent decides what to do about it.

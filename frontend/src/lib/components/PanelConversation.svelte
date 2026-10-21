@@ -141,18 +141,19 @@
 						{/if}
 					</TurnAside>
 				{:else if turn.author === READER}
-					<Turn speaker="reader" testId="panel-said">
+					<Turn speaker="reader" testId="panel-said" takenBack={turn.takenBackAt !== undefined}>
 						{#snippet head()}
 							<span>{timeAgo(turn.at, review.clock.now)}</span>
 						{/snippet}
-						{#if turn.cancelled}
-							<TakenBack said={ASKED_TO_DROP_IT} testId="panel-taken-back">
-								{@render readersWords(turn)}
-							</TakenBack>
-						{:else}
-							{@render readersWords(turn)}
-						{/if}
+						{@render readersWords(turn)}
 					</Turn>
+					{#if turn.takenBackAt !== undefined}
+						<TakenBack
+							ago={timeAgo(turn.takenBackAt, review.clock.now)}
+							said={ASKED_TO_DROP_IT}
+							testId="panel-taken-back"
+						/>
+					{/if}
 				{:else}
 					<Turn speaker="agent" testId="panel-answer">
 						{#snippet head()}

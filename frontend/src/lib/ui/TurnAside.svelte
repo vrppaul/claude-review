@@ -3,11 +3,17 @@
 
 	/**
 	 * How what it holds is laid out: one under another at the start of the column — an act on the whole
-	 * conversation and why it failed — or across it, a rule either side: where a round ended, what the review did.
+	 * conversation and why it failed — or across it, a rule either side: where a round ended, what the review did;
+	 * or on a line of its own under the turn it is about, on the tint of what cannot be undone: that it was taken
+	 * back (TakenBack).
 	 */
-	type Lays = 'stacked' | 'across';
+	type Lays = 'stacked' | 'across' | 'taken-back';
 
-	const LAYS: Record<Lays, string> = { stacked: 'cr-ui-turn-aside-stacked', across: 'cr-ui-turn-aside-across' };
+	const LAYS: Record<Lays, string> = {
+		stacked: 'cr-ui-turn-aside-stacked',
+		across: 'cr-ui-turn-aside-across',
+		'taken-back': 'cr-ui-turn-aside-taken-back'
+	};
 
 	interface Props {
 		lays: Lays;

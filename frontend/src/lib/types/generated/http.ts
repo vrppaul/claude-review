@@ -306,7 +306,7 @@ export interface paths {
         put?: never;
         /**
          * Cancel Panel Message
-         * @description Take back a message the agent has not answered yet.
+         * @description Take back a message the agent has not answered yet; one it has answered is refused.
          *
          *     A request rather than a kill: it joins the queue behind whatever else is
          *     waiting, and the agent decides what to do about it.
@@ -1699,8 +1699,8 @@ export interface components {
             threads: string[];
             /** Files */
             files: string[];
-            /** Taken Back */
-            taken_back: boolean;
+            /** Taken Back At */
+            taken_back_at: number | null;
         };
         /**
          * SayRequest
@@ -2870,6 +2870,15 @@ export interface operations {
             };
             /** @description Forbidden */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Refusal"];
+                };
+            };
+            /** @description Conflict */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

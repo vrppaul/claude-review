@@ -124,7 +124,7 @@ describe('the panel talks to the agent about the review', () => {
 
 		expect(server.bodiesSentTo('POST /api/cancel')).toEqual([{ message_id: message }]);
 		expect(review.conversation.working).toBeUndefined();
-		expect(review.conversation.turns[0].cancelled).toBe(true);
+		expect(review.conversation.turns[0].takenBackAt).toBeTypeOf('number');
 	});
 
 	it('keeps the conversation across a reload', async () => {
@@ -190,7 +190,7 @@ describe('the panel talks to the agent about the review', () => {
 
 		await expect(review.conversation.cancel(review.conversation.turns[0].id)).rejects.toThrow();
 
-		expect(review.conversation.turns[0].cancelled).toBeFalsy();
+		expect(review.conversation.turns[0].takenBackAt).toBeUndefined();
 		expect(review.conversation.working?.body).toBe('Keep this one');
 	});
 

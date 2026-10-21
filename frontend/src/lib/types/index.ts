@@ -331,8 +331,8 @@ export interface PanelTurn {
 	images?: string[];
 	/** Which message an answer belongs to. */
 	answers?: string;
-	/** Taken back before it was answered. */
-	cancelled?: boolean;
+	/** When the reader took it back before it was answered. */
+	takenBackAt?: number;
 }
 
 /** What happened to a comment field, for whoever follows along. */

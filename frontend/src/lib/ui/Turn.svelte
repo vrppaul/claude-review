@@ -23,6 +23,8 @@
 		testId: string;
 		/** Whether it has just landed: an answer nobody has looked at yet, which arrives in the agent's colour. */
 		landing?: boolean;
+		/** Whether the reader took back what it says: still read, its words struck through (TakenBack says so under it). */
+		takenBack?: boolean;
 		/** What its head says after who said it: how long ago, and whatever else it says of the turn. */
 		head?: Snippet | undefined;
 		/** What stands at the far end of its head: what can be done to the turn, or how long it has been waited on. */
@@ -31,7 +33,7 @@
 		children: Snippet;
 	}
 
-	let { speaker, testId, landing = false, head, headEnd, children, ...attributes }: Props = $props();
+	let { speaker, testId, landing = false, takenBack = false, head, headEnd, children, ...attributes }: Props = $props();
 
 	const headed = $derived(HEADED[speaker]);
 </script>
@@ -42,7 +44,12 @@
 <div
 	{...attributes}
 	data-testid={testId}
-	class={['cr-ui-turn-row cr-ui-turn', headed.look, landing && 'cr-ui-turn-landing']}
+	class={[
+		'cr-ui-turn-row cr-ui-turn',
+		headed.look,
+		landing && 'cr-ui-turn-landing',
+		takenBack && 'cr-ui-turn-taken-back'
+	]}
 >
 	<Avatar {speaker} />
 	<div data-testid="turn-body" class="cr-ui-turn-body">

@@ -146,5 +146,9 @@ class ImageAlreadySentError(ConflictError):
     """Raised when an image that went out with a message is asked to be removed."""
 
 
+class MessageAnsweredError(ConflictError):
+    """Raised when a message the agent has answered is asked to be taken back: the answer is there to read."""
+
+
 class StoryRefusedError(FieldsRefusedError):
     """Raised when a story may not be told as it was written."""

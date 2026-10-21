@@ -74,8 +74,10 @@ SAID = SaidInPanel(
     images=["image-1"],
     threads=["thread-1"],
     files=["src/moved.py"],
-    taken_back=False,
+    taken_back_at=None,
 )
+# When the message above is taken back, forty seconds after it was said
+TAKEN_BACK_AT = 1_760_000_040_000
 STEP = Step(file="src/moved.py", lines=LineSpan(first=11, last=12), reason="The store closes before the reply is sent.")
 CHAPTER = Chapter[Step](
     id="ch-1",
@@ -141,7 +143,7 @@ MADE = [
     MadeFrom(
         what="an anchor on the story's words lost", source=STORY_ANCHOR, made=STORY_ANCHOR.lost(), replaced={"outdated"}
     ),
-    MadeFrom(what="a message taken back", source=SAID, made=SAID.withdrawn(), replaced={"taken_back"}),
+    MadeFrom(what="a message taken back", source=SAID, made=SAID.withdrawn(TAKEN_BACK_AT), replaced={"taken_back_at"}),
     MadeFrom(
         what="a refused field named as it was sent", source=FIELD, made=FIELD.without_request_part(), replaced={"loc"}
     ),

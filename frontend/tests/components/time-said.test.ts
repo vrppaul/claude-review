@@ -28,7 +28,7 @@ afterEach(() => {
 
 /** What was said in the panel: the reader's message two minutes before `now`, the answer forty seconds before. */
 function saidInThePanel(now: number): SaidInPanel[] {
-	const asked = { said_id: 'panel-1', message_id: 'panel-1', images: [], threads: [], files: [], taken_back: false };
+	const asked = { said_id: 'panel-1', message_id: 'panel-1', images: [], threads: [], files: [], taken_back_at: null };
 	return [
 		{ ...asked, author: 'reader', body: 'Run the tests.', at: now - TWO_MINUTES },
 		{ ...asked, said_id: 'answer-1', author: 'author', body: 'All green.', at: now - FORTY_SECONDS }

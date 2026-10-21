@@ -313,10 +313,14 @@ class Review:
         log.info("panel_message", message_id=message_id, threads=len(threads), images=len(handed))
 
     def take_back(self, message_id: str) -> None:
-        """Take back a message the agent has not answered yet: a request it picks up, not a kill."""
+        """Take back a message the agent has not answered yet: a request it picks up, not a kill.
+
+        Raises:
+            MessageAnsweredError: if the agent has answered it; nothing is handed to the agent then.
+        """
+        self._conversation.taken_back(message_id)
         self._inbox.hand_in(PanelCancel(message_id=message_id))
         self._answerer.end_work_for(message_id)
-        self._conversation.taken_back(message_id)
         log.info("panel_cancelled", message_id=message_id)
 
     def agent_says(self, *, message_id: str | None, body: str, files: list[FilePath]) -> None:

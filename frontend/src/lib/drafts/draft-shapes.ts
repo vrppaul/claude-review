@@ -12,7 +12,8 @@
  * was being written in the threads and not said yet, which pasted images
  * each field uploaded itself, which files were read and folded away, and
  * the round the review had reached, rather than read back from the marks
- * its threads carry; and it is kept under the name the review gives itself rather than
+ * its threads carry; a message taken back in the panel says when; and it is
+ * kept under the name the review gives itself rather than
  * under its title, which another review on the same port may share. A
  * draft a release kept is brought up to date — never thrown away: it is an
  * hour of somebody's reading. The shapes between the last released one and
@@ -34,7 +35,7 @@ import { COMMENT_ID_PREFIX, IdSequence, TURN_ID_PREFIX } from '$lib/utils/ids';
 import { AGENT, READER } from '$lib/utils/speakers';
 
 /** The shape drafts are kept in now. */
-export const DRAFT_SHAPE = 17;
+export const DRAFT_SHAPE = 18;
 // The round every review begins in
 const FIRST_ROUND = 1;
 
@@ -140,6 +141,9 @@ type AsKept<Shape> = Omit<Shape, GrownLater | 'turns'> &
 /** A thread in any shape before shape 10: on an anchor, or on lines alone. */
 type KeptComment = AsKept<ReadComment> | AsKept<FlatComment>;
 
+/** Something said in the panel, as a release kept it: whether the reader took it back, never when. */
+type KeptPanelTurn = Omit<PanelTurn, 'takenBackAt'> & { cancelled?: boolean };
+
 /**
  * A draft of a shape before 10, when threads were kept as comments with how
  * they were read inside them — one of shape 9 that kept no count of the ids
@@ -154,7 +158,7 @@ interface ReleasedDraft {
 	reviewBody?: string;
 	// Before rounds were numbered a sent thread was only an id
 	sent?: (string | [string, number])[];
-	panel?: PanelTurn[];
+	panel?: KeptPanelTurn[];
 	composer?: Omit<Composer, 'uploaded'>;
 	issued?: IssuedIds;
 }
@@ -242,7 +246,7 @@ export function upToDate(kept: ReleasedDraft): Draft {
 		reviewBody: kept.reviewBody ?? '',
 		sent,
 		// The panel came after threads did; an older draft simply has nothing said
-		panel: kept.panel ?? [],
+		panel: (kept.panel ?? []).map(upToDatePanelTurn),
 		// The panel kept nothing half-written until it could hold images
 		// A composer kept before it said what it uploaded: its images count as handed in
 		composer: kept.composer ? { ...kept.composer, uploaded: [] } : emptyComposer(),
@@ -252,6 +256,15 @@ export function upToDate(kept: ReleasedDraft): Draft {
 		files: emptyFilesRead(),
 		round: roundReached(comments, sent)
 	};
+}
+
+/**
+ * Something said in the panel a release kept, in the current shape. One it
+ * kept as taken back is taken back at the moment it was said: no release
+ * kept when, and a message is taken back while it is still waited on.
+ */
+function upToDatePanelTurn({ cancelled, ...turn }: KeptPanelTurn): PanelTurn {
+	return cancelled ? { ...turn, takenBackAt: turn.at } : turn;
 }
 
 /**

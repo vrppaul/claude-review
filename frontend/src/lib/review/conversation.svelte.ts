@@ -46,7 +46,7 @@ function turnOfHeld(said: SaidInPanel, threads: Thread[]): PanelTurn {
 		at: said.at,
 		threads: said.threads,
 		images: said.images,
-		...(said.taken_back ? { cancelled: true } : {})
+		...(said.taken_back_at === null ? {} : { takenBackAt: said.taken_back_at })
 	};
 }
 
@@ -70,7 +70,7 @@ function openingTurns(held: PanelTurn[], kept: PanelTurn[]): PanelTurn[] {
  */
 function workingOn(turns: PanelTurn[]): PanelTurn | undefined {
 	const last = turns.findLast((turn) => turn.author === READER);
-	if (!last || last.cancelled) return undefined;
+	if (!last || last.takenBackAt !== undefined) return undefined;
 	return turns.some((turn) => turn.answers === last.id) ? undefined : last;
 }
 
@@ -205,28 +205,24 @@ export class Conversation {
 	}
 
 	/**
-	 * Take a message back before it is answered.
+	 * Take a message back before it is answered, as a thread takes back its
+	 * question: once the review has heard it, the panel waits for it no more.
 	 *
 	 * A request, not a kill: the agent is in another process and decides what
-	 * to do about it. The panel stops waiting either way, because the reader
-	 * has said they are no longer interested.
+	 * to do about it. Where the review refuses — it never heard, or the answer
+	 * crossed the request on its way — the agent is still on it, or done, and
+	 * nothing is marked: the failure is said where the reader asked.
 	 */
 	async cancel(messageId: string): Promise<void> {
-		this.#markCancelled(messageId, true);
-		try {
-			await cancelMessage({ message_id: messageId });
-		} catch (error) {
-			// Never heard, so the agent is still on it and the panel still waits
-			this.#markCancelled(messageId, false);
-			throw error;
-		}
+		await cancelMessage({ message_id: messageId });
+		this.#markTakenBack(messageId, Date.now());
 	}
 
 	#say(turn: PanelTurn): void {
 		this.#turns = [...this.#turns, turn];
 	}
 
-	#markCancelled(messageId: string, cancelled: boolean): void {
-		this.#turns = this.#turns.map((turn) => (turn.id === messageId ? { ...turn, cancelled } : turn));
+	#markTakenBack(messageId: string, takenBackAt: number): void {
+		this.#turns = this.#turns.map((turn) => (turn.id === messageId ? { ...turn, takenBackAt } : turn));
 	}
 }

@@ -9,6 +9,7 @@ already discussed.
 
 import uuid
 
+from claude_review.domain.exceptions import MessageAnsweredError
 from claude_review.domain.interfaces import Clock
 from claude_review.domain.models import FilePath, SaidInPanel, TurnAuthor
 
@@ -42,7 +43,7 @@ class Conversation:
                 images=images,
                 threads=threads,
                 files=[],
-                taken_back=False,
+                taken_back_at=None,
             )
         )
 
@@ -59,11 +60,22 @@ class Conversation:
                 images=[],
                 threads=[],
                 files=files,
-                taken_back=False,
+                taken_back_at=None,
             )
         )
         return said_id
 
     def taken_back(self, message_id: str) -> None:
-        """Mark a message the reader took back. A question taken back in a thread names none here, and marks nothing."""
-        self._said = [said.withdrawn() if said.said_id == message_id else said for said in self._said]
+        """Mark a message the reader took back, and when.
+
+        A question taken back in a thread names none here, and marks nothing.
+
+        Raises:
+            MessageAnsweredError: if the agent has answered it: a take-back crossing the answer on its way would
+                strike out what was answered.
+        """
+        if any(said.author == TurnAuthor.AUTHOR and said.message_id == message_id for said in self._said):
+            msg = "the agent has answered it already"
+            raise MessageAnsweredError(msg)
+        now = self._clock.now()
+        self._said = [said.withdrawn(now) if said.said_id == message_id else said for said in self._said]

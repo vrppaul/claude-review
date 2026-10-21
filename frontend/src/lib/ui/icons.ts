@@ -119,8 +119,8 @@ export const ICONS = {
 	// A ring struck through: what the reader asked for and took back
 	'taken-back': {
 		viewBox: '0 0 16 16',
-		paths: ['M3 8a5 5 0 1 0 10 0a5 5 0 1 0 -10 0', 'M4.5 11.5l7-7'],
-		drawn: TRACED
+		paths: ['M2.5 8a5.5 5.5 0 1 0 11 0a5.5 5.5 0 1 0 -11 0', 'M4.2 11.8l7.6-7.6'],
+		drawn: TRACED_FINE
 	},
 	// A window with a column down one side, shaded while it stands open, or narrowed to a strip with an arrow the
 	// way it comes back in: a side column's toggle, drawing the state the column is in

@@ -20,6 +20,7 @@ from tests.helpers import (
     CONVERSATION_ROUTE,
     EVENTS_ROUTE,
     FIRST_THREAD_ID,
+    PANEL_MESSAGE_ID,
     REVIEW_ROUTE,
     REVIEWED_FILE,
     REVIEWED_LINE,
@@ -48,6 +49,8 @@ MESSAGE = message_json("Run the tests and say what fails.", images=[])
 
 # A moment on the review's clock, in epoch milliseconds
 A_MOMENT = 1_791_000_000_000
+# How long after it was sent the reader takes a message back, in milliseconds
+TAKEN_BACK_AFTER = 40_000
 # A file the agent makes after the diff was taken, and one it has yet to make
 MADE_SINCE = "made_since.py"
 NOT_YET_MADE = "src/not_yet.py"
@@ -135,7 +138,7 @@ async def test_a_page_opening_reads_what_was_said_in_the_panel(client: AsyncClie
     asked, answered = (await client.get(CONVERSATION_ROUTE)).json()["said"]
 
     assert (asked["said_id"], asked["author"], asked["body"]) == ("panel-1", "reader", MESSAGE["body"])
-    assert (asked["threads"], asked["taken_back"]) == ([FIRST_THREAD_ID], False)
+    assert (asked["threads"], asked["taken_back_at"]) == ([FIRST_THREAD_ID], None)
     assert (answered["author"], answered["message_id"], answered["body"]) == ("author", "panel-1", "One failed; fixed.")
     assert answered["files"] == [REVIEWED_FILE]
 
@@ -169,14 +172,28 @@ async def test_what_the_agent_says_is_never_known_by_the_id_of_what_it_said_in_a
     assert first != second
 
 
-async def test_a_message_taken_back_is_held_as_taken_back(client: AsyncClient) -> None:
-    """A page opening later says it was stopped, as the page that took it back did."""
+async def test_a_message_taken_back_is_held_as_taken_back_and_when(reviews: ReviewFactory) -> None:
+    """A page opening later says it was taken back, and how long ago, as the page that took it back did."""
+    clock = FixedClock(A_MOMENT)
+    async with http_client(reviews.app_of_change([one_line_file()], clock=clock)) as client:
+        await client.post("/api/message", json=MESSAGE)
+        clock.moment = A_MOMENT + TAKEN_BACK_AFTER
+        await client.post("/api/cancel", json={"message_id": PANEL_MESSAGE_ID})
+
+        [held] = (await client.get(CONVERSATION_ROUTE)).json()["said"]
+
+    assert held["taken_back_at"] == A_MOMENT + TAKEN_BACK_AFTER
+
+
+async def test_a_message_the_agent_answered_cannot_be_taken_back(client: AsyncClient) -> None:
+    """The answer is there to read: a take-back crossing it would strike out what was answered."""
     await client.post("/api/message", json=MESSAGE)
-    await client.post("/api/cancel", json={"message_id": "panel-1"})
+    await client.post("/api/say", json={"message_id": PANEL_MESSAGE_ID, "body": "Two fail."})
 
-    [held] = (await client.get(CONVERSATION_ROUTE)).json()["said"]
+    refused = await client.post("/api/cancel", json={"message_id": PANEL_MESSAGE_ID})
+    [asked, _answer] = (await client.get(CONVERSATION_ROUTE)).json()["said"]
 
-    assert held["taken_back"] is True
+    assert (refused.status_code, asked["taken_back_at"]) == (HTTPStatus.CONFLICT, None)
 
 
 async def test_stopping_is_a_request_the_agent_picks_up(client: AsyncClient) -> None:

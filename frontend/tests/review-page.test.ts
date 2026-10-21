@@ -67,8 +67,10 @@ const A_MESSAGE_SENT_ELSEWHERE: SaidInPanel = {
 	images: ['shot.png'],
 	threads: ['comment-1'],
 	files: [],
-	taken_back: false
+	taken_back_at: null
 };
+// When it was taken back in that browser, a while after it was sent
+const TAKEN_BACK_ELSEWHERE_AT = NOW - A_MINUTE / 2;
 // The agent's answer to it, said before any page was open
 const AN_ANSWER_BEFORE_ANY_PAGE: SaidInPanel = {
 	said_id: 'answer-3f2a',
@@ -79,7 +81,7 @@ const AN_ANSWER_BEFORE_ANY_PAGE: SaidInPanel = {
 	images: [],
 	threads: [],
 	files: ['a.py'],
-	taken_back: false
+	taken_back_at: null
 };
 // What the agent said once the test had begun: after any note a page made of its own
 const AN_ANSWER_LATER: SaidInPanel = {
@@ -558,12 +560,16 @@ describe('opening the page', () => {
 		const server = serving();
 		openReview({ said: [A_MESSAGE_SENT_ELSEWHERE] });
 		leavePage();
-		server.answer('GET /api/conversation', { said: [{ ...A_MESSAGE_SENT_ELSEWHERE, taken_back: true }] });
+		server.answer('GET /api/conversation', {
+			said: [{ ...A_MESSAGE_SENT_ELSEWHERE, taken_back_at: TAKEN_BACK_ELSEWHERE_AT }]
+		});
 		const page = newPage();
 
 		await page.open();
 
-		expect(openedReview(page).conversation.turns).toMatchObject([{ id: 'panel-1', cancelled: true }]);
+		expect(openedReview(page).conversation.turns).toMatchObject([
+			{ id: 'panel-1', takenBackAt: TAKEN_BACK_ELSEWHERE_AT }
+		]);
 	});
 
 	it('takes in once what the agent said as the page opened, held and pushed both, and counts it as nothing new', async () => {

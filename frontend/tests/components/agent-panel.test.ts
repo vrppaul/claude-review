@@ -8,7 +8,7 @@ import { AGENT_STOPPED_LISTENING, TAKE_BACK } from '$lib/components/agent-waits'
 import { FIELD_KEYS } from '$lib/components/keymap';
 import type { HeldThread, Thread, ReviewResponse } from '$lib/types';
 import { addedLine, diffFile, diffResponse, hunk, REVIEW_BASE, sinceRound } from '../diff';
-import { fakeServer, listeningToThePanel, UNPROCESSABLE } from '../fake-server';
+import { fakeServer, listeningToThePanel, SERVER_ERROR, UNPROCESSABLE } from '../fake-server';
 import { newComment } from '../new-comment';
 import { lineAnchor } from '$lib/anchors/line';
 import type { Review } from '$lib/review/review.svelte';
@@ -25,6 +25,8 @@ const SHORTEST = 5;
 // following a new turn over a real layout.
 const VISIBLE_HEIGHT = 100;
 const FULL_HEIGHT = 500;
+// How long ago a message said in another browser was taken back, in milliseconds
+const TAKEN_BACK_AGO = 40_000;
 
 const file = diffFile({ path: 'src/routes.py', hunks: [hunk([addedLine(2, 'y = 3')])] });
 
@@ -284,7 +286,7 @@ describe('the agent panel', () => {
 		expect(getByTestId('panel-working')).toBeTruthy();
 	});
 
-	it('takes the message back once the reader says so, and says under it that it was', async () => {
+	it('takes the message back once the reader says so, and says under it that it was, and when', async () => {
 		const user = userEvent.setup({ delay: null });
 		const server = listeningToThePanel();
 		const { getByTestId } = render(AgentPanel, inReview(review));
@@ -295,7 +297,23 @@ describe('the agent panel', () => {
 		await user.click(getByTestId('confirm-go-ahead'));
 
 		expect(server.bodiesSentTo('POST /api/cancel')).toEqual([{ message_id: review.conversation.turns[0].id }]);
-		expect(getByTestId('panel-taken-back').textContent).toContain('Taken back');
+		expect(getByTestId('panel-taken-back').textContent).toContain('Taken back 0s ago. The agent was asked to drop it.');
+	});
+
+	it('says under the turn why it could not take the message back, and keeps the cross to try again', async () => {
+		const user = userEvent.setup({ delay: null });
+		const server = listeningToThePanel();
+		server.fail('POST /api/cancel', SERVER_ERROR);
+		const { getByTestId, findByTestId, queryByTestId } = render(AgentPanel, inReview(review));
+		await user.type(getByTestId('panel-input'), 'Never mind');
+		await user.click(getByTestId('send-message'));
+		await user.click(getByTestId('panel-working-take-back'));
+
+		await user.click(getByTestId('confirm-go-ahead'));
+
+		expect((await findByTestId('panel-working-take-back-error')).textContent).toContain('Could not take it back');
+		expect(getByTestId('panel-working-take-back')).toBeTruthy();
+		expect(queryByTestId('panel-taken-back')).toBeNull();
 	});
 
 	it('keeps the line breaks of what the reader wrote', async () => {
@@ -665,7 +683,7 @@ describe('the agent panel', () => {
 });
 
 describe('what was said before the page opened', () => {
-	it('draws what was said in another browser as it was said there: its screenshot by its id, its thread a chip, taken back', () => {
+	it('draws what was said in another browser as it was said there: its screenshot by its id, its thread a chip, taken back and when', () => {
 		const held: HeldThread = {
 			thread_id: 'comment-1',
 			anchor: lineAnchor(file.path, 'new', 2, 2, ['y = 3']),
@@ -690,7 +708,7 @@ describe('what was said before the page opened', () => {
 					images: [KEPT_AS],
 					threads: [held.thread_id],
 					files: [],
-					taken_back: true
+					taken_back_at: Date.now() - TAKEN_BACK_AGO
 				},
 				{
 					said_id: 'answer-3f2a',
@@ -701,7 +719,7 @@ describe('what was said before the page opened', () => {
 					images: [],
 					threads: [],
 					files: [file.path],
-					taken_back: false
+					taken_back_at: null
 				}
 			]
 		});
@@ -710,7 +728,7 @@ describe('what was said before the page opened', () => {
 
 		expect(getByTestId('said-image').getAttribute('href')).toBe(`/api/images/${KEPT_AS}`);
 		expect(getByTestId('panel-thread-ref').textContent).toContain('2');
-		expect(getByTestId('panel-taken-back')).toBeTruthy();
+		expect(getByTestId('panel-taken-back').textContent).toContain('Taken back 40s ago.');
 		expect(getByTestId('answer-file').getAttribute('title')).toBe(file.path);
 	});
 });

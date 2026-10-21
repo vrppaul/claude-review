@@ -684,11 +684,11 @@ class SaidInPanel(BaseModel):
     threads: list[str]
     # Files the agent's words name, a chip each
     files: list[FilePath]
-    # Whether the reader took the message back before it was answered
-    taken_back: bool
+    # When the reader took the message back before it was answered; None while it stands
+    taken_back_at: EpochMillis | None
 
-    def withdrawn(self) -> SaidInPanel:
-        """The same thing said, marked as taken back by the reader."""
+    def withdrawn(self, at: EpochMillis) -> SaidInPanel:
+        """The same thing said, marked as taken back by the reader at that moment."""
         return SaidInPanel(
             said_id=self.said_id,
             message_id=self.message_id,
@@ -698,7 +698,7 @@ class SaidInPanel(BaseModel):
             images=self.images,
             threads=self.threads,
             files=self.files,
-            taken_back=True,
+            taken_back_at=at,
         )
 
 

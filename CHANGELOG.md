@@ -201,8 +201,9 @@
   reader's blue tint with a blue edge at their foot; a dot, an icon or a
   count of a colour of its own keeps it. An icon button in a turn or a
   card keeps its look while what it asks is open: the red cross under
-  "Take it back?", the bin under "Delete this comment?". The file the reader is in, the option the
-  keys lit and the block a thread hangs open under stand on a grey tint
+  "Take it back?", the bin under "Delete this comment?". The file the
+  reader is in, the option the keys lit and the block a thread hangs open
+  under stand on a grey tint
   with no edge at their start, their words in ink even once viewed; a row
   is rounded at a box's corner, under the pointer as where the reader is.
   A setting's box is the page's own, 16 px on the plainest ground: ticked,
@@ -246,9 +247,14 @@
   fails, the failure is said under the turn and the cross stays to try
   again. Work nobody asked for has none. The panel's turn at work says only
   how long ago, where it said "working 3m ago". A message taken back stays
-  where it was said, struck through, with a line of its own under it,
-  "Taken back. The agent was asked to drop it.", where it was faint with
-  "stopped" under it. The agent's work reads as a checklist, its line in
+  where it was said, struck through, with a row of the conversation of its
+  own under it, on danger's tint, "Taken back 40s ago. The agent was asked
+  to drop it.", where it was faint with "stopped" under it; a page opened
+  later says how long ago too, as the review keeps when. A message the
+  agent has answered can no longer be taken back: the review refuses, where
+  a take-back crossing the answer on its way struck out what was answered.
+  The panel marks a message taken back once the review has heard it, as a
+  thread does, so a failure there is said under the turn, where it was lost. The agent's work reads as a checklist, its line in
   ink and bold, its steps without the rail they hung from. A turn's head
   stands as tall as its avatar. What the reader writes in the panel keeps
   its line breaks, and a word longer than a turn breaks where the turn
