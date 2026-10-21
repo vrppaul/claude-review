@@ -77,6 +77,7 @@ describe('who said each turn, in a thread and in the panel, and how long ago', (
 	it('says it in the panel as in a thread: the reader two minutes ago, the agent forty seconds ago', () => {
 		vi.useFakeTimers();
 		const review = openReview({ said: saidInThePanel(Date.now()) });
+		review.layout.agentPanel.setOpen(true);
 
 		render(AgentPanel, inReview(review));
 

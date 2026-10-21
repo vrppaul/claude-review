@@ -252,8 +252,8 @@
   its line breaks, and a word longer than a turn breaks where the turn
   ends rather than scrolling the panel sideways.
 - **What the reader does moves; nothing else does.** A pane opened from a
-  control comes from it, faded in over 120 ms from a step nearer it, and
-  goes at once; a note the page puts up never moves in. The chosen
+  control comes in faded over 120 ms where it stands, and goes at once; a
+  note the page puts up does not fade in. The chosen
   segment's ink slides to the one pressed over 150 ms, where the browser
   can place one box by another in each track. A folder the reader unfolds
   in the tree opens over 150 ms as its chevron turns. A column the reader

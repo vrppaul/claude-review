@@ -693,29 +693,24 @@
 }
 .cr-ui-below-start,
 .cr-ui-below-end {
-	--cr-pane-coming-from: calc(-1 * --spacing(1));
-
 	top: calc(100% + var(--cr-pane-gap));
 }
 .cr-ui-above-start,
 .cr-ui-above-end {
-	--cr-pane-coming-from: --spacing(1);
-
 	bottom: calc(100% + var(--cr-pane-gap));
 }
 /*
- * A pane the reader opened from a control comes from it: faded in over
- * --cr-coming-in, from a step nearer the control; it goes at once
+ * A pane the reader opened from a control comes in, faded over
+ * --cr-coming-in, where it stands; it goes at once. It does not move in:
+ * the box it is measured by to stand whole in the window (lib/ui/pane.ts)
+ * would stand where it moved from
  */
 .cr-ui-pane-coming {
-	transition:
-		opacity var(--cr-coming-in) ease,
-		transform var(--cr-coming-in) ease;
+	transition: opacity var(--cr-coming-in) ease;
 }
 @starting-style {
 	.cr-ui-pane-coming {
 		opacity: 0;
-		transform: translateY(var(--cr-pane-coming-from));
 	}
 }
 .cr-ui-below-start,
