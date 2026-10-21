@@ -157,10 +157,10 @@ async def stop_the_story(review: ReviewDep) -> None:
 
 @router.get("/diff", responses=refusals(UnknownVersionError, NoRepositoryError, takes=Takes.PARAMETERS))
 async def get_diff(
-    *,
-    ignore_whitespace: Annotated[bool, Query()] = False,
-    base: Annotated[str | None, Query(max_length=MAX_ID_LENGTH)] = None,
     review: ReviewDep,
+    *,
+    ignore_whitespace: bool = False,
+    base: Annotated[str | None, Query(max_length=MAX_ID_LENGTH)] = None,
 ) -> DiffResponse:
     """Serve the review's content against the base the page asks for, the review's own when it names none.
 
@@ -170,11 +170,11 @@ async def get_diff(
     the review it read, whatever the base: a story is of the code on screen
     only while it says the same take.
     """
-    view = await review.view(key_of(base) if base is not None else None, ignore_whitespace=ignore_whitespace)
+    view = await review.view(made_or_none(key_of, base), ignore_whitespace=ignore_whitespace)
     opened_against = review.standing().opened_against
     return DiffResponse(
         files=[DiffFile.from_domain(file) for file in view.files],
-        base=shown_base(view.shown, opened_against) if view.shown is not None else None,
+        base=made_or_none(lambda shown: shown_base(shown, opened_against), view.shown),
         moved=view.moved,
         take=view.take,
     )
@@ -208,7 +208,7 @@ async def get_file_window(
 ) -> FileWindowResponse:
     """Serve lines a hunk left out, so the reader can widen its context."""
     window = await review.file_window(path, start, end)
-    return FileWindowResponse(start=window.start, lines=window.lines, total=window.total)
+    return FileWindowResponse.from_domain(window)
 
 
 @router.post("/anchors/follow", responses=refusals(takes=Takes.JSON_BODY))
@@ -365,7 +365,7 @@ async def retake_diff(review: ReviewDep) -> RetakeResponse:
     """
     retaken = await review.retake()
     return RetakeResponse(
-        file_count=retaken.file_count, round=retaken.round, changes=changes_since_round(retaken.changes)
+        file_count=retaken.file_count, round=retaken.round, changes=made_or_none(changes_since_round, retaken.changes)
     )
 
 

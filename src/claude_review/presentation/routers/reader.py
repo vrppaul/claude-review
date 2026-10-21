@@ -29,9 +29,7 @@ router = APIRouter()
 
 
 @router.get("/settings")
-async def reader_settings(
-    settings: SettingsServiceDep,
-) -> KeptRecord[ReaderSettings]:
+async def reader_settings(settings: SettingsServiceDep) -> KeptRecord[ReaderSettings]:
     """Say how this reader reads, as chosen in any review on this machine."""
     return await _kept(settings, ReaderSettings.from_domain)
 
@@ -45,18 +43,13 @@ async def change_reader_settings(request: SettingsChange, review: ReviewDep) -> 
 
 
 @router.get("/guide")
-async def guide_state(
-    guide: GuideServiceDep,
-) -> KeptRecord[GuideState]:
+async def guide_state(guide: GuideServiceDep) -> KeptRecord[GuideState]:
     """Say how far this reader has been shown around, in any review on this machine."""
     return await _kept(guide, GuideState.from_domain)
 
 
 @router.put("/guide", responses=refusals(takes=Takes.JSON_BODY))
-async def change_guide_state(
-    request: GuideChange,
-    guide: GuideServiceDep,
-) -> GuideState:
+async def change_guide_state(request: GuideChange, guide: GuideServiceDep) -> GuideState:
     """Remember what the reader has now been shown."""
     return GuideState.from_domain(await guide.change(request))
 

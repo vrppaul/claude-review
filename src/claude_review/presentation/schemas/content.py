@@ -18,7 +18,7 @@ from claude_review.domain.models import (
 )
 from claude_review.presentation.schemas.agent import AgentStatus, AgentWork
 from claude_review.presentation.schemas.base import MAX_TEXT_LENGTH, Schema
-from claude_review.services.file_window_service import MAX_WINDOW_LINES
+from claude_review.services.file_window_service import MAX_WINDOW_LINES, FileWindow
 from claude_review.services.image_service import MAX_IMAGE_BYTES, MAX_IMAGES_PER_MESSAGE
 
 
@@ -318,3 +318,7 @@ class FileWindowResponse(Schema):
     start: int
     lines: list[str]
     total: int
+
+    @classmethod
+    def from_domain(cls, window: FileWindow) -> Self:
+        return cls(start=window.start, lines=window.lines, total=window.total)

@@ -423,7 +423,7 @@ class StoryRequestEvent(Schema):
 
     @classmethod
     def from_domain(cls, requested: models.StoryRequested) -> Self:
-        return cls(stale=made_or_none(StoryWentStale.from_domain, requested.stale))
+        return cls(type=EventKind.STORY_REQUEST, stale=made_or_none(StoryWentStale.from_domain, requested.stale))
 
 
 class StoryCancelEvent(Schema):

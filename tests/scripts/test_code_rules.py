@@ -123,6 +123,14 @@ FIELDS_BY_NAME = [
         said="checked.py:3: `from_attributes` reads a model off another by the names the two share",
     ),
     FieldsByName(
+        what="a model told by a mapping to read others by the names they share",
+        source="""
+            class Sent(BaseModel):
+                model_config = {"from_attributes": True}
+        """,
+        said="checked.py:3: `from_attributes` reads a model off another by the names the two share",
+    ),
+    FieldsByName(
         what="an object's fields read as a mapping",
         source="""
             def moved(anchor: Anchor, line: int) -> Anchor:

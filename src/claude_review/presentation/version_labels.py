@@ -124,10 +124,8 @@ def shown_base(shown: VersionKey, opened_against: str | None) -> ShownBase:
     )
 
 
-def changes_since_round(changes: ChangedSinceRound | None) -> ChangesSince | None:
+def changes_since_round(changes: ChangedSinceRound) -> ChangesSince:
     """What changed since a round began, with the key that shows just that."""
-    if changes is None:
-        return None
     return ChangesSince(
         since_round=changes.round, base_key=key_text(RoundKey(round=changes.round)), paths=changes.paths
     )

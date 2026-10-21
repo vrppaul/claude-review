@@ -74,7 +74,7 @@ def push_of(event: PageEvent) -> ServerPush:
         case RoundBegan():
             return RoundPush(number=event.number)
         case DiffRetaken():
-            return DiffPush(file_count=event.file_count, changes=changes_since_round(event.changes))
+            return DiffPush(file_count=event.file_count, changes=made_or_none(changes_since_round, event.changes))
         case StoryTold():
             return StoryPush()
         case StoryAskingChanged():

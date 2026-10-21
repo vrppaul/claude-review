@@ -12,8 +12,8 @@ No model is taken apart into its fields by name, or put together from
 them: a model made from another is made by a method of the model, which
 calls its constructor with every field written out, where a type checker
 reads the names. So what goes the other way is not used at all — pydantic's
-`model_copy`, `model_construct` and `model_dump`, its `from_attributes`
-however it is given, and Python's `__dict__`, `vars` and `copy.replace`. A
+`model_copy`, `model_construct` and `model_dump`, its `from_attributes` as a
+keyword or a mapping's key, and Python's `__dict__`, `vars` and `copy.replace`. A
 model leaves in a request or an answer as JSON (`model_dump_json`), never as
 a mapping. The check knows these by name alone: a model handed to
 `dict(…)`, or walked field by field, is past what it sees, and the rule
@@ -83,7 +83,8 @@ FIELDS_BY_NAME = {
     "model_dump": "`model_dump` writes a model out as a mapping: hand the model on, or write it as JSON",
     "__dict__": "`__dict__` reads an object's fields as a mapping, by name: read the fields it has",
 }
-# What pydantic is told, by a call or a model's settings, to read one model off another by the names the two share
+# What pydantic is told, by a call or a model's settings, to read one model off another by the names the two share:
+# refused as a keyword and as a mapping's key, the two ways pydantic takes it
 READ_BY_SHARED_NAMES = "from_attributes"
 SHARED_NAMES_READ = (
     "`from_attributes` reads a model off another by the names the two share: build it by its constructor"
@@ -276,6 +277,8 @@ def _said_of_fields_by_name(node: ast.AST, copy_module_names: frozenset[str]) ->
             return [Said(line=node.lineno, says=FIELDS_BY_NAME[name])]
         case ast.keyword(arg=name) if name == READ_BY_SHARED_NAMES:
             return [Said(line=node.lineno, says=SHARED_NAMES_READ)]
+        case ast.Dict(keys=keys) if READ_BY_SHARED_NAMES in _texts_among(keys):
+            return [Said(line=node.lineno, says=SHARED_NAMES_READ)]
         case ast.Name(id=name) if name == FIELDS_OF:
             return [Said(line=node.lineno, says=VARS_READ)]
         case _:
@@ -337,6 +340,11 @@ def _is_a_refusal(base: ast.expr, file: CheckedFile) -> bool:
 def _name_among(imported: list[ast.alias], name: str) -> bool:
     """Whether a name is among those an import brings in."""
     return any(alias.name == name for alias in imported)
+
+
+def _texts_among(keys: list[ast.expr | None]) -> frozenset[str]:
+    """The keys of a mapping written as text; one spread into it (`**`) has none."""
+    return frozenset(key.value for key in keys if isinstance(key, ast.Constant) and isinstance(key.value, str))
 
 
 def _name_given(node: ast.AST) -> GivenName | None:

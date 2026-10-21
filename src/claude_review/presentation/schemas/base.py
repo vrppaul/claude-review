@@ -36,10 +36,10 @@ class Schema(BaseModel):
     A field with a default may be left out by whoever sends one, but the
     review always writes it, so the schema of what it writes says so — and
     the browser's types, generated from that schema, do not call such a
-    field maybe missing. One the review sends is made from the domain's model
-    by its own `from_domain`, every field written out: never read off the
-    model by the names the two happen to share, which a field renamed on one
-    side would leave at its default without a word.
+    field maybe missing. One the review sends is made from the model it
+    carries by its own `from_domain`, every field written out: never read off
+    the model by the names the two happen to share, which a field renamed on
+    one side would leave at its default without a word.
     """
 
     model_config = ConfigDict(json_schema_serialization_defaults_required=True)

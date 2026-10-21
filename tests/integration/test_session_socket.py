@@ -378,6 +378,21 @@ def test_a_thread_the_agent_raised_is_held_as_the_page_last_said_it(review_page:
     assert [turn["body"] for turn in held["turns"]] == ["Why?"]
 
 
+def test_a_page_that_opens_with_no_draft_is_handed_the_screenshots_its_threads_hold(review_page: TestClient) -> None:
+    """Pasted with the comment or with a reply, each comes back where it was pasted, by the id it is kept under."""
+    pasted = review_page.post("/api/images", content=PNG).json()["image_id"]
+    replied = review_page.post("/api/images", content=PNG).json()["image_id"]
+    reply = turn_json(TurnAuthor.READER, "And here", turn_id="turn-1", images=[replied])
+    pictured = thread_json(line_json(REVIEWED_FILE, 1), "Why one?", images=[pasted], turns=[reply])
+
+    with open_session(review_page) as socket:
+        socket.send_json({"threads": [pictured]})
+        until_the_review_holds_threads(review_page, 1)
+
+    [held] = review_page.get(THREADS_ROUTE).json()["threads"]
+    assert (held["images"], held["turns"][0]["images"]) == ([pasted], [replied])
+
+
 def test_a_page_that_says_nothing_of_its_threads_leaves_them_as_the_review_holds_them(
     review_page: TestClient,
 ) -> None:

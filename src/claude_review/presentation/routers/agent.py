@@ -135,10 +135,7 @@ async def catch_up(review: ReviewDep) -> CatchUpResponse:
 
 
 @router.post("/catch-up/threads/{thread_id}", responses=refusals(UnknownThreadError, takes=Takes.PARAMETERS))
-async def read_thread(
-    thread_id: SafeId,
-    review: ReviewDep,
-) -> Thread:
+async def read_thread(thread_id: SafeId, review: ReviewDep) -> Thread:
     """Hand over one thread the review holds, in full: every turn, its lines, its images.
 
     Read, so handed over: the agent may open its images from now on, and
