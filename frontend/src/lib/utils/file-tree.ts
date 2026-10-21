@@ -12,7 +12,7 @@ import type { DiffFile } from '$lib/types';
 import { fileName, PATH_SEPARATOR } from '$lib/utils/paths';
 
 /** A folder of the tree, and what it holds. */
-interface TreeFolder {
+export interface TreeFolder {
 	kind: 'folder';
 	/** What its row says: its own name, or the names of the folders it stands for. */
 	name: string;

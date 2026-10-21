@@ -102,6 +102,7 @@ class StoredWidth {
 class PutAwayColumn {
 	readonly #openKey: string;
 	#open: boolean;
+	#changedByReader = $state(false);
 	readonly #width: StoredWidth;
 
 	/**
@@ -120,6 +121,11 @@ class PutAwayColumn {
 		return this.#open;
 	}
 
+	/** Whether it was the reader who last put it away or brought it back, rather than the page of its own accord. */
+	get changedByReader(): boolean {
+		return this.#changedByReader;
+	}
+
 	get width(): number {
 		return this.#width.value;
 	}
@@ -135,6 +141,7 @@ class PutAwayColumn {
 	/** The reader puts it away or brings it back, which is kept as their choice. */
 	setOpen(next: boolean): void {
 		this.#open = next;
+		this.#changedByReader = true;
 		writeChoice(this.#openKey, next);
 	}
 
@@ -146,9 +153,10 @@ class PutAwayColumn {
 		this.#width.set(next);
 	}
 
-	/** Bring it on screen of its own accord, the reader having chosen nothing: nothing is kept. */
+	/** Bring it on screen of its own accord, the reader having chosen nothing: nothing is kept, and nothing moves. */
 	protected comeOnScreen(): void {
 		this.#open = true;
+		this.#changedByReader = false;
 	}
 }
 

@@ -70,19 +70,11 @@
 	let putAwayButton: HTMLButtonElement | undefined = $state();
 	let rail: HTMLButtonElement | undefined = $state();
 
-	// Whether the reader has put the column away or brought it back since it was first drawn: only then does what
-	// takes its place come in faded, since nothing moves but in answer to the reader. A stylesheet cannot tell a
-	// first drawing from one the reader asked for
-	let drawnOnce = false;
-	let moved = $state(false);
-
 	// Put away or brought back, by its own control or by a key, the column takes with it whatever held
 	// the keyboard in it: the control pressed, an entry. Looked at before the page redraws it: the
 	// keyboard then goes to the control that undoes what was done, and is never left on nothing
 	$effect.pre(() => {
 		const open = column.open;
-		if (drawnOnce) moved = true;
-		drawnOnce = true;
 		const drawnBefore = open ? rail : columnElement;
 		if (drawnBefore?.contains(document.activeElement)) focusWhatRemains(() => (open ? putAwayButton : rail));
 	});
@@ -104,9 +96,16 @@
 {/snippet}
 
 <!-- The room a column stands in beside what is read, as wide as the reader left it, or as narrow as its rail once it
-	is put away: the column itself, scrolling by itself, or the rail it narrows to, so the way back is where it went -->
+	is put away: the column itself, scrolling by itself, or the rail it narrows to, so the way back is where it went.
+	Only where the reader put it away or brought it back does it move: its room narrowing or widening, and what takes
+	its place coming in faded. One that came on screen of its own accord, or was drawn so at first, stands at once -->
 <div
-	class={['cr-ui-side-column', drawn.drawnAs, !column.open && 'cr-ui-side-column-away']}
+	class={[
+		'cr-ui-side-column',
+		drawn.drawnAs,
+		!column.open && 'cr-ui-side-column-away',
+		column.changedByReader && 'cr-ui-side-column-moving'
+	]}
 	style:--cr-column-width="{column.width}px"
 >
 	{#if column.open}
@@ -116,7 +115,7 @@
 			data-testid={testIds.column}
 			data-tour={tour}
 			aria-label={label}
-			class={['cr-ui-column', moved && 'cr-ui-column-coming']}
+			class={['cr-ui-column', column.changedByReader && 'cr-ui-column-coming']}
 		>
 			<EdgeGrip {column} grows={drawn.grows} label={resizing} testId={testIds.resize} />
 			<Bar heads="column" testId={testIds.head}>
@@ -144,7 +143,7 @@
 			testId={testIds.bringBack}
 			data-tour={tour}
 			{marks}
-			marksComeIn={moved}
+			marksComeIn={column.changedByReader}
 			onclick={() => column.toggle()}
 		/>
 	{/if}

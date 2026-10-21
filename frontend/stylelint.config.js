@@ -47,10 +47,10 @@ const AN_ALPHA_WRITTEN = ['/(rgb|hsl|hwb|lab|lch|oklab|oklch)a?\\([^)]*\\//'];
 // Every property but those that may hold an alpha of their own: a shadow, and the shade laid behind a modal
 const HOLDS_NO_ALPHA = '/^(?!--cr-(shadow-[a-z-]+|shade)$)/';
 // The rules that move something, each by its whole selector, and no other: a button's or a segment's state
-// easing in, a box filling as it is ticked and its check drawn in, a chevron turning, a side column narrowing to
-// its rail and back (held still while its edge is dragged, which it would trail), the column and its rail's marks
-// coming in once the reader moved it, the chosen segment's ink sliding, a pane coming from its control, a folder
-// the reader unfolded opening, a note fading, work breathing, what arrived lit, the tour's light gliding.
+// easing in, a box filling as it is ticked and its check drawn in, a chevron turning, a side column the reader put
+// away narrowing to its rail and back (held still while its edge is dragged, which it would trail), the column and
+// its rail's marks coming in once the reader moved it, the chosen segment's ink sliding, a pane coming from its
+// control, a folder the reader unfolded opening, a note fading, work breathing, what arrived lit, the tour's light gliding.
 // Whatever else is selected holds none, a row and a band the keys move above all, however a stylesheet selects
 // them: the keys outrun it, and two rows would stand lit at once. Where a reader asked for less motion it all
 // stops, in a stylesheet of its own that may say `none` and nothing else of motion; and eslint refuses motion
@@ -60,7 +60,7 @@ const WHAT_MOVES = [
 	'\\.cr-ui-checkbox-box',
 	'\\.cr-ui-checkbox-check',
 	'\\.cr-ui-icon',
-	'\\.cr-ui-side-column(:has\\(\\.cr-ui-grip:is\\(:active, :focus-visible\\)\\))?',
+	'\\.cr-ui-side-column-moving(:has\\(\\.cr-ui-grip:is\\(:active, :focus-visible\\)\\))?',
 	'\\.cr-ui-column-coming',
 	'\\.cr-ui-column-rail-marks-coming',
 	'\\.cr-ui-segmented::before',

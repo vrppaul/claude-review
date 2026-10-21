@@ -857,10 +857,9 @@
  * lib/ui/column.ts): as wide as the reader left the column, giving up width
  * to what is read down to the least it reads at, or as narrow as its rail
  * once it is put away, on the columns' own ground and ruled off from what is
- * read. Its width changes over --cr-column-change, but while the reader
- * drags its edge, which it would trail. On a screen too narrow to keep the
- * column beside what is read, it lies over that instead, at the breakpoints
- * of tokens.css; its rail stands beside it at every width
+ * read. On a screen too narrow to keep the column beside what is read, it
+ * lies over that instead, at the breakpoints of tokens.css; its rail stands
+ * beside it at every width
  */
 .cr-ui-side-column {
 	position: relative;
@@ -869,12 +868,15 @@
 	min-height: 0;
 	width: var(--cr-column-width);
 	background: var(--cr-ground-column);
+}
+/* Put away or brought back by the reader, its width changes over a column's time */
+.cr-ui-side-column-moving {
 	transition:
 		width var(--cr-column-change) ease,
 		min-width var(--cr-column-change) ease;
 }
 /* Held still while its edge is dragged or stepped by the keys, which it would trail */
-.cr-ui-side-column:has(.cr-ui-grip:is(:active, :focus-visible)) {
+.cr-ui-side-column-moving:has(.cr-ui-grip:is(:active, :focus-visible)) {
 	transition: none;
 }
 .cr-ui-side-column-left {

@@ -256,9 +256,13 @@
   note the page puts up does not fade in. The chosen
   segment's ink slides to the one pressed over 150 ms, where the browser
   can place one box by another in each track. A folder the reader unfolds
-  in the tree opens over 150 ms as its chevron turns. A column the reader
-  puts away or brings back fades in what takes its place; drawn at first,
-  nothing fades. For a reader who asked for less motion, none of it moves.
+  in the tree opens over 150 ms as its chevron turns; a tree brought back,
+  or read again in Files, opens none of its folders again. A column moves
+  only when the reader puts it away or brings it back: its room narrows or
+  widens over 200 ms and what takes its place fades in. Drawn at first, or
+  on screen of its own accord, as the agent's panel comes when an agent
+  turns up, it stands there at once. For a reader who asked for less
+  motion, none of it moves.
 - **One ladder of colour.** Each colour that says whose a thing is or
   what it means — the reader's blue, the agent's violet, the diff's green
   and red, what is done, a warning, an error, and the ink of the words —

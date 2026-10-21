@@ -13,10 +13,10 @@
 	import Filter from '$lib/ui/Filter.svelte';
 	import Heading from '$lib/ui/Heading.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
-	import Row from '$lib/ui/Row.svelte';
 	import SideColumn from '$lib/ui/SideColumn.svelte';
 	import ChangedLines from './ChangedLines.svelte';
 	import FileRow from './FileRow.svelte';
+	import FileTreeFolder from './FileTreeFolder.svelte';
 	import { COLUMN_KEY } from './keymap';
 
 	/** What the tree lists, in words: counted in its heading, looked for in its filter. */
@@ -39,9 +39,6 @@
 
 	// What the tree is filtered by and which folders are folded are the layout's: they outlive the tree being put away
 	const layout = review.layout.fileTree;
-	// The folder the reader last unfolded, which opens over a fold's time: the tree drawn at first opens no folder,
-	// since nothing moves but in answer to the reader
-	let unfoldedLast = $state<string | null>(null);
 
 	const isDiffMode = $derived(review.mode === 'diff');
 	const listed = $derived(COUNTED_AS[review.mode]);
@@ -61,12 +58,6 @@
 
 	// What the filter leaves, drawn: where it looks for the first file to go to
 	let list: HTMLElement | undefined = $state();
-
-	/** Fold a folder away or open it, an opened one opening over a fold's time. */
-	function toggleFolder(path: string) {
-		unfoldedLast = layout.isFolderFolded(path) ? path : null;
-		layout.toggleFolder(path);
-	}
 
 	/**
 	 * Enter goes to the first file the filter leaves, as a click on it would;
@@ -124,22 +115,13 @@
 	{#if node.kind === 'file'}
 		{@render fileRow(node.file, node.name, depth)}
 	{:else}
-		{@const folded = layout.isFolderFolded(node.path)}
-		<li>
-			<!-- A folder, quieter than the files it folds under it -->
-			<Row names="path" testId="folder-item" {depth} {folded} onclick={() => toggleFolder(node.path)}>
-				{#snippet label()}
-					<span class="cr-muted">{node.name}/</span>
-				{/snippet}
-			</Row>
-			{#if !folded}
-				<ul class={[node.path === unfoldedLast && 'cr-tree-unfolding']}>
-					{#each node.children as child (child.path)}
-						{@render treeNode(child, depth + 1)}
-					{/each}
-				</ul>
-			{/if}
-		</li>
+		<FileTreeFolder
+			folder={node}
+			{depth}
+			folded={layout.isFolderFolded(node.path)}
+			toggle={() => layout.toggleFolder(node.path)}
+			node={treeNode}
+		/>
 	{/if}
 {/snippet}
 

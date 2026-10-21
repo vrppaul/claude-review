@@ -61,5 +61,7 @@ export const COLUMN_HOLDS: Record<ColumnHolds, string> = {
 export interface PutAway extends ColumnWidth {
 	/** Whether it is on screen. */
 	readonly open: boolean;
+	/** Whether the reader made the last change to that: only then does it move, since nothing moves by itself. */
+	readonly changedByReader: boolean;
 	toggle: () => void;
 }
