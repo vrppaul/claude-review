@@ -186,6 +186,7 @@
 			{placement}
 			{width}
 			arrow
+			comesIn
 			{arrowOffset}
 			{head}
 			{testId}

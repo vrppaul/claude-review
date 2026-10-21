@@ -15,9 +15,11 @@
 		element?: HTMLButtonElement | undefined;
 		/** What is behind it, said under its head: a count, the chapter being read, who is there. */
 		marks?: Snippet | undefined;
+		/** Whether its marks come in once the column has narrowed: so where the reader put the column away. */
+		marksComeIn: boolean;
 	}
 
-	let { side, label, key, testId, element = $bindable(), marks, ...attributes }: Props = $props();
+	let { side, label, key, testId, element = $bindable(), marks, marksComeIn, ...attributes }: Props = $props();
 </script>
 
 <!-- What a column put away leaves where it stood, the column narrowed: its head the column's own height, the toggle
@@ -34,6 +36,6 @@
 >
 	<span class="cr-ui-column-rail-head"><Icon name={COLUMN_SIDES[side].putAway} size="sm" /></span>
 	{#if marks}
-		<span class="cr-ui-column-rail-marks">{@render marks()}</span>
+		<span class={['cr-ui-column-rail-marks', marksComeIn && 'cr-ui-column-rail-marks-coming']}>{@render marks()}</span>
 	{/if}
 </button>

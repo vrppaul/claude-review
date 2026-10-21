@@ -330,6 +330,32 @@
 .cr-ui-segment[aria-pressed='true'] {
 	font-weight: var(--font-weight-semibold);
 }
+/*
+ * The chosen segment's ink slides to the segment pressed, over a switch's
+ * time: one ground in the track, placed on the chosen segment, its words
+ * over it. Where the browser cannot place one box by another in each track
+ * on its own, the chosen segment keeps its own ground and does not slide
+ */
+@supports (anchor-scope: --cr-chosen-segment) {
+	.cr-ui-segmented {
+		position: relative;
+		anchor-scope: --cr-chosen-segment;
+	}
+	.cr-ui-segmented .cr-ui-segment[aria-pressed='true'] {
+		position: relative;
+		anchor-name: --cr-chosen-segment;
+		background-color: transparent;
+	}
+	.cr-ui-segmented::before {
+		content: '';
+		position: absolute;
+		position-anchor: --cr-chosen-segment;
+		inset: anchor(top) anchor(right) anchor(bottom) anchor(left);
+		border-radius: calc(var(--radius-field) - var(--cr-track-room));
+		background-color: var(--color-base-content);
+		transition: inset var(--cr-state-change) ease;
+	}
+}
 /* A track among the header's controls, as tall as they are, words or none: its segments' words at a control's size */
 .cr-ui-segmented-sm {
 	height: var(--cr-button-sm);
@@ -667,11 +693,30 @@
 }
 .cr-ui-below-start,
 .cr-ui-below-end {
+	--cr-pane-coming-from: calc(-1 * --spacing(1));
+
 	top: calc(100% + var(--cr-pane-gap));
 }
 .cr-ui-above-start,
 .cr-ui-above-end {
+	--cr-pane-coming-from: --spacing(1);
+
 	bottom: calc(100% + var(--cr-pane-gap));
+}
+/*
+ * A pane the reader opened from a control comes from it: faded in over
+ * --cr-coming-in, from a step nearer the control; it goes at once
+ */
+.cr-ui-pane-coming {
+	transition:
+		opacity var(--cr-coming-in) ease,
+		transform var(--cr-coming-in) ease;
+}
+@starting-style {
+	.cr-ui-pane-coming {
+		opacity: 0;
+		transform: translateY(var(--cr-pane-coming-from));
+	}
 }
 .cr-ui-below-start,
 .cr-ui-above-start {
@@ -859,10 +904,7 @@
 		box-shadow: var(--cr-shadow-raised);
 	}
 }
-/*
- * The column standing in its room: its head, what it holds and what the
- * reader writes at its foot, coming in faded as its room widens
- */
+/* The column standing in its room: its head, what it holds and what the reader writes at its foot */
 .cr-ui-column {
 	position: relative;
 	display: flex;
@@ -870,10 +912,13 @@
 	flex-direction: column;
 	min-width: 0;
 	min-height: 0;
+}
+/* Brought back by the reader, it comes in faded as its room widens */
+.cr-ui-column-coming {
 	transition: opacity var(--cr-coming-in) ease;
 }
 @starting-style {
-	.cr-ui-column {
+	.cr-ui-column-coming {
 		opacity: 0;
 	}
 }
@@ -1495,10 +1540,13 @@
 	align-items: center;
 	gap: --spacing(3);
 	padding-top: --spacing(3);
+}
+/* Put away by the reader, they come in once the column has narrowed */
+.cr-ui-column-rail-marks-coming {
 	transition: opacity var(--cr-coming-in) ease var(--cr-state-change);
 }
 @starting-style {
-	.cr-ui-column-rail-marks {
+	.cr-ui-column-rail-marks-coming {
 		opacity: 0;
 	}
 }

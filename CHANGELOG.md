@@ -251,6 +251,14 @@
   stands as tall as its avatar. What the reader writes in the panel keeps
   its line breaks, and a word longer than a turn breaks where the turn
   ends rather than scrolling the panel sideways.
+- **What the reader does moves; nothing else does.** A pane opened from a
+  control comes from it, faded in over 120 ms from a step nearer it, and
+  goes at once; a note the page puts up never moves in. The chosen
+  segment's ink slides to the one pressed over 150 ms, where the browser
+  can place one box by another in each track. A folder the reader unfolds
+  in the tree opens over 150 ms as its chevron turns. A column the reader
+  puts away or brings back fades in what takes its place; drawn at first,
+  nothing fades. For a reader who asked for less motion, none of it moves.
 - **One ladder of colour.** Each colour that says whose a thing is or
   what it means — the reader's blue, the agent's violet, the diff's green
   and red, what is done, a warning, an error, and the ink of the words —

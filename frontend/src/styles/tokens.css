@@ -385,7 +385,7 @@
 	--cr-state-change: 150ms;
 	/* A column put away to its rail or brought back: its width changes over this */
 	--cr-column-change: 200ms;
-	/* What comes in shows over this: the marks of a column's rail, once it is put away */
+	/* What comes in shows over this: a pane from the control that opened it, the marks of a column's rail */
 	--cr-coming-in: 120ms;
 	/*
 	 * What the reader marked in the code, the lines they picked to comment

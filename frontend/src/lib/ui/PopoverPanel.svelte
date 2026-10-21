@@ -31,6 +31,8 @@
 		edge?: PaneEdge | undefined;
 		/** Whether it fades out over the time a note stands, which whoever puts it there sets as --cr-note-lasts. */
 		fading?: boolean;
+		/** Whether it comes from the control the reader pressed; a note the page puts there by itself never moves in. */
+		comesIn?: boolean;
 		head?: Head | undefined;
 		testId: string;
 		/** The pane itself, held by whoever opened it: focus is moved into it and back. */
@@ -51,6 +53,7 @@
 		arrowOffset,
 		edge,
 		fading = false,
+		comesIn = false,
 		head,
 		testId,
 		pane = $bindable(),
@@ -101,7 +104,8 @@
 		PANE_WIDTHS[width],
 		edge && PANE_EDGES[edge],
 		!arrow && 'cr-ui-arrowless',
-		fading && 'cr-ui-pane-fading'
+		fading && 'cr-ui-pane-fading',
+		comesIn && 'cr-ui-pane-coming'
 	]}
 	style:--cr-arrow-offset="{arrowOffset}px"
 	style:--cr-pane-shift={pixels(fit?.shift)}

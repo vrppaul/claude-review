@@ -39,6 +39,9 @@
 
 	// What the tree is filtered by and which folders are folded are the layout's: they outlive the tree being put away
 	const layout = review.layout.fileTree;
+	// The folder the reader last unfolded, which opens over a fold's time: the tree drawn at first opens no folder,
+	// since nothing moves but in answer to the reader
+	let unfoldedLast = $state<string | null>(null);
 
 	const isDiffMode = $derived(review.mode === 'diff');
 	const listed = $derived(COUNTED_AS[review.mode]);
@@ -63,6 +66,12 @@
 	 * Enter goes to the first file the filter leaves, as a click on it would;
 	 * the down arrow hands the keyboard to it, to go on from there.
 	 */
+	/** Fold a folder away or open it, an opened one opening over a fold's time. */
+	function toggleFolder(path: string) {
+		unfoldedLast = layout.isFolderFolded(path) ? path : null;
+		layout.toggleFolder(path);
+	}
+
 	function onFilterKey(event: KeyboardEvent) {
 		if (isComposingText(event) || (event.key !== 'Enter' && event.key !== 'ArrowDown')) return;
 		const first = list?.querySelector<HTMLElement>(`[data-role="${FILE_ROW_ROLE}"]`);
@@ -118,13 +127,13 @@
 		{@const folded = layout.isFolderFolded(node.path)}
 		<li>
 			<!-- A folder, quieter than the files it folds under it -->
-			<Row names="path" testId="folder-item" {depth} {folded} onclick={() => layout.toggleFolder(node.path)}>
+			<Row names="path" testId="folder-item" {depth} {folded} onclick={() => toggleFolder(node.path)}>
 				{#snippet label()}
 					<span class="cr-muted">{node.name}/</span>
 				{/snippet}
 			</Row>
 			{#if !folded}
-				<ul>
+				<ul class={[node.path === unfoldedLast && 'cr-tree-unfolding']}>
 					{#each node.children as child (child.path)}
 						{@render treeNode(child, depth + 1)}
 					{/each}

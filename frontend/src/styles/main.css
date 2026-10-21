@@ -16,6 +16,8 @@
 	background-color: var(--cr-ground-reading);
 	color: var(--color-base-content);
 	scrollbar-color: var(--cr-scrollbar) transparent;
+	/* A height may ease to and from what its content makes it, as a folder unfolding in the tree does */
+	interpolate-size: allow-keywords;
 }
 
 /*
@@ -645,6 +647,21 @@
 /* A chapter is read under its bar: the headers of its pieces stick under the bar, and a step gone to lands under it */
 .cr-story-chapter {
 	--cr-top-room: var(--cr-chapter-bar-height);
+}
+
+/*
+ * A folder the reader unfolded in the tree: its files come down from under
+ * it over a fold's time, as its chevron turns, their rings kept whole
+ */
+.cr-tree-unfolding {
+	overflow-y: clip;
+	overflow-clip-margin: calc(var(--cr-focus-ring-width) + var(--cr-focus-ring-offset));
+	transition: height var(--cr-state-change) ease;
+}
+@starting-style {
+	.cr-tree-unfolding {
+		height: 0;
+	}
 }
 
 /*

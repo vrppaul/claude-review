@@ -70,11 +70,19 @@
 	let putAwayButton: HTMLButtonElement | undefined = $state();
 	let rail: HTMLButtonElement | undefined = $state();
 
+	// Whether the reader has put the column away or brought it back since it was first drawn: only then does what
+	// takes its place come in faded, since nothing moves but in answer to the reader. A stylesheet cannot tell a
+	// first drawing from one the reader asked for
+	let drawnOnce = false;
+	let moved = $state(false);
+
 	// Put away or brought back, by its own control or by a key, the column takes with it whatever held
 	// the keyboard in it: the control pressed, an entry. Looked at before the page redraws it: the
 	// keyboard then goes to the control that undoes what was done, and is never left on nothing
 	$effect.pre(() => {
 		const open = column.open;
+		if (drawnOnce) moved = true;
+		drawnOnce = true;
 		const drawnBefore = open ? rail : columnElement;
 		if (drawnBefore?.contains(document.activeElement)) focusWhatRemains(() => (open ? putAwayButton : rail));
 	});
@@ -108,7 +116,7 @@
 			data-testid={testIds.column}
 			data-tour={tour}
 			aria-label={label}
-			class="cr-ui-column"
+			class={['cr-ui-column', moved && 'cr-ui-column-coming']}
 		>
 			<EdgeGrip {column} grows={drawn.grows} label={resizing} testId={testIds.resize} />
 			<Bar heads="column" testId={testIds.head}>
@@ -136,6 +144,7 @@
 			testId={testIds.bringBack}
 			data-tour={tour}
 			{marks}
+			marksComeIn={moved}
 			onclick={() => column.toggle()}
 		/>
 	{/if}
