@@ -492,9 +492,9 @@ async def test_a_thread_the_author_raises_lands_on_the_line(diff_review: Running
 
     main = _section(page, MAIN_FILE)
     await main.get_by_text(RAISED_BODY).wait_for()
-    # Drawn as the author's, and not counted as the reader's unsent work
+    # Drawn as the author's, and not counted as the reader's unsent work: Send counts nothing going with it
     await main.get_by_test_id("comment-raised").wait_for()
-    assert "0 unsent" in (await page.get_by_test_id("comment-count").text_content() or "")
+    assert await page.get_by_test_id("unsent-count").count() == 0
 
     # And the panel says where it went
     await page.get_by_test_id("panel-thread-ref").wait_for()
