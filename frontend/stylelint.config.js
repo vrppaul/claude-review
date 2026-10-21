@@ -44,8 +44,24 @@ const A_HUE_AT_A_WRITTEN_STRENGTH = [`/color-mix\\((?=.*${A_HUE})(?=.*[\\d.]+%)/
 const AN_ALPHA_WRITTEN = ['/(rgb|hsl|hwb|lab|lch|oklab|oklch)a?\\([^)]*\\//'];
 // Every property but those that may hold an alpha of their own: a shadow, and the shade laid behind a modal
 const HOLDS_NO_ALPHA = '/^(?!--cr-(shadow-[a-z-]+|shade)$)/';
-// A row and a band the keys move hold no motion of their own: the keys outrun it, and two rows stand lit at once
-const MOVED_BY_THE_KEYS = { '/\\.cr-ui-(row|band)/': ['/^transition/', '/^animation/'] };
+// The rules that move something, each by its whole selector, and no other: a button's or a segment's state
+// easing in, a chevron turning, a pane fading, work breathing, what arrived lit, the tour's light gliding, and
+// where a reader asked for less motion all of it stopped. Whatever else is selected holds none, a row and a band
+// the keys move above all, however they are selected: the keys outrun it, and two rows would stand lit at once.
+// Motion written as a utility in the markup is past what this reads
+const WHAT_MOVES = [
+	'\\.cr-ui-button,\\s*\\.cr-ui-segment',
+	'\\.cr-ui-icon',
+	'\\.cr-ui-pane-fading',
+	'\\.cr-ui-dot-breathing(:nth-of-type\\(\\d\\))?',
+	'\\.cr-ui-turn-landing',
+	'\\.cr-sketch-writing',
+	'\\.cr-marked',
+	'\\.cr-note-time-left',
+	'\\.cr-guide-spot-gliding',
+	':root \\*,\\s*:root \\*::before,\\s*:root \\*::after'
+];
+const MOTION_ELSEWHERE = { [`/^(?!(${WHAT_MOVES.join('|')})$)/`]: ['/^transition/', '/^animation/'] };
 // Every size is taken off one scale, which tokens.css sets out: a number with a unit, either way up and in any
 // case, is named there once and named everywhere else — every unit but those of a turn and of a grid's share,
 // which are no size. Nothing is no size in any unit
@@ -104,7 +120,7 @@ export default {
 		'no-duplicate-selectors': true,
 		'declaration-no-important': true,
 		'selector-disallowed-list': SELECTORS_OF_THE_LIBRARY,
-		'rule-selector-property-disallowed-list': MOVED_BY_THE_KEYS
+		'rule-selector-property-disallowed-list': MOTION_ELSEWHERE
 	},
 	overrides: [
 		{

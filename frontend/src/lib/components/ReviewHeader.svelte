@@ -72,7 +72,8 @@
 			<BasePicker />
 			{#if review.settings.current.ignore_whitespace}
 				<!-- Said here as well as in the settings, because it hides changes: in the reader's mark, as a
-					narrower base is, since it narrows the diff too. Pressed, it shows them again -->
+					narrower base is, since it narrows the diff too. Its mark says it where its words give way.
+					Pressed, it shows them again -->
 				<Button
 					tone="marked"
 					size="sm"
@@ -81,6 +82,7 @@
 					title={SHOW_WHITESPACE_AGAIN}
 					onclick={() => review.setIgnoreWhitespace(false)}
 				>
+					<Icon name="whitespace" size="xs" />
 					<span class="max-xl:sr-only">No whitespace</span>
 					<Icon name="cross" size="xs" />
 				</Button>
@@ -90,7 +92,8 @@
 		<div class="flex-1"></div>
 
 		{#if review.submission.failed}
-			<Failure stands="inline" testId="submit-error" said={review.submission.failed} />
+			<!-- Cut where the row's room ends, whole on the pointer: the header never wraps -->
+			<Failure stands="cut" testId="submit-error" said={review.submission.failed} />
 		{/if}
 
 		{#if review.threads.answered.length > 0}

@@ -153,19 +153,24 @@
 				<BreathingDots tone="inherited" testId="sending-dots" />
 				Sending
 			{:else if inRounds}
-				<!-- The round's number gives way last of all the header's words, kept in Send's name; Send keeps its
-					word and its count -->
+				<!-- The round's number gives way with the header's other words, kept in Send's name; Send keeps its
+					word and its count to the last -->
 				Send
 				<span class="max-lg:sr-only">round {review.rounds.current}</span>
 			{:else}
 				Finish review
 			{/if}
 			{#if going > 0}
-				<!-- The figure seen, its words in Send's name and on the pointer -->
-				<span data-tour={tourStop('unsent-count')} class="flex">
-					<Count tone="reader" count={going} title={goingSaid} aria-hidden testId="unsent-count" />
-				</span>
-				<span class="sr-only">{goingSaid}</span>
+				<!-- The figure seen, its words in Send's name, apart from the round's number, and on the pointer -->
+				<Count
+					tone="reader"
+					count={going}
+					title={goingSaid}
+					aria-hidden
+					data-tour={tourStop('unsent-count')}
+					testId="unsent-count"
+				/>
+				<span class="sr-only">({goingSaid})</span>
 			{/if}
 			<Icon name="chevron" size="xs" />
 		</Button>

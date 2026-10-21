@@ -55,6 +55,8 @@ export const ICONS = {
 		drawn: { kind: 'traced', width: 1.2 }
 	},
 	cross: { viewBox: '0 0 12 12', paths: ['M3 3l6 6M9 3l-6 6'], drawn: { kind: 'traced', width: 1.6 } },
+	// An open box, as an editor marks a space it shows: changes to whitespace, where they are hidden
+	whitespace: { viewBox: '0 0 12 12', paths: ['M2.5 6v3h7V6'], drawn: TRACED },
 	// A ring of six dashes: what has not happened yet, and is waited for
 	awaited: {
 		viewBox: '0 0 16 16',

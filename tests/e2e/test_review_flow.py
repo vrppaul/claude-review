@@ -34,6 +34,8 @@ SUBMIT_RESPONSE = "**/api/submit"
 AGENT_WAIT_SECONDS = 15
 
 RAISED_BODY = "I kept the old name; renaming it broke two callers."
+# What Send is called while nothing of the reader's goes with the round
+SEND_WITH_NOTHING_GOING = "Send round 1"
 # The e2e repository: its file as committed, and the changes made since —
 # that file edited, one added
 MAIN_FILE = "main.py"
@@ -492,9 +494,9 @@ async def test_a_thread_the_author_raises_lands_on_the_line(diff_review: Running
 
     main = _section(page, MAIN_FILE)
     await main.get_by_text(RAISED_BODY).wait_for()
-    # Drawn as the author's, and not counted as the reader's unsent work: Send counts nothing going with it
+    # Drawn as the author's, and not counted as the reader's unsent work: Send says nothing goes with it
     await main.get_by_test_id("comment-raised").wait_for()
-    assert await page.get_by_test_id("unsent-count").count() == 0
+    await expect(page.get_by_test_id("quick-submit")).to_have_accessible_name(SEND_WITH_NOTHING_GOING)
 
     # And the panel says where it went
     await page.get_by_test_id("panel-thread-ref").wait_for()

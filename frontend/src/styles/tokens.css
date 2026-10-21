@@ -74,11 +74,12 @@
 	/* How wide written words run before they wrap, prose rendered from Markdown as a comment's */
 	--cr-prose-measure: 72ch;
 	/*
-	 * How wide the header says where the change is, its repository and what it
-	 * had checked out, cut short past it: at the most, and at the least it
-	 * gives way to the controls beside it
+	 * The widest the header lets words the review wrote stand, cut short past
+	 * it and whole on the pointer: where the change is, and the base it is read
+	 * against, which no length bounds. And the least where the change is gives
+	 * way to, the one part of the header that shrinks for the controls beside it
 	 */
-	--cr-where-widest: 10rem;
+	--cr-header-words-widest: 8rem;
 	--cr-where-least: 4rem;
 	/*
 	 * A field (lib/ui/field.ts): the tallest one being written in grows with
