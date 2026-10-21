@@ -152,7 +152,13 @@ export default {
 			files: ['src/styles/less-motion.css'],
 			rules: {
 				'rule-selector-property-disallowed-list': null,
-				'declaration-property-value-allowed-list': { '/^(transition|animation)$/': ['none'] }
+				'property-disallowed-list': ['/^(transition|animation)-/'],
+				'declaration-property-value-allowed-list': {
+					'z-index': A_LAYER,
+					'box-shadow': A_SHADOW,
+					...THE_SCALES_WORDS,
+					'/^(transition|animation)$/': ['none']
+				}
 			}
 		}
 	]

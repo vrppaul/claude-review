@@ -122,7 +122,6 @@
 }
 /* An icon alone: as wide as it is tall */
 .cr-ui-icon-button {
-	position: relative;
 	aspect-ratio: 1;
 	padding-inline: 0;
 }

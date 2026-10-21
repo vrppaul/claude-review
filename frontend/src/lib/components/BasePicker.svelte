@@ -89,7 +89,7 @@
 			size="sm"
 			testId="base-picker"
 			data-tour={tourStop('review-base')}
-			title="What the working tree is compared against: {review.diff.phrase}"
+			title="What the working tree is compared against"
 		>
 			<Icon name="compare" size="xs" />
 			<!-- What it is read against, named as the bases listed are: in the code's face, given way to its mark and

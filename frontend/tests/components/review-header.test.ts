@@ -149,31 +149,41 @@ describe('a review that cannot be reached', () => {
 
 describe('the review header', () => {
 	it('says where the change is: the repository over its branch or its commit, else what is reviewed', () => {
-		// Each kind of review, and the lines its header says where the change is in
-		const reviews: { facts: Partial<ReviewResponse>; lines: string[] }[] = [
+		// Each kind of review, the lines its header says where the change is in, and what the pointer says of it
+		const reviews: { facts: Partial<ReviewResponse>; lines: string[]; pointer: string }[] = [
 			{
 				facts: { mode: 'diff', repository: { name: 'shop', checkout: { at: 'branch', branch: 'feature/cart' } } },
-				lines: ['shop', 'feature/cart']
+				lines: ['shop', 'feature/cart'],
+				pointer: 'shop, on the branch feature/cart'
 			},
 			{
 				facts: { mode: 'diff', repository: { name: 'shop', checkout: { at: 'commit', commit: 'a1b2c3d' } } },
-				lines: ['shop', 'a1b2c3d']
+				lines: ['shop', 'a1b2c3d'],
+				pointer: 'shop, at the commit a1b2c3d, on no branch'
 			},
-			{ facts: { mode: 'files', repository: null, title: 'plan.md, notes.md' }, lines: ['plan.md, notes.md'] },
+			{
+				facts: { mode: 'files', repository: null, title: 'plan.md, notes.md' },
+				lines: ['plan.md, notes.md'],
+				pointer: 'plan.md, notes.md'
+			},
 			{
 				facts: { mode: 'transcript', repository: null, title: 'Conversation 63b8ade4' },
-				lines: ['Conversation 63b8ade4']
+				lines: ['Conversation 63b8ade4'],
+				pointer: 'Conversation 63b8ade4'
 			}
 		];
 
 		const said = reviews.map(({ facts }) => {
-			const { container } = render(ReviewHeader, inReview(openReview({ files: [file], facts, diff: READ_WHOLE })));
-			return within(container)
-				.getAllByTestId('where-line')
-				.map((line) => line.textContent?.trim());
+			const where = within(
+				render(ReviewHeader, inReview(openReview({ files: [file], facts, diff: READ_WHOLE }))).container
+			);
+			return {
+				lines: where.getAllByTestId('where-line').map((line) => line.textContent?.trim()),
+				pointer: where.getByTestId('where-the-change-is').title
+			};
 		});
 
-		expect(said).toEqual(reviews.map(({ lines }) => lines));
+		expect(said).toEqual(reviews.map(({ lines, pointer }) => ({ lines, pointer })));
 	});
 
 	it('offers comment navigation only once there is a comment', async () => {

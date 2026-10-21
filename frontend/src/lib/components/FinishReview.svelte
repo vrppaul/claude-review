@@ -155,8 +155,8 @@
 			{:else if inRounds}
 				<!-- The round's number gives way last, with the branch, kept in Send's name; Send keeps its word and its
 					count -->
-				Send
-				<span class="max-cr-header-repository:sr-only">round {review.rounds.current}</span>
+				<!-- One run of words, as the board writes it, a word's space before the round -->
+				<span>Send <span class="max-cr-header-repository:sr-only">round {review.rounds.current}</span></span>
 			{:else}
 				Finish review
 			{/if}
