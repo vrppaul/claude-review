@@ -10,6 +10,7 @@
 	} from '$lib/review/story-reading';
 	import Dot from '$lib/ui/Dot.svelte';
 	import Heading from '$lib/ui/Heading.svelte';
+	import Icon from '$lib/ui/Icon.svelte';
 	import Row from '$lib/ui/Row.svelte';
 	import SideColumn from '$lib/ui/SideColumn.svelte';
 	import { fileStats } from '$lib/utils/file-stats';
@@ -17,8 +18,10 @@
 	import ChangedLines from './ChangedLines.svelte';
 	import ContentsEntry from './ContentsEntry.svelte';
 	import FileRow from './FileRow.svelte';
+	import { COLUMN_KEY } from './keymap';
 	import {
 		alsoInShort,
+		chapterAmong,
 		chapterEntitled,
 		chapterNumber,
 		chaptersCounted,
@@ -38,6 +41,8 @@
 	const stepRead = $derived(review.stepBeingRead);
 	// The parts above the one being read; and how many chapters of them, the overview being no chapter
 	const scrolledPast = $derived(review.partsScrolledPast);
+	// The chapter being read, if a chapter is: its rail names it once the contents are put away
+	const chapterRead = $derived(contents.chapters.find((chapter) => chapter.part === review.parts.beingRead));
 	const chaptersRead = $derived(contents.chapters.filter((chapter) => scrolledPast.has(chapter.part)).length);
 	// How many changed lines no step told when the story was told, and how many none tells now: said beside what
 	// is left out where the review says a round changed how many. Null otherwise, when neither is said
@@ -52,9 +57,13 @@
 	{@const story = held.story}
 	<SideColumn
 		column={review.layout.storyContents}
+		side="left"
 		landmark="nav"
 		label="Story contents"
 		called="the contents"
+		resizing="Resize the contents"
+		key={COLUMN_KEY}
+		holds="list"
 		testIds={{
 			column: 'contents',
 			head: 'contents-head',
@@ -67,6 +76,19 @@
 			<Heading tag="h2" heads="pane" testId="contents-count">
 				{chaptersCounted(contents.chapters.length, chaptersRead)}
 			</Heading>
+		{/snippet}
+		<!-- The story, and the chapter being read in its node as the contents draw it, where a chapter is -->
+		{#snippet marks()}
+			<Icon name="story" size="sm" />
+			{#if chapterRead}
+				<span
+					data-testid="contents-rail-chapter"
+					title={chapterAmong(chapterRead.place, contents.chapters.length)}
+					class="cr-contents-node cr-contents-node-current"
+				>
+					{chapterNumber(chapterRead.place)}
+				</span>
+			{/if}
 		{/snippet}
 
 		<ol data-testid="contents-parts">

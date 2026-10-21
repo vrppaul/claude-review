@@ -134,6 +134,11 @@ export function chapterEntitled(place: number, title: string): string {
 	return `${chapterByNumber(place)}${BEFORE_A_TITLE}${title}`;
 }
 
+/** Which of a story's chapters is being read, as the rail of its contents put away says: "Chapter 2 of 5". */
+export function chapterAmong(place: number, chapters: number): string {
+	return `${chapterByNumber(place)} ${OUT_OF} ${chapters}`;
+}
+
 /** Which of its chapter's steps a step is, as the bar a chapter is read under says: "step 2 of 5". */
 export function stepAmong(stepPlace: number, steps: number): string {
 	return `${STEPS.one} ${stepPlace + FIRST_NUMBER} ${OUT_OF} ${steps}`;

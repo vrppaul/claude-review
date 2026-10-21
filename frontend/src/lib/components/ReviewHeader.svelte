@@ -1,10 +1,8 @@
 <script lang="ts">
-	import { tourStop } from '$lib/guide/tour';
 	import { useReview } from '$lib/review/context';
 	import type { Ending } from '$lib/review/server-link.svelte';
 	import Bar from '$lib/ui/Bar.svelte';
 	import Button from '$lib/ui/Button.svelte';
-	import Dot from '$lib/ui/Dot.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import IconButton from '$lib/ui/IconButton.svelte';
 	import type { IconName } from '$lib/ui/icons';
@@ -13,8 +11,6 @@
 	import BasePicker from './BasePicker.svelte';
 	import FinishReview from './FinishReview.svelte';
 	import HelpMenu from './HelpMenu.svelte';
-	import { PANEL_TOGGLE_ROLE } from './keymap';
-	import PresenceDot from './PresenceDot.svelte';
 	import RepliesMenu from './RepliesMenu.svelte';
 	import SettingsMenu from './SettingsMenu.svelte';
 	import ViewSwitch from './ViewSwitch.svelte';
@@ -119,23 +115,6 @@
 				</IconButton>
 			</div>
 		{/if}
-
-		<Button
-			tone="quiet"
-			size="sm"
-			testId="toggle-panel"
-			data-role={PANEL_TOGGLE_ROLE}
-			data-tour={tourStop('agent-panel-toggle')}
-			aria-pressed={review.layout.agentPanel.open}
-			title="The agent panel — talk about the review, not one line of it"
-			onclick={() => review.layout.agentPanel.toggle()}
-		>
-			<PresenceDot />
-			Agent
-			{#if review.layout.agentPanel.unread > 0}
-				<Dot tone="unread" testId="panel-unread" /><span class="sr-only">new answers</span>
-			{/if}
-		</Button>
 
 		<FinishReview />
 

@@ -224,6 +224,20 @@
   one under the other. A question before something is lost, "Delete this
   comment?" or "Discard this comment?", stands on one line with its two
   answers. The bases stand on the edges of the field that filters them.
+- **Both side columns are put away alike.** The agent's column is put
+  away by the toggle at its head's end, as the tree and a story's contents
+  are by the toggle at their head's start, and each narrows over 200 ms to
+  a rail where it stood, 48 px, which brings it back pressed anywhere down
+  it, "Show the file tree (f)", "Show the contents (f)" or "Show the agent
+  (c)" on the pointer, the keyboard going with it. Each toggle draws the
+  state its column is in, a window with the column shaded or narrowed to a
+  strip. The rail says what is behind it: the tree how many files changed,
+  the contents the chapter being read, the agent whether it is there and
+  at work, and how many of its replies wait unread. The header's Agent
+  button is gone, and with it the review that was over leaving the
+  keyboard on nothing once the panel was put away. The heads of the row
+  under the header, a column's bar, a rail's and a file's, stand one
+  height, 40 px.
 - **One ladder of colour.** Each colour that says whose a thing is or
   what it means — the reader's blue, the agent's violet, the diff's green
   and red, what is done, a warning, an error, and the ink of the words —

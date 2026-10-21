@@ -196,6 +196,12 @@
 	--cr-chapter-bar-height: calc(var(--cr-button-sm) + --spacing(4) + var(--cr-line));
 	/* The review's header at its least: one row of its controls, which never wraps */
 	--cr-header-least-height: 3rem;
+	/*
+	 * Every head on the row under the header — a side column's bar, the head
+	 * of a column's rail, a file's bar: a small button with two steps of room
+	 * above and below it, its line drawn inside
+	 */
+	--cr-head-row: calc(var(--cr-button-xs) + --spacing(4));
 
 	/*
 	 * Whatever breathes while the agent works on it — a dot (lib/ui Dot), a
@@ -254,6 +260,8 @@
 	--cr-shadow-hanging: 0 8px 24px rgb(0 0 0 / 0.25);
 	/* The card's ground in a ring round an avatar in a thread, which parts it from the spine behind it */
 	--cr-shadow-avatar-ring: 0 0 0 3px var(--cr-ground-card);
+	/* The column's ground in a ring round what stands on an avatar's corner on a rail, which parts it from the avatar */
+	--cr-shadow-mark-ring: 0 0 0 var(--cr-line-strong) var(--cr-ground-column);
 
 	/*
 	 * A card stands one step off the reading ground, as the side columns do,
@@ -375,6 +383,10 @@
 	--cr-on-ink: var(--color-base-100);
 	--cr-selected: var(--cr-ink-tint);
 	--cr-state-change: 150ms;
+	/* A column put away to its rail or brought back: its width changes over this */
+	--cr-column-change: 200ms;
+	/* What comes in shows over this: the marks of a column's rail, once it is put away */
+	--cr-coming-in: 120ms;
 	/*
 	 * What the reader marked in the code, the lines they picked to comment
 	 * on: theirs, so in their mark, on its tint with its edge at the row's
@@ -415,8 +427,14 @@
 	--cr-diff-least-width: 36rem;
 	--cr-side-column-least-width: 10rem;
 	--cr-panel-least-width: 17.5rem;
-	/* What a side column put away leaves standing beside the diff, at every width */
-	--cr-side-column-rail-width: 1.5rem;
+	/*
+	 * What a column put away leaves standing where it stood, at every width:
+	 * the column narrowed to its toggle and three steps either side, so the
+	 * toggle keeps its spot
+	 */
+	--cr-column-rail-width: calc(var(--cr-button-xs) + --spacing(6));
+	/* And the rails of the two columns, one on each side of what is read */
+	--cr-both-rails-width: calc(var(--cr-column-rail-width) * 2);
 	/* A column's edge, there to be dragged: a target as wide as this, centred on the edge */
 	--cr-grip-width: 0.375rem;
 	/* An image the reader pasted into the panel: small enough to keep the words beside it in view */

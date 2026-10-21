@@ -244,6 +244,17 @@ describe('the contents beside a story, as the reader scrolls', () => {
 		]);
 	});
 
+	it('names on the rail they leave the chapter being read', async () => {
+		const user = userEvent.setup();
+		const [, theEnd] = screen.getAllByTestId('story-chapter');
+		scrollTo(theEnd);
+		flushSync();
+
+		await user.click(screen.getByTestId('hide-contents'));
+
+		expect(screen.getByTestId('contents-rail-chapter').textContent).toBe('2');
+	});
+
 	it('marks the file of the step being read, in the chapter that tells that step and in no other', () => {
 		const [theBeginnings] = screen.getAllByTestId('story-chapter');
 		const [ofLineOne] = screen.getAllByTestId('story-piece');

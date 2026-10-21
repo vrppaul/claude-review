@@ -15,7 +15,7 @@ import type { Review } from '$lib/review/review.svelte';
 import { inReview, openReview } from '../review';
 import { settled } from '../settled';
 import { SEND_LIMITS, KEPT_AS, keepingImages, oversizedScreenshot, paste, screenshot } from '../pasted-images';
-import { chatPush } from '../pushes';
+import { chatPush, handOverNext } from '../pushes';
 
 const TITLE = 'claude-review: uncommitted changes';
 // The longest text a test's server takes, short enough to type past
@@ -781,5 +781,54 @@ describe('a message on its way', () => {
 		await user.keyboard('{Control>}{Shift>}{Enter}{/Shift}{/Control}');
 
 		expect(server.requestsTo('POST /api/message')).toHaveLength(0);
+	});
+});
+
+describe('putting the agent away', () => {
+	it('leaves the keyboard on the rail it leaves where it stood', async () => {
+		const user = userEvent.setup();
+		const { getByTestId } = render(AgentPanel, inReview(answeredReview()));
+
+		await user.click(getByTestId('close-panel'));
+
+		expect(document.activeElement).toBe(getByTestId('show-panel'));
+	});
+
+	it('counts on its rail what the agent said while it was away', async () => {
+		const user = userEvent.setup();
+		const review = answeredReview();
+		const { getByTestId } = render(AgentPanel, inReview(review));
+		await user.click(getByTestId('close-panel'));
+
+		handOverNext(review, chatPush('Done.'));
+		flushSync();
+
+		expect(getByTestId('panel-rail-unread').textContent).toBe('1');
+	});
+
+	it('is brought back by its rail, with what was said meanwhile', async () => {
+		const user = userEvent.setup();
+		const review = answeredReview();
+		const { getByTestId } = render(AgentPanel, inReview(review));
+		await user.click(getByTestId('close-panel'));
+		handOverNext(review, chatPush('Done.'));
+
+		await user.click(getByTestId('show-panel'));
+
+		expect(getByTestId('panel-input')).toBeTruthy();
+		expect(getByTestId('agent-panel').textContent).toContain('Done.');
+	});
+
+	it('counts afresh once it was brought back', async () => {
+		const user = userEvent.setup();
+		const review = answeredReview();
+		const { getByTestId, queryByTestId } = render(AgentPanel, inReview(review));
+		await user.click(getByTestId('close-panel'));
+		handOverNext(review, chatPush('Done.'));
+		await user.click(getByTestId('show-panel'));
+
+		await user.click(getByTestId('close-panel'));
+
+		expect(queryByTestId('panel-rail-unread')).toBeNull();
 	});
 });

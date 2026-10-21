@@ -13,6 +13,8 @@ export interface IconShape {
 	viewBox: string;
 	paths: readonly string[];
 	drawn: HowDrawn;
+	/** What of the drawing is laid in a shade of its colour, under its lines: the column a window holds. */
+	shaded?: readonly string[];
 }
 
 const FILLED: HowDrawn = { kind: 'filled' };
@@ -20,6 +22,8 @@ const FILLED: HowDrawn = { kind: 'filled' };
 const TRACED: HowDrawn = { kind: 'traced', width: 1.5 };
 // The finer line of what can be done to a thread, at the size it is drawn at there
 const TRACED_FINE: HowDrawn = { kind: 'traced', width: 1.4 };
+// A window with rounded corners, which a side column's toggle draws a column in
+const WINDOW = 'M3.5 3h9a1.5 1.5 0 0 1 1.5 1.5v7a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 11.5v-7A1.5 1.5 0 0 1 3.5 3z';
 
 export const ICONS = {
 	// An arrow coming round to where it began: a round of the review, and the one a story was told in
@@ -112,6 +116,22 @@ export const ICONS = {
 		drawn: TRACED
 	},
 	plus: { viewBox: '0 0 20 20', paths: ['M10 3v14M3 10h14'], drawn: TRACED },
+	// A window with a column down one side, shaded while it stands open, or narrowed to a strip with an arrow the
+	// way it comes back in: a side column's toggle, drawing the state the column is in
+	'column-left-open': {
+		viewBox: '0 0 16 16',
+		paths: [WINDOW, 'M6.5 3v10'],
+		shaded: ['M3.5 3h3v10h-3A1.5 1.5 0 0 1 2 11.5v-7A1.5 1.5 0 0 1 3.5 3z'],
+		drawn: TRACED_FINE
+	},
+	'column-left-put-away': { viewBox: '0 0 16 16', paths: [WINDOW, 'M4.5 3v10', 'M8 6l2 2-2 2'], drawn: TRACED_FINE },
+	'column-right-open': {
+		viewBox: '0 0 16 16',
+		paths: [WINDOW, 'M9.5 3v10'],
+		shaded: ['M9.5 3h3a1.5 1.5 0 0 1 1.5 1.5v7a1.5 1.5 0 0 1-1.5 1.5h-3z'],
+		drawn: TRACED_FINE
+	},
+	'column-right-put-away': { viewBox: '0 0 16 16', paths: [WINDOW, 'M11.5 3v10', 'M8 6l-2 2 2 2'], drawn: TRACED_FINE },
 	settings: {
 		viewBox: '0 0 24 24',
 		paths: [

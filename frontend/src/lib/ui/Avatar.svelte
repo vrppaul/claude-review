@@ -24,5 +24,6 @@
 	const drawn = $derived(DRAWN_AS[speaker]);
 </script>
 
-<!-- Who says a turn, round (lib/ui/avatar.ts): as wide as its turn's first column (Turn), which lays out round it -->
+<!-- Who says a turn, round (lib/ui/avatar.ts): as wide as the room it stands in, which lays out round it: its turn's
+	first column (Turn), or the mark on a rail of who is behind it (SpeakerMark) -->
 <span class={['cr-ui-avatar', drawn.look]}><Icon name={drawn.icon} size="xs" /></span>

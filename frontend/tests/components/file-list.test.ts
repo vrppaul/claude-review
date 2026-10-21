@@ -299,7 +299,17 @@ describe('putting the tree away', () => {
 
 		await user.click(getByTestId('hide-sidebar'));
 
-		expect(getByRole('button', { name: 'Bring the file tree back' })).toBe(getByTestId('show-sidebar'));
+		expect(getByRole('button', { name: 'Show the file tree' })).toBe(getByTestId('show-sidebar'));
+	});
+
+	it('counts the files of the change on the rail it leaves', async () => {
+		const user = userEvent.setup();
+		const review = openReview({ files: diffFiles });
+		const { getByTestId } = render(FileList, inReview(review));
+
+		await user.click(getByTestId('hide-sidebar'));
+
+		expect(getByTestId('sidebar-rail-count').textContent).toBe(String(diffFiles.length));
 	});
 
 	it('leaves the rail where the tour looks for the tree', async () => {

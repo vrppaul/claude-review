@@ -17,6 +17,7 @@
 	import SideColumn from '$lib/ui/SideColumn.svelte';
 	import ChangedLines from './ChangedLines.svelte';
 	import FileRow from './FileRow.svelte';
+	import { COLUMN_KEY } from './keymap';
 
 	/** What the tree lists, in words: counted in its heading, looked for in its filter. */
 	interface Listed extends CountedWords {
@@ -133,12 +134,17 @@
 	{/if}
 {/snippet}
 
-<!-- The files of the review, in the column beside them: the frame, its width and being put away are the column's -->
+<!-- The files of the review, in the column beside them: the frame, its width and being put away are the column's;
+	its rail counts the files -->
 <SideColumn
 	column={layout}
+	side="left"
 	landmark="aside"
 	label="Files"
 	called="the file tree"
+	resizing="Resize the file tree"
+	key={COLUMN_KEY}
+	holds="list"
 	data-tour={tourStop('file-tree')}
 	testIds={{
 		column: 'sidebar',
@@ -150,6 +156,10 @@
 >
 	{#snippet heading()}
 		<Heading tag="h2" heads="pane" testId="sidebar-heading">{headedBy}</Heading>
+	{/snippet}
+	{#snippet marks()}
+		<Icon name="files" size="xs" />
+		<span data-testid="sidebar-rail-count" class="text-2xs font-semibold">{review.diff.files.length}</span>
 	{/snippet}
 
 	<div class="mb-2">

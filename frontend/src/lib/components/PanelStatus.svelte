@@ -1,14 +1,7 @@
 <script lang="ts">
-	import { focusWhatCarries } from '$lib/dom/keyboard';
-	import { formatWeight } from '$lib/review/weight';
 	import { useReview } from '$lib/review/context';
-	import Bar from '$lib/ui/Bar.svelte';
-	import Icon from '$lib/ui/Icon.svelte';
-	import IconButton from '$lib/ui/IconButton.svelte';
-	import Tag from '$lib/ui/Tag.svelte';
 	import { AGENT } from '$lib/utils/speakers';
 	import { timeAgo } from '$lib/utils/time';
-	import { PANEL_TOGGLE_ROLE } from './keymap';
 	import PresenceDot from './PresenceDot.svelte';
 
 	const review = useReview();
@@ -22,54 +15,25 @@
 	function since(at: number): string {
 		return timeAgo(at, review.clock.now);
 	}
-
-	/** How long ago the agent reported its context, if it ever has. */
-	function reportedAgo(at: number | null): string {
-		return at === null ? '' : since(at);
-	}
-
-	/**
-	 * The panel goes, and the button pressed with it: the keyboard goes to
-	 * the header's button that brings the panel back.
-	 */
-	function putAway() {
-		review.layout.agentPanel.setOpen(false);
-		focusWhatCarries(PANEL_TOGGLE_ROLE);
-	}
 </script>
 
-<Bar heads="column" testId="panel-status">
-	<PresenceDot />
-	<span class={['text-sm font-semibold', !attached && 'cr-muted']}>
-		{attached ? 'Agent' : 'Waiting for the agent'}
+<!-- What heads the agent's column: whether the agent is there, which model it is, and how long ago it last said
+	anything or began what it is at -->
+<PresenceDot />
+<span class={['text-sm font-semibold', !attached && 'cr-muted']}>
+	{attached ? 'Agent' : 'Waiting for the agent'}
+</span>
+{#if review.answerer.status.model}
+	<span data-testid="agent-model" class="cr-faint font-mono text-xs">
+		{review.answerer.status.model}
 	</span>
-	{#if review.answerer.status.model}
-		<span data-testid="agent-model" class="cr-faint font-mono text-xs">
-			{review.answerer.status.model}
-		</span>
-	{/if}
-	<div class="flex-1"></div>
-	{#if working}
-		<span class="cr-faint text-xs">{since(working.at)}</span>
-	{:else if lastAnswer !== undefined}
-		<!-- Said, not answered: much of what the agent says, nobody asked for -->
-		<span data-testid="agent-last-answer" class="cr-faint text-xs">
-			said {since(lastAnswer)}
-		</span>
-	{/if}
-	<IconButton tone="quiet" size="xs" shape="square" label="Hide the agent panel" testId="close-panel" onclick={putAway}>
-		<Icon name="chevron" size="xs" pointing="right" />
-	</IconButton>
-</Bar>
-
-<!-- Two numbers, told apart: one this side measures, one the agent reports -->
-<div class="flex shrink-0 flex-wrap items-center gap-2 border-b border-base-300 px-3 py-1.5">
-	<Tag tone="quiet" testId="review-weight" title="What handing this review over costs">
-		review {formatWeight(review.weight)} tokens
-	</Tag>
-	{#if review.answerer.status.context}
-		<Tag tone="quiet" testId="agent-context">
-			context {review.answerer.status.context} · as reported {reportedAgo(review.answerer.status.at)}
-		</Tag>
-	{/if}
-</div>
+{/if}
+<div class="flex-1"></div>
+{#if working}
+	<span class="cr-faint text-xs">{since(working.at)}</span>
+{:else if lastAnswer !== undefined}
+	<!-- Said, not answered: much of what the agent says, nobody asked for -->
+	<span data-testid="agent-last-answer" class="cr-faint text-xs">
+		said {since(lastAnswer)}
+	</span>
+{/if}

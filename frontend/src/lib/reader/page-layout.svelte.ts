@@ -96,8 +96,8 @@ class StoredWidth {
 }
 
 /**
- * A column beside what is read, which the reader puts away and brings back:
- * on screen or not, and how wide.
+ * A column beside what is read, which the reader puts away to its rail and
+ * brings back, on either side: on screen or not, and how wide.
  */
 class PutAwayColumn {
 	readonly #openKey: string;
@@ -106,15 +106,16 @@ class PutAwayColumn {
 
 	/**
 	 * @param openKey the name whether it is on screen is kept under
-	 * @param width how wide it is: the width of every column beside what is read, whichever view it stands in
+	 * @param width how wide it is: a width it may share, as the tree and a story's contents do, whichever view it stands in
+	 * @param openUnchosen whether it is on screen before the reader has opened or shut it themselves
 	 */
-	constructor(openKey: string, width: StoredWidth) {
+	constructor(openKey: string, width: StoredWidth, openUnchosen: boolean) {
 		this.#openKey = openKey;
-		this.#open = $state(readFlag(openKey, screenReaches(PUT_AWAY_BESIDE)));
+		this.#open = $state(readFlag(openKey, openUnchosen));
 		this.#width = width;
 	}
 
-	/** Whether the column is on screen. Put away, it gives its room back. */
+	/** Whether the column is on screen. Put away, it gives its room back to what is read, but for its rail. */
 	get open(): boolean {
 		return this.#open;
 	}
@@ -131,13 +132,23 @@ class PutAwayColumn {
 		return this.#width.bounds.max;
 	}
 
+	/** The reader puts it away or brings it back, which is kept as their choice. */
+	setOpen(next: boolean): void {
+		this.#open = next;
+		writeChoice(this.#openKey, next);
+	}
+
 	toggle(): void {
-		this.#open = !this.#open;
-		writeChoice(this.#openKey, this.#open);
+		this.setOpen(!this.#open);
 	}
 
 	setWidth(next: number): void {
 		this.#width.set(next);
+	}
+
+	/** Bring it on screen of its own accord, the reader having chosen nothing: nothing is kept. */
+	protected comeOnScreen(): void {
+		this.#open = true;
 	}
 }
 
@@ -152,7 +163,7 @@ class FileTreeLayout extends PutAwayColumn {
 
 	/** @param width how wide it is, as wide as a story's contents */
 	constructor(width: StoredWidth) {
-		super(FILE_TREE_OPEN_KEY, width);
+		super(FILE_TREE_OPEN_KEY, width, screenReaches(PUT_AWAY_BESIDE));
 	}
 
 	/** What the reader typed into the tree's filter. */
@@ -175,62 +186,38 @@ class FileTreeLayout extends PutAwayColumn {
 }
 
 /**
- * The agent panel: open or shut, how wide, and how many answers landed
- * while it was shut, so the header can say so.
+ * The agent panel: a column put away and brought back as the tree is, and
+ * how many answers landed while it was put away, so its rail can say so.
  */
-class AgentPanelLayout {
-	#open: boolean;
+class AgentPanelLayout extends PutAwayColumn {
 	// Until the reader has said whether they want the panel, it opens itself
 	// when an agent turns up and stays out of the way otherwise: an empty
 	// panel beside a review nobody is answering is a column of nothing
-	#chosen: boolean;
+	#chosen = readChoice<PanelChoice>(AGENT_PANEL_OPEN_KEY, PANEL_CHOICES, 'unset') !== 'unset';
 	#unread = $state(0);
 	// The cursor was asked into the panel's field, which has not taken it yet:
 	// the field may not be drawn until the panel opens
 	#inputWanted = $state(false);
-	readonly #width = new StoredWidth(AGENT_PANEL_WIDTH_KEY, AGENT_PANEL_WIDTH);
 
 	constructor() {
-		const stored = readChoice<PanelChoice>(AGENT_PANEL_OPEN_KEY, PANEL_CHOICES, 'unset');
-		this.#open = $state(stored === 'on');
-		this.#chosen = stored !== 'unset';
+		super(AGENT_PANEL_OPEN_KEY, new StoredWidth(AGENT_PANEL_WIDTH_KEY, AGENT_PANEL_WIDTH), false);
 	}
 
-	get open(): boolean {
-		return this.#open;
-	}
-
-	get width(): number {
-		return this.#width.value;
-	}
-
-	get least(): number {
-		return this.#width.bounds.min;
-	}
-
-	get most(): number {
-		return this.#width.bounds.max;
-	}
-
-	/** Answers that landed while the panel was shut. */
+	/** Answers that landed while the panel was put away. */
 	get unread(): number {
 		return this.#unread;
 	}
 
-	setOpen(next: boolean): void {
-		this.#open = next;
+	/** The reader's choice, from which on it no longer opens itself; brought back, what landed meanwhile is read. */
+	override setOpen(next: boolean): void {
+		super.setOpen(next);
 		this.#chosen = true;
-		writeChoice(AGENT_PANEL_OPEN_KEY, next);
 		if (next) this.#unread = 0;
-	}
-
-	toggle(): void {
-		this.setOpen(!this.#open);
 	}
 
 	/** An agent has turned up; show the panel unless the reader shut it, or it would lie over the diff. */
 	offer(): void {
-		if (!this.#chosen && screenReaches(AGENT_PANEL_BESIDE)) this.#open = true;
+		if (!this.#chosen && screenReaches(AGENT_PANEL_BESIDE)) this.comeOnScreen();
 	}
 
 	/** Whether the cursor is waiting to be put in the panel's field. */
@@ -250,11 +237,7 @@ class AgentPanelLayout {
 
 	/** An answer landed in the conversation; count it if nobody can see it. */
 	noteAnswer(): void {
-		if (!this.#open) this.#unread += 1;
-	}
-
-	setWidth(next: number): void {
-		this.#width.set(next);
+		if (!this.open) this.#unread += 1;
 	}
 }
 
@@ -292,7 +275,11 @@ export class PageLayout {
 	readonly #sideColumnWidth = new StoredWidth(SIDE_COLUMN_WIDTH_KEY, SIDE_COLUMN_WIDTH);
 	readonly fileTree = new FileTreeLayout(this.#sideColumnWidth);
 	/** The contents beside a story: put away by itself, whatever the tree of files is, and as wide as it. */
-	readonly storyContents = new PutAwayColumn(STORY_CONTENTS_OPEN_KEY, this.#sideColumnWidth);
+	readonly storyContents = new PutAwayColumn(
+		STORY_CONTENTS_OPEN_KEY,
+		this.#sideColumnWidth,
+		screenReaches(PUT_AWAY_BESIDE)
+	);
 	readonly agentPanel = new AgentPanelLayout();
 	readonly contentView = new ContentViewChoice();
 	readonly readingView = new ReadingViewChoice();

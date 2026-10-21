@@ -168,9 +168,6 @@ tests. Remove items when done — don't check them off.
       it lands on the first line of the story, and from a file's header
       kept over the middle of its file, on that file's first line. Read in
       the code, not looked at in a browser.
-- [ ] `fix(ui)`: in a review that is over, the agent panel put away by its
-      own button leaves the keyboard on nothing: the header then draws no
-      control to take it (`ReviewHeader.svelte`).
 - [ ] `refactor(ui)`: whose numbers a drawing's lines carry is named
       `'the-reviews'`, `'a-narrower-bases'` (`anchors/numbering.ts`):
       possessives with the apostrophe gone.
@@ -289,10 +286,6 @@ of it is built yet.
       (`services/text_files.py`) into `repositories/`, behind interfaces, the
       way `ImageService` keeps policy and `DirectoryImageStore` touches the
       disk. Both read files themselves today.
-- [ ] `refactor(ui)`: a column's width, its least and its most, and
-      `setWidth` are written out twice in `reader/page-layout.svelte.ts`:
-      for a column the reader puts away (`PutAwayColumn`) and for the
-      agent panel.
 - [ ] `refactor(server)`: three routes call two methods of the `Review`
       where the rule is that a route calls one (`.claude/rules/api.md`):
       GET /api/review (`presentation/routers/page.py:81-82`), GET

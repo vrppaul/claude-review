@@ -778,14 +778,23 @@
 .cr-ui-bar-page {
 	min-height: var(--cr-header-least-height);
 }
+/*
+ * A section's and a column's, the heads of the row under the header: one
+ * height, a small button's with its room, its line inside; a section's
+ * controls wrapped onto more rows keep that room above and below them
+ */
+.cr-ui-bar-section,
+.cr-ui-bar-column {
+	min-height: var(--cr-head-row);
+}
 .cr-ui-bar-section {
 	flex-wrap: wrap;
 	top: var(--cr-top-room, 0);
 	z-index: var(--cr-layer-over-content);
+	padding-block: calc((var(--cr-head-row) - var(--cr-button-xs) - var(--cr-line)) / 2);
 }
 .cr-ui-bar-column {
 	gap: --spacing(2);
-	min-height: calc(var(--cr-button-xs) + --spacing(3));
 	padding-inline: --spacing(3);
 }
 .cr-ui-bar-chapter {
@@ -796,36 +805,42 @@
 }
 
 /*
- * A column beside what is read (Column, lib/ui/column.ts): as wide as the
- * reader left it, giving up width to what is read down to the least it reads
- * at, on the page's own ground and ruled off from what is read; what the
- * reader writes in it at its foot. On a screen too narrow to keep it beside
- * what is read, it lies over that instead, at the breakpoints of tokens.css
+ * The room a column beside what is read stands in (SideColumn,
+ * lib/ui/column.ts): as wide as the reader left the column, giving up width
+ * to what is read down to the least it reads at, or as narrow as its rail
+ * once it is put away, on the columns' own ground and ruled off from what is
+ * read. Its width changes over --cr-column-change, but while the reader
+ * drags its edge, which it would trail. On a screen too narrow to keep the
+ * column beside what is read, it lies over that instead, at the breakpoints
+ * of tokens.css; its rail stands beside it at every width
  */
-.cr-ui-column {
+.cr-ui-side-column {
 	position: relative;
 	display: flex;
-	flex-direction: column;
 	flex-shrink: 1;
 	min-height: 0;
 	width: var(--cr-column-width);
 	background: var(--cr-ground-column);
+	transition: width var(--cr-column-change) ease;
 }
-.cr-ui-column-left {
+.cr-ui-side-column:has(.cr-ui-grip:active) {
+	transition: none;
+}
+.cr-ui-side-column-left {
 	min-width: var(--cr-side-column-least-width);
 	border-right: var(--cr-line) solid var(--color-base-300);
 }
-.cr-ui-column-right {
+.cr-ui-side-column-right {
 	min-width: var(--cr-panel-least-width);
 	border-left: var(--cr-line) solid var(--color-base-300);
 }
-.cr-ui-column-foot {
+.cr-ui-side-column-away {
 	flex-shrink: 0;
-	padding: --spacing(2) --spacing(3);
-	border-top: var(--cr-line) solid var(--color-base-300);
+	width: var(--cr-column-rail-width);
+	min-width: var(--cr-column-rail-width);
 }
 @media (width < theme(--breakpoint-cr-side-column-beside)) {
-	.cr-ui-column-left {
+	.cr-ui-side-column-left:not(.cr-ui-side-column-away) {
 		position: absolute;
 		inset-block: 0;
 		left: 0;
@@ -835,7 +850,7 @@
 	}
 }
 @media (width < theme(--breakpoint-cr-panel-beside)) {
-	.cr-ui-column-right {
+	.cr-ui-side-column-right:not(.cr-ui-side-column-away) {
 		position: absolute;
 		inset-block: 0;
 		right: 0;
@@ -843,6 +858,48 @@
 		z-index: var(--cr-layer-column);
 		box-shadow: var(--cr-shadow-raised);
 	}
+}
+/*
+ * The column standing in its room: its head, what it holds and what the
+ * reader writes at its foot, coming in faded as its room widens
+ */
+.cr-ui-column {
+	position: relative;
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+	min-width: 0;
+	min-height: 0;
+	transition: opacity var(--cr-coming-in) ease;
+}
+@starting-style {
+	.cr-ui-column {
+		opacity: 0;
+	}
+}
+/* What heads it takes the room its toggle leaves */
+.cr-ui-column-heading {
+	display: flex;
+	flex: 1;
+	align-items: center;
+	gap: --spacing(2);
+	min-width: 0;
+}
+.cr-ui-column-list {
+	flex: 1;
+	min-height: 0;
+	padding: --spacing(3);
+}
+.cr-ui-column-parts {
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+	min-height: 0;
+}
+.cr-ui-column-foot {
+	flex-shrink: 0;
+	padding: --spacing(2) --spacing(3);
+	border-top: var(--cr-line) solid var(--color-base-300);
 }
 /* A column's edge, there to be dragged (EdgeGrip): on the edge the column grows towards, centred on it */
 .cr-ui-grip {
@@ -1047,6 +1104,12 @@
 .cr-ui-icon {
 	flex-shrink: 0;
 	transition: rotate var(--cr-state-change) ease;
+}
+/* What a drawing lays in a shade of its colour, under its lines: filled at the strength of an edge, no line round it */
+.cr-ui-icon-shaded {
+	fill: currentColor;
+	fill-opacity: var(--cr-strength-border);
+	stroke: none;
 }
 .cr-ui-icon-xs {
 	width: var(--text-xs);
@@ -1403,21 +1466,41 @@
 
 /*
  * What a column beside what is read leaves standing where it stood, put
- * away (ColumnRail): a strip as wide as the rail, from the column's head to
- * its foot, so the way back is wherever the reader reaches for it, its
- * chevron at the head; quiet, on the page's ground, ruled off from what is
- * read
+ * away (ColumnRail): the column narrowed, from its head to its foot, so the
+ * way back is wherever the reader reaches for it, the pointer lighting all
+ * of it. Its head is the column's own height, ruled off as the column's is,
+ * its toggle in the middle, where it stood in the open column's head; under
+ * it what is behind it, coming in once the column has narrowed, in muted ink
  */
 .cr-ui-column-rail {
 	display: flex;
+	flex: 1;
+	flex-direction: column;
+	align-items: center;
+	color: var(--cr-muted);
+}
+.cr-ui-column-rail-head {
+	display: flex;
 	flex-shrink: 0;
-	align-items: flex-start;
+	align-items: center;
 	justify-content: center;
-	width: var(--cr-side-column-rail-width);
+	align-self: stretch;
+	height: var(--cr-head-row);
+	border-bottom: var(--cr-line) solid var(--color-base-300);
+	color: var(--color-base-content);
+}
+.cr-ui-column-rail-marks {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: --spacing(3);
 	padding-top: --spacing(3);
-	border-right: var(--cr-line) solid var(--color-base-300);
-	background: var(--cr-ground-column);
-	color: var(--cr-faint);
+	transition: opacity var(--cr-coming-in) ease var(--cr-state-change);
+}
+@starting-style {
+	.cr-ui-column-rail-marks {
+		opacity: 0;
+	}
 }
 
 /*
@@ -1533,6 +1616,9 @@
 	align-items: center;
 	gap: --spacing(1);
 }
+.cr-ui-breathing-dots-stacked {
+	flex-direction: column;
+}
 
 /*
  * Who says a turn (Avatar, lib/ui/avatar.ts): round, as wide as the room it
@@ -1562,6 +1648,24 @@
 .cr-ui-avatar-unsaid {
 	background-color: var(--color-base-300);
 	color: var(--cr-faint);
+}
+/*
+ * Who is behind what is put away (SpeakerMark): their avatar at a turn's
+ * avatar size, and on its corner, at the bottom on the side words run to,
+ * what is said of them, ringed in the ground round it
+ */
+.cr-ui-speaker-mark {
+	position: relative;
+	display: inline-flex;
+	width: var(--cr-turn-avatar-size);
+}
+.cr-ui-speaker-mark-corner {
+	position: absolute;
+	right: 0;
+	bottom: 0;
+	display: flex;
+	border-radius: 50%;
+	box-shadow: var(--cr-shadow-mark-ring);
 }
 
 /*

@@ -191,10 +191,10 @@ describe('a row of the library', () => {
 		expect(getByTestId(TEST_ID).hasAttribute('aria-expanded')).toBe(false);
 	});
 
-	it('says what the rail a column put away leaves does, to whoever cannot see its chevron and under the pointer', () => {
-		const { getByTestId } = render(ColumnRail, { label: WORDS, testId: TEST_ID });
+	it('says what the rail a column put away leaves does, to whoever cannot see its toggle, and with its key under the pointer', () => {
+		const { getByTestId } = render(ColumnRail, { side: 'left', label: WORDS, key: 'f', testId: TEST_ID });
 
 		expect(getByTestId(TEST_ID).getAttribute('aria-label')).toBe(WORDS);
-		expect(getByTestId(TEST_ID).getAttribute('title')).toBe(WORDS);
+		expect(getByTestId(TEST_ID).getAttribute('title')).toBe(`${WORDS} (f)`);
 	});
 });

@@ -126,7 +126,6 @@ const DRAWING: Record<TourTarget, () => void | Promise<void>> = {
 	'awaited-answer': drawAwaitedQuestion,
 	answer: drawAnswer,
 	'agent-panel': drawAgentPanel,
-	'agent-panel-toggle': drawHeader,
 	send: drawHeader
 };
 

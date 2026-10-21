@@ -25,12 +25,11 @@ import type { Review } from '$lib/review/review.svelte';
  */
 export const HELP_BUTTON_ROLE = 'open-help';
 
-/**
- * What the header's button that opens and shuts the agent panel carries:
- * where the keyboard goes when the panel is put away by its own button,
- * which goes with it.
- */
-export const PANEL_TOGGLE_ROLE = 'toggle-panel';
+/** The key of the column beside what is read, the tree or a story's contents, as its rail says it. */
+export const COLUMN_KEY = 'f';
+
+/** The key that brings the agent's column on screen to talk to it, as its rail says it. */
+export const TALK_KEY = 'c';
 
 /** The chord that finishes the review, as the help and the hints beside its button write it. */
 export const FINISH_KEYS = 'Ctrl+Shift+Enter';
@@ -182,21 +181,27 @@ const KEYMAP: readonly KeyRow[] = [
 		views: EVERY_VIEW,
 		live: ALWAYS
 	},
-	{ keys: ['c'], does: 'Talk to the agent', presses: [alone('c', talkToAgent)], views: EVERY_VIEW, live: ALWAYS },
+	{
+		keys: [TALK_KEY],
+		does: 'Talk to the agent',
+		presses: [alone(TALK_KEY, talkToAgent)],
+		views: EVERY_VIEW,
+		live: ALWAYS
+	},
 	// The tree stands beside the files whatever the diff holds: of no file, it says so
 	{
-		keys: ['f'],
+		keys: [COLUMN_KEY],
 		does: 'Show or hide the file tree',
-		presses: [alone('f', (review) => review.layout.fileTree.toggle())],
+		presses: [alone(COLUMN_KEY, (review) => review.layout.fileTree.toggle())],
 		views: THE_FILES,
 		live: ALWAYS
 	},
 	// The same key in a story is its own column's: the contents, not the tree it does not draw.
 	// The contents stand beside a story's lines, and with none told there are none to put away
 	{
-		keys: ['f'],
+		keys: [COLUMN_KEY],
 		does: 'Show or hide the contents',
-		presses: [alone('f', (review) => review.layout.storyContents.toggle())],
+		presses: [alone(COLUMN_KEY, (review) => review.layout.storyContents.toggle())],
 		views: THE_STORY,
 		live: WHILE_LINES_ARE_DRAWN
 	},

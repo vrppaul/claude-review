@@ -2,9 +2,9 @@
 	import type { Snippet } from 'svelte';
 	import { focusWhatRemains } from '$lib/dom/keyboard';
 	import Bar from './Bar.svelte';
-	import Column from './Column.svelte';
-	import type { PutAway } from './column';
+	import { COLUMN_HOLDS, COLUMN_SIDES, type ColumnHolds, type ColumnSide, type PutAway } from './column';
 	import ColumnRail from './ColumnRail.svelte';
+	import EdgeGrip from './EdgeGrip.svelte';
 	import Icon from './Icon.svelte';
 	import IconButton from './IconButton.svelte';
 
@@ -20,26 +20,52 @@
 	interface Props {
 		/** Whether the column is on screen, and how wide the reader left it. */
 		column: PutAway;
+		side: ColumnSide;
 		/** What the column is to whoever goes through the page by its parts: something beside what is read, or a way through it. */
 		landmark: 'aside' | 'nav';
 		/** What that part of the page is called: "Files". */
 		label: string;
 		/** What its own controls call it: "the file tree". */
 		called: string;
+		/** What its grip resizes, said to whoever cannot see it: "Resize the file tree". */
+		resizing: string;
+		/** The key that brings it back, said on its rail: `f`. */
+		key: string;
 		/** The name the tour lights it by, on screen or put away, written with lib/guide/tour.ts's tourStop. */
 		'data-tour'?: string | undefined;
 		testIds: TestIds;
-		/** What heads the column, beside the way to put it away. */
+		holds: ColumnHolds;
+		/** What heads the column, beside the toggle that puts it away: it takes the room the toggle leaves. */
 		heading: Snippet;
+		/** What its rail says is behind it, once it is put away. */
+		marks?: Snippet | undefined;
 		children: Snippet;
+		/** What stands at its foot, ruled off from what is above it: what the reader writes there. */
+		foot?: Snippet | undefined;
 	}
 
-	let { column, landmark, label, called, 'data-tour': tour, testIds, heading, children }: Props = $props();
+	let {
+		column,
+		side,
+		landmark,
+		label,
+		called,
+		resizing,
+		key,
+		'data-tour': tour,
+		testIds,
+		holds,
+		heading,
+		marks,
+		children,
+		foot
+	}: Props = $props();
 
+	const drawn = $derived(COLUMN_SIDES[side]);
 	const putAway = $derived(`Put ${called} away`);
-	const bringBack = $derived(`Bring ${called} back`);
+	const bringBack = $derived(`Show ${called}`);
 
-	// The column and its way to its rail, while it is on screen; the rail, while it is put away
+	// The column and its toggle, while it is on screen; the rail, while it is put away
 	let columnElement: HTMLElement | undefined = $state();
 	let putAwayButton: HTMLButtonElement | undefined = $state();
 	let rail: HTMLButtonElement | undefined = $state();
@@ -54,44 +80,63 @@
 	});
 </script>
 
-<!-- A column on the left of what is read, scrolling by itself, and put away to a rail where it stood, so the
-	way back is where it went -->
-{#if column.open}
-	<Column
-		bind:element={columnElement}
-		side="left"
-		width={column}
-		{landmark}
-		{label}
-		resizing="Resize {called}"
-		testIds={{ column: testIds.column, resize: testIds.resize }}
-		data-tour={tour}
-	>
-		<Bar heads="column" testId={testIds.head}>
-			{@render heading()}
-			<div class="flex-1"></div>
-			<IconButton
-				bind:element={putAwayButton}
-				tone="quiet"
-				size="xs"
-				shape="square"
-				label={putAway}
-				testId={testIds.putAway}
-				onclick={() => column.toggle()}
-			>
-				<Icon name="chevron" size="xs" pointing="left" />
-			</IconButton>
-		</Bar>
-		<div class="cr-scroller min-h-0 flex-1 p-3">
-			{@render children()}
-		</div>
-	</Column>
-{:else}
-	<ColumnRail
-		bind:element={rail}
-		label={bringBack}
-		testId={testIds.bringBack}
-		data-tour={tour}
+<!-- The toggle at the column's outer edge, drawing the column standing open -->
+{#snippet toggle()}
+	<IconButton
+		bind:element={putAwayButton}
+		tone="quiet"
+		size="xs"
+		shape="square"
+		label={putAway}
+		testId={testIds.putAway}
 		onclick={() => column.toggle()}
-	/>
-{/if}
+	>
+		<Icon name={drawn.open} size="sm" />
+	</IconButton>
+{/snippet}
+
+<!-- The room a column stands in beside what is read, as wide as the reader left it, or as narrow as its rail once it
+	is put away: the column itself, scrolling by itself, or the rail it narrows to, so the way back is where it went -->
+<div
+	class={['cr-ui-side-column', drawn.drawnAs, !column.open && 'cr-ui-side-column-away']}
+	style:--cr-column-width="{column.width}px"
+>
+	{#if column.open}
+		<svelte:element
+			this={landmark}
+			bind:this={columnElement}
+			data-testid={testIds.column}
+			data-tour={tour}
+			aria-label={label}
+			class="cr-ui-column"
+		>
+			<EdgeGrip {column} grows={drawn.grows} label={resizing} testId={testIds.resize} />
+			<Bar heads="column" testId={testIds.head}>
+				{#if drawn.toggleLeads}
+					{@render toggle()}
+				{/if}
+				<div class="cr-ui-column-heading">{@render heading()}</div>
+				{#if !drawn.toggleLeads}
+					{@render toggle()}
+				{/if}
+			</Bar>
+			<div class={COLUMN_HOLDS[holds]}>
+				{@render children()}
+			</div>
+			{#if foot}
+				<div class="cr-ui-column-foot">{@render foot()}</div>
+			{/if}
+		</svelte:element>
+	{:else}
+		<ColumnRail
+			bind:element={rail}
+			{side}
+			label={bringBack}
+			{key}
+			testId={testIds.bringBack}
+			data-tour={tour}
+			{marks}
+			onclick={() => column.toggle()}
+		/>
+	{/if}
+</div>

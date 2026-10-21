@@ -67,6 +67,9 @@
 	data-testid={testId}
 	class={['cr-ui-icon', SIZES[size], TURNS[pointing], tone && TONES[tone]]}
 >
+	{#each shape.shaded ?? [] as path (path)}
+		<path d={path} class="cr-ui-icon-shaded" />
+	{/each}
 	{#each shape.paths as path (path)}
 		<path d={path} />
 	{/each}

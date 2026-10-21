@@ -5,6 +5,7 @@
 	import { provideReview } from '$lib/review/context';
 	import { markTab } from '$lib/dom/tab';
 	import Button from '$lib/ui/Button.svelte';
+	import Heading from '$lib/ui/Heading.svelte';
 	import NoticeBar from '$lib/ui/NoticeBar.svelte';
 	import { COMMENTS, counted } from '$lib/utils/words';
 	import AgentColumn from './AgentColumn.svelte';
@@ -99,17 +100,18 @@
 			whether its column stands beside it or is put away to its rail -->
 		<drawn.beside />
 		<drawn.reading />
-		{#if review.layout.agentPanel.open}
-			<!-- A panel that cannot be drawn says so in its column, and leaves the review to be read and sent -->
-			<svelte:boundary onerror={reportBroken}>
-				<AgentPanel />
-				{#snippet failed(error, retry)}
-					<!-- Where the panel stood, as wide, so the review beside it does not move -->
-					<AgentColumn testId="agent-panel-failed">
-						<PartFailed what="The agent panel" {error} {retry} />
-					</AgentColumn>
-				{/snippet}
-			</svelte:boundary>
-		{/if}
+		<!-- A panel that cannot be drawn says so in its column, and leaves the review to be read and sent -->
+		<svelte:boundary onerror={reportBroken}>
+			<AgentPanel />
+			{#snippet failed(error, retry)}
+				<!-- Where the panel stood, as wide, so the review beside it does not move -->
+				<AgentColumn testId="agent-panel-failed">
+					{#snippet heading()}
+						<Heading tag="h2" heads="pane" testId="agent-panel-failed-heading">The agent</Heading>
+					{/snippet}
+					<PartFailed what="The agent panel" {error} {retry} />
+				</AgentColumn>
+			{/snippet}
+		</svelte:boundary>
 	</div>
 </div>

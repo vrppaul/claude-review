@@ -23,7 +23,6 @@ export const TOUR_TARGETS = [
 	'awaited-answer',
 	'answer',
 	'agent-panel',
-	'agent-panel-toggle',
 	'send'
 ] as const;
 
@@ -174,7 +173,7 @@ export const TOUR_STEPS: TourStep[] = [
 	},
 	{
 		id: 'panel',
-		targets: ['agent-panel', 'agent-panel-toggle'],
+		targets: ['agent-panel'],
 		title: 'Talk about the whole change',
 		body: 'The plan, the tests, a file nobody commented on: ask here rather than on a line. The agent answers in the panel while you keep reading.',
 		applies: (context) => context.attached
