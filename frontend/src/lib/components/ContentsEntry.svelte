@@ -58,7 +58,7 @@
 	entry's name to whoever cannot see it -->
 {#snippet threadsInIt()}
 	{#if threads > 0}
-		<Count count={threads} testId="part-threads" aria-hidden />
+		<Count tone="reader" count={threads} testId="part-threads" aria-hidden />
 	{/if}
 {/snippet}
 

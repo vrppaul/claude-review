@@ -164,7 +164,7 @@ export const TOUR_STEPS: TourStep[] = [
 		id: 'unsent',
 		targets: ['unsent-count'],
 		title: 'What waits for you to send it',
-		body: 'Comments added to the review wait here until you send them. The first number is what you have not sent yet; the second is everything in the review.',
+		body: 'Comments added to the review wait until you send them, counted here on the button that sends them.',
 		applies: (context) => context.route === 'ask'
 	},
 	{

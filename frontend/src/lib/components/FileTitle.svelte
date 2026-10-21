@@ -36,5 +36,5 @@
 	<ChangedLines changed={fileStats(file)} />
 {/if}
 {#if threads > 0}
-	<Count count={threads} testId="section-comment-count" />
+	<Count tone="reader" count={threads} testId="section-comment-count" />
 {/if}

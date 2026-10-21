@@ -55,7 +55,7 @@
 {#snippet trailing()}
 	{@render marks?.()}
 	{#if threads > 0}
-		<Count count={threads} testId="file-threads" />
+		<Count tone="reader" count={threads} testId="file-threads" />
 	{/if}
 	{@render end?.()}
 {/snippet}

@@ -153,6 +153,12 @@
   short past 10rem and said whole on the pointer. A review of files or of a
   conversation says what it is called, by its mark, where the header's
   middle said it before.
+- **Send counts what goes with it.** The header's "2 unsent · 5" is gone:
+  how many comments go with the round, or with the end of a review with
+  no agent, stands on Send itself, reversed on its fill, "2 comments go
+  with it" on the pointer, and nothing while none does. Replies is its
+  mark alone, how many answers wait unread on its corner in the agent's
+  colour, and in its name for a screen reader.
 - **What is chosen is drawn in ink.** A segment pressed, a toggle on and a
   button whose pane is open are reversed, the page's words their ground
   and what is drawn in them in those words, where they stood on the

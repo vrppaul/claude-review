@@ -3,9 +3,11 @@
 	import { anchorShortPlace } from '$lib/anchors/views';
 	import { useReview } from '$lib/review/context';
 	import Button from '$lib/ui/Button.svelte';
+	import Count from '$lib/ui/Count.svelte';
 	import Dot from '$lib/ui/Dot.svelte';
 	import EmptyNote from '$lib/ui/EmptyNote.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
+	import IconButton from '$lib/ui/IconButton.svelte';
 	import Popover from '$lib/ui/Popover.svelte';
 	import Row from '$lib/ui/Row.svelte';
 	import { plainWords } from '$lib/utils/plain-words';
@@ -17,6 +19,10 @@
 	const review = useReview();
 
 	let open = $state(false);
+
+	// How many answers wait unread: on the mark's corner, and in its name for whoever cannot see the figure
+	const unread = $derived(review.threads.unread.length);
+	const repliesNamed = $derived(unread > 0 ? `${REPLIES}, ${unread} unread` : REPLIES);
 
 	// Unread first: what changed since the reader last looked is the reason
 	// this list exists at all
@@ -39,14 +45,14 @@
 <!-- How many are unread, and the way to read them all at once, beside the pane's heading -->
 {#snippet unreadOfThem()}
 	<span class="cr-muted text-xs">
-		{review.threads.unread.length} unread
+		{unread} unread
 	</span>
 	<!-- Nothing to do while everything has been read: offered, it would do nothing -->
 	<Button
 		tone="quiet"
 		size="xs"
 		testId="mark-all-read"
-		disabled={review.threads.unread.length === 0}
+		disabled={unread === 0}
 		onclick={() => review.threads.reading.markAllRead()}
 	>
 		Mark all read
@@ -63,15 +69,14 @@
 	testId="replies-list"
 >
 	{#snippet trigger(control)}
-		<Button {...control} tone="quiet" size="xs" testId="replies-menu">
+		<IconButton {...control} tone="quiet" size="xs" label={repliesNamed} testId="replies-menu">
 			<Icon name="reply" size="sm" />
-			Replies
-			{#if review.threads.unread.length > 0}
-				<span data-testid="unread-count" class="text-(--cr-unread)">
-					{review.threads.unread.length}
-				</span>
-			{/if}
-		</Button>
+			{#snippet corner()}
+				{#if unread > 0}
+					<Count tone="unread" count={unread} aria-hidden testId="unread-count" />
+				{/if}
+			{/snippet}
+		</IconButton>
 	{/snippet}
 
 	<!-- One row a thread, inside the pane's margin: where it hangs, and what the agent last said in it -->

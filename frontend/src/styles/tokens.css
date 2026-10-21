@@ -368,6 +368,8 @@
 	--cr-underline-offset: 0.2em;
 	/* An answer or a thread from the agent that the reader has not looked at yet: an arrival of the agent's */
 	--cr-unread: var(--cr-agent);
+	/* A figure on that colour, how many answers wait unread: the page's plainest ground (7.5:1 light, 8.5:1 dark) */
+	--cr-on-unread: var(--color-base-100);
 	/* Something done, or ready: a thread settled, a branch of work finished, a file viewed, an agent listening */
 	--cr-done: var(--cr-add-text);
 	/* And at the ladder's steps, on the node and the axis of a part of a story read through */

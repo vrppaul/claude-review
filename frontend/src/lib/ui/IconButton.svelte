@@ -13,9 +13,11 @@
 		element?: HTMLButtonElement | undefined;
 		/** Its icon, drawn at the size the button gives it. */
 		children: Snippet;
+		/** A figure on its corner, a notification's: how many of what it opens wait (a Count). */
+		corner?: Snippet | undefined;
 	}
 
-	let { tone, size, label, testId, element = $bindable(), children, ...attributes }: Props = $props();
+	let { tone, size, label, testId, element = $bindable(), children, corner, ...attributes }: Props = $props();
 </script>
 
 <!-- A button that is an icon alone: as tall as it is wide, its words kept for whoever cannot see the icon -->
@@ -29,4 +31,7 @@
 	class={['cr-ui-button cr-ui-icon-button cr-pressable', BUTTON_TONES[tone], BUTTON_SIZES[size]]}
 >
 	{@render children()}
+	{#if corner}
+		<span class="cr-ui-icon-button-corner">{@render corner()}</span>
+	{/if}
 </button>

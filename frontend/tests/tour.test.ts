@@ -63,6 +63,12 @@ async function drawHeader() {
 	render(ReviewHeader, inReview(review));
 }
 
+/** The header of a review a comment was added to, which Send counts. */
+async function drawHeaderWithAComment() {
+	review.threads.add(newComment({ file: FILE.path, body: 'fix' }));
+	await drawHeader();
+}
+
 /** The header, with the list of bases it can be read against open. */
 async function drawBaseList() {
 	const server = fakeServer();
@@ -116,7 +122,7 @@ const DRAWING: Record<TourTarget, () => void | Promise<void>> = {
 	'file-tree': drawFileTree,
 	'line-number': drawDiff,
 	'comment-field': drawCommentField,
-	'unsent-count': drawHeader,
+	'unsent-count': drawHeaderWithAComment,
 	'awaited-answer': drawAwaitedQuestion,
 	answer: drawAnswer,
 	'agent-panel': drawAgentPanel,

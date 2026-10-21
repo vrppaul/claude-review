@@ -6,6 +6,7 @@
 	import Actions from '$lib/ui/Actions.svelte';
 	import BreathingDots from '$lib/ui/BreathingDots.svelte';
 	import Button from '$lib/ui/Button.svelte';
+	import Count from '$lib/ui/Count.svelte';
 	import Field from '$lib/ui/Field.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import Popover from '$lib/ui/Popover.svelte';
@@ -21,6 +22,8 @@
 
 	// What the comments still open in their fields are said to do, counted
 	const OPEN_COMMENTS_GOING: CountedWords = { one: 'comment still open goes', many: 'comments still open go' };
+	// What the comments that go with a send are said to do, counted on the button that sends them
+	const GOING_WITH_IT: CountedWords = { one: 'comment goes with it', many: 'comments go with it' };
 
 	const review = useReview();
 
@@ -29,6 +32,8 @@
 	// What the pane is called, and headed with: the round it sends, or the end
 	const title = $derived(finishingTitle(inRounds, review.rounds.current));
 	const unsent = $derived(review.threads.unsent.length);
+	// What goes with what the button sends: what is unsent, with a round; everything, with the end
+	const going = $derived(inRounds ? unsent : review.threads.count);
 	// Comments still open in their fields, which go with whatever is sent
 	const open = $derived(review.threads.open);
 
@@ -150,6 +155,11 @@
 				Send round {review.rounds.current}
 			{:else}
 				Finish review
+			{/if}
+			{#if going > 0}
+				<span data-tour={tourStop('unsent-count')} class="flex">
+					<Count tone="on-fill" count={going} title={counted(going, GOING_WITH_IT)} testId="unsent-count" />
+				</span>
 			{/if}
 			<Icon name="chevron" size="xs" />
 		</Button>

@@ -11,7 +11,6 @@
 	import type { IconName } from '$lib/ui/icons';
 	import type { NoticeTone } from '$lib/ui/notice';
 	import NoticeBar from '$lib/ui/NoticeBar.svelte';
-	import { COMMENTS, counted } from '$lib/utils/words';
 	import BasePicker from './BasePicker.svelte';
 	import FinishReview from './FinishReview.svelte';
 	import HelpMenu from './HelpMenu.svelte';
@@ -54,7 +53,6 @@
 
 	const review = useReview();
 
-	const inRounds = $derived(review.submission.inRounds);
 	const over = $derived(review.link.ending === null ? null : OVER[review.link.ending]);
 </script>
 
@@ -97,14 +95,6 @@
 		{#if review.threads.answered.length > 0}
 			<RepliesMenu />
 		{/if}
-
-		<span data-testid="comment-count" data-tour={tourStop('unsent-count')} class="cr-muted text-sm">
-			{#if inRounds}
-				{review.threads.unsent.length} unsent · {review.threads.count}
-			{:else}
-				{counted(review.threads.count, COMMENTS)}
-			{/if}
-		</span>
 
 		{#if review.threads.count > 0}
 			<div class="flex">

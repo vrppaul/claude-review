@@ -23,25 +23,32 @@ describe('sending the review', () => {
 		review = openReview({ files: [file], diff: READ_WHOLE });
 	});
 
-	it('counts the comments written', () => {
-		review.threads.add(newComment({ file: 'test.py', body: 'fix' }));
-		review.threads.add(newComment({ file: 'test.py', startLine: 2, body: 'fix2' }));
+	it('counts on Send the comments that go with it, saying how many on the pointer, and nothing with none', () => {
+		// A round sent to an agent there, and the end of a review with none, each a review of its own, which keeps a
+		// draft of its own; how many comments each holds, and what its count says: its figure, and its words on the
+		// pointer
+		const sends = [
+			{ review: 'a-round', attached: true, comments: 2, said: [{ figure: '2', pointer: '2 comments go with it' }] },
+			{ review: 'the-end', attached: false, comments: 1, said: [{ figure: '1', pointer: '1 comment goes with it' }] },
+			{ review: 'nothing-written', attached: false, comments: 0, said: [] }
+		];
 
-		const { getByTestId } = render(ReviewHeader, inReview(review));
-		const count = getByTestId('comment-count');
+		const said = sends.map(({ review: identity, attached, comments }) => {
+			const sending = openReview({
+				files: [file],
+				diff: READ_WHOLE,
+				facts: { identity, answerer_attached: attached }
+			});
+			Array.from({ length: comments }, (_, index) =>
+				sending.threads.add(newComment({ file: 'test.py', startLine: index + 1, body: 'fix' }))
+			);
+			const { container } = render(ReviewHeader, inReview(sending));
+			return within(container)
+				.queryAllByTestId('unsent-count')
+				.map((count) => ({ figure: count.textContent?.trim(), pointer: count.title }));
+		});
 
-		expect(count.textContent).toContain('2');
-		expect(count.textContent).toContain('comments');
-	});
-
-	it('says one comment, not one comments', () => {
-		review.threads.add(newComment({ file: 'test.py', body: 'fix' }));
-
-		const { getByTestId } = render(ReviewHeader, inReview(review));
-		const count = getByTestId('comment-count');
-
-		expect(count.textContent).toContain('1');
-		expect(count.textContent).toMatch(/\bcomment\b/);
+		expect(said).toEqual(sends.map(({ said }) => said));
 	});
 
 	it('can be opened once something is written', () => {
