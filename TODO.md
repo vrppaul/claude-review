@@ -210,6 +210,10 @@ of it is built yet.
       states), so it ages with each change to the page; this one is drawn
       from the library's own parts and tokens. Open: how a change made on
       the board reaches the code.
+- [ ] `feat(ui)`: say that the agent joined, where the reader sees it. The
+      panel used to come out by itself when an agent turned up; once
+      nothing moves but in answer to the reader, its rail's presence dot
+      alone says it. Not designed.
 - [ ] `feat(ui)`: a new look for the agent's progress in its panel.
 - [ ] `feat(ui)`: a new look for a folded thread's line (its words are in
       the code's face today).

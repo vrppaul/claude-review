@@ -536,15 +536,18 @@
  * box to press: its box laid over all of it, unseen, and the ring of the
  * keyboard drawn round the chip while the box holds it
  */
+/* As tall as the small buttons it stands beside in a file's bar, so the bar is the head row's height */
 .cr-ui-check-chip {
 	position: relative;
 	display: inline-flex;
 	align-items: center;
 	gap: --spacing(1.5);
-	padding: --spacing(1) --spacing(2);
+	height: var(--cr-button-xs);
+	padding-inline: --spacing(2);
 	border-radius: var(--radius-field);
 	color: var(--cr-muted);
 	font-size: var(--text-xs);
+	line-height: var(--text-xs--line-height);
 }
 /* A box ticked is something done: a file read through */
 .cr-ui-check-chip:has(:checked) {
@@ -866,18 +869,21 @@
 	min-height: 0;
 	width: var(--cr-column-width);
 	background: var(--cr-ground-column);
-	transition: width var(--cr-column-change) ease;
+	transition:
+		width var(--cr-column-change) ease,
+		min-width var(--cr-column-change) ease;
 }
-.cr-ui-side-column:has(.cr-ui-grip:active) {
+/* Held still while its edge is dragged or stepped by the keys, which it would trail */
+.cr-ui-side-column:has(.cr-ui-grip:is(:active, :focus-visible)) {
 	transition: none;
 }
 .cr-ui-side-column-left {
 	min-width: var(--cr-side-column-least-width);
-	border-right: var(--cr-line) solid var(--color-base-300);
+	border-right: var(--cr-line) solid var(--cr-pane-edge);
 }
 .cr-ui-side-column-right {
 	min-width: var(--cr-panel-least-width);
-	border-left: var(--cr-line) solid var(--color-base-300);
+	border-left: var(--cr-line) solid var(--cr-pane-edge);
 }
 .cr-ui-side-column-away {
 	flex-shrink: 0;
@@ -1527,15 +1533,27 @@
 	align-items: center;
 	color: var(--cr-muted);
 }
+/* The keyboard's ring inside it: outside, what is read beside it would paint over it */
+.cr-ui-column-rail:focus-visible {
+	outline-offset: calc(-1 * var(--cr-focus-ring-width));
+}
+/*
+ * Its toggle stays on its spot at the outer edge while the column narrows
+ * and widens: as far in as the open toggle's icon, three steps of the head's
+ * room and the step its button leaves round it
+ */
 .cr-ui-column-rail-head {
 	display: flex;
 	flex-shrink: 0;
 	align-items: center;
-	justify-content: center;
 	align-self: stretch;
 	height: var(--cr-head-row);
+	padding-inline: --spacing(4);
 	border-bottom: var(--cr-line) solid var(--color-base-300);
 	color: var(--color-base-content);
+}
+.cr-ui-side-column-right .cr-ui-column-rail-head {
+	justify-content: flex-end;
 }
 .cr-ui-column-rail-marks {
 	display: flex;

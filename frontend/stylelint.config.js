@@ -60,7 +60,7 @@ const WHAT_MOVES = [
 	'\\.cr-ui-checkbox-box',
 	'\\.cr-ui-checkbox-check',
 	'\\.cr-ui-icon',
-	'\\.cr-ui-side-column(:has\\(\\.cr-ui-grip:active\\))?',
+	'\\.cr-ui-side-column(:has\\(\\.cr-ui-grip:is\\(:active, :focus-visible\\)\\))?',
 	'\\.cr-ui-column-coming',
 	'\\.cr-ui-column-rail-marks-coming',
 	'\\.cr-ui-segmented::before',

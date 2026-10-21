@@ -103,7 +103,8 @@
 		<Filter bind:value={filter} label="Filter the bases" testId="base-filter" placeholder="filter" />
 	</div>
 
-	<!-- Each base a row on the filter field's edges, a section's name as far in as a row's words -->
+	<!-- Each base a row on the filter field's edges, a section's name as far in as a row's own room, before the
+		mark of the one in force -->
 	<div class="px-3 pb-1">
 		{#each sections as section (section.kind)}
 			{@const listed = matching.filter((version) => version.kind === section.kind)}

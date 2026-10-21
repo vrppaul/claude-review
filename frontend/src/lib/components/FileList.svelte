@@ -62,16 +62,16 @@
 	// What the filter leaves, drawn: where it looks for the first file to go to
 	let list: HTMLElement | undefined = $state();
 
-	/**
-	 * Enter goes to the first file the filter leaves, as a click on it would;
-	 * the down arrow hands the keyboard to it, to go on from there.
-	 */
 	/** Fold a folder away or open it, an opened one opening over a fold's time. */
 	function toggleFolder(path: string) {
 		unfoldedLast = layout.isFolderFolded(path) ? path : null;
 		layout.toggleFolder(path);
 	}
 
+	/**
+	 * Enter goes to the first file the filter leaves, as a click on it would;
+	 * the down arrow hands the keyboard to it, to go on from there.
+	 */
 	function onFilterKey(event: KeyboardEvent) {
 		if (isComposingText(event) || (event.key !== 'Enter' && event.key !== 'ArrowDown')) return;
 		const first = list?.querySelector<HTMLElement>(`[data-role="${FILE_ROW_ROLE}"]`);

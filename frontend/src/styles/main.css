@@ -654,7 +654,8 @@
  * it over a fold's time, as its chevron turns, their rings kept whole
  */
 .cr-tree-unfolding {
-	overflow-y: clip;
+	/* Clipped both ways, the one way a margin past the clip is drawn, so the rings stand whole */
+	overflow: clip;
 	overflow-clip-margin: calc(var(--cr-focus-ring-width) + var(--cr-focus-ring-offset));
 	transition: height var(--cr-state-change) ease;
 }
