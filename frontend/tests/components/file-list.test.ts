@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, within } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import FileList from '$lib/components/FileList.svelte';
-import { addedLine, diffFile, hunk, removedLine, wholeFile } from '../diff';
+import { addedLine, diffFile, hunk, OF_A_CONVERSATION, OF_FILES, removedLine, wholeFile } from '../diff';
 import { inReview, openReview } from '../review';
 
 const diffFiles = [
@@ -23,7 +23,7 @@ describe('the file tree', () => {
 	});
 
 	it('names plain files as files rather than changes', () => {
-		const review = openReview({ files: [wholeFile('/tmp/plan.md', '# Plan')], facts: { mode: 'files' } });
+		const review = openReview({ files: [wholeFile('/tmp/plan.md', '# Plan')], facts: { where: OF_FILES } });
 
 		const { getByTestId } = render(FileList, inReview(review));
 
@@ -125,7 +125,7 @@ describe('the file tree', () => {
 	});
 
 	it('says nothing became of a plain file, which is no change', () => {
-		const review = openReview({ files: [wholeFile('/tmp/plan.md', '# Plan')], facts: { mode: 'files' } });
+		const review = openReview({ files: [wholeFile('/tmp/plan.md', '# Plan')], facts: { where: OF_FILES } });
 
 		const { getByTestId } = render(FileList, inReview(review));
 
@@ -135,7 +135,7 @@ describe('the file tree', () => {
 	it('counts a transcript in messages', () => {
 		const review = openReview({
 			files: [wholeFile('user-1', 'hello'), wholeFile('assistant-2', 'hi')],
-			facts: { mode: 'transcript' }
+			facts: { where: OF_A_CONVERSATION }
 		});
 
 		const { getByTestId, getAllByTestId } = render(FileList, inReview(review));
@@ -185,7 +185,7 @@ describe('finding a file in a long review', () => {
 
 	it('looks for messages, not files, in a transcript', async () => {
 		const user = userEvent.setup();
-		const review = openReview({ files: [wholeFile('user-1', 'hello')], facts: { mode: 'transcript' } });
+		const review = openReview({ files: [wholeFile('user-1', 'hello')], facts: { where: OF_A_CONVERSATION } });
 
 		const { getByTestId, getByLabelText } = render(FileList, inReview(review));
 		await user.type(getByTestId('file-filter'), 'nobody');

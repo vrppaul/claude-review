@@ -4,7 +4,18 @@ import { userEvent } from '@testing-library/user-event';
 import { flushSync } from 'svelte';
 import DiffView from '$lib/components/DiffView.svelte';
 import { lineAnchor } from '$lib/anchors/line';
-import { addedLine, contextLine, diffFile, diffResponse, hunk, removedLine, sinceRound, wholeFile } from '../diff';
+import {
+	addedLine,
+	contextLine,
+	diffFile,
+	diffResponse,
+	hunk,
+	OF_A_CONVERSATION,
+	OF_FILES,
+	removedLine,
+	sinceRound,
+	wholeFile
+} from '../diff';
 import { fakeServer, keepingSettings } from '../fake-server';
 import { newComment } from '../new-comment';
 import type { Review } from '$lib/review/review.svelte';
@@ -61,7 +72,7 @@ describe('a diff on screen', () => {
 	});
 
 	it('says nothing of a change when the files are read whole', () => {
-		review = openReview({ files: [plan], facts: { mode: 'files' } });
+		review = openReview({ files: [plan], facts: { where: OF_FILES } });
 
 		const { queryByText } = render(DiffView, inReview(review));
 
@@ -78,7 +89,7 @@ describe('a diff on screen', () => {
 	});
 
 	it('numbers every line, to comment on', () => {
-		review = openReview({ files: [plan], facts: { mode: 'files' } });
+		review = openReview({ files: [plan], facts: { where: OF_FILES } });
 
 		const { getAllByTestId } = render(DiffView, inReview(review));
 
@@ -105,7 +116,7 @@ describe('a diff on screen', () => {
 	});
 
 	it('marks no jumps in a file read whole', () => {
-		review = openReview({ files: [plan], facts: { mode: 'files' } });
+		review = openReview({ files: [plan], facts: { where: OF_FILES } });
 
 		const { queryByTestId } = render(DiffView, inReview(review));
 
@@ -115,7 +126,7 @@ describe('a diff on screen', () => {
 	it('shows what a transcript message says', () => {
 		review = openReview({
 			files: [wholeFile('user-1', 'can you refactor auth?', 'use JWT instead')],
-			facts: { mode: 'transcript' }
+			facts: { where: OF_A_CONVERSATION }
 		});
 
 		const { getByTestId } = render(DiffView, inReview(review));
@@ -125,7 +136,7 @@ describe('a diff on screen', () => {
 	});
 
 	it('says nothing of a change in a transcript', () => {
-		review = openReview({ files: [wholeFile('assistant-2', 'response')], facts: { mode: 'transcript' } });
+		review = openReview({ files: [wholeFile('assistant-2', 'response')], facts: { where: OF_A_CONVERSATION } });
 
 		const { queryByText } = render(DiffView, inReview(review));
 
@@ -135,7 +146,7 @@ describe('a diff on screen', () => {
 
 describe('how a markdown file is shown', () => {
 	it('can be chosen for a markdown file', () => {
-		review = openReview({ files: [readme], facts: { mode: 'files' } });
+		review = openReview({ files: [readme], facts: { where: OF_FILES } });
 
 		const { getByTestId } = render(DiffView, inReview(review));
 
@@ -151,7 +162,10 @@ describe('how a markdown file is shown', () => {
 	});
 
 	it('can be chosen for a transcript message', () => {
-		review = openReview({ files: [wholeFile('assistant (14:30) #1', '# Response')], facts: { mode: 'transcript' } });
+		review = openReview({
+			files: [wholeFile('assistant (14:30) #1', '# Response')],
+			facts: { where: OF_A_CONVERSATION }
+		});
 
 		const { getByTestId } = render(DiffView, inReview(review));
 
@@ -159,7 +173,7 @@ describe('how a markdown file is shown', () => {
 	});
 
 	it('is the raw text until the reader picks another way', () => {
-		review = openReview({ files: [readme], facts: { mode: 'files' } });
+		review = openReview({ files: [readme], facts: { where: OF_FILES } });
 
 		const { getByTestId, queryByTestId } = render(DiffView, inReview(review));
 
@@ -168,7 +182,7 @@ describe('how a markdown file is shown', () => {
 	});
 
 	it('is the preview once the reader picks it', async () => {
-		review = openReview({ files: [readme], facts: { mode: 'files' } });
+		review = openReview({ files: [readme], facts: { where: OF_FILES } });
 
 		const { getByTestId, queryByTestId } = render(DiffView, inReview(review));
 
@@ -179,7 +193,7 @@ describe('how a markdown file is shown', () => {
 	});
 
 	it('says in the preview that comments are on the raw text', async () => {
-		review = openReview({ files: [readme], facts: { mode: 'files' } });
+		review = openReview({ files: [readme], facts: { where: OF_FILES } });
 		review.threads.add(newComment({ file: 'docs/readme.md', startLine: 1, body: 'Fix this heading' }));
 
 		const { getByTestId } = render(DiffView, inReview(review));
@@ -192,7 +206,7 @@ describe('how a markdown file is shown', () => {
 	});
 
 	it('is both side by side once the reader picks that', async () => {
-		review = openReview({ files: [readme], facts: { mode: 'files' } });
+		review = openReview({ files: [readme], facts: { where: OF_FILES } });
 
 		const { getByTestId, queryByTestId } = render(DiffView, inReview(review));
 

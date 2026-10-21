@@ -129,8 +129,8 @@ async def test_retaking_the_diff_serves_what_changed_since(tmp_git_repo: Path, r
     assert [served["path"] for served in diff.json()["files"]] == ["added.py"]
 
 
-async def test_a_review_without_a_repository_cannot_retake_its_diff(client: AsyncClient) -> None:
-    response = await client.post("/api/retake", json={}, headers=LOCAL_HEADERS)
+async def test_a_review_without_a_repository_cannot_retake_its_diff(files_client: AsyncClient) -> None:
+    response = await files_client.post("/api/retake", json={}, headers=LOCAL_HEADERS)
 
     assert response.status_code == HTTPStatus.NOT_FOUND
 

@@ -7,7 +7,7 @@ import ReviewHeader from '$lib/components/ReviewHeader.svelte';
 import ReviewScreen from '$lib/components/ReviewScreen.svelte';
 import type { Review } from '$lib/review/review.svelte';
 import type { ReviewResponse } from '$lib/types';
-import { contextLine, diffFile, hunk } from '../diff';
+import { contextLine, diffFile, hunk, OF_A_CONVERSATION, OF_FILES } from '../diff';
 import { fakeServer, SERVER_ERROR } from '../fake-server';
 import { newComment } from '../new-comment';
 import { inReview, openReview } from '../review';
@@ -152,22 +152,24 @@ describe('the review header', () => {
 		// Each kind of review, the lines its header says where the change is in, and what the pointer says of it
 		const reviews: { facts: Partial<ReviewResponse>; lines: string[]; pointer: string }[] = [
 			{
-				facts: { mode: 'diff', repository: { name: 'shop', checkout: { at: 'branch', branch: 'feature/cart' } } },
+				facts: {
+					where: { kind: 'diff', repository: { name: 'shop', checkout: { at: 'branch', branch: 'feature/cart' } } }
+				},
 				lines: ['shop', 'feature/cart'],
 				pointer: 'shop, on the branch feature/cart'
 			},
 			{
-				facts: { mode: 'diff', repository: { name: 'shop', checkout: { at: 'commit', commit: 'a1b2c3d' } } },
+				facts: { where: { kind: 'diff', repository: { name: 'shop', checkout: { at: 'commit', commit: 'a1b2c3d' } } } },
 				lines: ['shop', 'a1b2c3d'],
 				pointer: 'shop, at the commit a1b2c3d, on no branch'
 			},
 			{
-				facts: { mode: 'files', repository: null, title: 'plan.md, notes.md' },
+				facts: { where: OF_FILES, title: 'plan.md, notes.md' },
 				lines: ['plan.md, notes.md'],
 				pointer: 'plan.md, notes.md'
 			},
 			{
-				facts: { mode: 'transcript', repository: null, title: 'Conversation 63b8ade4' },
+				facts: { where: OF_A_CONVERSATION, title: 'Conversation 63b8ade4' },
 				lines: ['Conversation 63b8ade4'],
 				pointer: 'Conversation 63b8ade4'
 			}

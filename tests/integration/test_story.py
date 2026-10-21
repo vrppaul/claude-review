@@ -58,8 +58,10 @@ from tests.helpers import (
     WAIT_FOR_EVENT,
     FixedClock,
     ReviewFactory,
+    files_opening_of,
     http_client,
     next_push,
+    one_line_file,
     open_session,
     page_client,
     repository_opening,
@@ -237,17 +239,17 @@ async def test_a_document_of_the_wrong_shape_is_refused_as_any_request_is(agent:
     assert [field.loc for field in Refusal.model_validate_json(answered.content).detail] == [("body", "doubts")]
 
 
-async def test_a_review_of_no_change_takes_no_story(client: AsyncClient) -> None:
+async def test_a_review_of_no_change_takes_no_story(files_client: AsyncClient) -> None:
     """Files read once, or a conversation: nobody changed them, so there is no change to tell."""
-    answered = await client.put(STORY_ROUTE, json=as_the_agent_writes(WHOLE_STORY))
+    answered = await files_client.put(STORY_ROUTE, json=as_the_agent_writes(WHOLE_STORY))
 
     assert answered.status_code == HTTPStatus.NOT_FOUND
-    assert await held_by(client) == StoryResponse(held=None)
+    assert await held_by(files_client) == StoryResponse(held=None)
 
 
-async def test_a_review_of_no_change_says_so_to_whoever_tells_it_a_story(client: AsyncClient) -> None:
+async def test_a_review_of_no_change_says_so_to_whoever_tells_it_a_story(files_client: AsyncClient) -> None:
     """Told why, the agent stops trying: nothing it could write would be a story of this review."""
-    answered = await client.put(STORY_ROUTE, json=as_the_agent_writes(WHOLE_STORY))
+    answered = await files_client.put(STORY_ROUTE, json=as_the_agent_writes(WHOLE_STORY))
 
     assert "no change" in Refusal.model_validate_json(answered.content).detail
 
@@ -485,15 +487,15 @@ async def test_a_review_of_a_change_says_it_takes_a_story(agent: AsyncClient) ->
     assert facts.takes_a_story is True
 
 
-async def test_a_review_of_no_change_says_it_takes_no_story(client: AsyncClient) -> None:
-    facts = ReviewResponse.model_validate_json((await client.get(REVIEW_ROUTE)).content)
+async def test_a_review_of_no_change_says_it_takes_no_story(files_client: AsyncClient) -> None:
+    facts = ReviewResponse.model_validate_json((await files_client.get(REVIEW_ROUTE)).content)
 
     assert facts.takes_a_story is False
 
 
-async def test_a_review_of_no_change_is_read_at_the_take_it_was_made_with(client: AsyncClient) -> None:
+async def test_a_review_of_no_change_is_read_at_the_take_it_was_made_with(files_client: AsyncClient) -> None:
     """Nothing takes it again, so the take its page reads is the first."""
-    assert (await own_diff(client)).take == FIRST_TAKE
+    assert (await own_diff(files_client)).take == FIRST_TAKE
 
 
 @pytest.fixture
@@ -690,9 +692,10 @@ def test_a_story_refused_leaves_the_asking_for_it_as_it_was(page_of_the_change: 
     assert asking_read(page_of_the_change) == awaited
 
 
-def test_a_review_of_no_change_refuses_a_story_asked_for(review_page: TestClient) -> None:
+def test_a_review_of_no_change_refuses_a_story_asked_for(reviews: ReviewFactory) -> None:
     """Asked all the same, it would leave a reader waiting for a story no agent could tell."""
-    answered = review_page.post(STORY_REQUEST_ROUTE)
+    with page_client(reviews.app(files_opening_of([one_line_file()]))) as page_of_files:
+        answered = page_of_files.post(STORY_REQUEST_ROUTE)
 
     assert answered.status_code == HTTPStatus.NOT_FOUND
     assert "no change" in Refusal.model_validate_json(answered.content).detail

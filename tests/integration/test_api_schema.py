@@ -29,8 +29,8 @@ from tests.helpers import (
     LOCAL_HEADERS,
     LOCAL_ORIGIN,
     ReviewFactory,
+    files_opening_of,
     one_line_file,
-    opening_of,
     repository_opening,
 )
 
@@ -102,7 +102,7 @@ def described_schema() -> schemathesis.BaseSchema:
 @pytest.fixture
 def reviews_read_once(reviews: ReviewFactory) -> ReviewsByOperation:
     """Reviews of files read once: no bases, no context to widen, nothing to take again."""
-    return ReviewsByOperation(reviews, opening_of([one_line_file()]))
+    return ReviewsByOperation(reviews, files_opening_of([one_line_file()]))
 
 
 @pytest.fixture

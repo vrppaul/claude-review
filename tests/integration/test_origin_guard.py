@@ -30,7 +30,6 @@ from tests.helpers import (
     next_push,
     one_line_file,
     open_session,
-    opening_of,
 )
 
 FOREIGN_HEADERS = {"Origin": "https://attacker.example", "Host": LOCAL_HOST}
@@ -196,7 +195,7 @@ def test_only_the_reviews_own_page_opens_the_session_socket(headers: dict[str, s
 def test_a_socket_the_browser_says_another_page_opened_is_refused(reviews: ReviewFactory) -> None:
     """Whatever Origin it sends: the browser's word on where it comes from is enough."""
     with (
-        TestClient(reviews.app(opening_of([one_line_file()])), base_url=LOCAL_ORIGIN) as browser,
+        TestClient(reviews.app_of_change([one_line_file()]), base_url=LOCAL_ORIGIN) as browser,
         pytest.raises(WebSocketDisconnect),
         open_session(browser, {"Host": LOCAL_HOST, FETCH_SITE: ANOTHER_PORT}),
     ):

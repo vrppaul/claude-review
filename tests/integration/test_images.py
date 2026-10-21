@@ -15,7 +15,7 @@ import pytest
 from httpx import AsyncClient
 from structlog.typing import EventDict
 
-from claude_review.domain.models import LARGEST_FILE_SHOWN_BYTES, MAX_QUOTE_LINES, ReviewMode, TurnAuthor
+from claude_review.domain.models import LARGEST_FILE_SHOWN_BYTES, MAX_QUOTE_LINES, TurnAuthor
 from claude_review.hosting.workspace import ReviewWorkspace
 from claude_review.presentation.schemas.base import MAX_TEXT_LENGTH
 from claude_review.services.file_window_service import MAX_WINDOW_LINES
@@ -31,9 +31,9 @@ from tests.helpers import (
     WAIT_FOR_EVENT,
     ReviewFactory,
     UploadThatBreaksOff,
+    files_opening_of,
     http_client,
     line_json,
-    opening_of,
     thread_json,
     turn_json,
 )
@@ -57,7 +57,7 @@ A_THREAD = thread_json(line_json(REVIEWED_FILE, 1), "Looks off")
 
 @pytest.fixture
 async def client(reviews: ReviewFactory) -> AsyncIterator[AsyncClient]:
-    async with http_client(reviews.app(opening_of([], mode=ReviewMode.FILES))) as agent:
+    async with http_client(reviews.app(files_opening_of([]))) as agent:
         yield agent
 
 
@@ -148,7 +148,7 @@ async def test_an_upload_the_browser_breaks_off_is_dropped_without_a_refusal(
     reviews: ReviewFactory, workspace: ReviewWorkspace, logged: list[EventDict]
 ) -> None:
     """Nobody is left to be told no, and a refusal in the log would read as something gone wrong."""
-    review = reviews.app(opening_of([], mode=ReviewMode.FILES))
+    review = reviews.app(files_opening_of([]))
 
     await UploadThatBreaksOff(first_part=PNG).upload(review)
 

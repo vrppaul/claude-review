@@ -31,7 +31,6 @@ from claude_review.domain.models import (
     DiffFile,
     GitRef,
     OnBranch,
-    ReviewMode,
 )
 from claude_review.services.review.review import Review
 from claude_review.services.review_opening import OpenedRepository, ReviewOpening
@@ -146,16 +145,15 @@ class RepositoryGitWillNotStage(RepositoryBeingWorkedOn):
 async def _opened(reviews: ReviewFactory, repository: RepositoryBeingWorkedOn, read_for_it: list[DiffFile]) -> Review:
     """A review of the repository's uncommitted changes, put together and opened as the server opens it."""
     opening = ReviewOpening(
-        mode=ReviewMode.DIFF,
-        diff_files=read_for_it,
-        title="",
-        identity=TEST_IDENTITY,
-        repository=OpenedRepository(
+        source=OpenedRepository(
             root=ROOT,
             named_base=None,
             pinned_base=OPENED_ON,
             checkout=CHECKED_OUT,
         ),
+        diff_files=read_for_it,
+        title="",
+        identity=TEST_IDENTITY,
     )
     review = reviews.hosted(opening, clock=FixedClock(MARKED_AT), repository=repository).review
     await review.open()

@@ -38,7 +38,6 @@ from tests.helpers import (
     work_pushed,
     one_line_file,
     open_session,
-    opening_of,
     page_client,
     pushes_until,
     repository_opening,
@@ -173,7 +172,7 @@ async def test_what_the_agent_says_is_never_known_by_the_id_of_what_it_said_in_a
     """A page's draft outlives the review it was kept from: a review on the same files later must not name its words alike."""
     said_ids = []
     for _ in range(2):
-        async with http_client(reviews.app(opening_of([one_line_file()]))) as agent:
+        async with http_client(reviews.app_of_change([one_line_file()])) as agent:
             await agent.post("/api/say", json={"body": "Done."})
             said_ids.append((await agent.get(CONVERSATION_ROUTE)).json()["said"][0]["said_id"])
 
@@ -338,7 +337,7 @@ def test_work_that_branched_is_reported_as_branches(review_page: TestClient) -> 
 def test_work_is_dated_when_it_was_reported(reviews: ReviewFactory) -> None:
     """A review reloaded later says how long the work has gone on, not that it just began."""
     with (
-        page_client(reviews.app(opening_of([one_line_file()]), clock=FixedClock(A_MOMENT))) as review_page,
+        page_client(reviews.app_of_change([one_line_file()], clock=FixedClock(A_MOMENT))) as review_page,
         open_session(review_page) as socket,
     ):
         review_page.post("/api/progress", json={"text": "reading the handler"})
@@ -468,7 +467,7 @@ async def test_a_reloaded_review_learns_the_status_again(client: AsyncClient) ->
 
 async def test_a_status_is_dated_when_it_was_reported(reviews: ReviewFactory) -> None:
     """The panel says how old the numbers are, so the date is the review's own clock."""
-    async with http_client(reviews.app(opening_of([one_line_file()]), clock=FixedClock(A_MOMENT))) as client:
+    async with http_client(reviews.app_of_change([one_line_file()], clock=FixedClock(A_MOMENT))) as client:
         await client.post("/api/status", json={"model": "opus-5"})
         standing = (await client.get(REVIEW_ROUTE)).json()
 
@@ -476,7 +475,7 @@ async def test_a_status_is_dated_when_it_was_reported(reviews: ReviewFactory) ->
 
 
 async def test_what_is_said_in_the_panel_is_dated_when_it_was_said(reviews: ReviewFactory) -> None:
-    async with http_client(reviews.app(opening_of([one_line_file()]), clock=FixedClock(A_MOMENT))) as client:
+    async with http_client(reviews.app_of_change([one_line_file()], clock=FixedClock(A_MOMENT))) as client:
         await client.post("/api/message", json=MESSAGE)
         await client.post("/api/say", json={"message_id": MESSAGE["message_id"], "body": "Two fail."})
         panel = (await client.get(CATCH_UP_ROUTE)).json()["panel"]

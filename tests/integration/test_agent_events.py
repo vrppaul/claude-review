@@ -27,7 +27,6 @@ from tests.helpers import (
     line_json,
     methods_allowed,
     one_line_file,
-    opening_of,
     repository_opening,
     thread_json,
     thread_route,
@@ -72,7 +71,7 @@ async def stale_once_rewritten(reviews: ReviewFactory, repository: Path, rewritt
 
 async def test_a_poll_whose_caller_left_takes_nothing_meant_for_the_next(reviews: ReviewFactory) -> None:
     """A killed `wait` must not leave behind a poll that swallows the next question."""
-    app = reviews.app(opening_of([one_line_file()]))
+    app = reviews.app_of_change([one_line_file()])
     caller = CallerThatLeaves()
     async with http_client(app) as agent:
         abandoned = asyncio.ensure_future(caller.poll(app, ABANDONED_POLL_SECONDS))

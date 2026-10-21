@@ -7,7 +7,7 @@ refused.
 
 from playwright.async_api import Page
 
-from tests.helpers import ReviewServers, one_line_file, opening_of
+from tests.helpers import ReviewServers, one_line_file
 
 # What Chromium writes on the console about anything the page's policy refused
 REFUSED_BY_THE_POLICY = "Content Security Policy"
@@ -27,7 +27,7 @@ def _script_sources(policy: str) -> list[str]:
 async def test_the_page_runs_its_inline_script_under_its_policy_and_nothing_is_refused(
     servers: ReviewServers, page: Page
 ) -> None:
-    review = await servers.start(opening_of([one_line_file()]))
+    review = await servers.start_change([one_line_file()])
     console: list[str] = []
     page.on("console", lambda message: console.append(message.text))
 

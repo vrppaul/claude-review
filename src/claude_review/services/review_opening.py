@@ -10,13 +10,24 @@ were named.
 import asyncio
 import hashlib
 from pathlib import Path
+from typing import Annotated, Literal
 
 import structlog
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from claude_review.domain.exceptions import UnknownVersionError
 from claude_review.domain.interfaces import Repository
-from claude_review.domain.models import HEAD, Checkout, DiffFile, RepositoryAt, ReviewMode
+from claude_review.domain.models import (
+    HEAD,
+    Checkout,
+    DiffFile,
+    InRepository,
+    OfConversation,
+    OfFiles,
+    RepositoryAt,
+    ReviewMode,
+    WhereTheChangeIs,
+)
 from claude_review.services.diff_reading import read_diff
 from claude_review.services.text_files import read_text_files
 from claude_review.services.transcript import SHORT_ID_LENGTH, read_transcript
@@ -49,6 +60,7 @@ class OpenedRepository(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
+    kind: Literal[ReviewMode.DIFF] = ReviewMode.DIFF
     root: Path
     # The base as the reader named it — `HEAD~1`, `main` — or None for the
     # uncommitted changes. The review is named by it, never by an id.
@@ -69,9 +81,14 @@ class OpenedRepository(BaseModel):
         return self.root.name or str(self.root)
 
     @property
-    def repository_at(self) -> RepositoryAt:
+    def where(self) -> InRepository:
         """Where the change is, as the header says it: the repository, by its name, and what it had checked out."""
-        return RepositoryAt(name=self.name, checkout=self.checkout)
+        return InRepository(repository=RepositoryAt(name=self.name, checkout=self.checkout))
+
+
+# What a review opens on, one kind to each kind of review: a repository's change, read from it whenever it is
+# taken again; or files or a conversation, read once
+type OpenedSource = Annotated[OpenedRepository | OfFiles | OfConversation, Field(discriminator="kind")]
 
 
 class ReviewOpening(BaseModel):
@@ -79,16 +96,18 @@ class ReviewOpening(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    mode: ReviewMode
+    source: OpenedSource
     diff_files: list[DiffFile]
     # What the header says is under review
     title: str
     # What makes it the same review when it is opened again: that lands it on
     # the same port, and its page on the draft its reader left in it
     identity: str
-    # Where a diff review reads from; a review of files or of a conversation
-    # has no repository
-    repository: OpenedRepository | None
+
+    @property
+    def mode(self) -> ReviewMode:
+        """What kind of review it is: the kind of what it opens on."""
+        return self.source.kind
 
     @property
     def identity_digest(self) -> str:
@@ -98,12 +117,20 @@ class ReviewOpening(BaseModel):
     @property
     def opened_against(self) -> str | None:
         """The base as the reader named it: None for the uncommitted changes, and for a review of no repository."""
-        return self.repository.named_base if self.repository is not None else None
+        match self.source:
+            case OpenedRepository(named_base=named_base):
+                return named_base
+            case OfFiles() | OfConversation():
+                return None
 
     @property
-    def repository_at(self) -> RepositoryAt | None:
-        """Where the change under review is: None for a review of files or of a conversation, of no repository."""
-        return self.repository.repository_at if self.repository is not None else None
+    def where(self) -> WhereTheChangeIs:
+        """Where the change under review is: in its repository, or in the files or the conversation read."""
+        match self.source:
+            case OpenedRepository() as repository:
+                return repository.where
+            case OfFiles() | OfConversation() as read_once:
+                return read_once
 
 
 async def open_diff(location: Path, base: str | None, repository: Repository) -> ReviewOpening:
@@ -130,11 +157,10 @@ async def open_diff(location: Path, base: str | None, repository: Repository) ->
         checkout=await repository.checked_out(resolved_location),
     )
     return ReviewOpening(
-        mode=ReviewMode.DIFF,
+        source=opened,
         diff_files=diff_files,
         title=_diff_title(opened.name, base),
         identity=IDENTITY_SEPARATOR.join((str(root), base or NO_BASE)),
-        repository=opened,
     )
 
 
@@ -159,12 +185,11 @@ async def open_files(paths: list[Path], *, named_from: Path) -> ReviewOpening:
     log.info("loading_files", count=len(files))
     diff_files = await read_text_files(files, named_from=named_from)
     return ReviewOpening(
-        mode=ReviewMode.FILES,
+        source=OfFiles(),
         diff_files=diff_files,
         title=_files_title(files),
         # The same files are the same review, in whatever order they are named
         identity=IDENTITY_SEPARATOR.join(sorted(str(file) for file in files)),
-        repository=None,
     )
 
 
@@ -174,11 +199,10 @@ async def open_transcript(path: Path) -> ReviewOpening:
     log.info("loading_transcript", path=str(conversation))
     transcript = await read_transcript(conversation)
     return ReviewOpening(
-        mode=ReviewMode.TRANSCRIPT,
+        source=OfConversation(),
         diff_files=transcript.turns,
         title=CONVERSATION_TITLE.format(name=transcript.session_id[:SHORT_ID_LENGTH]),
         identity=IDENTITY_SEPARATOR.join((str(conversation), ReviewMode.TRANSCRIPT)),
-        repository=None,
     )
 
 

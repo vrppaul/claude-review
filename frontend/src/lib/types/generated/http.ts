@@ -1107,6 +1107,18 @@ export interface components {
             image_id: string;
         };
         /**
+         * InRepository
+         * @description A review of a change in a repository: where it is, which the header says in place of the tool's name.
+         */
+        InRepository: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "diff";
+            repository: components["schemas"]["RepositoryAt"];
+        };
+        /**
          * ItemBlock
          * @description One thing a list of the overview holds, by where it stands in the list, counted from 0.
          */
@@ -1291,6 +1303,28 @@ export interface components {
             message_id: string;
             /** Threads */
             threads?: components["schemas"]["ThreadDraft-Input"][];
+        };
+        /**
+         * OfConversation
+         * @description A review of a conversation Claude Code kept: in no repository, and called by its title.
+         */
+        OfConversation: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "transcript";
+        };
+        /**
+         * OfFiles
+         * @description A review of files read once, each whole: in no repository, and called by its title.
+         */
+        OfFiles: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "files";
         };
         /**
          * OnBranch
@@ -1562,16 +1596,6 @@ export interface components {
             changes: components["schemas"]["ChangesSince"] | null;
         };
         /**
-         * ReviewMode
-         * @description What kind of content is being reviewed.
-         *
-         *     DIFF  — git changes (the default): two-column line numbers, add/delete styling.
-         *     FILES — plain text files (plans, docs): single line numbers, no diff decoration.
-         *     TRANSCRIPT — conversation messages: each message is a reviewable block.
-         * @enum {string}
-         */
-        ReviewMode: "diff" | "files" | "transcript";
-        /**
          * ReviewResponse
          * @description Response for GET /api/review — what the review is and where it stands, whichever base is on screen.
          *
@@ -1582,10 +1606,9 @@ export interface components {
         ReviewResponse: {
             /** Title */
             title: string;
-            repository: components["schemas"]["RepositoryAt"] | null;
+            where: components["schemas"]["WhereTheChangeIs"];
             /** Identity */
             identity: string;
-            mode: components["schemas"]["ReviewMode"];
             /** Round */
             round: number;
             /** Answerer Attached */
@@ -2222,6 +2245,7 @@ export interface components {
             /** Versions */
             versions: components["schemas"]["ReviewVersion"][];
         };
+        WhereTheChangeIs: components["schemas"]["InRepository"] | components["schemas"]["OfFiles"] | components["schemas"]["OfConversation"];
     };
     responses: never;
     parameters: never;

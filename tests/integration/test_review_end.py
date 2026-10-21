@@ -10,7 +10,7 @@ from httpx import AsyncClient
 
 from claude_review.presentation.schemas.pushes import EndedPush
 from claude_review.presentation.schemas.session import Delivery, Welcome
-from tests.helpers import SETTLE_SECONDS, ReviewServers, message_said, one_line_file, opening_of
+from tests.helpers import SETTLE_SECONDS, ReviewServers, message_said, one_line_file
 from tests.page_socket import PageSocket, page_socket_held
 
 END_ROUTE = "/api/end"
@@ -22,7 +22,7 @@ async def _next_message(page: PageSocket) -> str:
 
 
 async def test_a_page_hears_the_review_is_over_before_its_socket_closes(servers: ReviewServers) -> None:
-    review = await servers.start(opening_of([one_line_file()]))
+    review = await servers.start_change([one_line_file()])
 
     async with page_socket_held(review.port) as page, AsyncClient(base_url=review.url) as reader:
         assert isinstance(message_said(await _next_message(page)), Welcome)

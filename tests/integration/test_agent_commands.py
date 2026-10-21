@@ -35,7 +35,6 @@ from tests.helpers import (
     line_json,
     next_push,
     one_line_file,
-    opening_of,
     removed_line,
     repository_opening,
     thread_json,
@@ -75,7 +74,7 @@ FROM_A_HEREDOC = f"{MARKDOWN}\n"
 @pytest.fixture
 async def review(servers: ReviewServers) -> RunningReview:
     """A review of one file with one line in it, served on a port of its own."""
-    return await servers.start(opening_of([one_line_file()]))
+    return await servers.start_change([one_line_file()])
 
 
 async def _run(review: RunningReview, command: str, *arguments: str, typed: str | None = None) -> Result:
@@ -110,9 +109,7 @@ async def test_a_file_typed_twice_is_sent_once(review: RunningReview, command: s
 
 async def test_a_thread_raised_hangs_on_the_side_it_names_with_the_weight_it_is_given(servers: ReviewServers) -> None:
     """A thread on lines the change removed must not land on the lines that replaced them."""
-    review = await servers.start(
-        opening_of([diff_file(REVIEWED_FILE, [removed_line(1, "x = 0"), added_line(1, "x = 1")])])
-    )
+    review = await servers.start_change([diff_file(REVIEWED_FILE, [removed_line(1, "x = 0"), added_line(1, "x = 1")])])
     async with page_socket_held(review.port) as page:
         result = await _run(
             review, "point", "--file", REVIEWED_FILE, "--lines", "1", "--side", "old", "--severity", "blocker", "Why?"

@@ -41,6 +41,8 @@ from claude_review.domain.models import (
     LineAnchor,
     LineSide,
     LineType,
+    OfConversation,
+    OfFiles,
     ReviewMode,
     StoryAnchor,
     StoryBlock,
@@ -61,7 +63,8 @@ from claude_review.presentation.schemas.session import Delivery, SessionMessage,
 from claude_review.repositories.git_repository import GitRepository
 from claude_review.repositories.system_clock import SystemClock
 from claude_review.services.review.review_lifetime import EndReason, ReviewLifetime
-from claude_review.services.review_opening import ReviewOpening, open_diff
+from claude_review.services.review_opening import OpenedRepository, ReviewOpening, open_diff
+from tests.held_still import RepositoryHeldStill, change_held_still
 
 # Where a review built in the test process is reached. Its own page names
 # itself by this origin, and the host is what the origin guard checks.
@@ -339,9 +342,14 @@ class FixedClock(Clock):
         return self.moment
 
 
-def opening_of(diff_files: list[DiffFile], *, mode: ReviewMode = ReviewMode.DIFF, title: str = "") -> ReviewOpening:
-    """What a review of files read once opens on, built by the test; a repository is opened by `repository_opening`."""
-    return ReviewOpening(mode=mode, diff_files=diff_files, title=title, identity=TEST_IDENTITY, repository=None)
+def files_opening_of(diff_files: list[DiffFile], *, title: str = "") -> ReviewOpening:
+    """What a review of files read once opens on, built by the test; a change is opened by `hosted_change`."""
+    return ReviewOpening(source=OfFiles(), diff_files=diff_files, title=title, identity=TEST_IDENTITY)
+
+
+def conversation_opening_of(diff_files: list[DiffFile], *, title: str = "") -> ReviewOpening:
+    """What a review of a conversation opens on, its turns built by the test."""
+    return ReviewOpening(source=OfConversation(), diff_files=diff_files, title=title, identity=TEST_IDENTITY)
 
 
 class ReviewFactory:
@@ -367,7 +375,8 @@ class ReviewFactory:
         repository: ReviewedRepository | None = None,
     ) -> HostedReview:
         """The review put together as the command line puts it together, over git unless the test names another."""
-        workspace = self._marking_workspace if opening.repository is not None and keeps_marks else self._workspace
+        reads_a_repository = isinstance(opening.source, OpenedRepository)
+        workspace = self._marking_workspace if reads_a_repository and keeps_marks else self._workspace
         return host_review(
             opening,
             repository=repository or GitRepository(objects=workspace.objects),
@@ -376,9 +385,35 @@ class ReviewFactory:
             clock=clock or SystemClock(),
         )
 
+    def hosted_change(
+        self,
+        diff_files: list[DiffFile],
+        *,
+        title: str = "",
+        too_large: frozenset[str] = frozenset(),
+        clock: Clock | None = None,
+    ) -> HostedReview:
+        """A review of these files as a repository's change, over a repository held still (tests/held_still.py)."""
+        return self.hosted(
+            change_held_still(diff_files, title=title),
+            clock=clock,
+            repository=RepositoryHeldStill(diff_files, too_large=too_large),
+        )
+
     def app(self, opening: ReviewOpening, *, keeps_marks: bool = True, clock: Clock | None = None) -> FastAPI:
         """The app that serves the review, for a test that speaks to it and to nothing else."""
         return self.hosted(opening, keeps_marks=keeps_marks, clock=clock).app
+
+    def app_of_change(
+        self,
+        diff_files: list[DiffFile],
+        *,
+        title: str = "",
+        too_large: frozenset[str] = frozenset(),
+        clock: Clock | None = None,
+    ) -> FastAPI:
+        """The app that serves a review of these files as a repository's change, held still."""
+        return self.hosted_change(diff_files, title=title, too_large=too_large, clock=clock).app
 
 
 @contextlib.asynccontextmanager
@@ -684,8 +719,14 @@ class ReviewServers:
         self._loop = asyncio.get_running_loop()
 
     async def start(self, opening: ReviewOpening) -> RunningReview:
+        return await self._serve(self._reviews.hosted(opening))
+
+    async def start_change(self, diff_files: list[DiffFile]) -> RunningReview:
+        """A review of these files as a repository's change, held still, served."""
+        return await self._serve(self._reviews.hosted_change(diff_files))
+
+    async def _serve(self, hosted: HostedReview) -> RunningReview:
         assert asyncio.get_running_loop() is self._loop, STARTED_IN_ANOTHER_LOOP
-        hosted = self._reviews.hosted(opening)
         lifetime = hosted.review.lifetime
         # The server the command line runs, so a browser test meets the same one
         server = ReviewServer(hosted.app, lifetime)

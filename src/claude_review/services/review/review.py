@@ -104,9 +104,8 @@ class Review:
     ) -> None:
         # What it was opened on, read from the source made from it: handed once, it cannot be another's
         opening = source.opening
-        self._mode = opening.mode
         self._title = opening.title
-        self._repository_at = opening.repository_at
+        self._where = opening.where
         self._identity = opening.identity_digest
         self._opened_against = opening.opened_against
         self._page = page
@@ -140,9 +139,8 @@ class Review:
         """What the review is and where it has got to, in one piece."""
         return ReviewStanding(
             title=self._title,
-            repository_at=self._repository_at,
+            where=self._where,
             identity=self._identity,
-            mode=self._mode,
             opened_against=self._opened_against,
             round=self._rounds.current,
             answerer_attached=self._answerer.attached,

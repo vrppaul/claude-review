@@ -372,7 +372,7 @@ def test_a_conversation_is_reviewed_as_its_messages(tmp_path: Path, cli: CliProc
 
     cli.start("transcript", str(conversation), "--port", str(port), "--no-open").wait_for_address()
 
-    assert _read(port, "/api/review")["mode"] == ReviewMode.TRANSCRIPT
+    assert _read(port, "/api/review")["where"] == {"kind": ReviewMode.TRANSCRIPT}
     assert len(_read(port, "/api/diff")["files"]) == len(CONVERSATION)
 
 

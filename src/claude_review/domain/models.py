@@ -880,6 +880,36 @@ class RepositoryAt(BaseModel):
     checkout: Checkout
 
 
+class InRepository(BaseModel):
+    """A review of a change in a repository: where it is, which the header says in place of the tool's name."""
+
+    model_config = ConfigDict(frozen=True)
+
+    kind: Literal[ReviewMode.DIFF] = ReviewMode.DIFF
+    repository: RepositoryAt
+
+
+class OfFiles(BaseModel):
+    """A review of files read once, each whole: in no repository, and called by their names."""
+
+    model_config = ConfigDict(frozen=True)
+
+    kind: Literal[ReviewMode.FILES] = ReviewMode.FILES
+
+
+class OfConversation(BaseModel):
+    """A review of a conversation Claude Code kept: in no repository, and called by its session."""
+
+    model_config = ConfigDict(frozen=True)
+
+    kind: Literal[ReviewMode.TRANSCRIPT] = ReviewMode.TRANSCRIPT
+
+
+# Where the change under review is, one kind to each kind of review: so no review of files is in a
+# repository, and no diff in none
+type WhereTheChangeIs = Annotated[InRepository | OfFiles | OfConversation, Field(discriminator="kind")]
+
+
 class ReviewKey(BaseModel):
     """The review's own base: what it was opened against, and the diff it keeps."""
 

@@ -166,6 +166,12 @@
   it is, "Conversation 63b8ade4", read from its entries, where it gave
   its file's whole name. A transcript no entry of which names its session
   is refused as unreadable: it is no conversation Claude Code kept.
+- **The API says where the change is in one field.** `GET /api/review`
+  answers `where`, one kind to each kind of review: `{"kind": "diff",
+  "repository": …}`, `{"kind": "files"}` or `{"kind": "transcript"}`. It
+  replaces `mode` and the `repository` beside it that was null for files
+  and conversations, so no answer can name a diff in no repository, or
+  files in one.
 - **Send counts what goes with it.** The header's "2 unsent · 5" is gone:
   how many comments go with the round, or with the end of a review with
   no agent, stands on Send itself, reversed on its fill, "2 comments go

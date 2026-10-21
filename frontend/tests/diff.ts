@@ -1,6 +1,14 @@
 /** Diffs as the server hands them over, built with only what a test cares about. */
 import { REVIEW_IDENTITY, THIS_RUN } from './fake-socket';
-import type { DiffFile, DiffHunk, DiffLine, DiffResponse, ReviewResponse, ShownBase } from '$lib/types';
+import type {
+	DiffFile,
+	DiffHunk,
+	DiffLine,
+	DiffResponse,
+	ReviewResponse,
+	ShownBase,
+	WhereTheChangeIs
+} from '$lib/types';
 import { SEND_LIMITS } from './pasted-images';
 
 /** A file as the diff carries it: modified, shown line by line, open to comments, with no lines unless given some. */
@@ -83,15 +91,21 @@ export function diffResponse(given: Partial<DiffResponse> = {}): DiffResponse {
 /** What the review a test opens is of, unless it says otherwise. */
 export const REVIEW_TITLE = 'repo: uncommitted changes';
 /** Where its change is: the repository, on the branch the change is made on. */
-const REVIEWED_REPOSITORY: ReviewResponse['repository'] = { name: 'repo', checkout: { at: 'branch', branch: 'main' } };
+const IN_THE_REPOSITORY: WhereTheChangeIs = {
+	kind: 'diff',
+	repository: { name: 'repo', checkout: { at: 'branch', branch: 'main' } }
+};
+/** Where the change is in a review of files read once. */
+export const OF_FILES: WhereTheChangeIs = { kind: 'files' };
+/** Where it is in a review of a conversation. */
+export const OF_A_CONVERSATION: WhereTheChangeIs = { kind: 'transcript' };
 
 /** What the server says the review is, as a page opening reads it: a diff in its first round. */
 export function reviewResponse(given: Partial<ReviewResponse> = {}): ReviewResponse {
 	return {
 		title: REVIEW_TITLE,
-		repository: REVIEWED_REPOSITORY,
+		where: IN_THE_REPOSITORY,
 		identity: REVIEW_IDENTITY,
-		mode: 'diff',
 		round: 1,
 		answerer_attached: false,
 		agent: { model: null, context: null, at: null },

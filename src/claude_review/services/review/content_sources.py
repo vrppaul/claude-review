@@ -26,7 +26,15 @@ from pydantic import BaseModel
 
 from claude_review.domain.exceptions import NoRepositoryError
 from claude_review.domain.interfaces import Clock, GitError, ReviewedRepository, StagedTree
-from claude_review.domain.models import ChangedSinceRound, DiffFile, ReviewKey, VersionKey, VersionOnOffer
+from claude_review.domain.models import (
+    ChangedSinceRound,
+    DiffFile,
+    OfConversation,
+    OfFiles,
+    ReviewKey,
+    VersionKey,
+    VersionOnOffer,
+)
 from claude_review.services.diff_reading import read_diff
 from claude_review.services.file_window_service import FileWindow, FileWindowService
 from claude_review.services.review.review_content import ReviewContent, TakesCompared
@@ -309,7 +317,9 @@ async def _no_moves() -> AsyncIterator[int]:
 
 
 def content_source(opening: ReviewOpening, *, repository: ReviewedRepository, clock: Clock) -> ContentSource:
-    """Where this review's content comes from: its repository, when it has one."""
-    if opening.repository is None:
-        return FixedSource(opening)
-    return RepositorySource(opening, opening.repository, repository=repository, clock=clock)
+    """Where this review's content comes from: a repository's change from the repository, whenever it is taken."""
+    match opening.source:
+        case OpenedRepository() as opened:
+            return RepositorySource(opening, opened, repository=repository, clock=clock)
+        case OfFiles() | OfConversation():
+            return FixedSource(opening)

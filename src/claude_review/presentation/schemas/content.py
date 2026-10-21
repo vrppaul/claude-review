@@ -222,6 +222,45 @@ class RepositoryAt(Schema):
         return cls(name=repository.name, checkout=_checkout_from_domain(repository.checkout))
 
 
+class InRepository(Schema):
+    """A review of a change in a repository: where it is, which the header says in place of the tool's name."""
+
+    kind: Literal[ReviewMode.DIFF] = ReviewMode.DIFF
+    repository: RepositoryAt
+
+    @classmethod
+    def from_domain(cls, where: models.InRepository) -> Self:
+        return cls(repository=RepositoryAt.from_domain(where.repository))
+
+
+class OfFiles(Schema):
+    """A review of files read once, each whole: in no repository, and called by its title."""
+
+    kind: Literal[ReviewMode.FILES] = ReviewMode.FILES
+
+
+class OfConversation(Schema):
+    """A review of a conversation Claude Code kept: in no repository, and called by its title."""
+
+    kind: Literal[ReviewMode.TRANSCRIPT] = ReviewMode.TRANSCRIPT
+
+
+type WhereTheChangeIs = Annotated[InRepository | OfFiles | OfConversation, Field(discriminator="kind")]
+
+
+def where_from_domain(where: models.WhereTheChangeIs) -> WhereTheChangeIs:
+    """The schema of where the change under review is, whichever kind of review it is."""
+    match where:
+        case models.InRepository():
+            return InRepository.from_domain(where)
+        case models.OfFiles():
+            return OfFiles()
+        case models.OfConversation():
+            return OfConversation()
+        case _:
+            assert_never(where)
+
+
 class ReviewResponse(Schema):
     """Response for GET /api/review — what the review is and where it stands, whichever base is on screen.
 
@@ -231,14 +270,14 @@ class ReviewResponse(Schema):
     """
 
     title: str
-    # Where the change is, which the header says in place of the tool's name:
-    # None for a review of files or of a conversation, of no repository
-    repository: RepositoryAt | None
+    # Where the change is, by the kind of review it is, which the header says
+    # in place of the tool's name: a repository's, or files or a conversation
+    # read once, said by the title
+    where: WhereTheChangeIs
     # What makes it the same review whenever it is opened, as a name that says
     # nothing of what it is made of: the page keeps the reader's unsent work
     # under it, and knows by it a review on this port that is not its own
     identity: str
-    mode: ReviewMode
     # Which round is being written, and whether anything is there to answer it
     round: int
     answerer_attached: StrictBool

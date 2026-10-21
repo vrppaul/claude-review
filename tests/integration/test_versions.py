@@ -14,7 +14,6 @@ from pathlib import Path
 import pytest
 from httpx import AsyncClient
 
-from claude_review.domain.models import ReviewMode
 from claude_review.repositories.git_repository import GitRepository
 from claude_review.services.review_opening import open_diff
 from tests.helpers import (
@@ -22,10 +21,10 @@ from tests.helpers import (
     LOCAL_HEADERS,
     FixedClock,
     ReviewFactory,
+    files_opening_of,
     git,
     http_client,
     line_json,
-    opening_of,
     repository_opening,
 )
 
@@ -185,7 +184,7 @@ async def test_the_diff_names_the_base_it_was_taken_against_and_whether_it_is_na
 
 async def test_a_review_without_a_repository_offers_no_bases(reviews: ReviewFactory) -> None:
     """Files and transcripts are not compared against anything."""
-    async with http_client(reviews.app(opening_of([], mode=ReviewMode.FILES))) as client:
+    async with http_client(reviews.app(files_opening_of([]))) as client:
         assert await _offered(client) == []
         assert (await client.get(DIFF_ROUTE, headers=LOCAL_HEADERS)).json()["base"] is None
 

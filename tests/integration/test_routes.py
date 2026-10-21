@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 from httpx import AsyncClient
 
-from claude_review.domain.models import MAX_PATH_LENGTH, DiffFile, FileStatus, ReviewMode, Unshown
+from claude_review.domain.models import MAX_PATH_LENGTH, DiffFile, FileStatus, Unshown
 from claude_review.repositories.git_repository import GitRepository
 from claude_review.services.review_opening import ReviewOpening, open_diff
 from claude_review.services.text_files import read_text_files
@@ -27,12 +27,13 @@ from tests.helpers import (
     added_line,
     committed_repository,
     context_line,
+    conversation_opening_of,
     diff_file,
+    files_opening_of,
     git,
     http_client,
     line_json,
     methods_allowed,
-    opening_of,
     removed_line,
     repository_opening,
     review_has_ended,
@@ -78,7 +79,7 @@ def _handler_change() -> list[DiffFile]:
 
 @pytest.fixture
 async def client(reviews: ReviewFactory) -> AsyncIterator[AsyncClient]:
-    async with http_client(reviews.app(opening_of(_handler_change(), title=REVIEW_TITLE))) as agent:
+    async with http_client(reviews.app_of_change(_handler_change(), title=REVIEW_TITLE)) as agent:
         yield agent
 
 
@@ -109,7 +110,7 @@ async def test_a_file_whose_name_no_thread_may_carry_is_served_as_read_only(revi
     """Git hands out names with a tab or an escape in them; a thread naming one would sink its whole round."""
     named_with_a_tab = diff_file("tab\there.py", [added_line(1, "x = 1")])
 
-    async with http_client(reviews.app(opening_of([named_with_a_tab, *_handler_change()]))) as client:
+    async with http_client(reviews.app_of_change([named_with_a_tab, *_handler_change()])) as client:
         served = (await client.get(DIFF_ROUTE)).json()["files"]
 
     assert [(file["path"], file["commentable"]) for file in served] == [("tab\there.py", False), (HANDLER_FILE, True)]
@@ -120,7 +121,9 @@ async def test_a_file_shown_without_its_lines_is_served_saying_why(reviews: Revi
     too_large = DiffFile(path="generated.log", status=FileStatus.ADDED, hunks=[], unshown=Unshown.TOO_LARGE)
     binary = DiffFile(path="logo.png", status=FileStatus.ADDED, hunks=[], unshown=Unshown.BINARY)
 
-    async with http_client(reviews.app(opening_of([too_large, binary, *_handler_change()]))) as client:
+    async with http_client(
+        reviews.app_of_change([too_large, binary, *_handler_change()], too_large=frozenset({too_large.path}))
+    ) as client:
         served = (await client.get(DIFF_ROUTE)).json()["files"]
 
     assert [(file["path"], file["unshown"]) for file in served] == [
@@ -200,7 +203,7 @@ def plan_file(tmp_path: Path) -> Path:
 async def files_mode_client(plan_file: Path, reviews: ReviewFactory) -> AsyncIterator[AsyncClient]:
     """Client backed by a real text file, read as a files review reads it."""
     files = await read_text_files([plan_file], named_from=plan_file.parent)
-    async with http_client(reviews.app(opening_of(files, mode=ReviewMode.FILES))) as agent:
+    async with http_client(reviews.app(files_opening_of(files))) as agent:
         yield agent
 
 
@@ -209,7 +212,7 @@ async def test_a_review_of_files_tells_the_page_it_is_one(files_mode_client: Asy
     response = await files_mode_client.get(REVIEW_ROUTE)
 
     assert response.status_code == HTTPStatus.OK
-    assert response.json()["mode"] == "files"
+    assert response.json()["where"] == {"kind": "files"}
 
 
 @pytest.fixture
@@ -239,7 +242,7 @@ def transcript_file(tmp_path: Path) -> Path:
 async def transcript_mode_client(transcript_file: Path, reviews: ReviewFactory) -> AsyncIterator[AsyncClient]:
     """Client backed by a real transcript file, read as a conversation review reads it."""
     transcript = await read_transcript(transcript_file)
-    async with http_client(reviews.app(opening_of(transcript.turns, mode=ReviewMode.TRANSCRIPT))) as agent:
+    async with http_client(reviews.app(conversation_opening_of(transcript.turns))) as agent:
         yield agent
 
 
@@ -249,7 +252,7 @@ async def test_a_review_of_a_conversation_serves_its_messages_newest_first(
     response = await transcript_mode_client.get(DIFF_ROUTE)
 
     assert response.status_code == HTTPStatus.OK
-    assert (await transcript_mode_client.get(REVIEW_ROUTE)).json()["mode"] == "transcript"
+    assert (await transcript_mode_client.get(REVIEW_ROUTE)).json()["where"] == {"kind": "transcript"}
     newest, oldest = response.json()["files"]
     assert "assistant" in newest["path"]
     assert "user" in oldest["path"]
@@ -294,9 +297,9 @@ async def test_the_review_of_a_repository_says_its_name_and_the_branch_checked_o
     async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as client:
         response = await client.get(REVIEW_ROUTE)
 
-    assert response.json()["repository"] == {
-        "name": tmp_git_repo.name,
-        "checkout": {"at": "branch", "branch": DEFAULT_BRANCH},
+    assert response.json()["where"] == {
+        "kind": "diff",
+        "repository": {"name": tmp_git_repo.name, "checkout": {"at": "branch", "branch": DEFAULT_BRANCH}},
     }
 
 

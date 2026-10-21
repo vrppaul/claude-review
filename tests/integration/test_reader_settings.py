@@ -13,7 +13,7 @@ import pytest
 from httpx import AsyncClient
 
 from claude_review.hosting.workspace import ReaderFiles
-from tests.helpers import ReviewFactory, http_client, opening_of
+from tests.helpers import ReviewFactory, http_client
 
 # The settings file as a release before stories wrote it, for a reader who chose the dark theme: no model
 # of this release writes one without the choice
@@ -33,7 +33,7 @@ def reader_files(tmp_path: Path) -> ReaderFiles:
 
 def _client(reviews: ReviewFactory) -> AbstractAsyncContextManager[AsyncClient]:
     """A review of nothing in particular: what it remembers is the reader's, not its own."""
-    return http_client(reviews.app(opening_of([])))
+    return http_client(reviews.app_of_change([]))
 
 
 async def test_a_reader_who_never_chose_gets_the_defaults_and_is_told_so(reviews: ReviewFactory) -> None:

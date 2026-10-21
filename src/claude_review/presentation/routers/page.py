@@ -41,11 +41,11 @@ from claude_review.presentation.schemas.content import (
     DiffFile,
     DiffResponse,
     FileWindowResponse,
-    RepositoryAt,
     RetakeResponse,
     ReviewResponse,
     StoryAsking,
     VersionsResponse,
+    where_from_domain,
 )
 from claude_review.presentation.schemas.story import StoryHeld, StoryResponse
 from claude_review.presentation.schemas.threads import (
@@ -77,9 +77,8 @@ async def get_the_review(review: ReviewDep, release: ReleaseDep, broadcast: Broa
     told = broadcast.position()
     return ReviewResponse(
         title=standing.title,
-        repository=made_or_none(RepositoryAt.from_domain, standing.repository_at),
+        where=where_from_domain(standing.where),
         identity=standing.identity,
-        mode=standing.mode,
         round=standing.round,
         answerer_attached=standing.answerer_attached,
         agent=AgentStatus.from_domain(standing.agent),

@@ -9,7 +9,6 @@ import pytest
 from httpx import AsyncClient, TransportError
 from playwright.async_api import Locator, Page, expect
 
-from claude_review.domain.models import ReviewMode
 from claude_review.services.text_files import read_text_files
 from claude_review.services.transcript import read_transcript
 from tests.e2e.browsers_loop import in_the_browsers_loop
@@ -22,8 +21,9 @@ from tests.helpers import (
     SESSION_ID,
     RunningReview,
     committed_repository,
+    conversation_opening_of,
+    files_opening_of,
     git,
-    opening_of,
     repository_opening,
     review_has_ended,
     write_files,
@@ -211,9 +211,7 @@ def text_files(tmp_path: Path) -> list[Path]:
 @in_the_browsers_loop
 async def files_review(text_files: list[Path], servers: ReviewServers, tmp_path: Path) -> RunningReview:
     """A real server reviewing two text files."""
-    return await servers.start(
-        opening_of(await read_text_files(text_files, named_from=tmp_path), mode=ReviewMode.FILES)
-    )
+    return await servers.start(files_opening_of(await read_text_files(text_files, named_from=tmp_path)))
 
 
 async def test_a_comment_on_a_file_reaches_the_agent(files_review: RunningReview, page: Page) -> None:
@@ -241,7 +239,7 @@ def transcript_file(tmp_path: Path) -> Path:
 @in_the_browsers_loop
 async def transcript_review(transcript_file: Path, servers: ReviewServers) -> RunningReview:
     """A real server reviewing a conversation."""
-    return await servers.start(opening_of((await read_transcript(transcript_file)).turns, mode=ReviewMode.TRANSCRIPT))
+    return await servers.start(conversation_opening_of((await read_transcript(transcript_file)).turns))
 
 
 async def test_a_comment_on_a_message_reaches_the_agent(transcript_review: RunningReview, page: Page) -> None:

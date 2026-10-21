@@ -42,13 +42,13 @@ import type {
 	DiffResponse,
 	FollowOutcome,
 	HeldThread,
-	RepositoryAt,
 	ReviewMode,
 	ReviewResponse,
 	SaidInPanel,
 	SendLimits,
 	SessionHello,
-	StoryHeld
+	StoryHeld,
+	WhereTheChangeIs
 } from '$lib/types';
 import { DRAFT_SHAPE, type Draft, emptyDraft } from '$lib/drafts/draft-shapes';
 import { diffCharacters, threadCharacters, tokensOf } from '$lib/review/weight';
@@ -87,11 +87,10 @@ export interface ReaderParts {
 export class Review {
 	/** What is under review — which repository, and against what. */
 	readonly title: string;
-	/** Where the change is, for a review of a repository's change; none for a review of files or a conversation. */
-	readonly repository: RepositoryAt | null;
+	/** Where the change is: in its repository, or in the files or the conversation read, called by the title. */
+	readonly where: WhereTheChangeIs;
 	/** What makes it the same review whenever it is opened: its draft is kept under it. */
 	readonly identity: string;
-	readonly mode: ReviewMode;
 	/** What the server takes: pasted images, and the lines one comment covers. */
 	readonly limits: SendLimits;
 
@@ -152,9 +151,8 @@ export class Review {
 
 	constructor({ facts, firstDiff, draft, draftSetAside, held, said, story }: Opening, reader: ReaderParts) {
 		this.title = facts.title;
-		this.repository = facts.repository;
+		this.where = facts.where;
 		this.identity = facts.identity;
-		this.mode = facts.mode;
 		this.limits = facts.limits;
 		this.settings = reader.settings;
 		this.layout = reader.layout;
@@ -213,6 +211,11 @@ export class Review {
 		// A review stopped under the reader keeps its draft for when it is opened again
 		this.#draft = $derived(this.link.ending === 'finished' ? null : this.#snapshot());
 		if (this.answerer.attached) this.layout.agentPanel.offer();
+	}
+
+	/** What kind of review it is: the kind of where its change is. */
+	get mode(): ReviewMode {
+		return this.where.kind;
 	}
 
 	/** The unsent review as a draft keeps it; none once the review is over. */

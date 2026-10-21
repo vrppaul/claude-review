@@ -29,7 +29,7 @@ from claude_review.repositories.git_repository import GitRepository
 from claude_review.repositories.system_clock import SystemClock
 from claude_review.services.review.review import Review
 from claude_review.services.review.review_lifetime import EndReason, ReviewLifetime
-from claude_review.services.review_opening import ReviewOpening
+from claude_review.services.review_opening import OpenedRepository, ReviewOpening
 
 log = structlog.get_logger()
 
@@ -117,7 +117,7 @@ async def hold_open(
         PortUnavailableError: If the port asked for is taken.
         ServerStartError: If the server stopped before it ever listened.
     """
-    with review_workspace(writes_trees=opening.repository is not None, announcer=announcer) as workspace:
+    with review_workspace(writes_trees=isinstance(opening.source, OpenedRepository), announcer=announcer) as workspace:
         hosted = host_review(
             opening,
             repository=GitRepository(objects=workspace.objects),

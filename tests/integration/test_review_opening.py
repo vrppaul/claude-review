@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from claude_review.domain.exceptions import UnknownVersionError
-from claude_review.domain.models import OnBranch, OnCommit, RepositoryAt
+from claude_review.domain.models import InRepository, OnBranch, OnCommit, RepositoryAt
 from claude_review.repositories.git_repository import GitRepository
 from claude_review.services.review_opening import open_diff, open_files, open_transcript
 from tests.helpers import DEFAULT_BRANCH, INITIAL_FILE, INITIAL_FILES, SESSION_ID, committed_repository, git
@@ -65,16 +65,20 @@ async def test_a_diff_says_the_branch_checked_out_or_on_none_the_commit(tmp_path
     commit = git(on_no_branch, "rev-parse", "HEAD").strip()
 
     opened = [
-        (await open_diff(repository, None, GitRepository(objects=None))).repository_at
+        (await open_diff(repository, None, GitRepository(objects=None))).where
         for repository in (on_a_branch, beside_a_tag_of_its_name, nothing_committed, outside_the_branches, on_no_branch)
     ]
 
     assert opened == [
-        RepositoryAt(name=on_a_branch.name, checkout=OnBranch(branch=FEATURE_BRANCH)),
-        RepositoryAt(name=beside_a_tag_of_its_name.name, checkout=OnBranch(branch=DEFAULT_BRANCH)),
-        RepositoryAt(name=nothing_committed.name, checkout=OnBranch(branch=DEFAULT_BRANCH)),
-        RepositoryAt(name=outside_the_branches.name, checkout=OnBranch(branch=REMOTE_REF)),
-        RepositoryAt(name=on_no_branch.name, checkout=OnCommit(commit=commit[:SHORT_ID_LENGTH])),
+        InRepository(repository=RepositoryAt(name=on_a_branch.name, checkout=OnBranch(branch=FEATURE_BRANCH))),
+        InRepository(
+            repository=RepositoryAt(name=beside_a_tag_of_its_name.name, checkout=OnBranch(branch=DEFAULT_BRANCH))
+        ),
+        InRepository(repository=RepositoryAt(name=nothing_committed.name, checkout=OnBranch(branch=DEFAULT_BRANCH))),
+        InRepository(repository=RepositoryAt(name=outside_the_branches.name, checkout=OnBranch(branch=REMOTE_REF))),
+        InRepository(
+            repository=RepositoryAt(name=on_no_branch.name, checkout=OnCommit(commit=commit[:SHORT_ID_LENGTH]))
+        ),
     ]
 
 
@@ -86,7 +90,7 @@ async def test_a_diff_opened_from_a_subdirectory_is_the_whole_repository(changed
     from_inside = await open_diff(nested, None, GitRepository(objects=None))
     from_the_root = await open_diff(changed_repo, None, GitRepository(objects=None))
 
-    assert from_inside.repository == from_the_root.repository
+    assert from_inside.source == from_the_root.source
     assert from_inside.title == from_the_root.title
     assert from_inside.identity == from_the_root.identity
 

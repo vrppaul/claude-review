@@ -17,7 +17,7 @@ from claude_review.hosting.ports import ANY_FREE_PORT
 from claude_review.presentation.schemas.agent import ProgressRequest, SayRequest, ShowRequest, StatusRequest
 from claude_review.presentation.schemas.content import ReviewResponse
 from claude_review.presentation.schemas.refusal import FieldRefusal, Refusal
-from tests.helpers import REVIEW_ROUTE, ReviewServers, one_line_file, opening_of
+from tests.helpers import REVIEW_ROUTE, ReviewServers, one_line_file
 
 # A refusal as FastAPI writes one for a field it would not take, under the
 # part of the request the field came in
@@ -89,7 +89,7 @@ def test_a_refusal_in_words_is_passed_on_as_said() -> None:
 
 async def test_what_the_agent_says_beyond_ascii_reaches_the_review_as_said(servers: ReviewServers) -> None:
     """An agent answers in the reader's language, and a file may be named in it."""
-    review = await servers.start(opening_of([one_line_file(FILE_BEYOND_ASCII)]))
+    review = await servers.start_change([one_line_file(FILE_BEYOND_ASCII)])
     agent = ReviewClient(review.port)
 
     # The client blocks while the review, on this very loop, answers it
