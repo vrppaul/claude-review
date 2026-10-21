@@ -35,6 +35,21 @@ WAYS_NAMED = [
     (10, "subprocess_exec"),
     (11, "subprocess_shell"),
 ]
+# A list told to leave out what it cannot read, by each way a file reaches pydantic's name for it, and where
+DROPS_WHAT_IT_CANNOT_READ = """
+    import pydantic
+    from pydantic import OnErrorOmit
+
+
+    class Hello(BaseModel):
+        threads: list[OnErrorOmit[Thread]]
+        turns: list[pydantic.OnErrorOmit[Turn]]
+"""
+DROPPED_ON_LINES = [3, 7, 8]
+A_LIST_DROPS_NONE = (
+    "`OnErrorOmit` leaves out an item it cannot read, uncounted against the list's bound:"
+    " keep each item, as read or as it came"
+)
 # What a script that names one is told; the files that may not, a script in whatever directory under
 # `scripts/`; and the files that may
 A_SCRIPT_STARTS_NONE = "starts a process: a script starts one through `scripts/commands.py`, which stops what it starts"
@@ -320,6 +335,16 @@ def test_a_model_taken_apart_by_the_names_of_its_fields_is_named_where_it_is(
 
     assert checked.returncode == RULE_BROKEN
     assert named.said in checked.stdout
+
+
+def test_a_list_that_leaves_out_what_it_cannot_read_is_named_wherever_it_names_the_way(tmp_path: Path) -> None:
+    """Brought in by name, asked of the module, or used bare: a list far past its bound would be taken."""
+    checked = _check(tmp_path, DROPS_WHAT_IT_CANNOT_READ)
+
+    assert (checked.returncode, checked.stdout.splitlines()) == (
+        RULE_BROKEN,
+        [f"{tmp_path / 'checked.py'}:{line}: {A_LIST_DROPS_NONE}" for line in DROPPED_ON_LINES],
+    )
 
 
 def test_a_copy_that_changes_no_field_is_refused_all_the_same(tmp_path: Path) -> None:

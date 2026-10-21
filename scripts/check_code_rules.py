@@ -21,6 +21,12 @@ holds there all the same. A name is refused whatever is done with it —
 `model_copy` also where it changes no field — since a name does not show
 which use it is.
 
+No list leaves out an item it cannot read: pydantic's `OnErrorOmit` drops
+such an item unsaid, and a bound on the list counts only what it kept, so
+a list far past its bound is taken. A list whose items may not all be read
+keeps each, as what could be read of it or as it came. Refused by its name
+wherever a file writes it — brought in, asked of the module, or used bare.
+
 The module `copy` is known by the names the file's own imports give it,
 wherever in the file they stand, so a file that does not import it may
 call anything `copy`. In a file that does, whatever else goes by one of
@@ -95,6 +101,12 @@ VARS_READ = "`vars` reads an object's fields as a mapping, by name: read the fie
 COPY_MODULE = "copy"
 REPLACING = "replace"
 REPLACED_BY_NAME = "`copy.replace` copies an object by the names of its fields: build it by its constructor"
+# What pydantic is told to leave an item of a list out by, when it cannot read it, and what is said of it
+DROPS_WHAT_IT_CANNOT_READ = "OnErrorOmit"
+DROPPED_UNREAD = (
+    "`OnErrorOmit` leaves out an item it cannot read, uncounted against the list's bound:"
+    " keep each item, as read or as it came"
+)
 # What starts a process, by the names asyncio and its event loop give it, however a file reaches them
 PROCESS_STARTERS = frozenset(
     {"create_subprocess_exec", "create_subprocess_shell", "subprocess_exec", "subprocess_shell"}
@@ -236,6 +248,7 @@ def _look_inside(node: ast.AST, file: CheckedFile, *, inside_function: bool, fou
             *_said_of_a_function_inside(child, inside_function=inside_function),
             *_said_of_a_short_name(child),
             *_said_of_fields_by_name(child, file.copy_module_names),
+            *_said_of_an_item_dropped_unread(child),
             *_said_of_a_process_started(child, may_start_processes=file.may_start_processes),
             *_said_of_a_command_by_position(child),
             *_said_of_a_refusal_elsewhere(child, file),
@@ -277,10 +290,19 @@ def _said_of_fields_by_name(node: ast.AST, copy_module_names: frozenset[str]) ->
             return [Said(line=node.lineno, says=FIELDS_BY_NAME[name])]
         case ast.keyword(arg=name) if name == READ_BY_SHARED_NAMES:
             return [Said(line=node.lineno, says=SHARED_NAMES_READ)]
-        case ast.Dict(keys=keys) if READ_BY_SHARED_NAMES in _texts_among(keys):
+        case ast.Dict(keys=keys) if _text_among(keys, READ_BY_SHARED_NAMES):
             return [Said(line=node.lineno, says=SHARED_NAMES_READ)]
         case ast.Name(id=name) if name == FIELDS_OF:
             return [Said(line=node.lineno, says=VARS_READ)]
+        case _:
+            return []
+
+
+def _said_of_an_item_dropped_unread(node: ast.AST) -> list[Said]:
+    """What is said of a node that names pydantic's way of leaving out an item it cannot read."""
+    match node:
+        case ast.Attribute(attr=name) | ast.Name(id=name) | ast.alias(name=name) if name == DROPS_WHAT_IT_CANNOT_READ:
+            return [Said(line=node.lineno, says=DROPPED_UNREAD)]
         case _:
             return []
 
@@ -342,9 +364,9 @@ def _name_among(imported: list[ast.alias], name: str) -> bool:
     return any(alias.name == name for alias in imported)
 
 
-def _texts_among(keys: list[ast.expr | None]) -> frozenset[str]:
-    """The keys of a mapping written as text; one spread into it (`**`) has none."""
-    return frozenset(key.value for key in keys if isinstance(key, ast.Constant) and isinstance(key.value, str))
+def _text_among(keys: list[ast.expr | None], text: str) -> bool:
+    """Whether a mapping's keys write this text; one spread into it (`**`) has no key."""
+    return any(isinstance(key, ast.Constant) and key.value == text for key in keys)
 
 
 def _name_given(node: ast.AST) -> GivenName | None:
