@@ -196,10 +196,12 @@
   in the header's row. Send opens the pane again on everything the send
   held, and the note goes as it does.
 - **What is chosen is drawn in ink.** A segment pressed, a toggle on and a
-  button whose pane is open are reversed, the page's words their ground
-  and its plainest ground their words, where they stood on the reader's
-  blue tint with a blue edge at their foot; a dot, an icon or a count of a
-  colour of its own keeps it. The file the reader is in, the option the
+  header control whose pane is open are reversed, the page's words their
+  ground and its plainest ground their words, where they stood on the
+  reader's blue tint with a blue edge at their foot; a dot, an icon or a
+  count of a colour of its own keeps it. An icon button in a turn or a
+  card keeps its look while what it asks is open: the red cross under
+  "Take it back?", the bin under "Delete this comment?". The file the reader is in, the option the
   keys lit and the block a thread hangs open under stand on a grey tint
   with no edge at their start, their words in ink even once viewed; a row
   is rounded at a box's corner, under the pointer as where the reader is.

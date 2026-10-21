@@ -51,7 +51,8 @@ A part is held to these once it is moved to them, or once a change touches its l
 
 - Every pressable thing is drawn at rest, under the pointer, chosen or current, with the keyboard on it, and off; one that can be new has that state too.
 - What is chosen is marked the more weakly the larger it is: a small thing reversed, a row a pill.
-- A small thing chosen — a segment, a pressed toggle, a button whose pane is open — is reversed: an ink ground, its words in the ground's colour.
+- A small thing chosen — a segment, a pressed toggle, a header control whose pane is open — is reversed: an ink ground, its words in the ground's colour.
+- An icon button inside a turn or a card keeps its look while its question or its menu is open.
 - The row or band the reader is at is a grey pill of ink at 12%, rounded, with no edge, its words in ink.
 - A field or a card the keyboard is in turns its edge blue, twice as strong, with nothing outside it; anything else the keyboard is on shows the ring.
 - Off is faint words.
