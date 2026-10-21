@@ -27,7 +27,7 @@ cd frontend && pnpm format           # Prettier; the hook only checks
 - **Tests hold behaviour.** A behaviour someone can name gets a test first, at the cheapest level; a look, a refactor or a declaration gets none.
 - **Review before presenting.** Read every changed file: the right layer? redundant work? the non-obvious commented? every line needed?
 - **Test runs follow the change.** Which tests run when: `.claude/rules/tests.md`.
-- **Speed is measured.** Say with each piece how long it took and what its slowest step was. A tool we write does its whole job in one process start; one that takes over half a minute is made fast or not used.
+- **Speed is measured.** Say with each piece how long it took and what its slowest step was.
 - **Ask first** before adding a dependency, changing the architecture, or changing a domain model.
 - Never commit secrets or credentials.
 - A commit follows Conventional Commits, `type(scope): description`.
@@ -58,6 +58,7 @@ Every change leaves the repository better than it found it: cleaner, easier to r
 - **Root cause first.** Before a fix, say why the fault can happen and change that construction. A flag, guard or filter hiding a wrong value is a symptom fix: it needs a reason.
 - **Show it with facts, not adjectives.** Say what a reader can check: what was written several times and is now written once, which state has one owner now, which rule a tool now holds. Say as plainly what did not get better.
 - **The verdict is somebody else's.** A chunk is done when an independent reviewer has measured its whole diff against this rule and listed every place that got worse. Its author never calls it better.
+- **A review steps back.** Ask why each part the change lives in exists at all, from more than one side, against how the framework's docs and template do it. One with no reason that holds is a finding, however old.
 - **A regression found becomes a gate.** What a review catches turns into a rule a tool enforces at the commit, not a test. A form a checker refused is never answered with a form it cannot see.
 - **What you can name as worse is not committed.** Fix it, or stop and ask.
 
