@@ -25,7 +25,7 @@ from claude_review.presentation.body_limit import BodySizeLimit
 from claude_review.presentation.broadcast import BrowserBroadcast
 from claude_review.presentation.errors import ALLOW_HEADER, ALLOW_SEPARATOR, answer_refusals
 from claude_review.presentation.origin_guard import LocalOriginOnly
-from claude_review.presentation.routers.api import include_api
+from claude_review.presentation.routers.api import api_router
 from claude_review.presentation.security_headers import (
     POLICY_HEADER,
     SecurityHeaders,
@@ -93,7 +93,7 @@ def create_app(review: Review, broadcast: BrowserBroadcast, reader_records: Read
     app.add_middleware(LocalOriginOnly, page_path=PAGE_PATH, page_files_path=ASSETS_PATH)
     app.add_middleware(SecurityHeaders)
 
-    include_api(app)
+    app.include_router(api_router)
     # Whatever a route refuses is answered here, by its kind
     answer_refusals(app)
 

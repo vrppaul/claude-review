@@ -4,13 +4,10 @@ from pathlib import Path
 from typing import Annotated, Literal, Self, assert_never
 
 from pydantic import (
-    BaseModel,
-    ConfigDict,
     Field,
     JsonValue,
     StrictBool,
     StrictInt,
-    ValidationError,
     computed_field,
     model_validator,
 )
@@ -416,35 +413,9 @@ class ReceivedHello(HelloBase[JsonValue]):
 
     `SessionHello` is what the browser says; this is how the server takes
     it. One thread out of bounds must not cost the round and every other
-    thread with it, so each is read on its own afterwards (`HeldThreads`).
+    thread with it, so the session's router reads each on its own afterwards
+    (`HeldThreads`).
     """
-
-
-class HeldThreads(BaseModel):
-    """The threads a hello says the page holds, as the server read them: those it can read, and the ids of the rest.
-
-    Never in a request or an answer itself: what the server made of what was.
-    """
-
-    model_config = ConfigDict(frozen=True)
-
-    readable: list[ThreadDraft]
-    # A thread left out still owns its id in the browser, so the server
-    # must not hand that id out again
-    unreadable_ids: list[str]
-
-    @classmethod
-    def read(cls, threads: list[JsonValue]) -> Self:
-        """Read each thread on its own, keeping what can be read and the id of what cannot."""
-        readable: list[ThreadDraft] = []
-        unreadable_ids: list[str] = []
-        for thread in threads:
-            try:
-                readable.append(ThreadDraft.model_validate(thread))
-            except ValidationError:
-                if (thread_id := _thread_id_of(thread)) is not None:
-                    unreadable_ids.append(thread_id)
-        return cls(readable=readable, unreadable_ids=unreadable_ids)
 
 
 class NamedThread(Schema):
@@ -453,15 +424,6 @@ class NamedThread(Schema):
     # Held to the rule every id is: one no page or review could have given
     # names no thread, and owns nothing to keep from being handed out
     thread_id: SafeId
-
-
-def _thread_id_of(thread: JsonValue) -> str | None:
-    """The id a thread the server cannot read goes by, if it names one a page could have given it."""
-    try:
-        named = NamedThread.model_validate(thread)
-    except ValidationError:
-        return None
-    return named.thread_id
 
 
 class ThreadsResponse(Schema):

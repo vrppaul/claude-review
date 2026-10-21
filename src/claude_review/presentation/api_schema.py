@@ -22,7 +22,7 @@ from pydantic import JsonValue, TypeAdapter
 from pydantic.json_schema import JsonSchemaMode
 
 from claude_review.presentation.app import API_TITLE
-from claude_review.presentation.routers.api import include_api
+from claude_review.presentation.routers.api import api_router
 from claude_review.presentation.schemas.session import Resume, SessionMessage
 from claude_review.presentation.schemas.threads import SessionHello
 
@@ -64,7 +64,7 @@ class MissingSocketSchemaError(Exception):
 def http_document() -> dict[str, JsonValue]:
     """Every route the review serves, as OpenAPI: mounted as a review's app mounts them, with no review behind them."""
     app = FastAPI(title=API_TITLE)
-    include_api(app)
+    app.include_router(api_router)
     return app.openapi()
 
 

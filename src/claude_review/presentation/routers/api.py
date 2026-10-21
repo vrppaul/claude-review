@@ -1,6 +1,6 @@
-"""Every route a review serves, under one prefix, mounted the same way wherever the API is wanted."""
+"""Every route a review serves, under one prefix: the one router an app mounts wherever the API is wanted."""
 
-from fastapi import FastAPI
+from fastapi import APIRouter
 
 from claude_review.presentation.errors import documented
 from claude_review.presentation.origin_guard import NOT_ITS_PAGE_STATUS
@@ -8,12 +8,10 @@ from claude_review.presentation.routers import agent, page, reader, session
 
 API_PREFIX = "/api"
 
-
-def include_api(app: FastAPI) -> None:
-    """Mount the review's routes and its session socket on an app.
-
-    Each route says how it may refuse; every one of them may be refused by
-    the origin guard, which stands in front of them all.
-    """
-    for routes in (page, agent, reader, session):
-        app.include_router(routes.router, prefix=API_PREFIX, responses=documented({NOT_ITS_PAGE_STATUS}))
+# Each route says how it may refuse; every one of them may be refused by the
+# origin guard, which stands in front of them all
+api_router = APIRouter(prefix=API_PREFIX, responses=documented({NOT_ITS_PAGE_STATUS}))
+api_router.include_router(page.router)
+api_router.include_router(agent.router)
+api_router.include_router(reader.router)
+api_router.include_router(session.router)
