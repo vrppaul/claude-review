@@ -3,8 +3,8 @@
 	 * Where it stands:
 	 * - apart: in a line of its own, under what could not be done
 	 * - inline: among the words and controls of a line, beside what could not be done
-	 * - cut: in a line that holds one line alone, the code's or the header's, cut where the room ends, its whole
-	 *   words under the pointer
+	 * - cut: in a line of the code's that holds one line alone, cut where the room ends, its whole words under the
+	 *   pointer
 	 */
 	type Stands = 'apart' | 'inline' | 'cut';
 

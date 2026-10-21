@@ -20,7 +20,9 @@
 	let { tone, size, label, testId, element = $bindable(), children, corner, ...attributes }: Props = $props();
 </script>
 
-<!-- A button that is an icon alone: as tall as it is wide, its words kept for whoever cannot see the icon -->
+<!-- A button that is an icon alone, its words kept for whoever cannot see the icon: as tall as it is wide; or, with
+	a figure on its corner, a notification, with a button's room either side of its icon, so the figure stands over
+	its edge and not over the icon -->
 <button
 	bind:this={element}
 	type="button"
@@ -28,10 +30,15 @@
 	aria-label={label}
 	title={label}
 	data-testid={testId}
-	class={['cr-ui-button cr-ui-icon-button cr-pressable', BUTTON_TONES[tone], BUTTON_SIZES[size]]}
+	class={[
+		'cr-ui-button cr-pressable',
+		corner ? 'cr-ui-notification' : 'cr-ui-icon-button',
+		BUTTON_TONES[tone],
+		BUTTON_SIZES[size]
+	]}
 >
 	{@render children()}
 	{#if corner}
-		<span class="cr-ui-icon-button-corner">{@render corner()}</span>
+		<span class="cr-ui-notification-figure">{@render corner()}</span>
 	{/if}
 </button>

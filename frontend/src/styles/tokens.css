@@ -73,14 +73,8 @@
 	--cr-comment-leading: 1.6;
 	/* How wide written words run before they wrap, prose rendered from Markdown as a comment's */
 	--cr-prose-measure: 72ch;
-	/*
-	 * The widest the header lets words the review wrote stand, cut short past
-	 * it and whole on the pointer: where the change is, and the base it is read
-	 * against, which no length bounds. And the least where the change is gives
-	 * way to, the one part of the header that shrinks for the controls beside it
-	 */
-	--cr-header-words-widest: 8rem;
-	--cr-where-least: 4rem;
+	/* How far a branch's name runs in the header before it is cut, whole on the pointer */
+	--cr-branch-widest: 10rem;
 	/*
 	 * A field (lib/ui/field.ts): the tallest one being written in grows with
 	 * its text, before it scrolls instead; the least each stands while
@@ -480,6 +474,15 @@
 	--breakpoint-cr-panel-beside: 63.5rem;
 	/* The least side column and the least diff, the panel lying over it: 10 + 36 */
 	--breakpoint-cr-side-column-beside: 46rem;
+	/*
+	 * Where the header's words give way, as the design board draws it at 1200,
+	 * 960 and 760 px, each width drawn already narrowed, so each takes in its
+	 * own pixel: Help keeps only its key; Story, Files and the base keep their
+	 * marks; the branch and the round's number go
+	 */
+	--breakpoint-cr-header-help: 75.0625rem;
+	--breakpoint-cr-header-bare: 60.0625rem;
+	--breakpoint-cr-header-repository: 47.5625rem;
 }
 
 [data-theme='dark'] {
@@ -533,8 +536,7 @@
 	--cr-status-modified: #e0a458;
 	--cr-gutter-fg: #8694a8;
 	--cr-muted: #98a5b6;
-	/* Faint words, at 4.5:1 even on the ink's tint of the row the reader is at */
-	--cr-faint: #929dab;
+	--cr-faint: #8894a4;
 	/* The pointer's light: the page's words at the least strength that stands off every ground at 1.15:1 */
 	--cr-hover: color-mix(in srgb, var(--color-base-content) 7%, transparent);
 	/*
@@ -591,11 +593,10 @@
 	--cr-pane-edge: #c3cdd9;
 	--cr-axis: #d0d8e2;
 	--cr-node-edge: #b3bfcd;
-	/* A modified file's letter and faint words, at 4.5:1 even on the ink's tint of the row the reader is at */
-	--cr-status-modified: #855607;
+	--cr-status-modified: #8f5c07;
 	--cr-gutter-fg: #5b6878;
 	--cr-muted: #4c5866;
-	--cr-faint: #556170;
+	--cr-faint: #5b6878;
 	--cr-hover: color-mix(in srgb, var(--color-base-content) 8%, transparent);
 	--cr-hover-on-fill: color-mix(in srgb, var(--color-base-content) 12%, transparent);
 	--cr-add-text: #16702e;

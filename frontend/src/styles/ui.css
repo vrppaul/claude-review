@@ -78,7 +78,7 @@
 }
 /*
  * A button or a segment eases into its pressed or open look, but for a
- * reader who asked for less motion (main.css). A row and a band the keys
+ * reader who asked for less motion (less-motion.css). A row and a band the keys
  * move do not, as nothing moves that the keys outrun
  */
 .cr-ui-button,
@@ -126,8 +126,12 @@
 	aspect-ratio: 1;
 	padding-inline: 0;
 }
-/* A figure on its corner, standing over its edge: how many of what it opens wait, a notification's */
-.cr-ui-icon-button-corner {
+/* An icon with a figure on its corner, a notification (IconButton's `corner`): a button's room either side */
+.cr-ui-notification {
+	position: relative;
+}
+/* The figure on a notification's corner, standing over its edge: how many of what it opens wait */
+.cr-ui-notification-figure {
 	display: flex;
 	position: absolute;
 	top: calc(-1 * --spacing(1));
@@ -1125,8 +1129,13 @@
 	font-weight: var(--font-weight-semibold);
 	font-variant-numeric: tabular-nums;
 }
-/* A count in a filled button, how many go with what it does: reversed on its fill, the fill's words its ground */
+/*
+ * A count in a filled button, how many go with what it does: reversed on its
+ * fill, the fill's words its ground, a step and a half further from its words
+ * than the button's gap
+ */
 .cr-ui-primary .cr-ui-count {
+	margin-inline-start: --spacing(1.5);
 	background-color: var(--cr-on-control);
 	color: var(--cr-control-fill);
 }

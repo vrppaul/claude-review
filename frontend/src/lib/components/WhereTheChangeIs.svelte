@@ -26,30 +26,28 @@
 </script>
 
 <!-- Where the change is, in place of the tool's name: the repository over what it had checked out, two small
-	lines in a control's height, both cut short inside it and whole on the pointer: never wider than
-	--cr-header-words-widest, and the one part of the header that gives up room to the controls beside it, down to
-	--cr-where-least; the branch gives way in a narrow window. A review of no repository: its mark and what it is
-	called, on one line -->
+	lines in a control's height, giving up room to the controls beside it, each line cut short inside it and whole
+	on the pointer; the branch runs no further than --cr-branch-widest, and gives way in a narrow window. A review of
+	no repository: its mark and what it is called, on one line -->
 {#if review.repository}
 	{@const checkedOut = CHECKED_OUT[review.repository.checkout.at]}
 	{@const name = nameOf(review.repository.checkout)}
 	<span
 		data-testid="where-the-change-is"
-		class="flex max-w-(--cr-header-words-widest) min-w-(--cr-where-least) flex-col"
+		class="flex min-w-0 flex-col items-start"
 		title="{review.repository.name}, {checkedOut.said} {name}"
 	>
-		<span data-testid="where-line" class="truncate text-xs font-semibold">{review.repository.name}</span>
-		<span data-testid="where-line" class="cr-muted flex min-w-0 items-center gap-1 max-lg:sr-only">
+		<span data-testid="where-line" class="max-w-full truncate text-xs font-semibold">{review.repository.name}</span>
+		<span
+			data-testid="where-line"
+			class="cr-muted flex max-w-(--cr-branch-widest) min-w-0 items-center gap-1 max-cr-header-repository:sr-only"
+		>
 			<Icon name={checkedOut.mark} size="xs" />
 			<span class="truncate font-mono text-2xs">{name}</span>
 		</span>
 	</span>
 {:else if review.title}
-	<span
-		data-testid="where-the-change-is"
-		class="flex max-w-(--cr-header-words-widest) min-w-(--cr-where-least) items-center gap-1.5"
-		title={review.title}
-	>
+	<span data-testid="where-the-change-is" class="flex min-w-0 items-center gap-1.5" title={review.title}>
 		<span class="cr-muted flex"><Icon name={MARK_OF[review.mode]} size="xs" /></span>
 		<span data-testid="where-line" class="truncate text-xs font-semibold">{review.title}</span>
 	</span>

@@ -13,10 +13,7 @@
 
 	// What each view is called, on its segment and on the pointer, where its words give way first
 	const STORY = 'Story';
-	// What Story says while the agent writes it, after its name: the first of its words to give way, the dots
-	// beside it saying as much
-	const BEING_WRITTEN = ' · writing';
-	const STORY_BEING_WRITTEN = `${STORY}${BEING_WRITTEN}`;
+	const STORY_BEING_WRITTEN = 'Story · writing';
 	const FILES = 'Files';
 
 	const review = useReview();
@@ -91,10 +88,10 @@
 			>
 				{#if storySays === 'writing'}
 					<BreathingDots tone="agent" testId="story-writing-dots" />
-					<span class="max-lg:sr-only">{STORY}<span class="max-xl:sr-only">{BEING_WRITTEN}</span></span>
+					<span class="max-cr-header-bare:sr-only">{STORY_BEING_WRITTEN}</span>
 				{:else}
 					<Icon name="story" size="sm" />
-					<span class="max-lg:sr-only">{STORY}</span>
+					<span class="max-cr-header-bare:sr-only">{STORY}</span>
 				{/if}
 				{#if storySays === 'unread'}
 					<!-- Unsaid to a screen reader, as every dot is: the note under the switch said it -->
@@ -109,7 +106,7 @@
 				onclick={() => review.views.choose('files')}
 			>
 				<Icon name="files" size="sm" />
-				<span class="max-lg:sr-only">{FILES}</span>
+				<span class="max-cr-header-bare:sr-only">{FILES}</span>
 			</Segment>
 		</Segmented>
 		{#if storyOffered}

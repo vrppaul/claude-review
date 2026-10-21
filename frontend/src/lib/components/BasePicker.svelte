@@ -92,12 +92,9 @@
 			title="What the working tree is compared against: {review.diff.phrase}"
 		>
 			<Icon name="compare" size="xs" />
-			<!-- What it is read against, named as the bases listed are: in the code's face, cut short past the widest
-				the header lets the review's words stand, given way to its mark and its arrow as the window narrows,
-				whole on the pointer and to a screen reader -->
-			<span data-testid="base-named" class="max-w-(--cr-header-words-widest) truncate font-mono max-lg:sr-only">
-				{review.diff.phrase}
-			</span>
+			<!-- What it is read against, named as the bases listed are: in the code's face, given way to its mark and
+				its arrow as the window narrows, still said on the pointer and to a screen reader -->
+			<span data-testid="base-named" class="font-mono max-cr-header-bare:sr-only">{review.diff.phrase}</span>
 			<Icon name="chevron" size="xs" />
 		</Button>
 	{/snippet}
