@@ -28,7 +28,7 @@ import type {
 	NewTurn,
 	StoryBlock,
 	Thread,
-	ThreadInput,
+	ThreadDraft,
 	Turn
 } from '$lib/types';
 import { COMMENT_ID_PREFIX, IdSequence, TURN_ID_PREFIX } from '$lib/utils/ids';
@@ -149,7 +149,7 @@ export class Threads {
 	}
 
 	/** Every thread as the other side is told about it. */
-	get onTheWire(): ThreadInput[] {
+	get onTheWire(): ThreadDraft[] {
 		return this.#onTheWire;
 	}
 

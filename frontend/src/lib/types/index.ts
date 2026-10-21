@@ -211,14 +211,14 @@ export interface Thread {
  * was read. One shape wherever a thread travels — a round, a question, a
  * panel message, the review saying what it holds.
  */
-export type ThreadInput = Schemas['ThreadInput-Input'];
+export type ThreadDraft = Schemas['ThreadDraft-Input'];
 /** A turn as it goes back: what was said, with the images as ids. */
-export type TurnInput = Schemas['TurnInput-Input'];
+export type TurnDraft = Schemas['TurnDraft-Input'];
 /**
  * A thread the review holds, as a page last said it — every field there:
  * what a page that opens with no draft of the review takes in.
  */
-export type HeldThread = Schemas['ThreadInput-Output'];
+export type HeldThread = Schemas['ThreadDraft-Output'];
 /** The threads the review holds. */
 export type ThreadsResponse = Schemas['ThreadsResponse'];
 /**

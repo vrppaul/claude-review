@@ -751,7 +751,7 @@ export interface components {
         AskRequest: {
             /** Question Id */
             question_id: string;
-            thread: components["schemas"]["ThreadInput-Input"];
+            thread: components["schemas"]["ThreadDraft-Input"];
         };
         /** CancelEvent */
         CancelEvent: {
@@ -1296,7 +1296,7 @@ export interface components {
             /** Message Id */
             message_id: string;
             /** Threads */
-            threads?: components["schemas"]["ThreadInput-Input"][];
+            threads?: components["schemas"]["ThreadDraft-Input"][];
         };
         /**
          * OnBranch
@@ -2002,7 +2002,7 @@ export interface components {
          */
         SubmitRequest: {
             /** Threads */
-            threads: components["schemas"]["ThreadInput-Input"][];
+            threads: components["schemas"]["ThreadDraft-Input"][];
             /** Body */
             body?: string | null;
             /** End */
@@ -2053,14 +2053,16 @@ export interface components {
             readonly where: string;
         };
         /**
-         * ThreadInput
-         * @description A thread as the browser holds it, turns and all.
+         * ThreadDraft
+         * @description A thread as the page holds it, turns and all: the same both ways.
          *
-         *     The browser holds the threads — they are unsent work — so whatever is
+         *     The page holds the threads — they are unsent work — so whatever is
          *     about one sends it along as it stands right now: a round, a question, a
-         *     panel message, and the hello in which the page says what it holds.
+         *     panel message, and the hello in which the page says what it holds. The
+         *     review keeps what the page said, and hands it back to a page that opens
+         *     with no draft of its own.
          */
-        "ThreadInput-Input": {
+        "ThreadDraft-Input": {
             /** Body */
             body: string;
             /** Images */
@@ -2070,20 +2072,22 @@ export interface components {
             anchor: components["schemas"]["Anchor-Input"];
             severity: components["schemas"]["CommentSeverity"];
             /** Turns */
-            turns?: components["schemas"]["TurnInput-Input"][];
+            turns?: components["schemas"]["TurnDraft-Input"][];
             raised_by: components["schemas"]["TurnAuthor"];
             /** Resolved */
             resolved: boolean;
         };
         /**
-         * ThreadInput
-         * @description A thread as the browser holds it, turns and all.
+         * ThreadDraft
+         * @description A thread as the page holds it, turns and all: the same both ways.
          *
-         *     The browser holds the threads — they are unsent work — so whatever is
+         *     The page holds the threads — they are unsent work — so whatever is
          *     about one sends it along as it stands right now: a round, a question, a
-         *     panel message, and the hello in which the page says what it holds.
+         *     panel message, and the hello in which the page says what it holds. The
+         *     review keeps what the page said, and hands it back to a page that opens
+         *     with no draft of its own.
          */
-        "ThreadInput-Output": {
+        "ThreadDraft-Output": {
             /** Body */
             body: string;
             /** Images */
@@ -2093,7 +2097,7 @@ export interface components {
             anchor: components["schemas"]["Anchor-Output"];
             severity: components["schemas"]["CommentSeverity"];
             /** Turns */
-            turns: components["schemas"]["TurnInput-Output"][];
+            turns: components["schemas"]["TurnDraft-Output"][];
             raised_by: components["schemas"]["TurnAuthor"];
             /** Resolved */
             resolved: boolean;
@@ -2145,7 +2149,7 @@ export interface components {
          */
         ThreadsResponse: {
             /** Threads */
-            threads: components["schemas"]["ThreadInput-Output"][];
+            threads: components["schemas"]["ThreadDraft-Output"][];
         };
         /** TimeoutEvent */
         TimeoutEvent: {
@@ -2204,10 +2208,10 @@ export interface components {
          */
         TurnAuthor: "reader" | "author";
         /**
-         * TurnInput
-         * @description One turn of a thread, as the browser sends it back.
+         * TurnDraft
+         * @description One turn of a thread the page holds, its screenshots by their ids.
          */
-        "TurnInput-Input": {
+        "TurnDraft-Input": {
             /** Body */
             body: string;
             /** Images */
@@ -2219,10 +2223,10 @@ export interface components {
             round: number;
         };
         /**
-         * TurnInput
-         * @description One turn of a thread, as the browser sends it back.
+         * TurnDraft
+         * @description One turn of a thread the page holds, its screenshots by their ids.
          */
-        "TurnInput-Output": {
+        "TurnDraft-Output": {
             /** Body */
             body: string;
             /** Images */

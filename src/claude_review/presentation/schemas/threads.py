@@ -282,8 +282,8 @@ class SaysSomething(Schema):
         return self
 
 
-class TurnInput(SaysSomething):
-    """One turn of a thread, as the browser sends it back."""
+class TurnDraft(SaysSomething):
+    """One turn of a thread the page holds, its screenshots by their ids."""
 
     # The id the browser gave it, which is what a question asked in it names
     turn_id: SafeId
@@ -300,18 +300,20 @@ class TurnInput(SaysSomething):
         )
 
 
-class ThreadInput(SaysSomething):
-    """A thread as the browser holds it, turns and all.
+class ThreadDraft(SaysSomething):
+    """A thread as the page holds it, turns and all: the same both ways.
 
-    The browser holds the threads — they are unsent work — so whatever is
+    The page holds the threads — they are unsent work — so whatever is
     about one sends it along as it stands right now: a round, a question, a
-    panel message, and the hello in which the page says what it holds.
+    panel message, and the hello in which the page says what it holds. The
+    review keeps what the page said, and hands it back to a page that opens
+    with no draft of its own.
     """
 
     thread_id: SafeId
     anchor: Anchor
     severity: CommentSeverity
-    turns: list[TurnInput] = Field(default_factory=list, max_length=MAX_TURNS)
+    turns: list[TurnDraft] = Field(default_factory=list, max_length=MAX_TURNS)
     # Who opened it. Sent back so a thread the author raised is not read as
     # something the reader wrote.
     raised_by: TurnAuthor
@@ -325,7 +327,7 @@ class ThreadInput(SaysSomething):
             thread_id=thread.thread_id,
             anchor=anchor_from_domain(thread.anchor),
             severity=thread.severity,
-            turns=[TurnInput.from_domain(turn) for turn in thread.turns],
+            turns=[TurnDraft.from_domain(turn) for turn in thread.turns],
             raised_by=thread.raised_by,
             resolved=thread.resolved,
         )
@@ -347,7 +349,7 @@ class ThreadInput(SaysSomething):
 class SubmitRequest(Schema):
     """Request body for POST /api/submit."""
 
-    threads: list[ThreadInput] = Field(max_length=MAX_THREADS)
+    threads: list[ThreadDraft] = Field(max_length=MAX_THREADS)
     body: str | None = Field(default=None, max_length=MAX_TEXT_LENGTH)
     # Whether this send is the last one. False sends a round and leaves the
     # review open, which only makes sense while something is answering it.
@@ -374,7 +376,7 @@ class AskRequest(Schema):
     """
 
     question_id: SafeId
-    thread: ThreadInput
+    thread: ThreadDraft
 
 
 # What a hello's threads say the page holds, three ways
@@ -399,7 +401,7 @@ class HelloBase[Threads](Schema):
     threads: list[Threads] | None = Field(default=None, max_length=MAX_THREADS, description=HELLO_THREADS_MEANING)
 
 
-class SessionHello(HelloBase[ThreadInput]):
+class SessionHello(HelloBase[ThreadDraft]):
     """What the browser says on connecting, and whenever its threads change.
 
     The review on screen is the only side that knows what has been written
@@ -426,7 +428,7 @@ class HeldThreads(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    readable: list[ThreadInput]
+    readable: list[ThreadDraft]
     # A thread left out still owns its id in the browser, so the server
     # must not hand that id out again
     unreadable_ids: list[str]
@@ -434,11 +436,11 @@ class HeldThreads(BaseModel):
     @classmethod
     def read(cls, threads: list[JsonValue]) -> Self:
         """Read each thread on its own, keeping what can be read and the id of what cannot."""
-        readable: list[ThreadInput] = []
+        readable: list[ThreadDraft] = []
         unreadable_ids: list[str] = []
         for thread in threads:
             try:
-                readable.append(ThreadInput.model_validate(thread))
+                readable.append(ThreadDraft.model_validate(thread))
             except ValidationError:
                 if (thread_id := _thread_id_of(thread)) is not None:
                     unreadable_ids.append(thread_id)
@@ -469,7 +471,7 @@ class ThreadsResponse(Schema):
     Read once, as the page opens: from then on the page says what it holds.
     """
 
-    threads: list[ThreadInput]
+    threads: list[ThreadDraft]
 
 
 class ThreadSummary(Schema):

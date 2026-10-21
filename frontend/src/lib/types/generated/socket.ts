@@ -457,7 +457,7 @@ export interface components {
              * @description What the page holds, three ways. Null: nothing — a page that does not know them yet — and the review keeps what it holds. A list: every thread the page holds, which the review holds from then on in place of the reader's it held — an empty one when the last was deleted. The threads the agent raised are never taken away by a list that leaves them out: a page with no draft holds none of them, and reads them from GET /api/threads as it opens.
              * @default null
              */
-            threads: components["schemas"]["ThreadInput"][] | null;
+            threads: components["schemas"]["ThreadDraft"][] | null;
         };
         SessionMessage: components["schemas"]["Welcome"] | components["schemas"]["Delivery"];
         /** ShowPush */
@@ -566,14 +566,16 @@ export interface components {
             type: "story";
         };
         /**
-         * ThreadInput
-         * @description A thread as the browser holds it, turns and all.
+         * ThreadDraft
+         * @description A thread as the page holds it, turns and all: the same both ways.
          *
-         *     The browser holds the threads — they are unsent work — so whatever is
+         *     The page holds the threads — they are unsent work — so whatever is
          *     about one sends it along as it stands right now: a round, a question, a
-         *     panel message, and the hello in which the page says what it holds.
+         *     panel message, and the hello in which the page says what it holds. The
+         *     review keeps what the page said, and hands it back to a page that opens
+         *     with no draft of its own.
          */
-        ThreadInput: {
+        ThreadDraft: {
             /** Body */
             body: string;
             /** Images */
@@ -583,7 +585,7 @@ export interface components {
             anchor: components["schemas"]["Anchor-Input"];
             severity: components["schemas"]["CommentSeverity"];
             /** Turns */
-            turns?: components["schemas"]["TurnInput"][];
+            turns?: components["schemas"]["TurnDraft"][];
             raised_by: components["schemas"]["TurnAuthor"];
             /** Resolved */
             resolved: boolean;
@@ -598,10 +600,10 @@ export interface components {
          */
         TurnAuthor: "reader" | "author";
         /**
-         * TurnInput
-         * @description One turn of a thread, as the browser sends it back.
+         * TurnDraft
+         * @description One turn of a thread the page holds, its screenshots by their ids.
          */
-        TurnInput: {
+        TurnDraft: {
             /** Body */
             body: string;
             /** Images */

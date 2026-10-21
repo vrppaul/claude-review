@@ -17,7 +17,7 @@ from claude_review.presentation.schemas.base import (
     Schema,
     made_or_none,
 )
-from claude_review.presentation.schemas.threads import SaysSomething, Thread, ThreadInput, ThreadSummary
+from claude_review.presentation.schemas.threads import SaysSomething, Thread, ThreadDraft, ThreadSummary
 
 # The most threads one panel message may point at
 MAX_THREADS_IN_MESSAGE = 50
@@ -265,7 +265,7 @@ class MessageRequest(SaysSomething):
 
     message_id: SafeId
     body: str = Field(default="", max_length=MAX_TEXT_LENGTH)
-    threads: list[ThreadInput] = Field(default_factory=list, max_length=MAX_THREADS_IN_MESSAGE)
+    threads: list[ThreadDraft] = Field(default_factory=list, max_length=MAX_THREADS_IN_MESSAGE)
 
 
 class ImageResponse(Schema):

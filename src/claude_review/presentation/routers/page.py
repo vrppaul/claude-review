@@ -54,7 +54,7 @@ from claude_review.presentation.schemas.threads import (
     FollowResponse,
     SubmitRequest,
     SubmitResponse,
-    ThreadInput,
+    ThreadDraft,
     ThreadsResponse,
     anchor_from_domain,
 )
@@ -103,7 +103,7 @@ async def held_threads(review: ReviewDep) -> ThreadsResponse:
     later with nothing to read. Read-only: no page is told what another
     holds once it is open.
     """
-    return ThreadsResponse(threads=[ThreadInput.from_domain(held) for held in review.threads_held()])
+    return ThreadsResponse(threads=[ThreadDraft.from_domain(held) for held in review.threads_held()])
 
 
 @router.get("/conversation")
