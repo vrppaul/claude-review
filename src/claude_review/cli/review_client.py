@@ -18,7 +18,7 @@ from urllib.parse import quote, urlencode
 from pydantic import BaseModel, TypeAdapter, ValidationError
 
 from claude_review.hosting.address import LOOPBACK
-from claude_review.presentation.wire.agent import (
+from claude_review.presentation.schemas.agent import (
     CatchUpResponse,
     EventResponse,
     ProgressRequest,
@@ -27,11 +27,11 @@ from claude_review.presentation.wire.agent import (
     ShowRequest,
     StatusRequest,
 )
-from claude_review.presentation.wire.base import JSON_MEDIA_TYPE
-from claude_review.presentation.wire.content import RetakeResponse
-from claude_review.presentation.wire.refusal import FieldRefusal, Refusal
-from claude_review.presentation.wire.story import StoryRequest, StoryTakenResponse
-from claude_review.presentation.wire.threads import PointRequest, PointResponse, Thread
+from claude_review.presentation.schemas.base import JSON_MEDIA_TYPE
+from claude_review.presentation.schemas.content import RetakeResponse
+from claude_review.presentation.schemas.refusal import FieldRefusal, Refusal
+from claude_review.presentation.schemas.story import StoryRequest, StoryTakenResponse
+from claude_review.presentation.schemas.threads import PointRequest, PointResponse, Thread
 
 # How long an ordinary call may take: the review answers at once
 CALL_SECONDS = 10.0

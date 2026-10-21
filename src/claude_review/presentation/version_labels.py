@@ -20,7 +20,7 @@ from claude_review.domain.models import (
     VersionKey,
     VersionOnOffer,
 )
-from claude_review.presentation.wire.content import ChangesSince, ReviewVersion, ShownBase, VersionKind
+from claude_review.presentation.schemas.content import ChangesSince, ReviewVersion, ShownBase, VersionKind
 from claude_review.services.review_opening import UNCOMMITTED, changes_since
 
 # The keys, as the page holds them: the review's own base, and the prefixes
@@ -105,7 +105,7 @@ def kind_of(key: VersionKey) -> VersionKind:
             assert_never(key)
 
 
-def version_on_the_wire(offered: VersionOnOffer, opened_against: str | None) -> ReviewVersion:
+def review_version(offered: VersionOnOffer, opened_against: str | None) -> ReviewVersion:
     """A base on offer, as the page's menu shows it."""
     return ReviewVersion(
         key=key_text(offered.key),
@@ -117,14 +117,14 @@ def version_on_the_wire(offered: VersionOnOffer, opened_against: str | None) -> 
     )
 
 
-def base_on_the_wire(shown: VersionKey, opened_against: str | None) -> ShownBase:
+def shown_base(shown: VersionKey, opened_against: str | None) -> ShownBase:
     """The base a diff was taken against, as the page shows it: narrowed unless it is the review's own."""
     return ShownBase(
         key=key_text(shown), phrase=phrase_of(shown, opened_against), narrowed=not isinstance(shown, ReviewKey)
     )
 
 
-def changes_on_the_wire(changes: ChangedSinceRound | None) -> ChangesSince | None:
+def changes_since_round(changes: ChangedSinceRound | None) -> ChangesSince | None:
     """What changed since a round began, with the key that shows just that."""
     if changes is None:
         return None

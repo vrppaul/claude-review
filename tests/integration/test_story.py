@@ -29,11 +29,11 @@ from claude_review.domain.models import FIRST_ROUND, FIRST_TAKE, ReaderSettings
 from claude_review.domain.page_events import DiffRetaken, PageEvent
 from claude_review.domain.story import Step, Story, StoryHeld
 from claude_review.hosting.workspace import ReaderFiles, ReviewWorkspace
-from claude_review.presentation.wire.agent import EventResponse, StoryCancelEvent, StoryRequestEvent, TimeoutEvent
-from claude_review.presentation.wire.content import DiffResponse, ReviewResponse, StoryAsking
-from claude_review.presentation.wire.pushes import StoryAskingPush, StoryPush
-from claude_review.presentation.wire.refusal import Refusal
-from claude_review.presentation.wire.story import (
+from claude_review.presentation.schemas.agent import EventResponse, StoryCancelEvent, StoryRequestEvent, TimeoutEvent
+from claude_review.presentation.schemas.content import DiffResponse, ReviewResponse, StoryAsking
+from claude_review.presentation.schemas.pushes import StoryAskingPush, StoryPush
+from claude_review.presentation.schemas.refusal import Refusal
+from claude_review.presentation.schemas.story import (
     CodeMovedOn,
     LeftOutOfFile,
     LineSpan,

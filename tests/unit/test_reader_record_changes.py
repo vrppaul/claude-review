@@ -10,7 +10,7 @@ import pytest
 from pydantic import BaseModel, ConfigDict
 
 from claude_review.domain.models import DiffLayout, GuideState, ReaderSettings, Theme
-from claude_review.presentation.wire.records import GuideChange, SettingsChange
+from claude_review.presentation.schemas.records import GuideChange, SettingsChange
 
 # How a reader reads, with the choices that are a yes or a no not all kept alike
 KEPT = ReaderSettings(

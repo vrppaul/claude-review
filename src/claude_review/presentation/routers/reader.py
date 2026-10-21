@@ -11,9 +11,9 @@ from pydantic import BaseModel
 
 from claude_review.domain import models
 from claude_review.presentation.dependencies import get_guide_service, get_review, get_settings_service
-from claude_review.presentation.refusals import Takes, refusals
-from claude_review.presentation.wire.base import WireModel
-from claude_review.presentation.wire.records import (
+from claude_review.presentation.errors import Takes, refusals
+from claude_review.presentation.schemas.base import Schema
+from claude_review.presentation.schemas.records import (
     GuideChange,
     GuideState,
     KeptRecord,
@@ -39,7 +39,7 @@ async def reader_settings(
 @router.put("/settings", responses=refusals(takes=Takes.JSON_BODY))
 async def change_reader_settings(request: SettingsChange, review: Review = Depends(get_review)) -> ReaderSettings:
     """Keep a choice the reader made, for this review and every later one; stories turned on or off ask or stop here."""
-    changed = ReaderSettings.of(await review.change_settings(request))
+    changed = ReaderSettings.from_domain(await review.change_settings(request))
     log.info("settings_changed", changed=sorted(request.model_fields_set))
     return changed
 
@@ -58,12 +58,12 @@ async def change_guide_state(
     guide: ReaderRecordService[models.GuideState] = Depends(get_guide_service),
 ) -> GuideState:
     """Remember what the reader has now been shown."""
-    return GuideState.of(await guide.change(request))
+    return GuideState.from_domain(await guide.change(request))
 
 
-async def _kept[Record: BaseModel, Wire: WireModel](
-    service: ReaderRecordService[Record], wire_type: type[Wire]
-) -> KeptRecord[Wire]:
+async def _kept[Record: BaseModel, Answered: Schema](
+    service: ReaderRecordService[Record], schema: type[Answered]
+) -> KeptRecord[Answered]:
     """A record as kept, or the defaults for a reader nothing has been kept about, and which it is."""
     kept = await service.read()
-    return KeptRecord(record=wire_type.of(kept or service.defaults()), stored=kept is not None)
+    return KeptRecord(record=schema.from_domain(kept or service.defaults()), stored=kept is not None)

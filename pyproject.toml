@@ -42,7 +42,7 @@ asyncio_mode = "auto"
 testpaths = ["tests"]
 # The API's schema fuzzed, the longest part of a run, is left out unless asked for: `-m schema` runs it
 addopts = "-m 'not schema'"
-markers = ["schema: fuzzes every route against the API's schema; run where a route or a wire model changes"]
+markers = ["schema: fuzzes every route against the API's schema; run where a route or a schema changes"]
 
 [build-system]
 requires = ["hatchling"]
@@ -186,8 +186,8 @@ forbidden_modules = ["fastapi", "starlette", "uvicorn", "wsproto", "click"]
 name = "An agent's command loads no web server and no web framework"
 type = "forbidden"
 # The agent's commands run many times a minute and call a review served in
-# another process. Whatever they import, however indirectly — the wire models
-# they share with the routes, the ports, the rendering — builds on neither
+# another process. Whatever they import, however indirectly — the API's
+# schemas they share with the routers, the ports, the rendering — builds on neither
 source_modules = ["claude_review.cli.agent_commands"]
 forbidden_modules = ["fastapi", "starlette", "uvicorn", "wsproto"]
 
@@ -196,7 +196,7 @@ name = "An agent's command loads none of the review's work"
 type = "forbidden"
 # The review's state and its story are kept, checked and followed in the
 # process that serves it; an agent's command only sends and prints. Through
-# the story's wire models and the help of `story`, every command once loaded
+# the story's schemas and the help of `story`, every command once loaded
 # seven modules of that work, which it never ran
 source_modules = ["claude_review.cli.agent_commands"]
 forbidden_modules = [

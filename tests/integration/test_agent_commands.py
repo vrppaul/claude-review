@@ -17,10 +17,10 @@ from httpx import AsyncClient, Client
 
 from claude_review.cli.main import main
 from claude_review.domain.models import CommentSeverity, LineSide
-from claude_review.presentation.wire.agent import CatchUpResponse, ProgressStep
-from claude_review.presentation.wire.content import ReviewResponse
-from claude_review.presentation.wire.pushes import ChatPush, PointPush, ProgressPush, ReplyPush, StatusPush
-from claude_review.presentation.wire.story import StoryResponse
+from claude_review.presentation.schemas.agent import CatchUpResponse, ProgressStep
+from claude_review.presentation.schemas.content import ReviewResponse
+from claude_review.presentation.schemas.pushes import ChatPush, PointPush, ProgressPush, ReplyPush, StatusPush
+from claude_review.presentation.schemas.story import StoryResponse
 from tests.helpers import (
     CATCH_UP_ROUTE,
     FIRST_THREAD_ID,
@@ -32,13 +32,13 @@ from tests.helpers import (
     RunningReview,
     added_line,
     diff_file,
-    line_on_the_wire,
+    line_json,
     next_push,
     one_line_file,
     opening_of,
     removed_line,
     repository_opening,
-    thread_on_the_wire,
+    thread_json,
     until_the_review_holds_threads,
     work_pushed,
     write_files,
@@ -176,8 +176,8 @@ async def test_the_agent_reports_what_the_review_cannot_measure(review: RunningR
 
 async def test_a_thread_named_is_read_in_full(review: RunningReview) -> None:
     """The index is for choosing; naming a thread hands over all of it, with the lines it is about."""
-    quoted = {**line_on_the_wire(REVIEWED_FILE, 1), "quote": [REVIEWED_LINE]}
-    written = thread_on_the_wire(quoted, "Why this?\nAnd not that?")
+    quoted = {**line_json(REVIEWED_FILE, 1), "quote": [REVIEWED_LINE]}
+    written = thread_json(quoted, "Why this?\nAnd not that?")
     async with page_socket_held(review.port) as page:
         page.send(json.dumps({"threads": [written]}))
         with Client(base_url=review.url) as reader:
@@ -281,7 +281,7 @@ async def test_the_work_can_come_from_stdin_as_written(review: RunningReview) ->
 
 
 async def test_an_answer_can_come_from_stdin_as_written(review: RunningReview) -> None:
-    asked = {"question_id": FIRST_THREAD_ID, "thread": thread_on_the_wire(line_on_the_wire(REVIEWED_FILE, 1), "Why?")}
+    asked = {"question_id": FIRST_THREAD_ID, "thread": thread_json(line_json(REVIEWED_FILE, 1), "Why?")}
     async with AsyncClient(base_url=review.url) as reader, page_socket_held(review.port) as page:
         await reader.post(ASK_ROUTE, json=asked)
         result = await _run(review, "reply", "--thread", FIRST_THREAD_ID, FROM_STDIN, typed=FROM_A_HEREDOC)

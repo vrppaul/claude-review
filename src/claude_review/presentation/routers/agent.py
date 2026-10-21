@@ -17,8 +17,8 @@ from claude_review.domain.exceptions import (
 )
 from claude_review.presentation.asgi import HTTP_DISCONNECT
 from claude_review.presentation.dependencies import get_review
-from claude_review.presentation.refusals import Takes, refusals
-from claude_review.presentation.wire.agent import (
+from claude_review.presentation.errors import Takes, refusals
+from claude_review.presentation.schemas.agent import (
     AgentStatus,
     CancelEvent,
     CatchUpResponse,
@@ -41,14 +41,14 @@ from claude_review.presentation.wire.agent import (
     ThreadQuestion,
     TimeoutEvent,
 )
-from claude_review.presentation.wire.base import DEFAULT_WAIT_SECONDS, MAX_WAIT_SECONDS, WireId
-from claude_review.presentation.wire.story import StoryRequest, StoryTakenResponse
-from claude_review.presentation.wire.threads import (
+from claude_review.presentation.schemas.base import DEFAULT_WAIT_SECONDS, MAX_WAIT_SECONDS, SafeId
+from claude_review.presentation.schemas.story import StoryRequest, StoryTakenResponse
+from claude_review.presentation.schemas.threads import (
     PointRequest,
     PointResponse,
     Thread,
     ThreadSummary,
-    anchor_in_the_review,
+    anchor_to_domain,
 )
 from claude_review.services.review.agent_inbox import Silence
 from claude_review.services.review.review import Review
@@ -92,15 +92,15 @@ def _envelope(taken: models.AgentEvent | Silence) -> EventResponse:
     """Name what was taken, so the loop can tell the kinds apart."""
     match taken:
         case models.ThreadQuestion():
-            return QuestionEvent(question=ThreadQuestion.of(taken))
+            return QuestionEvent(question=ThreadQuestion.from_domain(taken))
         case models.RoundSubmission():
-            return RoundEvent(round=RoundSubmission.of(taken))
+            return RoundEvent(round=RoundSubmission.from_domain(taken))
         case models.PanelMessage():
-            return MessageEvent(message=PanelMessage.of(taken))
+            return MessageEvent(message=PanelMessage.from_domain(taken))
         case models.PanelCancel():
-            return CancelEvent(cancel=PanelCancel.of(taken))
+            return CancelEvent(cancel=PanelCancel.from_domain(taken))
         case models.StoryRequested():
-            return StoryRequestEvent.of(taken)
+            return StoryRequestEvent.from_domain(taken)
         case models.StoryCancelled():
             return StoryCancelEvent()
         case Silence.CLOSED:
@@ -130,15 +130,15 @@ async def catch_up(review: Review = Depends(get_review)) -> CatchUpResponse:
         round=standing.round,
         file_count=caught_up.file_count,
         answerer_attached=standing.answerer_attached,
-        agent=AgentStatus.of(standing.agent),
-        threads=[ThreadSummary.of_draft(held) for held in caught_up.threads],
-        panel=[PanelEntry.of(entry) for entry in caught_up.panel],
+        agent=AgentStatus.from_domain(standing.agent),
+        threads=[ThreadSummary.from_draft(held) for held in caught_up.threads],
+        panel=[PanelEntry.from_domain(entry) for entry in caught_up.panel],
     )
 
 
 @router.post("/catch-up/threads/{thread_id}", responses=refusals(UnknownThreadError, takes=Takes.PARAMETERS))
 async def read_thread(
-    thread_id: WireId,
+    thread_id: SafeId,
     review: Review = Depends(get_review),
 ) -> Thread:
     """Hand over one thread the review holds, in full: every turn, its lines, its images.
@@ -147,7 +147,7 @@ async def read_thread(
     the reader can no longer take them off. A POST for that: a read must
     change nothing.
     """
-    return Thread.of(review.read_thread(thread_id))
+    return Thread.from_domain(review.read_thread(thread_id))
 
 
 @router.post("/reply", status_code=HTTPStatus.NO_CONTENT, responses=refusals(UnknownThreadError, takes=Takes.JSON_BODY))
@@ -180,7 +180,7 @@ async def report_progress(request: ProgressRequest, review: Review = Depends(get
         message_id=request.message_id,
         text=request.text,
         files=request.files,
-        steps=[step.in_the_review() for step in request.steps],
+        steps=[step.to_domain() for step in request.steps],
     )
 
 
@@ -211,7 +211,7 @@ async def raise_a_thread(request: PointRequest, review: Review = Depends(get_rev
     thread: the reader answers it, settles it or removes it. It is drawn as
     the author's, though, and it is never counted as the reader's own work.
     """
-    raised = review.raise_thread(anchor_in_the_review(request.anchor), body=request.body, severity=request.severity)
+    raised = review.raise_thread(anchor_to_domain(request.anchor), body=request.body, severity=request.severity)
     return PointResponse(thread_id=raised)
 
 
@@ -234,5 +234,5 @@ async def tell_the_story(request: StoryRequest, review: Review = Depends(get_rev
     told or refused whole, and a refusal names everything wrong with it at
     once, each fault at its field of the document.
     """
-    held = await review.tell_story(request.in_the_review())
+    held = await review.tell_story(request.to_domain())
     return StoryTakenResponse.summing_up(held.story, round_number=held.round)

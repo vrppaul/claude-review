@@ -28,7 +28,7 @@ from pydantic import BaseModel, ConfigDict
 from claude_review.domain.interfaces import PageChannel
 from claude_review.domain.page_events import PageEvent
 from claude_review.presentation.event_pushes import push_of
-from claude_review.presentation.wire.session import Delivery, Resume, Welcome
+from claude_review.presentation.schemas.session import Delivery, Resume, Welcome
 
 log = structlog.get_logger()
 

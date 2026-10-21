@@ -25,11 +25,11 @@ import pytest
 
 from claude_review.cli.launch_commands import NOTHING_TO_REVIEW
 from claude_review.domain.models import CommentSeverity, ReviewMode
-from claude_review.presentation.wire.pushes import (
+from claude_review.presentation.schemas.pushes import (
     AnswererPush,
     ReplyPush,
 )
-from claude_review.presentation.wire.session import Welcome
+from claude_review.presentation.schemas.session import Welcome
 from claude_review.services.review.browser_presence import RELOAD_GRACE_SECONDS
 from tests.helpers import (
     ANY_PORT,
@@ -38,10 +38,10 @@ from tests.helpers import (
     PNG,
     SESSION_ROUTE,
     git,
-    line_on_the_wire,
+    line_json,
     message_said,
     next_push,
-    thread_on_the_wire,
+    thread_json,
 )
 from tests.page_socket import HandshakeRefusedError, PageSocket
 
@@ -484,8 +484,8 @@ def test_a_question_and_its_answer_travel_between_processes(changed_repo: Path, 
             "/api/ask",
             {
                 "question_id": FIRST_THREAD_ID,
-                "thread": thread_on_the_wire(
-                    {**line_on_the_wire("initial.txt", 1), "quote": ["changed"]},
+                "thread": thread_json(
+                    {**line_json("initial.txt", 1), "quote": ["changed"]},
                     "Why this rather than the constant?",
                     severity=CommentSeverity.QUESTION,
                 ),

@@ -24,19 +24,19 @@ from tests.helpers import (
     CallerThatLeaves,
     ReviewFactory,
     http_client,
-    line_on_the_wire,
+    line_json,
     methods_allowed,
     one_line_file,
     opening_of,
     repository_opening,
-    thread_on_the_wire,
+    thread_json,
     thread_route,
     until_an_agent_waits,
     write_files,
 )
 from tests.stories import ONLY_CHAPTER, as_the_agent_writes, step, story_of
 
-A_THREAD = thread_on_the_wire(line_on_the_wire(REVIEWED_FILE, 1), "Still reads oddly.")
+A_THREAD = thread_json(line_json(REVIEWED_FILE, 1), "Still reads oddly.")
 A_MESSAGE = {"message_id": "panel-1", "body": "Is the retry still needed?"}
 
 # Far longer than the test waits for anything, so a poll that is still

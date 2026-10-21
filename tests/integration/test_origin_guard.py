@@ -16,8 +16,8 @@ from fastapi import WebSocketDisconnect
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
 
-from claude_review.presentation.wire.pushes import ShowPush
-from claude_review.presentation.wire.refusal import Refusal
+from claude_review.presentation.schemas.pushes import ShowPush
+from claude_review.presentation.schemas.refusal import Refusal
 from tests.helpers import (
     DIFF_ROUTE,
     EVENTS_ROUTE,

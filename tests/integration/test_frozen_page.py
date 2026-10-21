@@ -16,15 +16,15 @@ from structlog.typing import EventDict
 
 from claude_review.domain.models import ReviewMode
 from claude_review.presentation.broadcast import PAGE_BACKLOG
-from claude_review.presentation.routes.session_socket import FELL_BEHIND
-from claude_review.presentation.wire.base import MAX_TEXT_LENGTH
+from claude_review.presentation.routers.session import FELL_BEHIND
+from claude_review.presentation.schemas.base import MAX_TEXT_LENGTH
 from tests.helpers import (
     FIRST_THREAD_ID,
     SETTLE_SECONDS,
     ReviewServers,
-    line_on_the_wire,
+    line_json,
     opening_of,
-    thread_on_the_wire,
+    thread_json,
 )
 from tests.page_socket import PageSocket, page_socket_held
 
@@ -39,7 +39,7 @@ ANSWER = "x" * MAX_TEXT_LENGTH
 REPLY_ROUTE = "/api/reply"
 ASK_ROUTE = "/api/ask"
 # The thread the reader asked about before the laptop went to sleep, which every answer is given in
-ASKED = {"question_id": FIRST_THREAD_ID, "thread": thread_on_the_wire(line_on_the_wire("a.py", 1), "Why?")}
+ASKED = {"question_id": FIRST_THREAD_ID, "thread": thread_json(line_json("a.py", 1), "Why?")}
 CATCH_UP_ROUTE = "/api/catch-up"
 
 

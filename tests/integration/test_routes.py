@@ -28,13 +28,13 @@ from tests.helpers import (
     diff_file,
     git,
     http_client,
-    line_on_the_wire,
+    line_json,
     methods_allowed,
     opening_of,
     removed_line,
     repository_opening,
     review_has_ended,
-    thread_on_the_wire,
+    thread_json,
     until_an_agent_waits,
     write_files,
 )
@@ -55,7 +55,7 @@ WIDENED_TO = 6
 # An image no review keeps: its path is reached, whatever it then answers
 NO_SUCH_IMAGE = "never-pasted"
 
-A_NOTE = thread_on_the_wire(line_on_the_wire("x.py", 1), "fix this")
+A_NOTE = thread_json(line_json("x.py", 1), "fix this")
 
 
 def _handler_change() -> list[DiffFile]:
@@ -130,8 +130,8 @@ async def test_a_file_shown_without_its_lines_is_served_saying_why(reviews: Revi
 
 async def test_a_sent_review_names_each_comment_by_its_file_and_lines(client: AsyncClient) -> None:
     threads = [
-        thread_on_the_wire(line_on_the_wire(HANDLER_FILE, 42), "Wrong null check", thread_id="comment-1"),
-        thread_on_the_wire(line_on_the_wire(HANDLER_FILE, 67, 70), "Add max retry", thread_id="comment-2"),
+        thread_json(line_json(HANDLER_FILE, 42), "Wrong null check", thread_id="comment-1"),
+        thread_json(line_json(HANDLER_FILE, 67, 70), "Add max retry", thread_id="comment-2"),
     ]
 
     response = await client.post("/api/submit", json={"threads": threads, "end": True})
@@ -169,8 +169,8 @@ async def test_an_agent_waiting_when_the_review_is_sent_is_handed_it_before_the_
 @pytest.mark.parametrize(
     "anchor",
     [
-        line_on_the_wire("x.py", 10, 5),
-        line_on_the_wire("x.py", 0, 1),
+        line_json("x.py", 10, 5),
+        line_json("x.py", 0, 1),
     ],
     ids=["ends-before-it-starts", "line-zero"],
 )
@@ -258,7 +258,7 @@ async def test_a_comment_on_a_message_reaches_the_agent_with_the_message_quoted(
     response = await transcript_mode_client.post(
         "/api/submit",
         json={
-            "threads": [thread_on_the_wire(line_on_the_wire(user_message["path"], 1), "Wrong approach")],
+            "threads": [thread_json(line_json(user_message["path"], 1), "Wrong approach")],
             "end": True,
         },
     )

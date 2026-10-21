@@ -3,13 +3,13 @@
 from enum import StrEnum, auto
 from typing import Annotated, Literal
 
-from pydantic import ConfigDict, Field
+from pydantic import ConfigDict, Field, StrictBool
 
 from claude_review.domain.models import CommentSeverity, FilePath
-from claude_review.presentation.wire.agent import AgentStatus, AgentWork
-from claude_review.presentation.wire.base import WireBool, WireModel
-from claude_review.presentation.wire.content import ChangesSince, StoryAsking
-from claude_review.presentation.wire.threads import Anchor
+from claude_review.presentation.schemas.agent import AgentStatus, AgentWork
+from claude_review.presentation.schemas.base import Schema
+from claude_review.presentation.schemas.content import ChangesSince, StoryAsking
+from claude_review.presentation.schemas.threads import Anchor
 
 
 class PushKind(StrEnum):
@@ -45,7 +45,7 @@ class PushKind(StrEnum):
     ENDED = auto()
 
 
-class Push(WireModel):
+class Push(Schema):
     """What every push is: said once, as it stands, and never changed."""
 
     model_config = ConfigDict(frozen=True)
@@ -62,7 +62,7 @@ class ReplyPush(Push):
 
 class AnswererPush(Push):
     type: Literal[PushKind.ANSWERER] = PushKind.ANSWERER
-    attached: WireBool
+    attached: StrictBool
 
 
 class ChatPush(Push):
@@ -163,7 +163,7 @@ class EndedPush(Push):
     """
 
     type: Literal[PushKind.ENDED] = PushKind.ENDED
-    finished: WireBool
+    finished: StrictBool
 
 
 # What the server pushes down the session socket, told apart by `type`

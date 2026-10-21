@@ -14,9 +14,9 @@ from httpx import AsyncClient
 from claude_review.cli.review_client import ReviewCallError, ReviewClient
 from claude_review.hosting.address import LOOPBACK
 from claude_review.hosting.ports import ANY_FREE_PORT
-from claude_review.presentation.wire.agent import ProgressRequest, SayRequest, ShowRequest, StatusRequest
-from claude_review.presentation.wire.content import ReviewResponse
-from claude_review.presentation.wire.refusal import FieldRefusal, Refusal
+from claude_review.presentation.schemas.agent import ProgressRequest, SayRequest, ShowRequest, StatusRequest
+from claude_review.presentation.schemas.content import ReviewResponse
+from claude_review.presentation.schemas.refusal import FieldRefusal, Refusal
 from tests.helpers import REVIEW_ROUTE, ReviewServers, one_line_file, opening_of
 
 # A refusal as FastAPI writes one for a field it would not take, under the

@@ -1,7 +1,7 @@
-"""A story on the wire: the document the agent writes, and the story as a page is told it.
+"""The API's story: the document the agent writes, and the story as a page is told it.
 
-Two families of models, because a story crosses the wire twice and is not
-the same thing each way. The agent sends a document it wrote by hand: it is
+Two families of schemas, because a story passes through the API twice and is
+not the same thing each way. The agent sends a document it wrote by hand: it is
 held to a request's bounds, a field it does not have is refused rather than
 passed over, and a step's lines come as a person writes them, "104-129".
 A page is sent the story once it is told: every step with the piece of the
@@ -15,13 +15,13 @@ everything wrong with its story in one answer.
 
 from typing import Annotated, Self
 
-from pydantic import ConfigDict, Field
+from pydantic import ConfigDict, Field, StrictBool
 
 from claude_review.domain import story
 from claude_review.domain.models import MAX_ID_LENGTH, MAX_PATH_LENGTH
 from claude_review.domain.story import ToldFrom
-from claude_review.presentation.wire.base import MAX_TEXT_LENGTH, LinesWritten, WireBool, WireModel
-from claude_review.presentation.wire.content import DiffFile
+from claude_review.presentation.schemas.base import MAX_TEXT_LENGTH, LinesWritten, Schema
+from claude_review.presentation.schemas.content import DiffFile
 
 # The most of each thing one document may hold. A story with more is not a
 # story any more, and the request that carries one stays bounded; how much a
@@ -43,7 +43,7 @@ StoryName = Annotated[str, Field(max_length=MAX_ID_LENGTH)]
 ChangedFile = Annotated[str, Field(max_length=MAX_PATH_LENGTH)]
 
 
-class StoryInput(WireModel):
+class StoryInput(Schema):
     """A part of a story's document as the agent wrote it: a field it does not have is refused, never passed over."""
 
     model_config = ConfigDict(extra="forbid")
@@ -108,26 +108,26 @@ class StoryRequest(StoryInput):
     chapters: list[ChapterInput] = Field(max_length=MAX_CHAPTERS)
     housekeeping: list[ChangedFile] = Field(default_factory=list, max_length=MAX_HOUSEKEEPING_FILES)
 
-    def in_the_review(self) -> story.Story[story.Step]:
-        """The story the document writes, as the review's own models hold one."""
+    def to_domain(self) -> story.Story[story.Step]:
+        """The story the document writes, as the domain's models hold one."""
         return story.Story[story.Step].model_validate(self, from_attributes=True)
 
 
-class LineSpan(WireModel):
+class LineSpan(Schema):
     """Lines of a file, the first and the last both among them."""
 
     first: int
     last: int
 
 
-class OverviewItem(WireModel):
+class OverviewItem(Schema):
     """One thing the overview lists, and the chapter that shows it, when one does."""
 
     text: str
     chapter: str | None
 
 
-class Diagram(WireModel):
+class Diagram(Schema):
     """The change drawn, as Mermaid writes one, and the chapter each part of the drawing leads to."""
 
     mermaid: str
@@ -135,7 +135,7 @@ class Diagram(WireModel):
     links: dict[str, str]
 
 
-class StoryOverview(WireModel):
+class StoryOverview(Schema):
     """The change in short: what was asked, what was done, what to doubt, and what the overview lists."""
 
     task: str
@@ -147,7 +147,7 @@ class StoryOverview(WireModel):
     later: list[OverviewItem]
 
 
-class StepNow(WireModel):
+class StepNow(Schema):
     """Where a step's code stands on the take of the change the story is on."""
 
     # The lines it stands at there, which a round's work may have moved from those it was told on
@@ -155,10 +155,10 @@ class StepNow(WireModel):
     # The rows of the file the step is, to be drawn as a file is
     piece: DiffFile
     # Whether a round's work changed them after the step was told
-    changed_since_told: WireBool
+    changed_since_told: StrictBool
 
 
-class FollowedStep(WireModel):
+class FollowedStep(Schema):
     """A step on the take the story is on: its reason, when it has one, and where its code stands there, if anywhere."""
 
     file: str
@@ -168,10 +168,10 @@ class FollowedStep(WireModel):
     # Null where its code is not in the change as it now stands
     now: StepNow | None
     # Whether a thread may hang on what it says: a path holding a control character is shown, but only to be read
-    commentable: WireBool
+    commentable: StrictBool
 
 
-class FollowedChapter(WireModel):
+class FollowedChapter(Schema):
     """A chapter on the take the story is on: why its changes belong together, where to look hardest, and its steps."""
 
     id: str
@@ -184,7 +184,7 @@ class FollowedChapter(WireModel):
     changed_steps: int
 
 
-class LeftOut(WireModel):
+class LeftOut(Schema):
     """What the story leaves out of one file, shown beside it all the same."""
 
     piece: DiffFile
@@ -192,7 +192,7 @@ class LeftOut(WireModel):
     changed_lines: int
 
 
-class ToldStory(WireModel):
+class ToldStory(Schema):
     """A story on the change it is told of: every step with what it shows, and what no step tells."""
 
     title: str
@@ -203,14 +203,14 @@ class ToldStory(WireModel):
     left_out: list[LeftOut]
 
 
-class LeftOutChanged(WireModel):
+class LeftOutChanged(Schema):
     """How many changed lines no step told when a story was told, and how many none tells now."""
 
     when_told: int
     now: int
 
 
-class CodeMovedOn(WireModel):
+class CodeMovedOn(Schema):
     """That a round's work moved the code under a story told before it: in which round, and how much is left out."""
 
     # The round of the take that first found it so: a later take that finds it still so keeps it
@@ -219,7 +219,7 @@ class CodeMovedOn(WireModel):
     left_out: LeftOutChanged | None
 
 
-class StoryHeld(WireModel):
+class StoryHeld(Schema):
     """A story as the review holds it: on a take of the change, with the round it was told in."""
 
     story: ToldStory
@@ -232,13 +232,13 @@ class StoryHeld(WireModel):
     moved_on: CodeMovedOn | None
 
 
-class StoryResponse(WireModel):
+class StoryResponse(Schema):
     """Response for GET /api/story — the story the review holds, or none while nobody has told one."""
 
     held: StoryHeld | None
 
 
-class LeftOutOfFile(WireModel):
+class LeftOutOfFile(Schema):
     """How much of one file a story leaves out: enough to say so in a line."""
 
     file: str
@@ -247,7 +247,7 @@ class LeftOutOfFile(WireModel):
     changed_lines: int
 
 
-class StoryTakenResponse(WireModel):
+class StoryTakenResponse(Schema):
     """Response for PUT /api/story — what the review made of the story it took, in short.
 
     The agent wrote the story and does not need it back; what it cannot

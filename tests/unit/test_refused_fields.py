@@ -7,7 +7,7 @@ field: they are told the field by what they wrote.
 
 import pytest
 
-from claude_review.presentation.wire.refusal import FieldRefusal, RequestPart
+from claude_review.presentation.schemas.refusal import FieldRefusal, RequestPart
 
 WHY = "says nothing"
 

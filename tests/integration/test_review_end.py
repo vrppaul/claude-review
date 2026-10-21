@@ -8,8 +8,8 @@ import asyncio
 
 from httpx import AsyncClient
 
-from claude_review.presentation.wire.pushes import EndedPush
-from claude_review.presentation.wire.session import Delivery, Welcome
+from claude_review.presentation.schemas.pushes import EndedPush
+from claude_review.presentation.schemas.session import Delivery, Welcome
 from tests.helpers import SETTLE_SECONDS, ReviewServers, message_said, one_line_file, opening_of
 from tests.page_socket import PageSocket, page_socket_held
 

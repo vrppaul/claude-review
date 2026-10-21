@@ -30,7 +30,7 @@ from pathlib import Path
 
 from claude_review.domain.models import CHAPTER_ID_RULE, LineSpan
 from claude_review.domain.story import TEXT_LIMITS, StoryText, TextLimit, ToldFrom
-from claude_review.presentation.wire.story import (
+from claude_review.presentation.schemas.story import (
     ChapterInput,
     DiagramInput,
     OverviewItemInput,

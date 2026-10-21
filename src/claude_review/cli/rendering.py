@@ -8,9 +8,9 @@ full when it is named.
 from pathlib import Path
 
 from claude_review.domain.models import TurnAuthor, says_nothing
-from claude_review.presentation.wire.agent import CatchUpResponse
-from claude_review.presentation.wire.story import LeftOutOfFile, StoryTakenResponse
-from claude_review.presentation.wire.threads import Thread, ThreadSummary
+from claude_review.presentation.schemas.agent import CatchUpResponse
+from claude_review.presentation.schemas.story import LeftOutOfFile, StoryTakenResponse
+from claude_review.presentation.schemas.threads import Thread, ThreadSummary
 from claude_review.services.thread_markdown import tags_of
 
 # How much of a comment fits on one line of an index without becoming the index
@@ -86,7 +86,7 @@ def render_catch_up(seen: CatchUpResponse) -> str:
 
 def render_thread(thread: Thread) -> str:
     """One thread in full: everything said in it, each image as a file to open, and the lines it hangs on."""
-    lines = [f"{thread.thread_id}  {thread.where}  {_marks(ThreadSummary.of_thread(thread))}"]
+    lines = [f"{thread.thread_id}  {thread.where}  {_marks(ThreadSummary.from_thread(thread))}"]
     lines.append(_indent(_said(thread.body, thread.images)))
     lines.extend(_images(thread.images))
     for turn in thread.turns:

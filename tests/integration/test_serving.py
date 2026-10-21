@@ -25,7 +25,7 @@ from claude_review.hosting.errors import ReviewStoppedError, ServerStartError
 from claude_review.hosting.hosted_review import HostedReview
 from claude_review.hosting.ports import ANY_FREE_PORT, bind
 from claude_review.hosting.serving import hold_open, serve_review, stop_signals
-from claude_review.presentation.wire.pushes import ChangedPush
+from claude_review.presentation.schemas.pushes import ChangedPush
 from claude_review.repositories.git_repository import GitRepository, GitStagedTree
 from claude_review.services.review_opening import ReviewOpening, open_diff
 from tests.helpers import (

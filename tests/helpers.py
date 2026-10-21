@@ -52,10 +52,10 @@ from claude_review.hosting.ports import bind
 from claude_review.hosting.review_server import ReviewServer
 from claude_review.hosting.workspace import ReaderFiles, ReviewWorkspace
 from claude_review.presentation.asgi import HTTP_DISCONNECT, HTTP_REQUEST, HTTP_SCOPE
-from claude_review.presentation.wire.agent import AgentWork
-from claude_review.presentation.wire.content import ReviewResponse
-from claude_review.presentation.wire.pushes import ProgressPush, Push, ServerPush
-from claude_review.presentation.wire.session import Delivery, SessionMessage, Welcome
+from claude_review.presentation.schemas.agent import AgentWork
+from claude_review.presentation.schemas.content import ReviewResponse
+from claude_review.presentation.schemas.pushes import ProgressPush, Push, ServerPush
+from claude_review.presentation.schemas.session import Delivery, SessionMessage, Welcome
 from claude_review.repositories.git_repository import GitRepository
 from claude_review.repositories.system_clock import SystemClock
 from claude_review.services.review.review_lifetime import EndReason, ReviewLifetime
@@ -249,7 +249,7 @@ def thread(
     )
 
 
-def line_on_the_wire(
+def line_json(
     file: str, start_line: int, end_line: int | None = None, *, side: LineSide = LineSide.NEW
 ) -> dict[str, object]:
     """Lines of one side of a file, as the page names them; a single line unless an end is given."""
@@ -262,7 +262,7 @@ def line_on_the_wire(
     }
 
 
-def turn_on_the_wire(
+def turn_json(
     author: TurnAuthor,
     body: str,
     *,
@@ -274,7 +274,7 @@ def turn_on_the_wire(
     return {"turn_id": turn_id, "author": author, "body": body, "round": round_number, "images": images or []}
 
 
-def thread_on_the_wire(
+def thread_json(
     anchor: dict[str, object],
     body: str,
     *,

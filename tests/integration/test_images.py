@@ -17,7 +17,7 @@ from structlog.typing import EventDict
 
 from claude_review.domain.models import LARGEST_FILE_SHOWN_BYTES, MAX_QUOTE_LINES, ReviewMode, TurnAuthor
 from claude_review.hosting.workspace import ReviewWorkspace
-from claude_review.presentation.wire.base import MAX_TEXT_LENGTH
+from claude_review.presentation.schemas.base import MAX_TEXT_LENGTH
 from claude_review.services.file_window_service import MAX_WINDOW_LINES
 from claude_review.services.image_service import MAX_IMAGE_BYTES, MAX_IMAGES_PER_MESSAGE, MAX_REVIEW_BYTES
 from tests.helpers import (
@@ -32,10 +32,10 @@ from tests.helpers import (
     ReviewFactory,
     UploadThatBreaksOff,
     http_client,
-    line_on_the_wire,
+    line_json,
     opening_of,
-    thread_on_the_wire,
-    turn_on_the_wire,
+    thread_json,
+    turn_json,
 )
 
 # The bytes each format starts with, and enough after them to be a file
@@ -52,7 +52,7 @@ ONE_TOO_MANY = MAX_IMAGES_PER_MESSAGE + 1
 # The levels a log line is written at when someone should look into it
 WORTH_A_LOOK = frozenset({"warning", "error", "critical"})
 
-A_THREAD = thread_on_the_wire(line_on_the_wire(REVIEWED_FILE, 1), "Looks off")
+A_THREAD = thread_json(line_json(REVIEWED_FILE, 1), "Looks off")
 
 
 @pytest.fixture
@@ -282,7 +282,7 @@ async def test_a_question_hands_the_agent_its_images(client: AsyncClient) -> Non
 
 async def test_a_question_asked_in_a_reply_hands_the_agent_the_images_of_that_reply(client: AsyncClient) -> None:
     image_id = await _upload(client, PNG)
-    reply = turn_on_the_wire(TurnAuthor.READER, "Still like this", turn_id="turn-1", images=[image_id])
+    reply = turn_json(TurnAuthor.READER, "Still like this", turn_id="turn-1", images=[image_id])
 
     await client.post("/api/ask", json={"question_id": "turn-1", "thread": {**A_THREAD, "turns": [reply]}})
     event = (await client.post(EVENTS_ROUTE, params=WAIT_FOR_EVENT)).json()

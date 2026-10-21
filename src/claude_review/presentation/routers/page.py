@@ -25,14 +25,8 @@ from claude_review.domain.exceptions import (
 from claude_review.domain.models import FIRST_LINE, MAX_ID_LENGTH, MAX_PATH_LENGTH
 from claude_review.presentation.broadcast import BrowserBroadcast
 from claude_review.presentation.dependencies import get_broadcast, get_release, get_review
-from claude_review.presentation.refusals import Takes, refusals
-from claude_review.presentation.version_words import (
-    base_on_the_wire,
-    changes_on_the_wire,
-    key_of,
-    version_on_the_wire,
-)
-from claude_review.presentation.wire.agent import (
+from claude_review.presentation.errors import Takes, refusals
+from claude_review.presentation.schemas.agent import (
     AgentStatus,
     AgentWork,
     CancelRequest,
@@ -41,8 +35,8 @@ from claude_review.presentation.wire.agent import (
     MessageRequest,
     SaidInPanel,
 )
-from claude_review.presentation.wire.base import WireId
-from claude_review.presentation.wire.content import (
+from claude_review.presentation.schemas.base import SafeId
+from claude_review.presentation.schemas.content import (
     SEND_LIMITS,
     DiffFile,
     DiffResponse,
@@ -53,8 +47,8 @@ from claude_review.presentation.wire.content import (
     StoryAsking,
     VersionsResponse,
 )
-from claude_review.presentation.wire.story import StoryHeld, StoryResponse
-from claude_review.presentation.wire.threads import (
+from claude_review.presentation.schemas.story import StoryHeld, StoryResponse
+from claude_review.presentation.schemas.threads import (
     AskRequest,
     FollowRequest,
     FollowResponse,
@@ -62,8 +56,14 @@ from claude_review.presentation.wire.threads import (
     SubmitResponse,
     ThreadInput,
     ThreadsResponse,
-    anchor_in_the_review,
-    anchor_on_the_wire,
+    anchor_from_domain,
+    anchor_to_domain,
+)
+from claude_review.presentation.version_labels import (
+    changes_since_round,
+    key_of,
+    review_version,
+    shown_base,
 )
 from claude_review.services.image_service import IMAGE_FORMATS, MAX_IMAGE_BYTES
 from claude_review.services.review.review import Review
@@ -83,15 +83,15 @@ async def get_the_review(
     told = broadcast.position()
     return ReviewResponse(
         title=standing.title,
-        repository=RepositoryAt.of_maybe(standing.repository_at),
+        repository=RepositoryAt.from_domain_or_none(standing.repository_at),
         identity=standing.identity,
         mode=standing.mode,
         round=standing.round,
         answerer_attached=standing.answerer_attached,
-        agent=AgentStatus.of(standing.agent),
-        work=AgentWork.of_maybe(work),
+        agent=AgentStatus.from_domain(standing.agent),
+        work=AgentWork.from_domain_or_none(work),
         takes_a_story=standing.takes_a_story,
-        story_asking=StoryAsking.of_maybe(standing.story_asking),
+        story_asking=StoryAsking.from_domain_or_none(standing.story_asking),
         limits=SEND_LIMITS,
         release=release,
         instance=told.instance,
@@ -109,7 +109,7 @@ async def held_threads(review: Review = Depends(get_review)) -> ThreadsResponse:
     later with nothing to read. Read-only: no page is told what another
     holds once it is open.
     """
-    return ThreadsResponse(threads=[ThreadInput.of(held) for held in review.threads_held()])
+    return ThreadsResponse(threads=[ThreadInput.from_domain(held) for held in review.threads_held()])
 
 
 @router.get("/conversation")
@@ -121,7 +121,7 @@ async def held_conversation(review: Review = Depends(get_review)) -> Conversatio
     one saw. Every part comes under the id a page that heard it holds it by,
     so a page with a draft draws each part once. Read-only, like the threads.
     """
-    return ConversationResponse(said=[SaidInPanel.of(said) for said in review.conversation_held()])
+    return ConversationResponse(said=[SaidInPanel.from_domain(said) for said in review.conversation_held()])
 
 
 @router.get("/story")
@@ -134,7 +134,7 @@ async def held_story(review: Review = Depends(get_review)) -> StoryResponse:
     had got.
     """
     held = review.story_held()
-    return StoryResponse(held=StoryHeld.of_maybe(held))
+    return StoryResponse(held=StoryHeld.from_domain_or_none(held))
 
 
 @router.post(
@@ -179,8 +179,8 @@ async def get_diff(
     view = await review.view(key_of(base) if base is not None else None, ignore_whitespace=ignore_whitespace)
     opened_against = review.standing().opened_against
     return DiffResponse(
-        files=[DiffFile.of(file) for file in view.files],
-        base=base_on_the_wire(view.shown, opened_against) if view.shown is not None else None,
+        files=[DiffFile.from_domain(file) for file in view.files],
+        base=shown_base(view.shown, opened_against) if view.shown is not None else None,
         moved=view.moved,
         take=view.take,
     )
@@ -190,7 +190,7 @@ async def get_diff(
 async def offered_versions(review: Review = Depends(get_review)) -> VersionsResponse:
     """Say what the working tree can be compared against: nothing at all, for files or a conversation."""
     opened_against = review.standing().opened_against
-    return VersionsResponse(versions=[version_on_the_wire(offered, opened_against) for offered in await review.offer()])
+    return VersionsResponse(versions=[review_version(offered, opened_against) for offered in await review.offer()])
 
 
 @router.get(
@@ -226,8 +226,8 @@ async def follow_anchors(request: FollowRequest, review: Review = Depends(get_re
     follows them, one whose lines are gone is marked outdated and keeps its
     quote.
     """
-    followed = review.follow([anchor_in_the_review(anchor) for anchor in request.anchors])
-    return FollowResponse(anchors=[anchor_on_the_wire(anchor) for anchor in followed])
+    followed = review.follow([anchor_to_domain(anchor) for anchor in request.anchors])
+    return FollowResponse(anchors=[anchor_from_domain(anchor) for anchor in followed])
 
 
 @router.post(
@@ -243,7 +243,7 @@ async def ask_about_thread(request: AskRequest, review: Review = Depends(get_rev
     The reader does not wait here: the answer arrives later, pushed down the
     session socket, so writing the review is never blocked on a reply.
     """
-    review.ask(request.question_id, request.thread.in_the_review())
+    review.ask(request.question_id, request.thread.to_domain())
 
 
 @router.post(
@@ -261,7 +261,7 @@ async def take_panel_message(request: MessageRequest, review: Review = Depends(g
     review.take_message(
         message_id=request.message_id,
         body=request.body,
-        threads=[thread.in_the_review() for thread in request.threads],
+        threads=[thread.to_domain() for thread in request.threads],
         image_ids=request.images,
     )
 
@@ -319,7 +319,7 @@ async def _read_capped(http_request: Request, *, limit: int) -> bytes:
     response_class=FileResponse,
     responses={**IMAGE_REPLY, **refusals(UnknownImageError, takes=Takes.PARAMETERS)},
 )
-async def serve_an_image(image_id: WireId, review: Review = Depends(get_review)) -> FileResponse:
+async def serve_an_image(image_id: SafeId, review: Review = Depends(get_review)) -> FileResponse:
     """Hand back an image this review keeps, to be drawn in the panel."""
     stored = review.kept_image(image_id)
     return FileResponse(stored.path, media_type=stored.media_type)
@@ -330,7 +330,7 @@ async def serve_an_image(image_id: WireId, review: Review = Depends(get_review))
     status_code=HTTPStatus.NO_CONTENT,
     responses=refusals(UnknownImageError, ImageAlreadySentError, takes=Takes.PARAMETERS),
 )
-async def discard_an_image(image_id: WireId, review: Review = Depends(get_review)) -> None:
+async def discard_an_image(image_id: SafeId, review: Review = Depends(get_review)) -> None:
     """Drop an image the reader took off the message before sending it.
 
     One that went out with a message stays: the agent may still be about to
@@ -351,7 +351,7 @@ async def submit_review(request: SubmitRequest, review: Review = Depends(get_rev
     screen, so an answer has somewhere to come back to.
     """
     sent = review.submit(
-        threads=[thread.in_the_review() for thread in request.threads], body=request.body, ends=request.end
+        threads=[thread.to_domain() for thread in request.threads], body=request.body, ends=request.end
     )
     return SubmitResponse(
         markdown=sent.markdown, comment_count=sent.comment_count, round=sent.number, ended=request.end
@@ -371,7 +371,7 @@ async def retake_diff(review: Review = Depends(get_review)) -> RetakeResponse:
     """
     retaken = await review.retake()
     return RetakeResponse(
-        file_count=retaken.file_count, round=retaken.round, changes=changes_on_the_wire(retaken.changes)
+        file_count=retaken.file_count, round=retaken.round, changes=changes_since_round(retaken.changes)
     )
 
 

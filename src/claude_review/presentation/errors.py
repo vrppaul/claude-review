@@ -1,4 +1,4 @@
-"""What a refusal answers: one table from the kind of `ReviewError` to its HTTP status.
+"""What a refusal answers: one table from the kind of `ReviewError` to its HTTP status, and the JSON it is said in.
 
 Routes raise what went wrong and never decide how it is said. Every refusal
 is answered the same way, with its message as the `detail` FastAPI uses for
@@ -19,6 +19,10 @@ caller went away before all of it came is no refusal: nobody is left to
 answer, and nothing went wrong on either side. Only such a route meets it: a
 JSON body is read by FastAPI before any route runs, and one cut off is
 answered there as unreadable, with nothing said of it here.
+
+Every refusal leaves by one door, `answered`, whoever makes it — the review's
+handlers, or the guard that stands before every route — so a refusal is
+written as JSON by its schema and never taken apart into a mapping on the way.
 """
 
 from collections.abc import Set
@@ -45,8 +49,8 @@ from claude_review.domain.exceptions import (
     TooLargeError,
 )
 from claude_review.presentation.body_limit import TOO_LARGE_STATUS
-from claude_review.presentation.refusal_answers import answered
-from claude_review.presentation.wire.refusal import FieldRefusal, Refusal, RequestPart
+from claude_review.presentation.schemas.base import JSON_MEDIA_TYPE
+from claude_review.presentation.schemas.refusal import FieldRefusal, Refusal, RequestPart
 
 log = structlog.get_logger()
 
@@ -145,6 +149,11 @@ def status_of(kind: type[ReviewError]) -> HTTPStatus:
         msg = f"{kind.__name__} is answered with no status: it is no refusal"
         raise ValueError(msg)
     return REFUSAL_STATUS[nearest]
+
+
+def answered(refusal: Refusal, status: HTTPStatus) -> Response:
+    """The answer that says a refusal, with the status it is refused with."""
+    return Response(content=refusal.model_dump_json(), status_code=status, media_type=JSON_MEDIA_TYPE)
 
 
 def answer_refusals(app: FastAPI) -> None:

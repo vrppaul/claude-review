@@ -14,7 +14,7 @@ import pytest
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
 
-from claude_review.presentation.wire.pushes import AnswererPush, DiffPush
+from claude_review.presentation.schemas.pushes import AnswererPush, DiffPush
 from claude_review.services.review_opening import ReviewOpening
 from tests.helpers import (
     DIFF_ROUTE,
@@ -27,17 +27,17 @@ from tests.helpers import (
     ReviewFactory,
     git,
     http_client,
-    line_on_the_wire,
+    line_json,
     next_push,
     open_session,
     page_client,
     repository_opening,
     review_has_ended,
-    thread_on_the_wire,
+    thread_json,
     until_an_agent_waits,
 )
 
-A_THREAD = thread_on_the_wire(line_on_the_wire(REVIEWED_FILE, 1), "Still reads oddly.")
+A_THREAD = thread_json(line_json(REVIEWED_FILE, 1), "Still reads oddly.")
 
 
 @pytest.fixture
@@ -90,8 +90,8 @@ async def test_a_later_round_says_which_round_it_is(client: AsyncClient) -> None
 
 async def test_a_thread_quoting_fewer_lines_than_it_names_is_refused(client: AsyncClient) -> None:
     """The page drew only some of those lines: an agent applying the suggestion would delete the rest unseen."""
-    across_a_gap = {**line_on_the_wire(REVIEWED_FILE, 1, 3), "quote": ["the first line, and no other"]}
-    thread = thread_on_the_wire(across_a_gap, "Replace these.")
+    across_a_gap = {**line_json(REVIEWED_FILE, 1, 3), "quote": ["the first line, and no other"]}
+    thread = thread_json(across_a_gap, "Replace these.")
 
     response = await client.post("/api/submit", json={"threads": [thread], "end": False}, headers=LOCAL_HEADERS)
 
@@ -208,7 +208,7 @@ async def test_after_a_retake_each_thread_is_told_where_its_lines_went(
 ) -> None:
     """The browser holds the threads and the server holds the diff they hang on."""
     (tmp_git_repo / "a.py").write_text("def run():\n    return 1\n")
-    on_run = {**line_on_the_wire("a.py", 1), "quote": ["def run():"]}
+    on_run = {**line_json("a.py", 1), "quote": ["def run():"]}
     on_walk = {**on_run, "quote": ["def walk():"]}
 
     async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as client:

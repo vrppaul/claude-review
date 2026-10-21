@@ -10,7 +10,7 @@ from typing import override
 
 from claude_review.domain.interfaces import RecordStore
 from claude_review.domain.models import DiffLayout, ReaderSettings, Theme
-from claude_review.presentation.wire.records import SettingsChange
+from claude_review.presentation.schemas.records import SettingsChange
 from claude_review.services.reader_record_service import ReaderRecordService
 
 

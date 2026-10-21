@@ -1,4 +1,4 @@
-"""Threads on the wire: what they hang on, what the page sends of them, and what the agent is handed."""
+"""The API's threads: what they hang on, what the page sends of them, and what the agent is handed."""
 
 from pathlib import Path
 from typing import Annotated, Literal, Self
@@ -8,6 +8,8 @@ from pydantic import (
     ConfigDict,
     Field,
     JsonValue,
+    StrictBool,
+    StrictInt,
     TypeAdapter,
     ValidationError,
     computed_field,
@@ -34,15 +36,13 @@ from claude_review.domain.models import (
     TurnAuthor,
     says_nothing,
 )
-from claude_review.presentation.wire.base import (
+from claude_review.presentation.schemas.base import (
     MAX_TEXT_LENGTH,
     MAX_THREADS,
     AgentText,
     ImageIds,
-    WireBool,
-    WireId,
-    WireModel,
-    WireNumber,
+    SafeId,
+    Schema,
 )
 from claude_review.services.place_words import place_in_words
 
@@ -57,7 +57,7 @@ MAX_QUOTE_LINE_LENGTH = LARGEST_FILE_SHOWN_BYTES
 QuoteLine = Annotated[str, Field(max_length=MAX_QUOTE_LINE_LENGTH)]
 
 
-class LineAnchor(WireModel):
+class LineAnchor(Schema):
     """Lines of one side of a file in the review's own diff, as the page and the agent name them.
 
     A quote left out is filled in by the review from its diff.
@@ -66,10 +66,10 @@ class LineAnchor(WireModel):
     kind: Literal[AnchorKind.LINE] = AnchorKind.LINE
     file: FilePath
     side: LineSide
-    start_line: WireNumber = Field(ge=FIRST_LINE)
-    end_line: WireNumber = Field(ge=FIRST_LINE)
+    start_line: StrictInt = Field(ge=FIRST_LINE)
+    end_line: StrictInt = Field(ge=FIRST_LINE)
     quote: list[QuoteLine] = Field(default_factory=list, max_length=MAX_QUOTE_LINES)
-    outdated: WireBool = False
+    outdated: StrictBool = False
 
     @model_validator(mode="after")
     def start_before_end(self) -> Self:
@@ -77,22 +77,22 @@ class LineAnchor(WireModel):
         return self
 
 
-class OverviewBlock(WireModel):
+class OverviewBlock(Schema):
     """One of the overview's three lines, by its name."""
 
     at: Literal[StoryBlockKind.OVERVIEW] = StoryBlockKind.OVERVIEW
     text: OverviewText
 
 
-class ItemBlock(WireModel):
+class ItemBlock(Schema):
     """One thing a list of the overview holds, by where it stands in the list, counted from 0."""
 
     at: Literal[StoryBlockKind.ITEM] = StoryBlockKind.ITEM
     list: OverviewList
-    item: WireNumber = Field(ge=FIRST_ITEM)
+    item: StrictInt = Field(ge=FIRST_ITEM)
 
 
-class ChapterBlock(WireModel):
+class ChapterBlock(Schema):
     """What a chapter says of itself, the chapter by its id."""
 
     at: Literal[StoryBlockKind.CHAPTER] = StoryBlockKind.CHAPTER
@@ -100,22 +100,22 @@ class ChapterBlock(WireModel):
     text: ChapterText
 
 
-class ReasonBlock(WireModel):
+class ReasonBlock(Schema):
     """A step's reason, the step by its file and the first line it tells."""
 
     at: Literal[StoryBlockKind.REASON] = StoryBlockKind.REASON
     file: FilePath
-    first_line: WireNumber = Field(ge=FIRST_LINE)
+    first_line: StrictInt = Field(ge=FIRST_LINE)
 
 
-# A block of the story's words, as the wire carries it
+# A block of the story's words, as the API carries it
 type StoryBlock = Annotated[OverviewBlock | ItemBlock | ChapterBlock | ReasonBlock, Field(discriminator="at")]
 
 # The words of a block a story anchor quotes: a text of the story, bounded as anything said in a review is
 QuotedWords = Annotated[str, Field(max_length=MAX_TEXT_LENGTH)]
 
 
-class StoryAnchor(WireModel):
+class StoryAnchor(Schema):
     """A block of the words of the story told of the change, as the page and the agent name it.
 
     A quote left out is filled in by the review from the story it holds.
@@ -124,29 +124,29 @@ class StoryAnchor(WireModel):
     kind: Literal[AnchorKind.STORY] = AnchorKind.STORY
     block: StoryBlock
     quote: list[QuotedWords] = Field(default_factory=list, max_length=STORY_QUOTE_TEXTS)
-    outdated: WireBool = False
+    outdated: StrictBool = False
 
 
-# Everything a thread can hang on, as the wire carries it
+# Everything a thread can hang on, as the API carries it
 type Anchor = Annotated[LineAnchor | StoryAnchor, Field(discriminator="kind")]
 
 
 # Every kind of anchor, read from the other side's form by its fields
-ANCHORS_ON_THE_WIRE: TypeAdapter[Anchor] = TypeAdapter(Anchor)
-ANCHORS_IN_THE_REVIEW: TypeAdapter[models.Anchor] = TypeAdapter(models.Anchor)
+SCHEMA_ANCHORS: TypeAdapter[Anchor] = TypeAdapter(Anchor)
+DOMAIN_ANCHORS: TypeAdapter[models.Anchor] = TypeAdapter(models.Anchor)
 
 
-def anchor_in_the_review(anchor: Anchor) -> models.Anchor:
-    """The review's own form of an anchor the wire carried, whatever its kind."""
-    return ANCHORS_IN_THE_REVIEW.validate_python(anchor, from_attributes=True)
+def anchor_to_domain(anchor: Anchor) -> models.Anchor:
+    """The domain's form of an anchor a request carried, whatever its kind."""
+    return DOMAIN_ANCHORS.validate_python(anchor, from_attributes=True)
 
 
-def anchor_on_the_wire(anchor: models.Anchor) -> Anchor:
-    """The wire's form of one of the review's anchors, whatever its kind."""
-    return ANCHORS_ON_THE_WIRE.validate_python(anchor, from_attributes=True)
+def anchor_from_domain(anchor: models.Anchor) -> Anchor:
+    """The schema of one of the domain's anchors, whatever its kind."""
+    return SCHEMA_ANCHORS.validate_python(anchor, from_attributes=True)
 
 
-class Turn(WireModel):
+class Turn(Schema):
     """One thing said in a thread after the comment that opened it, its screenshots as files to open."""
 
     author: TurnAuthor
@@ -155,7 +155,7 @@ class Turn(WireModel):
     images: list[Path]
 
 
-class Thread(WireModel):
+class Thread(Schema):
     """A thread as the agent is handed it: where it is, everything said in it, its screenshots as files."""
 
     thread_id: str
@@ -165,7 +165,7 @@ class Thread(WireModel):
     images: list[Path]
     turns: list[Turn]
     raised_by: TurnAuthor
-    resolved: WireBool
+    resolved: StrictBool
 
     # Said from the anchor each time it is asked, never kept beside it: a thread
     # cannot say one place and hang on another, wherever it was built — by
@@ -174,10 +174,10 @@ class Thread(WireModel):
     @property
     def where(self) -> str:
         """The place, in plain words, for whoever reads the thread as text."""
-        return place_in_words(anchor_in_the_review(self.anchor))
+        return place_in_words(anchor_to_domain(self.anchor))
 
 
-class SaysSomething(WireModel):
+class SaysSomething(Schema):
     """Something said: words, screenshots, or both — but never neither."""
 
     body: str = Field(max_length=MAX_TEXT_LENGTH)
@@ -196,7 +196,7 @@ class TurnInput(SaysSomething):
     """One turn of a thread, as the browser sends it back."""
 
     # The id the browser gave it, which is what a question asked in it names
-    turn_id: WireId
+    turn_id: SafeId
     author: TurnAuthor
     round: int = Field(ge=FIRST_ROUND)
 
@@ -209,41 +209,41 @@ class ThreadInput(SaysSomething):
     panel message, and the hello in which the page says what it holds.
     """
 
-    thread_id: WireId
+    thread_id: SafeId
     anchor: Anchor
     severity: CommentSeverity
     turns: list[TurnInput] = Field(default_factory=list, max_length=MAX_TURNS)
     # Who opened it. Sent back so a thread the author raised is not read as
     # something the reader wrote.
     raised_by: TurnAuthor
-    resolved: WireBool
+    resolved: StrictBool
 
-    def in_the_review(self) -> models.ThreadDraft:
+    def to_domain(self) -> models.ThreadDraft:
         """The thread as the review holds what the page holds."""
         return models.ThreadDraft.model_validate(self, from_attributes=True)
 
 
-class SubmitRequest(WireModel):
+class SubmitRequest(Schema):
     """Request body for POST /api/submit."""
 
     threads: list[ThreadInput] = Field(max_length=MAX_THREADS)
     body: str | None = Field(default=None, max_length=MAX_TEXT_LENGTH)
     # Whether this send is the last one. False sends a round and leaves the
     # review open, which only makes sense while something is answering it.
-    end: WireBool
+    end: StrictBool
 
 
-class SubmitResponse(WireModel):
+class SubmitResponse(Schema):
     """Response for POST /api/submit."""
 
     markdown: str
     comment_count: int
     # Which round was just sent: the one written next is the one after it
     round: int
-    ended: WireBool
+    ended: StrictBool
 
 
-class AskRequest(WireModel):
+class AskRequest(Schema):
     """Request body for POST /api/ask — the reader asking in a thread.
 
     The whole thread goes, as it stands. `question_id` names what is asked:
@@ -252,7 +252,7 @@ class AskRequest(WireModel):
     finds it.
     """
 
-    question_id: WireId
+    question_id: SafeId
     thread: ThreadInput
 
 
@@ -266,7 +266,7 @@ HELLO_THREADS_MEANING = (
 )
 
 
-class HelloBase[Threads](WireModel):
+class HelloBase[Threads](Schema):
     """What a page says on its socket: the round it had reached, and the threads it holds.
 
     Written once for both of its readings — the browser's, of what it says,
@@ -300,7 +300,7 @@ class ReceivedHello(HelloBase[JsonValue]):
 class HeldThreads(BaseModel):
     """The threads a hello says the page holds, as the server read them: those it can read, and the ids of the rest.
 
-    Never on the wire itself: what the server made of what was.
+    Never in a request or an answer itself: what the server made of what was.
     """
 
     model_config = ConfigDict(frozen=True)
@@ -324,12 +324,12 @@ class HeldThreads(BaseModel):
         return cls(readable=readable, unreadable_ids=unreadable_ids)
 
 
-class NamedThread(WireModel):
+class NamedThread(Schema):
     """All the server reads of a thread it cannot read whole: the id it goes by."""
 
     # Held to the rule every id is: one no page or review could have given
     # names no thread, and owns nothing to keep from being handed out
-    thread_id: WireId
+    thread_id: SafeId
 
 
 def _thread_id_of(thread: JsonValue) -> str | None:
@@ -341,7 +341,7 @@ def _thread_id_of(thread: JsonValue) -> str | None:
     return named.thread_id
 
 
-class ThreadsResponse(WireModel):
+class ThreadsResponse(Schema):
     """Response for GET /api/threads — the threads the review holds, for a page that opens with no draft of its own.
 
     As a page last said them, and the agent's own however a page left them.
@@ -351,7 +351,7 @@ class ThreadsResponse(WireModel):
     threads: list[ThreadInput]
 
 
-class ThreadSummary(WireModel):
+class ThreadSummary(Schema):
     """A thread in short: enough to choose what to read, and nothing handed over.
 
     The comment that opened it, whole — a reader of the index shortens it as
@@ -365,12 +365,12 @@ class ThreadSummary(WireModel):
     severity: CommentSeverity
     body: str
     raised_by: TurnAuthor
-    resolved: WireBool
-    outdated: WireBool
+    resolved: StrictBool
+    outdated: StrictBool
     turn_count: int
 
     @classmethod
-    def of_draft(cls, thread: models.ThreadDraft) -> Self:
+    def from_draft(cls, thread: models.ThreadDraft) -> Self:
         """The summary of a thread as the page holds it."""
         return cls(
             thread_id=thread.thread_id,
@@ -384,7 +384,7 @@ class ThreadSummary(WireModel):
         )
 
     @classmethod
-    def of_thread(cls, thread: Thread) -> Self:
+    def from_thread(cls, thread: Thread) -> Self:
         """The summary of a thread as the agent was handed it."""
         return cls(
             thread_id=thread.thread_id,
@@ -398,7 +398,7 @@ class ThreadSummary(WireModel):
         )
 
 
-class PointRequest(WireModel):
+class PointRequest(Schema):
     """Request body for POST /api/point — the author raising a thread.
 
     The same anchor a reader's comment on lines carries, because it becomes
@@ -411,13 +411,13 @@ class PointRequest(WireModel):
     severity: CommentSeverity
 
 
-class PointResponse(WireModel):
+class PointResponse(Schema):
     """Response for POST /api/point — which thread was raised."""
 
     thread_id: str
 
 
-class FollowRequest(WireModel):
+class FollowRequest(Schema):
     """Request body for POST /api/anchors/follow — where these are now.
 
     The browser holds the threads, and the server holds the diff they hang
@@ -428,7 +428,7 @@ class FollowRequest(WireModel):
     anchors: list[Anchor] = Field(max_length=MAX_THREADS)
 
 
-class FollowResponse(WireModel):
+class FollowResponse(Schema):
     """Response for POST /api/anchors/follow, one anchor per one asked about."""
 
     anchors: list[Anchor]

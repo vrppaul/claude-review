@@ -21,7 +21,7 @@ from schemathesis.specs.openapi.checks import positive_data_acceptance
 
 from claude_review.hosting.hosted_review import HostedReview
 from claude_review.presentation.api_schema import http_document
-from claude_review.presentation.wire.base import MAX_WAIT_SECONDS
+from claude_review.presentation.schemas.base import MAX_WAIT_SECONDS
 from claude_review.services.image_service import IMAGE_FORMATS
 from claude_review.services.review_opening import ReviewOpening
 from tests.helpers import (

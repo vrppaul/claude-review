@@ -2,40 +2,40 @@
 
 from typing import override
 
-from pydantic import ConfigDict, Field
+from pydantic import ConfigDict, Field, StrictBool
 
 from claude_review.domain import models
 from claude_review.domain.interfaces import RecordChange
 from claude_review.domain.models import DiffLayout, Theme
-from claude_review.presentation.wire.base import WireBool, WireModel
+from claude_review.presentation.schemas.base import Schema
 
 # A release number, generously: 1.5.0, 1.5.0rc1, 1.4.3.dev0
 MAX_RELEASE_LENGTH = 50
 
 
-class ReaderSettings(WireModel):
+class ReaderSettings(Schema):
     """How this reader reads a review, the same in every review on the machine."""
 
     theme: Theme
     diff_layout: DiffLayout
     # Leave out changes that only alter whitespace
-    ignore_whitespace: WireBool
+    ignore_whitespace: StrictBool
     # A tick when an answer arrives while the review is in a background tab
-    sound_on_replies: WireBool
+    sound_on_replies: StrictBool
     # Ask the agent for a story of every change reviewed
-    stories: WireBool
+    stories: StrictBool
 
 
-class GuideState(WireModel):
+class GuideState(Schema):
     """What the review remembers of having shown this reader around."""
 
     # The release whose news the reader was last shown
     seen_release: str | None
     # Whether Story has been introduced to the reader: by its release news, at the switch, or by their trying it
-    story_introduced: WireBool
+    story_introduced: StrictBool
 
 
-class KeptRecord[Record: WireModel](WireModel):
+class KeptRecord[Record: Schema](Schema):
     """One record kept about the reader, and whether anything has been kept at all.
 
     A reader nothing has been kept about gets the defaults, and is told so:
@@ -44,10 +44,10 @@ class KeptRecord[Record: WireModel](WireModel):
     """
 
     record: Record
-    stored: WireBool
+    stored: StrictBool
 
 
-class SettingsChange(WireModel, RecordChange[models.ReaderSettings]):
+class SettingsChange(Schema, RecordChange[models.ReaderSettings]):
     """Request body for PUT /api/settings — the choices being changed, and only those.
 
     A choice sent as null is a choice not sent, as in every change to what
@@ -58,9 +58,9 @@ class SettingsChange(WireModel, RecordChange[models.ReaderSettings]):
 
     theme: Theme | None = None
     diff_layout: DiffLayout | None = None
-    ignore_whitespace: WireBool | None = None
-    sound_on_replies: WireBool | None = None
-    stories: WireBool | None = None
+    ignore_whitespace: StrictBool | None = None
+    sound_on_replies: StrictBool | None = None
+    stories: StrictBool | None = None
 
     @override
     def applied_to(self, record: models.ReaderSettings) -> models.ReaderSettings:
@@ -74,7 +74,7 @@ class SettingsChange(WireModel, RecordChange[models.ReaderSettings]):
         )
 
 
-class GuideChange(WireModel, RecordChange[models.GuideState]):
+class GuideChange(Schema, RecordChange[models.GuideState]):
     """Request body for PUT /api/guide — what the reader has now been shown, and only that.
 
     A fact sent as null is a fact not sent, as in every change to what is
@@ -84,7 +84,7 @@ class GuideChange(WireModel, RecordChange[models.GuideState]):
     model_config = ConfigDict(extra="forbid")
 
     seen_release: str | None = Field(default=None, min_length=1, max_length=MAX_RELEASE_LENGTH)
-    story_introduced: WireBool | None = None
+    story_introduced: StrictBool | None = None
 
     @override
     def applied_to(self, record: models.GuideState) -> models.GuideState:

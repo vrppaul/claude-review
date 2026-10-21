@@ -5,11 +5,11 @@ from hypothesis import given, strategies as strategy
 
 from claude_review.domain.exceptions import UnknownVersionError
 from claude_review.domain.models import FIRST_ROUND, HEAD, ChangedSinceRound, RefKey, ReviewKey, RoundKey, VersionKey
-from claude_review.presentation.version_words import (
+from claude_review.presentation.version_labels import (
     REF_PREFIX,
     REVIEW_KEY,
     ROUND_PREFIX,
-    changes_on_the_wire,
+    changes_since_round,
     key_of,
     key_text,
     label_of,
@@ -88,7 +88,7 @@ def test_the_review_is_named_by_what_it_was_opened_against() -> None:
 
 
 def test_what_changed_since_a_round_carries_the_key_that_shows_just_that() -> None:
-    told = changes_on_the_wire(ChangedSinceRound(round=3, paths=["a.py"]))
+    told = changes_since_round(ChangedSinceRound(round=3, paths=["a.py"]))
 
     assert told is not None
     assert (told.since_round, told.base_key, told.paths) == (3, "round:3", ["a.py"])

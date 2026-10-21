@@ -37,7 +37,7 @@ from claude_review.domain.story import (
     ToldFrom,
     ToldStory,
 )
-from claude_review.presentation.wire.story import StoryRequest
+from claude_review.presentation.schemas.story import StoryRequest
 from claude_review.services.anchor_service import side_lines
 from claude_review.services.review.review_content import ReviewContent, TakesCompared
 from claude_review.services.review.review_story import ReviewStory
@@ -106,7 +106,7 @@ def field_at(story: Story[Step], path: FieldPath) -> JsonValue:
 
 def as_the_agent_writes(story: Story[Step]) -> dict[str, JsonValue]:
     """A story as its document says it: JSON, each step's lines written "104-129"."""
-    return StoryRequest.of(story).model_dump(mode="json")
+    return StoryRequest.from_domain(story).model_dump(mode="json")
 
 
 def without_field(document: dict[str, JsonValue], field: str) -> dict[str, JsonValue]:

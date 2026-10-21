@@ -12,7 +12,7 @@ from fastapi.testclient import TestClient
 from httpx import AsyncClient
 
 from claude_review.domain.models import CommentSeverity, TurnAuthor
-from claude_review.presentation.wire.pushes import ReplyPush
+from claude_review.presentation.schemas.pushes import ReplyPush
 from tests.helpers import (
     EVENTS_ROUTE,
     FIRST_THREAD_ID,
@@ -20,11 +20,11 @@ from tests.helpers import (
     REVIEWED_FILE,
     REVIEWED_LINE,
     WAIT_FOR_EVENT,
-    line_on_the_wire,
+    line_json,
     next_push,
     open_session,
-    thread_on_the_wire,
-    turn_on_the_wire,
+    thread_json,
+    turn_json,
     until_the_review_holds_threads,
 )
 
@@ -32,18 +32,18 @@ ASK_ROUTE = "/api/ask"
 
 OPENING = "Why did you drop the None check?"
 QUOTED = "    return now - self.started_at > timeout"
-ANCHOR = {**line_on_the_wire("src/a.py", 42), "quote": [QUOTED]}
+ANCHOR = {**line_json("src/a.py", 42), "quote": [QUOTED]}
 
 # A thread nothing was said in since the comment that opened it
-A_THREAD = thread_on_the_wire(ANCHOR, OPENING)
+A_THREAD = thread_json(ANCHOR, OPENING)
 # The overview's doubt, and a thread's anchor on it as the page sends one
 DOUBT_SAID = "Whether a timeout of zero still times out."
 ON_THE_DOUBT = {"kind": "story", "block": {"at": "overview", "text": "doubt"}, "quote": [DOUBT_SAID]}
 # What the agent answered, and what the reader asked next
 ANSWER_ID = "turn-1"
 FOLLOW_UP_ID = "turn-2"
-ANSWER = turn_on_the_wire(TurnAuthor.AUTHOR, "It moved to the caller.", turn_id=ANSWER_ID)
-FOLLOW_UP = turn_on_the_wire(TurnAuthor.READER, "Which caller?", turn_id=FOLLOW_UP_ID)
+ANSWER = turn_json(TurnAuthor.AUTHOR, "It moved to the caller.", turn_id=ANSWER_ID)
+FOLLOW_UP = turn_json(TurnAuthor.READER, "Which caller?", turn_id=FOLLOW_UP_ID)
 # An image id the review never kept, or no longer keeps after a restart
 GONE_IMAGE = "gone.png"
 # What the agent opens a thread of its own with
@@ -76,7 +76,7 @@ async def test_a_question_on_the_storys_words_reaches_the_agent_with_the_words_a
     client: AsyncClient,
 ) -> None:
     """The agent has the files in front of it, not the story it told: the words come with the question."""
-    await client.post(ASK_ROUTE, json=_asking(thread_on_the_wire(ON_THE_DOUBT, OPENING)))
+    await client.post(ASK_ROUTE, json=_asking(thread_json(ON_THE_DOUBT, OPENING)))
 
     thread = (await _question_taken(client))["thread"]
 
@@ -174,7 +174,7 @@ async def test_an_id_that_could_not_be_read_back_is_refused(client: AsyncClient)
 
 async def test_a_question_in_a_thread_quoting_fewer_lines_than_it_names_is_refused(client: AsyncClient) -> None:
     """Handed over, the agent would take the quote for every line the thread names."""
-    short = {**A_THREAD, "anchor": {**line_on_the_wire("src/a.py", 40, 42), "quote": [QUOTED]}}
+    short = {**A_THREAD, "anchor": {**line_json("src/a.py", 40, 42), "quote": [QUOTED]}}
 
     response = await client.post(ASK_ROUTE, json=_asking(short))
 
@@ -271,15 +271,15 @@ async def _raise_a_thread(client: AsyncClient) -> dict[str, object]:
     """The agent raises a thread on the reviewed line; the thread as the page then holds and sends it."""
     raised = await client.post(
         "/api/point",
-        json={"anchor": line_on_the_wire(REVIEWED_FILE, 1), "body": RAISED_BODY, "severity": CommentSeverity.NOTE},
+        json={"anchor": line_json(REVIEWED_FILE, 1), "body": RAISED_BODY, "severity": CommentSeverity.NOTE},
     )
-    anchor = {**line_on_the_wire(REVIEWED_FILE, 1), "quote": [REVIEWED_LINE]}
-    return thread_on_the_wire(anchor, RAISED_BODY, thread_id=raised.json()["thread_id"], raised_by=TurnAuthor.AUTHOR)
+    anchor = {**line_json(REVIEWED_FILE, 1), "quote": [REVIEWED_LINE]}
+    return thread_json(anchor, RAISED_BODY, thread_id=raised.json()["thread_id"], raised_by=TurnAuthor.AUTHOR)
 
 
 async def test_the_agents_own_thread_is_asked_about_as_it_raised_it(client: AsyncClient) -> None:
     raised = await _raise_a_thread(client)
-    answered = {**raised, "turns": [turn_on_the_wire(TurnAuthor.READER, "Why keep it?", turn_id=FOLLOW_UP_ID)]}
+    answered = {**raised, "turns": [turn_json(TurnAuthor.READER, "Why keep it?", turn_id=FOLLOW_UP_ID)]}
 
     response = await client.post(ASK_ROUTE, json=_asking(answered, question_id=FOLLOW_UP_ID))
 

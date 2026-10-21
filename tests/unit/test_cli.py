@@ -16,9 +16,9 @@ from claude_review.domain.models import MAX_ID_LENGTH, MAX_QUOTE_LINES
 from claude_review.domain.story import TEXT_LIMITS, StoryText, TextLimit
 from claude_review.hosting.address import LOOPBACK
 from claude_review.hosting.ports import ANY_FREE_PORT
-from claude_review.presentation.wire.agent import MAX_PROGRESS_STEPS
-from claude_review.presentation.wire.base import MAX_FILES_NAMED, MAX_WAIT_SECONDS
-from claude_review.presentation.wire.story import StoryRequest
+from claude_review.presentation.schemas.agent import MAX_PROGRESS_STEPS
+from claude_review.presentation.schemas.base import MAX_FILES_NAMED, MAX_WAIT_SECONDS
+from claude_review.presentation.schemas.story import StoryRequest
 from claude_review.services.place_words import NOT_LINES
 from claude_review.services.story_checks import document_faults
 from tests.stories import as_the_agent_writes, step, story_of, without_field
@@ -334,7 +334,7 @@ def test_the_help_of_story_says_how_long_each_kind_of_text_may_be_and_where_the_
 def test_the_example_in_the_help_of_story_is_a_document_the_review_reads_and_finds_no_fault_in() -> None:
     example = StoryRequest.model_validate_json(_example_in_the_help_of_story())
 
-    assert document_faults(example.in_the_review()) == []
+    assert document_faults(example.to_domain()) == []
 
 
 @pytest.mark.parametrize("left_out", WRITTEN_FOR_WHAT_IS_LEFT_OUT)

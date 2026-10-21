@@ -1,4 +1,4 @@
-"""Functional requirement tests for a story on the wire: the document the agent writes, and the story a page is told.
+"""Functional requirement tests for the API's story: the document the agent writes, and the story a page is told.
 
 The agent writes a story's document by hand, as JSON. What it wrote is read
 as the story it means, or refused naming the field: a field the document
@@ -11,7 +11,7 @@ from pydantic import JsonValue, ValidationError
 
 from claude_review.domain.exceptions import FieldPath
 from claude_review.domain.story import ToldFrom
-from claude_review.presentation.wire.story import StoryRequest, ToldStory
+from claude_review.presentation.schemas.story import StoryRequest, ToldStory
 from claude_review.services.story_telling import as_told, tell
 from tests.stories import as_the_agent_writes, canvas_story, changed_file, hunk, step, story_of, without_field
 
@@ -58,19 +58,19 @@ def refused_at(document: dict[str, JsonValue]) -> list[FieldPath]:
 def test_a_document_is_read_as_the_story_it_writes() -> None:
     document = as_the_agent_writes(canvas_story())
 
-    assert StoryRequest.model_validate(document).in_the_review() == canvas_story()
+    assert StoryRequest.model_validate(document).to_domain() == canvas_story()
 
 
 def test_a_story_the_review_holds_is_written_as_the_document_that_says_it() -> None:
     """Lines the review holds as lines are taken as they are, and written as a person writes them."""
-    document = StoryRequest.of(canvas_story())
+    document = StoryRequest.from_domain(canvas_story())
 
-    assert document.in_the_review() == canvas_story()
+    assert document.to_domain() == canvas_story()
     assert document.model_dump(mode="json")["chapters"][0]["steps"][0]["lines"] == "30-47"
 
 
 def test_what_a_story_may_leave_out_is_read_as_left_out() -> None:
-    story = StoryRequest.model_validate(THE_LEAST_A_STORY_SAYS).in_the_review()
+    story = StoryRequest.model_validate(THE_LEAST_A_STORY_SAYS).to_domain()
 
     assert story.told_from == ToldFrom.COMMITS
     assert (story.overview.doubt, story.overview.diagram, story.chapters[0].doubt) == (None, None, None)
@@ -102,7 +102,7 @@ def test_lines_that_run_backwards_are_read_and_left_to_the_storys_checks() -> No
     """Refused here, they would be refused alone, and everything else wrong with the story heard only afterwards."""
     document = written_with(as_the_agent_writes(canvas_story()), (*FIRST_STEP, "lines"), "47-30")
 
-    lines = StoryRequest.model_validate(document).in_the_review().chapters[0].steps[0].lines
+    lines = StoryRequest.model_validate(document).to_domain().chapters[0].steps[0].lines
 
     assert (lines.first, lines.last) == (47, 30)
 
@@ -120,12 +120,12 @@ def test_a_document_written_out_again_is_the_document_that_was_read(lines: str) 
 def test_a_told_story_reaches_a_page_with_every_piece_and_every_line_it_was_told_with() -> None:
     told = as_told(tell(story_of(step(SERVICE, 12, 13)), CHANGE))
 
-    on_the_wire = ToldStory.of(told)
+    sent = ToldStory.from_domain(told)
 
-    # A step and a piece on the wire say whether a thread may name their file, and a chapter how many of its steps
-    # show code changed since it was told, which the review's own answer from the path and from the steps
+    # A step and a piece sent say whether a thread may name their file, and a chapter how many of its steps show
+    # code changed since it was told, which the domain's models answer from the path and from the steps
     whether_commentable = {"piece": {"commentable"}}
-    as_the_review_holds_it = on_the_wire.model_dump(
+    as_the_review_holds_it = sent.model_dump(
         exclude={
             "chapters": {
                 "__all__": {

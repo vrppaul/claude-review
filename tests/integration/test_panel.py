@@ -19,8 +19,8 @@ from claude_review.domain.models import (
     StoryBlockKind,
     TurnAuthor,
 )
-from claude_review.presentation.wire.agent import ProgressStep
-from claude_review.presentation.wire.pushes import ChatPush, PointPush, ProgressPush, ShowPush, StatusPush
+from claude_review.presentation.schemas.agent import ProgressStep
+from claude_review.presentation.schemas.pushes import ChatPush, PointPush, ProgressPush, ShowPush, StatusPush
 from tests.helpers import (
     CATCH_UP_ROUTE,
     CONVERSATION_ROUTE,
@@ -33,7 +33,7 @@ from tests.helpers import (
     FixedClock,
     ReviewFactory,
     http_client,
-    line_on_the_wire,
+    line_json,
     next_push,
     work_pushed,
     one_line_file,
@@ -43,9 +43,9 @@ from tests.helpers import (
     pushes_until,
     repository_opening,
     review_facts,
-    thread_on_the_wire,
+    thread_json,
     thread_route,
-    turn_on_the_wire,
+    turn_json,
     until_the_review_holds_threads,
 )
 
@@ -57,10 +57,10 @@ A_MOMENT = 1_791_000_000_000
 MADE_SINCE = "made_since.py"
 NOT_YET_MADE = "src/not_yet.py"
 
-THREAD = thread_on_the_wire(
-    {**line_on_the_wire(REVIEWED_FILE, 42), "quote": ["    return now - self.started_at > timeout"]},
+THREAD = thread_json(
+    {**line_json(REVIEWED_FILE, 42), "quote": ["    return now - self.started_at > timeout"]},
     "Why did you drop the None check?",
-    turns=[turn_on_the_wire(TurnAuthor.AUTHOR, "It moved to the caller.", turn_id="turn-1")],
+    turns=[turn_json(TurnAuthor.AUTHOR, "It moved to the caller.", turn_id="turn-1")],
 )
 
 QUESTION = {"question_id": FIRST_THREAD_ID, "thread": THREAD}
@@ -102,7 +102,7 @@ async def test_a_message_pointing_at_a_thread_quoting_fewer_lines_than_it_names_
     client: AsyncClient,
 ) -> None:
     """Handed over, the agent would take the quote for every line the thread names."""
-    short = {**THREAD, "anchor": {**line_on_the_wire(REVIEWED_FILE, 40, 42), "quote": ["only line 40"]}}
+    short = {**THREAD, "anchor": {**line_json(REVIEWED_FILE, 40, 42), "quote": ["only line 40"]}}
 
     response = await client.post("/api/message", json={**MESSAGE, "threads": [short]})
 
@@ -205,7 +205,7 @@ def test_the_author_can_raise_a_thread_on_a_line(review_page: TestClient) -> Non
         response = review_page.post(
             POINT_ROUTE,
             json={
-                "anchor": line_on_the_wire(REVIEWED_FILE, 1),
+                "anchor": line_json(REVIEWED_FILE, 1),
                 "body": "I did this differently from what was asked, because...",
                 "severity": CommentSeverity.QUESTION,
             },
@@ -222,7 +222,7 @@ def test_the_author_can_raise_a_thread_on_a_line(review_page: TestClient) -> Non
 
 async def test_a_thread_the_agent_raised_can_be_answered_in(client: AsyncClient) -> None:
     """The reader may ask about it like any other, and the review knows it before the page says it holds it."""
-    raised = await client.post(POINT_ROUTE, json=_pointing(line_on_the_wire(REVIEWED_FILE, 1), "Kept on purpose"))
+    raised = await client.post(POINT_ROUTE, json=_pointing(line_json(REVIEWED_FILE, 1), "Kept on purpose"))
 
     response = await client.post("/api/reply", json={"thread_id": raised.json()["thread_id"], "body": "Because"})
 
@@ -231,8 +231,8 @@ async def test_a_thread_the_agent_raised_can_be_answered_in(client: AsyncClient)
 
 async def test_raised_threads_are_numbered_apart_from_the_readers(client: AsyncClient) -> None:
     """The browser mints its own ids; two sides must not collide."""
-    first = await client.post(POINT_ROUTE, json=_pointing(line_on_the_wire(REVIEWED_FILE, 1), "one"))
-    second = await client.post(POINT_ROUTE, json=_pointing(line_on_the_wire(REVIEWED_FILE, 1), "two"))
+    first = await client.post(POINT_ROUTE, json=_pointing(line_json(REVIEWED_FILE, 1), "one"))
+    second = await client.post(POINT_ROUTE, json=_pointing(line_json(REVIEWED_FILE, 1), "two"))
 
     assert first.json()["thread_id"] == "raised-1"
     assert second.json()["thread_id"] == "raised-2"
@@ -248,7 +248,7 @@ async def test_a_thread_on_a_block_of_the_storys_words_is_refused_for_the_author
 
 async def test_a_thread_on_a_file_not_under_review_is_refused(client: AsyncClient) -> None:
     """Silently accepting it shows the reader a thread about nothing."""
-    response = await client.post(POINT_ROUTE, json=_pointing(line_on_the_wire("src/elsewhere.py", 1), "here"))
+    response = await client.post(POINT_ROUTE, json=_pointing(line_json("src/elsewhere.py", 1), "here"))
 
     assert response.status_code == HTTPStatus.NOT_FOUND
     assert "not in this review" in response.json()["detail"]
@@ -257,7 +257,7 @@ async def test_a_thread_on_a_file_not_under_review_is_refused(client: AsyncClien
 
 async def test_a_thread_on_a_line_the_diff_does_not_show_is_refused(client: AsyncClient) -> None:
     """The quote would come back empty and go outdated at the next retake."""
-    response = await client.post(POINT_ROUTE, json=_pointing(line_on_the_wire(REVIEWED_FILE, 900), "far away"))
+    response = await client.post(POINT_ROUTE, json=_pointing(line_json(REVIEWED_FILE, 900), "far away"))
 
     assert response.status_code == HTTPStatus.UNPROCESSABLE_CONTENT
     assert "does not show new line 900" in response.json()["detail"]
@@ -486,11 +486,11 @@ async def test_no_status_is_reported_as_nothing_rather_than_zero(client: AsyncCl
     assert standing["agent"] == {"model": None, "context": None, "at": None}
 
 
-A_DISCUSSED_THREAD = thread_on_the_wire(
-    {**line_on_the_wire(REVIEWED_FILE, 1), "quote": [REVIEWED_LINE]},
+A_DISCUSSED_THREAD = thread_json(
+    {**line_json(REVIEWED_FILE, 1), "quote": [REVIEWED_LINE]},
     "Why did you drop the None check?",
     severity=CommentSeverity.QUESTION,
-    turns=[turn_on_the_wire(TurnAuthor.AUTHOR, "It moved to the caller.", turn_id="turn-1")],
+    turns=[turn_json(TurnAuthor.AUTHOR, "It moved to the caller.", turn_id="turn-1")],
 )
 
 

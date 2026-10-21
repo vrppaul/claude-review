@@ -12,7 +12,7 @@ from httpx import AsyncClient
 from starlette.websockets import WebSocketDisconnect
 
 from claude_review.presentation.app import ASSETS_NAME, PAGE_NAME, serve_the_page
-from claude_review.presentation.refusals import answer_refusals
+from claude_review.presentation.errors import answer_refusals
 from tests.helpers import methods_allowed
 
 # What a build of the page left, in a test's own folder

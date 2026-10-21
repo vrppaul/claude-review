@@ -25,7 +25,7 @@ from claude_review.cli.story_help import story_document_help
 from claude_review.cli.terminal_text import terminal_text
 from claude_review.domain.models import CommentSeverity, LineSide, says_nothing
 from claude_review.hosting.ports import HIGHEST_PORT, LOWEST_PORT
-from claude_review.presentation.wire.agent import (
+from claude_review.presentation.schemas.agent import (
     MAX_PROGRESS_STEPS,
     ProgressRequest,
     ProgressStep,
@@ -35,9 +35,9 @@ from claude_review.presentation.wire.agent import (
     StatusRequest,
     TimeoutEvent,
 )
-from claude_review.presentation.wire.base import DEFAULT_WAIT_SECONDS, MAX_WAIT_SECONDS
-from claude_review.presentation.wire.story import StoryRequest
-from claude_review.presentation.wire.threads import LineAnchor, PointRequest
+from claude_review.presentation.schemas.base import DEFAULT_WAIT_SECONDS, MAX_WAIT_SECONDS
+from claude_review.presentation.schemas.story import StoryRequest
+from claude_review.presentation.schemas.threads import LineAnchor, PointRequest
 from claude_review.services.place_words import LINES_EXAMPLE
 
 # How a refusal lists the steps both --did and --step name

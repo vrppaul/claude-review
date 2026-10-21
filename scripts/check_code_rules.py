@@ -13,7 +13,7 @@ them: a model made from another is made by a method of the model, which
 calls its constructor with every field written out, where a type checker
 reads the names. So what goes the other way is not used at all — pydantic's
 `model_copy`, `model_construct` and `model_dump`, and Python's `__dict__`,
-`vars` and `copy.replace`. A model leaves for the wire as JSON
+`vars` and `copy.replace`. A model leaves in a request or an answer as JSON
 (`model_dump_json`), never as a mapping. The check knows these by name
 alone: a model handed to `dict(…)`, or walked field by field, is past what
 it sees, and the rule holds there all the same. A name is refused whatever

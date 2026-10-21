@@ -7,8 +7,8 @@ import pytest
 from claude_review.cli.rendering import GIST_LENGTH, render_catch_up, render_thread
 from claude_review.domain import models
 from claude_review.domain.models import CommentSeverity, Turn, TurnAuthor
-from claude_review.presentation.wire.agent import AgentStatus, CatchUpResponse, PanelEntry
-from claude_review.presentation.wire.threads import Thread, ThreadSummary
+from claude_review.presentation.schemas.agent import AgentStatus, CatchUpResponse, PanelEntry
+from claude_review.presentation.schemas.threads import Thread, ThreadSummary
 from tests.helpers import line_anchor, thread
 
 SAID_AT = 1
@@ -34,7 +34,7 @@ ASKED_TO_RUN_THE_TESTS = PanelEntry(
 
 def _summary(thread: models.Thread) -> ThreadSummary:
     """A thread as the catch-up lists it."""
-    return ThreadSummary.of_thread(Thread.of(thread))
+    return ThreadSummary.from_thread(Thread.from_domain(thread))
 
 
 SEEN = CatchUpResponse(
@@ -106,7 +106,7 @@ def test_a_long_comment_is_cut_to_one_line_of_the_index() -> None:
 
 def test_a_thread_asked_for_by_name_comes_in_full() -> None:
     """The index is for choosing what to read; this is the reading."""
-    printed = render_thread(Thread.of(DISCUSSED))
+    printed = render_thread(Thread.from_domain(DISCUSSED))
 
     assert printed.startswith("comment-4  src/routes.py:118-130  question")
     assert "And if it does, what then?" in printed
@@ -145,7 +145,7 @@ def test_an_image_in_a_thread_read_in_full_is_listed_as_a_file_to_open(body: str
         turns=[Turn(author=TurnAuthor.READER, body=body, round=1, images=[answered_with])],
     )
 
-    printed = render_thread(Thread.of(pictured))
+    printed = render_thread(Thread.from_domain(pictured))
 
     assert f"image: {opened_with}" in printed
     assert "reader: (image)" in printed

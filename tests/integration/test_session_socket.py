@@ -16,8 +16,8 @@ from fastapi.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
 from claude_review.domain.models import MAX_ID_LENGTH, MAX_QUOTE_LINES, CommentSeverity, TurnAuthor
-from claude_review.presentation.wire.pushes import EndedPush, ReplyPush, RoundPush, ShowPush
-from claude_review.presentation.wire.session import Welcome
+from claude_review.presentation.schemas.pushes import EndedPush, ReplyPush, RoundPush, ShowPush
+from claude_review.presentation.schemas.session import Welcome
 from tests.helpers import (
     CATCH_UP_ROUTE,
     FIRST_THREAD_ID,
@@ -25,20 +25,20 @@ from tests.helpers import (
     REVIEWED_FILE,
     REVIEWED_LINE,
     SESSION_ROUTE,
-    line_on_the_wire,
+    line_json,
     next_push,
     open_session,
     open_session_at,
     review_facts,
-    thread_on_the_wire,
+    thread_json,
     thread_route,
-    turn_on_the_wire,
+    turn_json,
     until_the_review_holds_threads,
     until_the_review_is_on_round,
     welcome_of,
 )
 
-A_THREAD = thread_on_the_wire(line_on_the_wire(REVIEWED_FILE, 1), "Why one?")
+A_THREAD = thread_json(line_json(REVIEWED_FILE, 1), "Why one?")
 
 SHOWN = ShowPush(file=REVIEWED_FILE)
 ANSWER = "It moved to config"
@@ -60,7 +60,7 @@ def test_a_page_coming_back_is_handed_what_was_said_while_it_was_away(review_pag
     """A laptop asleep drops the socket; the answer given meanwhile must still reach the page."""
     with open_session(review_page) as away:
         last_seen = welcome_of(away)
-        away.send_json({"threads": [thread_on_the_wire(line_on_the_wire(REVIEWED_FILE, 1), "Why?")]})
+        away.send_json({"threads": [thread_json(line_json(REVIEWED_FILE, 1), "Why?")]})
         until_the_review_holds_threads(review_page, 1)
     review_page.post("/api/reply", json={"thread_id": FIRST_THREAD_ID, "body": ANSWER})
 
@@ -179,7 +179,7 @@ def test_anything_else_on_the_socket_is_ignored(review_page: TestClient) -> None
 
 def test_threads_the_browser_holds_reach_an_agent_with_their_place_named(review_page: TestClient) -> None:
     """An agent arriving late reads where each thread is the way the review writes it."""
-    ranged = thread_on_the_wire(line_on_the_wire(REVIEWED_FILE, 3, 5), "Why these?", thread_id="comment-2")
+    ranged = thread_json(line_json(REVIEWED_FILE, 3, 5), "Why these?", thread_id="comment-2")
 
     with open_session(review_page) as socket:
         socket.send_json({"threads": [A_THREAD, ranged]})
@@ -240,8 +240,8 @@ def test_a_thread_the_review_does_not_hold_is_not_found(review_page: TestClient)
 
 def test_a_thread_the_server_cannot_read_costs_only_itself(review_page: TestClient) -> None:
     """One thread out of bounds must not take the round and every other thread with it."""
-    too_long = thread_on_the_wire(
-        {**line_on_the_wire(REVIEWED_FILE, 1), "quote": [""] * (MAX_QUOTE_LINES + 1)},
+    too_long = thread_json(
+        {**line_json(REVIEWED_FILE, 1), "quote": [""] * (MAX_QUOTE_LINES + 1)},
         "Quotes more than the review keeps",
         thread_id="comment-2",
     )
@@ -255,8 +255,8 @@ def test_a_thread_the_server_cannot_read_costs_only_itself(review_page: TestClie
 
 def test_a_thread_the_server_cannot_read_still_keeps_its_id_from_being_handed_out(review_page: TestClient) -> None:
     """The browser still holds it: a second thread under the same id would edit and delete as one."""
-    unreadable = thread_on_the_wire(
-        {**line_on_the_wire(REVIEWED_FILE, 1), "quote": [""] * (MAX_QUOTE_LINES + 1)},
+    unreadable = thread_json(
+        {**line_json(REVIEWED_FILE, 1), "quote": [""] * (MAX_QUOTE_LINES + 1)},
         "Raised before the restart",
         thread_id="raised-7",
         raised_by=TurnAuthor.AUTHOR,
@@ -267,7 +267,7 @@ def test_a_thread_the_server_cannot_read_still_keeps_its_id_from_being_handed_ou
 
     raised = review_page.post(
         "/api/point",
-        json={"anchor": line_on_the_wire(REVIEWED_FILE, 1), "body": "And", "severity": CommentSeverity.NOTE},
+        json={"anchor": line_json(REVIEWED_FILE, 1), "body": "And", "severity": CommentSeverity.NOTE},
     )
 
     assert raised.json()["thread_id"] == "raised-8"
@@ -290,9 +290,7 @@ def test_a_thread_whose_id_no_page_gives_costs_only_itself(review_page: TestClie
 
 def test_a_thread_the_server_cannot_read_can_still_be_answered_in(review_page: TestClient) -> None:
     """The browser holds it and draws the answer in it, whatever the server could not make of it."""
-    unreadable = thread_on_the_wire(
-        {**line_on_the_wire(REVIEWED_FILE, 1), "quote": [""] * (MAX_QUOTE_LINES + 1)}, "Why this?"
-    )
+    unreadable = thread_json({**line_json(REVIEWED_FILE, 1), "quote": [""] * (MAX_QUOTE_LINES + 1)}, "Why this?")
     with open_session(review_page) as socket:
         socket.send_json({"round": 2, "threads": [unreadable]})
         until_the_review_is_on_round(review_page, 2)
@@ -315,8 +313,8 @@ def test_threads_the_reader_deleted_are_forgotten(review_page: TestClient) -> No
 
 def test_a_restarted_server_does_not_hand_out_an_id_a_thread_already_has(review_page: TestClient) -> None:
     """The browser still holds the agent's threads from before the restart."""
-    raised_before = thread_on_the_wire(
-        line_on_the_wire(REVIEWED_FILE, 1), "Kept it on purpose", thread_id="raised-3", raised_by=TurnAuthor.AUTHOR
+    raised_before = thread_json(
+        line_json(REVIEWED_FILE, 1), "Kept it on purpose", thread_id="raised-3", raised_by=TurnAuthor.AUTHOR
     )
     with open_session(review_page) as socket:
         socket.send_json({"threads": [raised_before]})
@@ -324,7 +322,7 @@ def test_a_restarted_server_does_not_hand_out_an_id_a_thread_already_has(review_
 
     raised = review_page.post(
         "/api/point",
-        json={"anchor": line_on_the_wire(REVIEWED_FILE, 1), "body": "And", "severity": CommentSeverity.NOTE},
+        json={"anchor": line_json(REVIEWED_FILE, 1), "body": "And", "severity": CommentSeverity.NOTE},
     )
 
     assert raised.json()["thread_id"] == "raised-4"
@@ -337,7 +335,7 @@ def _raised(page: TestClient, body: str) -> str:
     """Raise a thread on the review's one line, as the agent does, and say its id."""
     raised = page.post(
         "/api/point",
-        json={"anchor": line_on_the_wire(REVIEWED_FILE, 1), "body": body, "severity": CommentSeverity.NOTE},
+        json={"anchor": line_json(REVIEWED_FILE, 1), "body": body, "severity": CommentSeverity.NOTE},
     )
     return raised.json()["thread_id"]
 
@@ -369,7 +367,7 @@ def test_a_thread_the_agent_raised_is_held_as_the_page_last_said_it(review_page:
     """The reader's reply in it is what an agent arriving later must read."""
     thread_id = _raised(review_page, "Kept on purpose")
     raised = review_page.get(THREADS_ROUTE).json()["threads"][0]
-    replied = {**raised, "turns": [turn_on_the_wire(TurnAuthor.READER, "Why?", turn_id="turn-1")]}
+    replied = {**raised, "turns": [turn_json(TurnAuthor.READER, "Why?", turn_id="turn-1")]}
 
     with open_session(review_page) as socket:
         socket.send_json({"round": 2, "threads": [replied]})

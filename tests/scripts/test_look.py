@@ -16,8 +16,8 @@ import pytest
 from httpx import URL, AsyncClient
 from pydantic import BaseModel, ConfigDict
 
-from claude_review.presentation.wire.content import DiffResponse
-from claude_review.presentation.wire.story import StoryResponse
+from claude_review.presentation.schemas.content import DiffResponse
+from claude_review.presentation.schemas.story import StoryResponse
 from tests.helpers import DIFF_ROUTE, STORY_ROUTE
 from tests.page_socket import PageSocket
 

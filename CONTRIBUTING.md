@@ -59,7 +59,7 @@ DDD-lite with clean layer separation:
 ```
 cli/           → the command line: launching a review, and the agent's commands
 hosting/       → one review held open on this machine: its directories, port and server
-presentation/  → FastAPI routes, wire models, Depends() DI
+presentation/  → FastAPI routers, the API's schemas, Depends() DI
 services/      → orchestration; services/review/ owns a review's state
 repositories/  → infrastructure (GitRepository, the image and record stores, the clock)
 domain/        → Pydantic models, the interfaces the services build on, enums

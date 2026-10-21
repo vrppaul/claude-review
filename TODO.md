@@ -47,8 +47,8 @@ tests. Remove items when done — don't check them off.
       date, "✕ 1 of 3 failed", or nothing when none was reported, and the
       chip opens a list of the commands. Drawn on the design canvas of
       2026-10-20 (board Checks), after the story's design of 2026-10-07.
-      The server has none of it: a command, a model and a wire field, so
-      the domain model changes.
+      The server has none of it: a command, a model and a field of the
+      API's, so the domain model changes.
 
 ## Bugs
 
@@ -294,9 +294,9 @@ of it is built yet.
       for a column the reader puts away (`PutAwayColumn`) and for the
       agent panel.
 - [ ] `refactor(server)`: three routes call two methods of the `Review`
-      where the rule is that a route calls one (`.claude/rules/wire.md`):
-      GET /api/review (`presentation/routes/page_routes.py:80-81`), GET
-      /api/diff (`177-178`) and GET /api/versions (`190-191`).
+      where the rule is that a route calls one (`.claude/rules/api.md`):
+      GET /api/review (`presentation/routers/page.py:81-82`), GET
+      /api/diff (`178-179`) and GET /api/versions (`192-193`).
 - [ ] The instruction-files gate reads a path only between two backticks
       on one line of prose (`scripts/check_instruction_files.py`): a path
       inside a fenced block, or one a Markdown link points at, is not held
@@ -324,8 +324,8 @@ of it is built yet.
       43.5 ms for ten of it (410 files), about 17 ms a MB. Writing each
       body once as it changes pays only for changes far larger.
 - [ ] `perf(cli)`: every agent command loads `services/image_service`, and
-      structlog with it, through `presentation/wire/base.py`: about 71 ms
-      of an import of some 245 ms, `wire/agent.py` about 149 ms in all
+      structlog with it, through `presentation/schemas/base.py`: about 71 ms
+      of an import of some 245 ms, `schemas/agent.py` about 149 ms in all
       (`python -X importtime`, one run).
 - [ ] `refactor(hosting)`: `hold_open` (`hosting/serving.py`) makes a
       `GitRepository` for every kind of review and hands it to
@@ -334,9 +334,10 @@ of it is built yet.
       git reader it never calls. Making one only for a change would choose
       the source by kind in two callers, `serving.py` and the tests'
       `hosted` (`tests/helpers.py`), unless the choice moves with it.
-- [ ] `refactor(wire)`: `StoryTakenResponse.summing_up` builds its
-      `LeftOutOfFile`s field by field (`presentation/wire/story.py`), not
-      with `.of()` from a domain twin as wire.md asks of every wire model.
+- [ ] `refactor(api)`: `StoryTakenResponse.summing_up` builds its
+      `LeftOutOfFile`s field by field (`presentation/schemas/story.py`), not
+      with `from_domain()` from a domain model, as api.md asks of every
+      schema the review sends.
 
 ## Testing
 
@@ -387,7 +388,7 @@ of it is built yet.
       named values alone: one written in place, `overflow-y-[auto]` or
       `[overflow-y:auto]`, is let through. The page writes neither.
 - [ ] `RequestPart.QUERY` and `RequestPart.PATH`
-      (`src/claude_review/presentation/wire/refusal.py`) are named by a
+      (`src/claude_review/presentation/schemas/refusal.py`) are named by a
       test alone, `tests/unit/test_refused_fields.py`: the package matches
       them by value.
 - [ ] Older tests make a variant of a model with `model_copy(update=…)`,

@@ -22,7 +22,7 @@ from tests.helpers import (
     ReviewServers,
     RunningReview,
     committed_repository,
-    line_on_the_wire,
+    line_json,
     repository_opening,
     write_files,
 )
@@ -114,7 +114,7 @@ async def review(many_hunks: Path, servers: ReviewServers) -> RunningReview:
 async def review_with_a_thread_above_the_far_file(review: RunningReview) -> RunningReview:
     """The review, with a thread the agent raised on the last changed line of the file right above the far one."""
     raised = {
-        "anchor": line_on_the_wire(ABOVE_THE_FAR_FILE, CHANGED_LINES[-1]),
+        "anchor": line_json(ABOVE_THE_FAR_FILE, CHANGED_LINES[-1]),
         "body": A_THREAD_ABOVE,
         "severity": CommentSeverity.NOTE,
     }

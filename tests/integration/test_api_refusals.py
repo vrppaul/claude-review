@@ -26,13 +26,13 @@ from claude_review.domain.exceptions import (
 )
 from claude_review.presentation.api_schema import http_document
 from claude_review.presentation.origin_guard import NOT_ITS_PAGE_STATUS
-from claude_review.presentation.refusals import (
+from claude_review.presentation.errors import (
     INPUT_REFUSAL_EXTENSION,
     REFUSED_FOR_INPUT,
     Takes,
     answer_refusals,
 )
-from claude_review.presentation.wire.refusal import FieldRefusal, Refusal
+from claude_review.presentation.schemas.refusal import FieldRefusal, Refusal
 from claude_review.services.image_service import IMAGE_FORMATS
 from tests.helpers import IMAGES_ROUTE, http_client
 

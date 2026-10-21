@@ -12,10 +12,10 @@ from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError,
 
 from claude_review.cli.review_client import REASON_SEPARATOR, fields_said_wrong
 from claude_review.domain.models import FIRST_LINE, MAX_QUOTE_LINES, FilePath, StepText, runs_backwards
-from claude_review.presentation.wire.agent import MAX_PROGRESS_STEPS, ProgressText, StatusText
-from claude_review.presentation.wire.base import MAX_FILES_NAMED, AgentText, WireId
-from claude_review.presentation.wire.refusal import FieldRefusal
-from claude_review.presentation.wire.story import StoryRequest
+from claude_review.presentation.schemas.agent import MAX_PROGRESS_STEPS, ProgressText, StatusText
+from claude_review.presentation.schemas.base import MAX_FILES_NAMED, AgentText, SafeId
+from claude_review.presentation.schemas.refusal import FieldRefusal
+from claude_review.presentation.schemas.story import StoryRequest
 from claude_review.services.place_words import lines_named
 
 # What stands for stdin where text is wanted, as it does for `git commit -F -`,
@@ -65,7 +65,7 @@ class TextParameter(CheckedParameter):
 
 
 # An id the review gave out: a thread, a question, a message
-ID = CheckedParameter("id", TypeAdapter[str](WireId))
+ID = CheckedParameter("id", TypeAdapter[str](SafeId))
 # A file as the diff names it
 FILE = CheckedParameter("path", TypeAdapter[str](FilePath))
 # What the agent says: words that say something

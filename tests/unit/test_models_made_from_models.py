@@ -29,8 +29,8 @@ from claude_review.domain.models import (
     Unshown,
 )
 from claude_review.domain.story import Chapter, LeftOut, Step, StepNow, StoryAsking
-from claude_review.presentation.wire.records import GuideChange, SettingsChange
-from claude_review.presentation.wire.refusal import FieldRefusal
+from claude_review.presentation.schemas.records import GuideChange, SettingsChange
+from claude_review.presentation.schemas.refusal import FieldRefusal
 from tests.helpers import line_anchor
 from tests.stories import canvas_story, hunk
 

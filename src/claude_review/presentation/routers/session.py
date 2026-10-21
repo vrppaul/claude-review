@@ -15,8 +15,8 @@ from pydantic import ValidationError
 from claude_review.presentation.asgi import WEBSOCKET_DISCONNECT
 from claude_review.presentation.broadcast import BrowserBroadcast
 from claude_review.presentation.dependencies import get_broadcast, get_review
-from claude_review.presentation.wire.session import PushNumber, Resume, ReviewName, RunName
-from claude_review.presentation.wire.threads import HeldThreads, ReceivedHello
+from claude_review.presentation.schemas.session import PushNumber, Resume, ReviewName, RunName
+from claude_review.presentation.schemas.threads import HeldThreads, ReceivedHello
 from claude_review.services.review.review import Review
 
 log = structlog.get_logger()
@@ -127,4 +127,4 @@ def _take_the_hello(review: Review, said: str) -> None:
 
     if heard.threads is not None:
         held = HeldThreads.read(heard.threads)
-        review.page_holds([thread.in_the_review() for thread in held.readable], held.unreadable_ids)
+        review.page_holds([thread.to_domain() for thread in held.readable], held.unreadable_ids)

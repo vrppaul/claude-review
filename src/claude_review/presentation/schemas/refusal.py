@@ -7,7 +7,7 @@ caller reads one shape whichever refused, and the API describes it once.
 
 from enum import StrEnum, auto
 
-from claude_review.presentation.wire.base import WireModel
+from claude_review.presentation.schemas.base import Schema
 
 
 class RequestPart(StrEnum):
@@ -27,7 +27,7 @@ class RequestPart(StrEnum):
     PATH = auto()
 
 
-class FieldRefusal(WireModel):
+class FieldRefusal(Schema):
     """One field a request had wrong, as pydantic and FastAPI both describe it."""
 
     loc: tuple[str | int, ...]
@@ -45,7 +45,7 @@ class FieldRefusal(WireModel):
         return FieldRefusal(loc=named, msg=self.msg)
 
 
-class Refusal(WireModel):
+class Refusal(Schema):
     """Why a request was refused: said in words, or field by field."""
 
     detail: str | list[FieldRefusal]

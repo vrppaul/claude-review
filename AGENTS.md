@@ -67,7 +67,7 @@ Every change leaves the repository better than it found it: cleaner, easier to r
 Before you change or review code in an area, read its file whole; a brief to another agent names the files.
 
 - `.claude/rules/server.md` — anything under `src/`: Python, the package's parts, models, errors, time, the command line.
-- `.claude/rules/wire.md` — a wire model, a route, the API's schema, the page's generated types and its requests.
+- `.claude/rules/api.md` — a schema, a route, the API's contract, the page's generated types and its requests.
 - `.claude/rules/page.md` — anything under `frontend/`: types, state, parts, styling, panes and keys, moving the reader.
 - `.claude/rules/design.md`, `.claude/rules/design-behaviour.md`, `.claude/rules/design-process.md` — how the page looks and answers the reader, and how a design is made.
 - `.claude/rules/tests.md` — any test, under `tests/` or `frontend/tests/`.

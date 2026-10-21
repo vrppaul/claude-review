@@ -27,8 +27,8 @@ from starlette.datastructures import Headers
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from claude_review.presentation.asgi import HTTP_SCOPE, WEBSOCKET_CLOSE, WEBSOCKET_SCOPE
-from claude_review.presentation.refusal_answers import answered
-from claude_review.presentation.wire.refusal import Refusal
+from claude_review.presentation.errors import answered
+from claude_review.presentation.schemas.refusal import Refusal
 
 # This machine's names over loopback, as a Host header writes them: an IPv6
 # address always in brackets

@@ -37,7 +37,7 @@ paths:
 - A test and its helpers hold no branch: no `if`, no conditional expression, no `or`, no filter in a comprehension. A helper that depends on a kind is a lookup table.
 - Cases of one rule are one test that names every case that fails. A property test (hypothesis, fast-check) replaces the example tests of its rule, one example kept at most.
 - Data with a shape is a typed model, never a raw `dict` or `Mapping`, in tests too.
-- Wire JSON is written out by hand only where a test speaks as the browser or the agent and its neighbours already do.
+- A request's or an answer's JSON is written out by hand only where a test speaks as the browser or the agent and its neighbours already do.
 - The tests are held to formatting, `ruff format` and Prettier: no linter, type checker or spelling check reads them. vulture and knip read them for what of the package and the page they use.
 - Two hooks read them for a look alone, each naming the reads it refuses (`.pre-commit-config.yaml`); `tests/e2e/placing.py` is the one setup let alone.
 - A test acts on an element by its `data-testid`, and never asserts one. `getByText` and `text=` only assert words the user sees. Never a CSS class selector.
@@ -53,6 +53,6 @@ paths:
 - Iterating: the tests of the code in hand. A commit runs the gates alone.
 - At a chunk's end each part changed runs once, by whoever commits; a reviewer reads that run and does not repeat it.
 - The page: vitest, and `tests/e2e` where the change touches what it holds.
-- The server: `tests/unit` and `tests/integration`, and `tests/e2e` and the schema's fuzzing (`-m schema`) where a route or a wire model changes. `scripts/`: that script's tests.
+- The server: `tests/unit` and `tests/integration`, and `tests/e2e` and the schema's fuzzing (`-m schema`) where a route or a schema changes. `scripts/`: that script's tests.
 - A release, or a merge to master, runs everything, `-m schema` with it.
 - A review's findings about tests are two: a test to delete (a look, a twin, internals, one that cannot fail) and a behaviour no test holds.

@@ -14,11 +14,11 @@ The pushes say what happened; this says how they reached the page.
 from enum import StrEnum, auto
 from typing import Annotated, Literal
 
-from pydantic import ConfigDict, Field
+from pydantic import ConfigDict, Field, StrictBool
 
 from claude_review.domain.models import MAX_ID_LENGTH
-from claude_review.presentation.wire.base import WireBool, WireModel
-from claude_review.presentation.wire.pushes import ServerPush
+from claude_review.presentation.schemas.base import Schema
+from claude_review.presentation.schemas.pushes import ServerPush
 
 
 class SessionMessageKind(StrEnum):
@@ -32,7 +32,7 @@ class SessionMessageKind(StrEnum):
     DELIVERY = auto()
 
 
-class Welcome(WireModel):
+class Welcome(Schema):
     """Which review, and which run of it, the page reached; how far its telling has got; whether it missed nothing.
 
     `identity` names the review as GET /api/review does: another review may
@@ -49,10 +49,10 @@ class Welcome(WireModel):
     identity: str
     instance: str
     sequence: int
-    resumed: WireBool
+    resumed: StrictBool
 
 
-class Delivery(WireModel):
+class Delivery(Schema):
     """One push, with its number in the review's telling."""
 
     model_config = ConfigDict(frozen=True)
@@ -75,7 +75,7 @@ RunName = Annotated[str, Field(max_length=MAX_ID_LENGTH)]
 PushNumber = Annotated[int, Field(ge=0)]
 
 
-class Resume(WireModel):
+class Resume(Schema):
     """Where a page coming back had got to: which review, which run of it, and the number of the last push it covers.
 
     Named in the socket's address — `?identity=…&instance=…&after=…` —

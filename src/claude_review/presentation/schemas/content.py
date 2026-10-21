@@ -3,7 +3,7 @@
 from enum import StrEnum, auto
 from typing import Annotated, Literal
 
-from pydantic import Field
+from pydantic import Field, StrictBool
 
 from claude_review.domain.models import (
     LARGEST_FILE_SHOWN_BYTES,
@@ -15,13 +15,13 @@ from claude_review.domain.models import (
     ReviewMode,
     Unshown,
 )
-from claude_review.presentation.wire.agent import AgentStatus, AgentWork
-from claude_review.presentation.wire.base import MAX_TEXT_LENGTH, WireBool, WireModel
+from claude_review.presentation.schemas.agent import AgentStatus, AgentWork
+from claude_review.presentation.schemas.base import MAX_TEXT_LENGTH, Schema
 from claude_review.services.file_window_service import MAX_WINDOW_LINES
 from claude_review.services.image_service import MAX_IMAGE_BYTES, MAX_IMAGES_PER_MESSAGE
 
 
-class DiffLine(WireModel):
+class DiffLine(Schema):
     """A single line in a diff hunk, numbered on the side or sides it is on."""
 
     kind: LineType
@@ -37,7 +37,7 @@ HUNK_START_MEANING = (
 )
 
 
-class DiffHunk(WireModel):
+class DiffHunk(Schema):
     """A contiguous block of changes in a file."""
 
     header: str
@@ -46,7 +46,7 @@ class DiffHunk(WireModel):
     lines: list[DiffLine]
 
 
-class DiffFile(WireModel):
+class DiffFile(Schema):
     """A file that has been changed, and what kind of change it was when it has no lines to show."""
 
     path: str
@@ -59,10 +59,10 @@ class DiffFile(WireModel):
     old_mode: str | None
     new_mode: str | None
     # Whether a thread may name it: a path holding a control character is shown, but only to be read
-    commentable: WireBool
+    commentable: StrictBool
 
 
-class SendLimits(WireModel):
+class SendLimits(Schema):
     """The limits the browser checks before it sends: an image, the lines a comment covers, a read of a file, a text.
 
     Told by the server rather than repeated in the browser, so the two
@@ -109,7 +109,7 @@ class VersionKind(StrEnum):
     REF = auto()
 
 
-class ReviewVersion(WireModel):
+class ReviewVersion(Schema):
     """One base the working tree can be compared against, as the page's menu shows it.
 
     `key` is what the page asks for it by; `label` is what a menu row calls
@@ -124,7 +124,7 @@ class ReviewVersion(WireModel):
     changed: int | None
 
 
-class ChangesSince(WireModel):
+class ChangesSince(Schema):
     """Which files changed since a round began, so they are read again rather than all of them."""
 
     since_round: int
@@ -133,24 +133,24 @@ class ChangesSince(WireModel):
     paths: list[str]
 
 
-class StoryAsking(WireModel):
+class StoryAsking(Schema):
     """The reader asking the agent for a story, and how far that has got."""
 
     asked_at: EpochMillis
     # When an agent took the request; None while none has
     taken_at: EpochMillis | None
     # Whether the reader stopped it
-    stopped: WireBool
+    stopped: StrictBool
 
 
-class OnBranch(WireModel):
+class OnBranch(Schema):
     """A branch checked out, by its name: the branch the change is made on."""
 
     at: Literal[CheckoutKind.BRANCH] = CheckoutKind.BRANCH
     branch: str
 
 
-class OnCommit(WireModel):
+class OnCommit(Schema):
     """A commit checked out on no branch, by its id as short as git writes it and still names it alone."""
 
     at: Literal[CheckoutKind.COMMIT] = CheckoutKind.COMMIT
@@ -161,14 +161,14 @@ class OnCommit(WireModel):
 type Checkout = Annotated[OnBranch | OnCommit, Field(discriminator="at")]
 
 
-class RepositoryAt(WireModel):
+class RepositoryAt(Schema):
     """Where the change under review is: the repository, by its name, and what its working tree had checked out."""
 
     name: str
     checkout: Checkout
 
 
-class ReviewResponse(WireModel):
+class ReviewResponse(Schema):
     """Response for GET /api/review — what the review is and where it stands, whichever base is on screen.
 
     Read when a page opens, and again when it comes back from a gap it could
@@ -187,13 +187,13 @@ class ReviewResponse(WireModel):
     mode: ReviewMode
     # Which round is being written, and whether anything is there to answer it
     round: int
-    answerer_attached: WireBool
+    answerer_attached: StrictBool
     # What the agent last said about itself, and what it says it is doing now
     agent: AgentStatus
     work: AgentWork | None
     # Whether a story can be told of the review, so the page offers one only
     # where it can be, and never asks what kind of review this is to know
-    takes_a_story: WireBool
+    takes_a_story: StrictBool
     # How the reader's asking for a story stands: None while nobody asked for
     # one, and once a story is told. Read here, a page orders it against the
     # pushes that change it, by the sequence below, as it does every fact here
@@ -210,7 +210,7 @@ class ReviewResponse(WireModel):
     release: str
 
 
-class ShownBase(WireModel):
+class ShownBase(Schema):
     """The base a diff was taken against, as the page shows it.
 
     `key` is what the page asks for it by, `phrase` what the header says
@@ -220,10 +220,10 @@ class ShownBase(WireModel):
 
     key: str
     phrase: str
-    narrowed: WireBool
+    narrowed: StrictBool
 
 
-class DiffResponse(WireModel):
+class DiffResponse(Schema):
     """Response for GET /api/diff — the review's content against one base."""
 
     files: list[DiffFile]
@@ -239,13 +239,13 @@ class DiffResponse(WireModel):
     take: int
 
 
-class VersionsResponse(WireModel):
+class VersionsResponse(Schema):
     """Response for GET /api/versions — what the working tree can be read against."""
 
     versions: list[ReviewVersion]
 
 
-class RetakeResponse(WireModel):
+class RetakeResponse(Schema):
     """Response for POST /api/retake — the diff taken again.
 
     The files that changed are named, so an agent that has come back to a
@@ -258,7 +258,7 @@ class RetakeResponse(WireModel):
     changes: ChangesSince | None
 
 
-class FileWindowResponse(WireModel):
+class FileWindowResponse(Schema):
     """Response for GET /api/file-window."""
 
     start: int

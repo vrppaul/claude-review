@@ -1,6 +1,6 @@
-"""What crosses the wire, written down for the browser's types to be generated from.
+"""The API, written down for the browser's types to be generated from.
 
-Two documents, because two things cross it. The routes describe themselves
+Two documents, because the page talks to the review two ways. The routes describe themselves
 as OpenAPI. The session socket is not HTTP, and OpenAPI has no words for it:
 what the browser says on it — and names in its address as it opens it — is
 read by the server, and what the server pushes is written by it, so each is
@@ -22,9 +22,9 @@ from pydantic import JsonValue, TypeAdapter
 from pydantic.json_schema import JsonSchemaMode
 
 from claude_review.presentation.app import API_TITLE
-from claude_review.presentation.routes.api import include_api
-from claude_review.presentation.wire.session import Resume, SessionMessage
-from claude_review.presentation.wire.threads import SessionHello
+from claude_review.presentation.routers.api import include_api
+from claude_review.presentation.schemas.session import Resume, SessionMessage
+from claude_review.presentation.schemas.threads import SessionHello
 
 # The OpenAPI version both documents are written in
 OPENAPI_VERSION = "3.1.0"
