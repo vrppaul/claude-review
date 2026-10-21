@@ -82,6 +82,8 @@ HTTP_VERSION = "1.1"
 DEFAULT_BRANCH = "main"
 INITIAL_FILE = "initial.txt"
 INITIAL_FILES = {INITIAL_FILE: "initial content\n"}
+# The session a conversation a test writes is of, named on every entry as Claude Code names it
+SESSION_ID = "63b8ade4-8f1c-4c55-9e4e-0d2a7c1b9f30"
 
 SESSION_ROUTE = "/api/session"
 # Reads what the server says down the session socket, as the page does

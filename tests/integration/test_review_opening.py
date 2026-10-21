@@ -1,5 +1,6 @@
 """What a review opens on, and what names it: the title its header shows and the identity its port comes from."""
 
+import json
 from pathlib import Path
 
 import pytest
@@ -8,7 +9,7 @@ from claude_review.domain.exceptions import UnknownVersionError
 from claude_review.domain.models import OnBranch, OnCommit, RepositoryAt, ReviewMode
 from claude_review.repositories.git_repository import GitRepository
 from claude_review.services.review_opening import open_diff, open_files, open_transcript
-from tests.helpers import DEFAULT_BRANCH, INITIAL_FILE, INITIAL_FILES, committed_repository, git
+from tests.helpers import DEFAULT_BRANCH, INITIAL_FILE, INITIAL_FILES, SESSION_ID, committed_repository, git
 
 # More files than a title names before it counts the rest
 FIVE_FILES = ("e.md", "d.md", "c.md", "b.md", "a.md")
@@ -17,6 +18,12 @@ FEATURE_BRANCH = "feature/where-the-change-is"
 SHORT_ID_LENGTH = 7
 # A ref HEAD may point at outside the branches: a remote's, whose name git says whole
 REMOTE_REF = "refs/remotes/origin/main"
+# A conversation as Claude Code keeps it: one entry, naming the session it is of; and a name for its file
+# that is not that session's
+A_CONVERSATION = json.dumps(
+    {"type": "user", "sessionId": SESSION_ID, "message": {"role": "user", "content": "Why is this name kept?"}}
+)
+CONVERSATION_FILE = "conversation.jsonl"
 
 
 @pytest.fixture
@@ -143,14 +150,12 @@ async def test_files_that_start_alike_are_a_different_review(tmp_path: Path) -> 
     ).identity
 
 
-async def test_a_conversation_is_named_by_its_sessions_short_id(tmp_path: Path) -> None:
-    conversation = tmp_path / "63b8ade4-8f1c-4c55-9e4e-0d2a7c1b9f30.jsonl"
-    conversation.write_text("")
+async def test_a_conversation_is_named_by_the_short_id_of_the_session_it_is_of(tmp_path: Path) -> None:
+    """Whatever its file is called."""
+    conversation = tmp_path / CONVERSATION_FILE
+    conversation.write_text(A_CONVERSATION)
 
-    opened = await open_transcript(conversation)
-
-    assert opened.mode == ReviewMode.TRANSCRIPT
-    assert opened.title == "Conversation 63b8ade4"
+    assert (await open_transcript(conversation)).title == "Conversation 63b8ade4"
 
 
 async def test_a_file_named_two_ways_is_one_file_and_the_same_review(tmp_path: Path) -> None:
@@ -166,10 +171,10 @@ async def test_a_file_named_two_ways_is_one_file_and_the_same_review(tmp_path: P
 
 
 async def test_a_conversation_named_by_a_roundabout_path_is_the_same_review(tmp_path: Path) -> None:
-    conversation = tmp_path / "abc123.jsonl"
-    conversation.write_text("")
+    conversation = tmp_path / CONVERSATION_FILE
+    conversation.write_text(A_CONVERSATION)
     (tmp_path / "sub").mkdir()
 
-    roundabout = await open_transcript(tmp_path / "sub" / ".." / "abc123.jsonl")
+    roundabout = await open_transcript(tmp_path / "sub" / ".." / CONVERSATION_FILE)
 
     assert roundabout.identity == (await open_transcript(conversation)).identity

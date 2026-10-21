@@ -152,8 +152,10 @@
   commit's short id where it was on none, each by its mark, the branch cut
   short past 10rem and said whole on the pointer. A review of files or of a
   conversation says what it is called, by its mark, where the header's
-  middle said it before; a conversation by its session's short id,
-  "Conversation 63b8ade4", where it gave the whole id.
+  middle said it before; a conversation by the short id of the session
+  it is, "Conversation 63b8ade4", read from its entries, where it gave
+  its file's whole name. A transcript no entry of which names its session
+  is refused as unreadable: it is no conversation Claude Code kept.
 - **Send counts what goes with it.** The header's "2 unsent · 5" is gone:
   how many comments go with the round, or with the end of a review with
   no agent, stands on Send itself, reversed on its fill, "2 comments go

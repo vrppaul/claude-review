@@ -21,6 +21,7 @@ from tests.helpers import (
     EVENTS_ROUTE,
     IMAGES_ROUTE,
     REVIEW_ROUTE,
+    SESSION_ID,
     WAIT_FOR_EVENT,
     ReviewFactory,
     added_line,
@@ -216,9 +217,14 @@ def transcript_file(tmp_path: Path) -> Path:
     """A JSONL conversation file for transcript-mode integration tests."""
     conversation = tmp_path / "conversation.jsonl"
     entries = [
-        {"type": "user", "message": {"role": "user", "content": "can you refactor the auth module?"}},
+        {
+            "type": "user",
+            "sessionId": SESSION_ID,
+            "message": {"role": "user", "content": "can you refactor the auth module?"},
+        },
         {
             "type": "assistant",
+            "sessionId": SESSION_ID,
             "message": {
                 "role": "assistant",
                 "content": [{"type": "text", "text": "def authenticate(token):\n    return jwt.decode(token)"}],
@@ -232,8 +238,8 @@ def transcript_file(tmp_path: Path) -> Path:
 @pytest.fixture
 async def transcript_mode_client(transcript_file: Path, reviews: ReviewFactory) -> AsyncIterator[AsyncClient]:
     """Client backed by a real transcript file, read as a conversation review reads it."""
-    messages = await read_transcript(transcript_file)
-    async with http_client(reviews.app(opening_of(messages, mode=ReviewMode.TRANSCRIPT))) as agent:
+    transcript = await read_transcript(transcript_file)
+    async with http_client(reviews.app(opening_of(transcript.turns, mode=ReviewMode.TRANSCRIPT))) as agent:
         yield agent
 
 

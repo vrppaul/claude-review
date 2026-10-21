@@ -19,6 +19,7 @@ from tests.helpers import (
     GLANCE_AT_EVENTS,
     SETTLE_SECONDS,
     ReviewServers,
+    SESSION_ID,
     RunningReview,
     committed_repository,
     git,
@@ -61,6 +62,7 @@ TRANSCRIPT_LINES = [
     json.dumps(
         {
             "type": "user",
+            "sessionId": SESSION_ID,
             "message": {
                 "role": "user",
                 "content": "can you refactor the auth module?\nuse JWT instead of sessions",
@@ -70,6 +72,7 @@ TRANSCRIPT_LINES = [
     json.dumps(
         {
             "type": "assistant",
+            "sessionId": SESSION_ID,
             "message": {
                 "role": "assistant",
                 "content": [{"type": "text", "text": "def authenticate(token):\n    return jwt.decode(token)"}],
@@ -238,7 +241,7 @@ def transcript_file(tmp_path: Path) -> Path:
 @in_the_browsers_loop
 async def transcript_review(transcript_file: Path, servers: ReviewServers) -> RunningReview:
     """A real server reviewing a conversation."""
-    return await servers.start(opening_of(await read_transcript(transcript_file), mode=ReviewMode.TRANSCRIPT))
+    return await servers.start(opening_of((await read_transcript(transcript_file)).turns, mode=ReviewMode.TRANSCRIPT))
 
 
 async def test_a_comment_on_a_message_reaches_the_agent(transcript_review: RunningReview, page: Page) -> None:

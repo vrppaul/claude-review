@@ -14,6 +14,7 @@ import pytest
 from claude_review.domain.models import DiffFile
 from claude_review.services.transcript import read_transcript
 from claude_review.services.unreadable_content import UnreadableContentError
+from tests.helpers import SESSION_ID
 
 
 def _write_jsonl(path: Path, entries: list[dict]) -> Path:
@@ -23,17 +24,28 @@ def _write_jsonl(path: Path, entries: list[dict]) -> Path:
     return conversation
 
 
+async def _turns_of(conversation: Path) -> list[DiffFile]:
+    """The conversation's turns as they are read for review, newest first."""
+    return (await read_transcript(conversation)).turns
+
+
 def _user(content: str, timestamp: str = "") -> dict:
-    return {"type": "user", "message": {"role": "user", "content": content}, "timestamp": timestamp}
+    return {
+        "type": "user",
+        "sessionId": SESSION_ID,
+        "message": {"role": "user", "content": content},
+        "timestamp": timestamp,
+    }
 
 
 def _user_blocks(blocks: list[dict]) -> dict:
-    return {"type": "user", "message": {"role": "user", "content": blocks}, "timestamp": ""}
+    return {"type": "user", "sessionId": SESSION_ID, "message": {"role": "user", "content": blocks}, "timestamp": ""}
 
 
 def _assistant(text: str, timestamp: str = "") -> dict:
     return {
         "type": "assistant",
+        "sessionId": SESSION_ID,
         "message": {"role": "assistant", "content": [{"type": "text", "text": text}]},
         "timestamp": timestamp,
     }
@@ -42,6 +54,7 @@ def _assistant(text: str, timestamp: str = "") -> dict:
 def _assistant_thinking(thinking: str) -> dict:
     return {
         "type": "assistant",
+        "sessionId": SESSION_ID,
         "message": {"role": "assistant", "content": [{"type": "thinking", "thinking": thinking}]},
         "timestamp": "",
     }
@@ -50,6 +63,7 @@ def _assistant_thinking(thinking: str) -> dict:
 def _assistant_tool_use(name: str) -> dict:
     return {
         "type": "assistant",
+        "sessionId": SESSION_ID,
         "message": {"role": "assistant", "content": [{"type": "tool_use", "name": name, "input": {}}]},
         "timestamp": "",
     }
@@ -86,7 +100,7 @@ class TestRead:
             ],
         )
 
-        result = await read_transcript(conversation)
+        result = await _turns_of(conversation)
 
         assert _first_lines(result) == ["second question", "first answer", "first question"]
 
@@ -101,7 +115,7 @@ class TestRead:
             ],
         )
 
-        result = await read_transcript(conversation)
+        result = await _turns_of(conversation)
 
         assert _first_lines(result) == ["Here is part one", "do something"]
         content = "\n".join(line.content for line in result[0].hunks[0].lines)
@@ -119,7 +133,7 @@ class TestRead:
             ],
         )
 
-        result = await read_transcript(conversation)
+        result = await _turns_of(conversation)
         assert _first_lines(result) == ["Here is my answer", "question"]
         content = "\n".join(line.content for line in result[0].hunks[0].lines)
         assert "my answer" in content
@@ -138,7 +152,7 @@ class TestRead:
             ],
         )
 
-        result = await read_transcript(conversation)
+        result = await _turns_of(conversation)
 
         assert _first_lines(result) == ["the answer is 42", "let me check", "question"]
 
@@ -153,7 +167,7 @@ class TestRead:
             ],
         )
 
-        result = await read_transcript(conversation)
+        result = await _turns_of(conversation)
 
         assert _first_lines(result) == ["real answer", "real question"]
         user_content = "\n".join(line.content for line in result[1].hunks[0].lines)
@@ -171,13 +185,13 @@ class TestRead:
             ],
         )
 
-        result = await read_transcript(conversation)
+        result = await _turns_of(conversation)
         assert _first_lines(result) == ["world", "hello"]
 
     async def test_content_preserved_line_by_line(self, tmp_path: Path) -> None:
         conversation = _write_jsonl(tmp_path, [_user("line one\nline two\nline three")])
 
-        result = await read_transcript(conversation)
+        result = await _turns_of(conversation)
         content = [line.content for line in result[0].hunks[0].lines]
 
         assert content == ["line one", "line two", "line three"]
@@ -191,7 +205,7 @@ class TestRead:
             ],
         )
 
-        result = await read_transcript(conversation)
+        result = await _turns_of(conversation)
         assert len(result) == 1
 
     async def test_no_visible_messages_produces_empty_result(self, tmp_path: Path) -> None:
@@ -199,12 +213,12 @@ class TestRead:
         conversation = _write_jsonl(
             tmp_path,
             [
-                {"type": "permission-mode", "permissionMode": "default"},
-                {"type": "attachment", "data": {}},
+                {"type": "permission-mode", "sessionId": SESSION_ID, "permissionMode": "default"},
+                {"type": "attachment", "sessionId": SESSION_ID, "data": {}},
             ],
         )
 
-        result = await read_transcript(conversation)
+        result = await _turns_of(conversation)
 
         assert len(result) == 0
 
@@ -218,7 +232,7 @@ class TestRead:
             ],
         )
 
-        result = await read_transcript(conversation)
+        result = await _turns_of(conversation)
 
         assert len(result) == 1
         assert result[0].hunks[0].lines[0].content == "real answer"
@@ -228,7 +242,17 @@ class TestRead:
         conversation.write_text("not json\n")
 
         with pytest.raises(UnreadableContentError, match="Invalid JSON"):
-            await read_transcript(conversation)
+            await _turns_of(conversation)
+
+    @pytest.mark.parametrize(
+        "entries", [[], [{"type": "user", "message": {"role": "user", "content": "hello"}}]], ids=["empty", "unnamed"]
+    )
+    async def test_a_transcript_no_entry_of_which_names_its_session_is_refused(
+        self, tmp_path: Path, entries: list[dict]
+    ) -> None:
+        """Claude Code names the session on every entry it writes: without one, this is not its conversation."""
+        with pytest.raises(UnreadableContentError, match="No entry names the session"):
+            await _turns_of(_write_jsonl(tmp_path, entries))
 
     @pytest.mark.parametrize(
         "separator", ["\u2028", "\u2029", "\u0085"], ids=["line-separator", "paragraph-separator", "next-line"]
@@ -241,7 +265,7 @@ class TestRead:
         said = f"before{separator}after"
         conversation.write_text(json.dumps(_user(said), ensure_ascii=False) + "\n", encoding="utf-8")
 
-        [turn] = await read_transcript(conversation)
+        [turn] = await _turns_of(conversation)
 
         assert [line.content for line in turn.hunks[0].lines] == [said]
 
@@ -253,13 +277,13 @@ class TestWhatIsATurn:
         injected = {**_user("Base directory for this skill: /skills/review"), "isMeta": True}
         transcript = _write_jsonl(tmp_path, [_user("Review this"), injected])
 
-        assert _turn_texts(await read_transcript(transcript)) == [["Review this"]]
+        assert _turn_texts(await _turns_of(transcript)) == [["Review this"]]
 
     async def test_a_side_conversation_is_not_part_of_the_transcript(self, tmp_path: Path) -> None:
         side = {**_assistant("subagent musing"), "isSidechain": True}
         transcript = _write_jsonl(tmp_path, [_user("Review this"), side])
 
-        assert _turn_texts(await read_transcript(transcript)) == [["Review this"]]
+        assert _turn_texts(await _turns_of(transcript)) == [["Review this"]]
 
 
 class TestLabels:
@@ -269,10 +293,10 @@ class TestLabels:
             _user("first", timestamp="2026-04-04T18:05:00.000Z"),
             _assistant("answer", timestamp="2026-04-04T18:05:00.000Z"),
         ]
-        before = _names_by_first_line(await read_transcript(_write_jsonl(tmp_path, earlier)))
+        before = _names_by_first_line(await _turns_of(_write_jsonl(tmp_path, earlier)))
 
         grown = [*earlier, _user("second", timestamp="2026-04-04T18:06:00.000Z")]
-        after = _names_by_first_line(await read_transcript(_write_jsonl(tmp_path, grown)))
+        after = _names_by_first_line(await _turns_of(_write_jsonl(tmp_path, grown)))
 
         assert after["first"] == before["first"]
         assert after["answer"] == before["answer"]
@@ -288,7 +312,7 @@ class TestLabels:
             ],
         )
 
-        paths = [turn.path for turn in await read_transcript(transcript)]
+        paths = [turn.path for turn in await _turns_of(transcript)]
 
         assert len(set(paths)) == len(paths)
 
@@ -324,7 +348,7 @@ async def test_a_turn_is_named_by_the_id_its_transcript_gives_it_in_every_time_z
     for zone in TIME_ZONES:
         time_zone.setenv("TZ", zone)
         time.tzset()
-        names_by_zone.append([turn.path for turn in await read_transcript(transcript)])
+        names_by_zone.append([turn.path for turn in await _turns_of(transcript)])
 
     assert names_by_zone[0] == names_by_zone[1]
     assert names_by_zone[0] == [f"assistant {ANSWER_ID[:8]}", f"user {QUESTION_ID[:8]}"]

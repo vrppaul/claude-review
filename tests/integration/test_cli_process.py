@@ -36,6 +36,7 @@ from tests.helpers import (
     FIRST_THREAD_ID,
     LOOPBACK,
     PNG,
+    SESSION_ID,
     SESSION_ROUTE,
     git,
     line_json,
@@ -69,8 +70,12 @@ AGENT_WAIT_SECONDS = "20"
 ONE_LINE_FAILURE = "Error: "
 # A conversation as Claude Code writes one, an entry a line: a question, and its answer
 CONVERSATION = [
-    {"type": "user", "message": {"role": "user", "content": "Can you rename the helper?"}},
-    {"type": "assistant", "message": {"role": "assistant", "content": [{"type": "text", "text": "Renamed it."}]}},
+    {"type": "user", "sessionId": SESSION_ID, "message": {"role": "user", "content": "Can you rename the helper?"}},
+    {
+        "type": "assistant",
+        "sessionId": SESSION_ID,
+        "message": {"role": "assistant", "content": [{"type": "text", "text": "Renamed it."}]},
+    },
 ]
 # What a machine with no browser to open looks like
 NO_BROWSER = {"BROWSER": "/bin/false", "DISPLAY": "", "WAYLAND_DISPLAY": ""}

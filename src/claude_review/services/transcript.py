@@ -13,7 +13,7 @@ from datetime import datetime
 from enum import StrEnum, auto
 from pathlib import Path
 
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from claude_review.domain.models import FIRST_LINE, DiffFile
 from claude_review.services.unreadable_content import UnreadableContentError
@@ -34,9 +34,11 @@ TEXT_BLOCK = "text"
 ENTRY_END = "\n"
 # What the transcript is written in
 TRANSCRIPT_ENCODING = "utf-8"
-# How much of an entry's id names the turn it begins: enough to tell a
-# conversation's turns apart, as a short commit id tells commits apart
-TURN_ID_LENGTH = 8
+# How much of an id Claude Code gives — a conversation's or one of its
+# entries' — names it: its first group of hex digits, enough to tell one's
+# conversations, or a conversation's turns, apart, as a short commit id
+# tells commits apart
+SHORT_ID_LENGTH = 8
 # How a turn is named: who spoke, then the id of the entry it began with, or
 # without one the local time it was said at; and how a name already taken is
 # numbered again
@@ -68,6 +70,8 @@ class TranscriptEntry(BaseModel):
     timestamp: str = ""
     # The entry's own id, which Claude Code gives every one it writes
     uuid: str | None = None
+    # The id of the conversation it is part of, which Claude Code also names the file by
+    session_id: str | None = Field(default=None, alias="sessionId")
     # Written in the user's name by the tool itself: a skill's instructions, a
     # pasted image's note, a subagent's report
     is_meta: bool = Field(default=False, alias="isMeta")
@@ -92,8 +96,19 @@ class ConversationTurn(BaseModel):
     entry_id: str | None
 
 
-async def read_transcript(path: Path) -> list[DiffFile]:
-    """A Claude Code JSONL conversation, each turn a reviewable file, newest first; read on a thread.
+class Transcript(BaseModel):
+    """A conversation as read for review: the session it is, and its turns."""
+
+    model_config = ConfigDict(frozen=True)
+
+    # The id Claude Code gives the conversation
+    session_id: str
+    # Each turn a reviewable file, newest first
+    turns: list[DiffFile]
+
+
+async def read_transcript(path: Path) -> Transcript:
+    """A Claude Code JSONL conversation, the session it is and each turn a reviewable file; read on a thread.
 
     Each line in the JSONL is a JSON object with a ``type`` field.
     Only ``user`` and ``assistant`` entries are extracted::
@@ -116,16 +131,34 @@ async def read_transcript(path: Path) -> list[DiffFile]:
     Tool calls act as turn boundaries.
 
     Raises:
-        UnreadableContentError: If the file cannot be read, or a line is not JSON.
+        UnreadableContentError: If the file cannot be read, a line is not
+            JSON, or no entry names the session.
     """
-    return await asyncio.to_thread(_files_of, path)
+    return await asyncio.to_thread(_transcript_of, path)
 
 
-def _files_of(path: Path) -> list[DiffFile]:
-    """The conversation's turns as files, newest first: the file read and parsed in one go."""
-    turns = _merge_turns(_entries(_read_text(path)))
+def _transcript_of(path: Path) -> Transcript:
+    """The conversation's session and its turns as files, newest first: the file read and parsed in one go."""
+    entries = _entries(_read_text(path))
+    turns = _merge_turns(entries)
     labels = _labels(turns)
-    return [whole_file(label, turn.text) for turn, label in reversed(list(zip(turns, labels, strict=True)))]
+    return Transcript(
+        session_id=_session_of(entries),
+        turns=[whole_file(label, turn.text) for turn, label in reversed(list(zip(turns, labels, strict=True)))],
+    )
+
+
+def _session_of(entries: list[TranscriptEntry]) -> str:
+    """The session the conversation is: Claude Code names it on every entry it writes.
+
+    Raises:
+        UnreadableContentError: If no entry names it, so the file is no conversation Claude Code kept.
+    """
+    session_id = next((entry.session_id for entry in entries if entry.session_id is not None), None)
+    if session_id is None:
+        msg = "No entry names the session: not a conversation Claude Code kept"
+        raise UnreadableContentError(msg)
+    return session_id
 
 
 def _read_text(path: Path) -> str:
@@ -262,7 +295,7 @@ def _labels(turns: list[ConversationTurn]) -> list[str]:
 def _name_of(turn: ConversationTurn) -> str:
     """Who spoke, and what tells the turn apart: the id of the entry it began with, or when it was said."""
     if turn.entry_id:
-        return NAMED_BY_ID.format(speaker=turn.speaker, entry_id=turn.entry_id[:TURN_ID_LENGTH])
+        return NAMED_BY_ID.format(speaker=turn.speaker, entry_id=turn.entry_id[:SHORT_ID_LENGTH])
     said_at = _said_at(turn.timestamp)
     return NAMED_BY_TIME.format(speaker=turn.speaker, said_at=said_at) if said_at else str(turn.speaker)
 
