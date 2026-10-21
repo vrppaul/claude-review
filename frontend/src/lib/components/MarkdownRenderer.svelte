@@ -81,12 +81,17 @@
 		text: string;
 		/** Inside a thread or the panel: set in a comment's reading face (lib/ui Prose). */
 		dense?: boolean;
+		/**
+		 * Whether a line broken in the words stays broken, as whoever wrote or pasted a message means it; a file's
+		 * own Markdown keeps Markdown's rule, which runs such lines together.
+		 */
+		keepsBreaks?: boolean;
 	}
 
-	let { text, dense = false }: Props = $props();
+	let { text, dense = false, keepsBreaks = false }: Props = $props();
 
 	// Parsed as it is drawn: nothing in this setup waits on anything
-	const html = $derived(marked.parse(text, { async: false }));
+	const html = $derived(marked.parse(text, { async: false, breaks: keepsBreaks }));
 </script>
 
 <Prose {dense} testId="markdown-content">

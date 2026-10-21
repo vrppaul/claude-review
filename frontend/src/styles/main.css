@@ -449,13 +449,12 @@
 }
 
 /*
- * What the agent is doing, while it does it.
- *
- * Quieter than what it says, because it is not something said: it is the
- * state of the work, and it will be gone by the time the answer arrives.
+ * What the agent is doing, while it does it: what heads its checklist of
+ * the work, so in ink and bold, over the steps it lists.
  */
 .cr-progress {
-	color: var(--cr-muted);
+	color: var(--color-base-content);
+	font-weight: var(--font-weight-semibold);
 	margin: 0;
 }
 
@@ -649,38 +648,24 @@
 }
 
 /*
- * The branches of a piece of the agent's work, hanging off the line that
- * spawned them, in the agent's colour.
- *
- * Three subagents read as three branches rather than as a sentence about
- * three subagents: the rail says they belong to the same thing, and each
- * one says for itself whether it is still running.
+ * The steps of a piece of the agent's work, a checklist under the line that
+ * heads it: each says for itself whether it is still running or done, by
+ * its mark, so three subagents read as three steps rather than as a
+ * sentence about three subagents.
  */
 .cr-branches {
-	margin: --spacing(0.5) 0 0 --spacing(1.5);
+	margin: --spacing(0.5) 0 0;
 	padding: 0;
 	list-style: none;
-	border-left: var(--cr-line) solid var(--cr-agent-border);
 }
 .cr-branch {
-	position: relative;
 	display: flex;
 	align-items: baseline;
 	gap: --spacing(1.5);
-	padding: --spacing(0.5) 0 --spacing(0.5) --spacing(3);
+	padding-block: --spacing(0.5);
 	font-size: var(--text-xs);
 	line-height: var(--text-xs--line-height);
 	color: var(--cr-muted);
-}
-/* The tick that joins a branch to the rail, level with the middle of its first line */
-.cr-branch::before {
-	content: '';
-	position: absolute;
-	left: 0;
-	top: calc(--spacing(0.5) + var(--cr-one-line) / 2);
-	width: --spacing(2);
-	height: var(--cr-line);
-	background: var(--cr-agent-border);
 }
 /* What says whether a branch still runs: as tall as an icon at the size of its words */
 .cr-branch-mark {

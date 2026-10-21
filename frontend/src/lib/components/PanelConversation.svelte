@@ -1,15 +1,18 @@
 <script lang="ts">
 	import { anchorShortPlace } from '$lib/anchors/views';
 	import { useReview } from '$lib/review/context';
+	import type { PanelTurn } from '$lib/types';
 	import Chip from '$lib/ui/Chip.svelte';
 	import Conversation from '$lib/ui/Conversation.svelte';
 	import EmptyNote from '$lib/ui/EmptyNote.svelte';
+	import TakenBack from '$lib/ui/TakenBack.svelte';
 	import Turn from '$lib/ui/Turn.svelte';
 	import TurnAside from '$lib/ui/TurnAside.svelte';
 	import type { Voice } from '$lib/ui/voice';
 	import { READER, THE_REVIEW } from '$lib/utils/speakers';
 	import { timeAgo } from '$lib/utils/time';
 	import AgentAtWork from './AgentAtWork.svelte';
+	import { ASKED_TO_DROP_IT } from './agent-waits';
 	import AttachByHand from './AttachByHand.svelte';
 	import FileChip from './FileChip.svelte';
 	import MarkdownRenderer from './MarkdownRenderer.svelte';
@@ -74,6 +77,18 @@
 	</div>
 {/snippet}
 
+<!-- What the reader said: their words, their lines broken where they broke them, what they pasted and the threads
+	they pointed at -->
+{#snippet readersWords(turn: PanelTurn)}
+	{#if turn.body}
+		<MarkdownRenderer text={turn.body} dense keepsBreaks />
+	{/if}
+	<SaidImages images={turn.images ?? []} />
+	{#if turn.threads && turn.threads.length > 0}
+		{@render threadChips(turn.threads, 'panel-thread-ref', 'reader')}
+	{/if}
+{/snippet}
+
 <!-- A log: what the agent and the reader say is read out as it arrives, in order -->
 <div
 	data-testid="panel-turns"
@@ -130,20 +145,13 @@
 						{#snippet head()}
 							<span>{timeAgo(turn.at, review.clock.now)}</span>
 						{/snippet}
-						<div class={[turn.cancelled && 'cr-faint']}>
-							{#if turn.body}
-								<MarkdownRenderer text={turn.body} dense />
-							{/if}
-							<SaidImages images={turn.images ?? []} />
-							{#if turn.threads && turn.threads.length > 0}
-								{@render threadChips(turn.threads, 'panel-thread-ref', 'reader')}
-							{/if}
-							{#if turn.cancelled}
-								<p data-testid="panel-cancelled" class="cr-faint mt-1 text-xs">
-									stopped — the agent was asked to drop it
-								</p>
-							{/if}
-						</div>
+						{#if turn.cancelled}
+							<TakenBack said={ASKED_TO_DROP_IT} testId="panel-taken-back">
+								{@render readersWords(turn)}
+							</TakenBack>
+						{:else}
+							{@render readersWords(turn)}
+						{/if}
 					</Turn>
 				{:else}
 					<Turn speaker="agent" testId="panel-answer">

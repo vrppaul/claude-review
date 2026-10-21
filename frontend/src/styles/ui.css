@@ -1650,6 +1650,31 @@
 	color: var(--cr-faint);
 }
 /*
+ * What the reader asked for and took back (TakenBack): its words muted and
+ * struck through, and under them a line of its own on the tint of what
+ * cannot be undone, its mark in that colour, saying what was done
+ */
+.cr-ui-taken-back-words {
+	color: var(--cr-muted);
+	text-decoration: line-through;
+	text-decoration-thickness: var(--cr-line);
+}
+.cr-ui-taken-back {
+	display: flex;
+	align-items: center;
+	gap: --spacing(2);
+	margin-top: --spacing(1);
+	padding: --spacing(1.5) --spacing(3);
+	border-radius: var(--radius-box);
+	background-color: var(--cr-error-tint);
+	font-size: var(--text-sm);
+	line-height: var(--text-sm--line-height);
+}
+.cr-ui-taken-back-what {
+	font-weight: var(--font-weight-semibold);
+}
+
+/*
  * Who is behind what is put away (SpeakerMark): their avatar at a turn's
  * avatar size, and on its corner, at the bottom on the side words run to,
  * what is said of them, ringed in the ground round it
@@ -1714,13 +1739,20 @@
 	flex-direction: column;
 	gap: --spacing(1);
 	min-width: 0;
+	/* A word longer than the turn, a path or a pasted line, breaks where the turn ends: never scrolls it sideways */
+	overflow-wrap: anywhere;
 }
-/* Who said it, in plain words and bold, and when, quieter than what was said; wrapped on a narrow screen */
+/*
+ * Who said it, in plain words and bold, and when, quieter than what was
+ * said; as tall as the avatar beside it, so the name stands on its middle;
+ * wrapped on a narrow screen
+ */
 .cr-ui-turn-head {
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
 	gap: --spacing(2);
+	min-height: var(--cr-turn-avatar-size);
 	font-size: var(--text-xs);
 	color: var(--cr-faint);
 }

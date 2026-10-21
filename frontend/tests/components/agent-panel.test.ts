@@ -257,25 +257,61 @@ describe('the agent panel', () => {
 		expect(server.bodiesSentTo('POST /api/message')).toMatchObject([{ threads: [{ body: 'Why catch here?' }] }]);
 	});
 
-	it('offers to stop a message the agent is still working on', async () => {
+	it('asks first before it takes back a message the agent is still working on', async () => {
 		const user = userEvent.setup({ delay: null });
 		const server = listeningToThePanel();
-
 		const { getByTestId } = render(AgentPanel, inReview(review));
 		await user.type(getByTestId('panel-input'), 'Never mind');
 		await user.click(getByTestId('send-message'));
 
-		expect(getByTestId('panel-working')).toBeTruthy();
 		await user.click(getByTestId('panel-working-take-back'));
 
+		expect(getByTestId('panel-working-take-back-dialog-question').textContent).toBe('Take it back?');
+		expect(server.bodiesSentTo('POST /api/cancel')).toEqual([]);
+	});
+
+	it('keeps waiting on the message when the reader says so', async () => {
+		const user = userEvent.setup({ delay: null });
+		const server = listeningToThePanel();
+		const { getByTestId } = render(AgentPanel, inReview(review));
+		await user.type(getByTestId('panel-input'), 'Never mind');
+		await user.click(getByTestId('send-message'));
+		await user.click(getByTestId('panel-working-take-back'));
+
+		await user.click(getByTestId('confirm-keep'));
+
+		expect(server.bodiesSentTo('POST /api/cancel')).toEqual([]);
+		expect(getByTestId('panel-working')).toBeTruthy();
+	});
+
+	it('takes the message back once the reader says so, and says under it that it was', async () => {
+		const user = userEvent.setup({ delay: null });
+		const server = listeningToThePanel();
+		const { getByTestId } = render(AgentPanel, inReview(review));
+		await user.type(getByTestId('panel-input'), 'Never mind');
+		await user.click(getByTestId('send-message'));
+		await user.click(getByTestId('panel-working-take-back'));
+
+		await user.click(getByTestId('confirm-go-ahead'));
+
 		expect(server.bodiesSentTo('POST /api/cancel')).toEqual([{ message_id: review.conversation.turns[0].id }]);
-		expect(getByTestId('panel-cancelled')).toBeTruthy();
+		expect(getByTestId('panel-taken-back').textContent).toContain('Taken back');
+	});
+
+	it('keeps the line breaks of what the reader wrote', async () => {
+		const user = userEvent.setup({ delay: null });
+		listeningToThePanel();
+		const { getByTestId } = render(AgentPanel, inReview(review));
+		await user.type(getByTestId('panel-input'), 'First line{Shift>}{Enter}{/Shift}second line');
+		await user.click(getByTestId('send-message'));
+
+		expect(getByTestId('panel-said').querySelectorAll('br')).toHaveLength(1);
 	});
 
 	it('says, once the agent stops listening, that it left the message unanswered, and still offers to take it back', async () => {
 		const user = userEvent.setup({ delay: null });
 		listeningToThePanel();
-		const { getByTestId } = render(AgentPanel, inReview(review));
+		const { getByTestId, getByRole } = render(AgentPanel, inReview(review));
 		await user.type(getByTestId('panel-input'), 'Run the tests');
 		await user.click(getByTestId('send-message'));
 
@@ -285,7 +321,7 @@ describe('the agent panel', () => {
 		const row = getByTestId('panel-working').textContent;
 		expect(row).toContain(AGENT_STOPPED_LISTENING);
 		expect(row).not.toContain('working');
-		expect(getByTestId('panel-working-take-back').textContent).toContain(TAKE_BACK);
+		expect(getByRole('button', { name: TAKE_BACK })).toBe(getByTestId('panel-working-take-back'));
 	});
 
 	it('brings a new turn into view', async () => {
@@ -418,14 +454,15 @@ describe('the agent panel', () => {
 		expect(queryByTestId('panel-progress')).toBeNull();
 	});
 
-	it('shows work nobody is waiting on, in a row of its own', async () => {
-		const { getByTestId } = render(AgentPanel, inReview(review));
+	it('shows work nobody is waiting on, in a row of its own, with nothing to take back', async () => {
+		const { getByTestId, queryByTestId } = render(AgentPanel, inReview(review));
 
 		review.answerer.showWork(work({ text: 'taking the diff again' }));
 		await tick();
 
 		expect(getByTestId('panel-work')).toBeTruthy();
 		expect(getByTestId('panel-progress').textContent).toContain('taking the diff again');
+		expect(queryByTestId('panel-work-take-back')).toBeNull();
 	});
 
 	it('says when the agent last said something, not that it answered what nobody asked', async () => {
@@ -673,7 +710,7 @@ describe('what was said before the page opened', () => {
 
 		expect(getByTestId('said-image').getAttribute('href')).toBe(`/api/images/${KEPT_AS}`);
 		expect(getByTestId('panel-thread-ref').textContent).toContain('2');
-		expect(getByTestId('panel-cancelled')).toBeTruthy();
+		expect(getByTestId('panel-taken-back')).toBeTruthy();
 		expect(getByTestId('answer-file').getAttribute('title')).toBe(file.path);
 	});
 });

@@ -116,6 +116,12 @@ export const ICONS = {
 		drawn: TRACED
 	},
 	plus: { viewBox: '0 0 20 20', paths: ['M10 3v14M3 10h14'], drawn: TRACED },
+	// A ring struck through: what the reader asked for and took back
+	'taken-back': {
+		viewBox: '0 0 16 16',
+		paths: ['M3 8a5 5 0 1 0 10 0a5 5 0 1 0 -10 0', 'M4.5 11.5l7-7'],
+		drawn: TRACED
+	},
 	// A window with a column down one side, shaded while it stands open, or narrowed to a strip with an arrow the
 	// way it comes back in: a side column's toggle, drawing the state the column is in
 	'column-left-open': {

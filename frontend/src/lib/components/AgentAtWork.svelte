@@ -25,7 +25,7 @@
 	it changes -->
 <AgentOnItsWay
 	testId={messageId === undefined ? 'panel-work' : 'panel-working'}
-	waited={`working ${timeAgo(since, review.clock.now)}`}
+	waited={timeAgo(since, review.clock.now)}
 	{takeBack}
 >
 	{#if work?.text}

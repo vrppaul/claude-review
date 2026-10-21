@@ -238,6 +238,19 @@
   keyboard on nothing once the panel was put away. The heads of the row
   under the header, a column's bar, a rail's and a file's, stand one
   height, 40 px.
+- **Taking back asks first.** A message or a question the agent is still on
+  is taken back by a red cross at its turn's head, which asks "Take it
+  back?" on one line, Keep waiting or Take back; where taking it back
+  fails, the failure is said under the turn and the cross stays to try
+  again. Work nobody asked for has none. The panel's turn at work says only
+  how long ago, where it said "working 3m ago". A message taken back stays
+  where it was said, struck through, with a line of its own under it,
+  "Taken back. The agent was asked to drop it.", where it was faint with
+  "stopped" under it. The agent's work reads as a checklist, its line in
+  ink and bold, its steps without the rail they hung from. A turn's head
+  stands as tall as its avatar. What the reader writes in the panel keeps
+  its line breaks, and a word longer than a turn breaks where the turn
+  ends rather than scrolling the panel sideways.
 - **One ladder of colour.** Each colour that says whose a thing is or
   what it means — the reader's blue, the agent's violet, the diff's green
   and red, what is done, a warning, an error, and the ink of the words —
