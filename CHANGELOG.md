@@ -236,7 +236,8 @@
   state its column is in, a window with the column shaded or narrowed to a
   strip. The rail says what is behind it: the tree how many files changed,
   the contents the chapter being read, the agent whether it is there and
-  at work, and how many of its replies wait unread. The header's Agent
+  at work — on a message, or on work nobody asked for, such as the diff
+  taken again — and how many of its replies wait unread. The header's Agent
   button is gone, and with it the review that was over leaving the
   keyboard on nothing once the panel was put away. The heads of the row
   under the header, a column's bar, a rail's and a file's, stand one

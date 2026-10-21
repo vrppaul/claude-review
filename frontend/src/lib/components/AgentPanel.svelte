@@ -35,7 +35,8 @@
 				<PresenceDot />
 			{/snippet}
 		</SpeakerMark>
-		{#if review.conversation.working}
+		<!-- At work as the panel draws it: on a message the reader sent, or on work nobody asked for -->
+		{#if review.conversation.working || review.answerer.work}
 			<BreathingDots tone="quiet" stacked testId="panel-rail-working" />
 		{/if}
 		{#if unread > 0}

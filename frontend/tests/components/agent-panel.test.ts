@@ -840,6 +840,25 @@ describe('a message on its way', () => {
 });
 
 describe('putting the agent away', () => {
+	// The two ways the agent is at work: on a message the reader sent, and on work nobody asked for
+	const SET_TO_WORK: [string, (review: Review) => Promise<unknown>][] = [
+		['on a message the reader sent', (review) => say(review, 'Run the tests')],
+		['on work nobody asked for', async (review) => review.answerer.showWork(work({ text: 'taking the diff again' }))]
+	];
+
+	it.each(SET_TO_WORK)('says on its rail that the agent is at work, %s', async (_how, setToWork) => {
+		const user = userEvent.setup();
+		listeningToThePanel();
+		const review = answeredReview();
+		const { getByTestId } = render(AgentPanel, inReview(review));
+		await user.click(getByTestId('close-panel'));
+
+		await setToWork(review);
+		flushSync();
+
+		expect(getByTestId('panel-rail-working')).toBeTruthy();
+	});
+
 	it('leaves the keyboard on the rail it leaves where it stood', async () => {
 		const user = userEvent.setup();
 		const { getByTestId } = render(AgentPanel, inReview(answeredReview()));
