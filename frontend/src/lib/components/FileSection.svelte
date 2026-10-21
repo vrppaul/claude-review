@@ -115,7 +115,6 @@
 				folded={collapsed}
 				subject={file.path}
 				testId="collapse-file"
-				tone="quiet"
 				onToggle={() => review.reading.toggleFolded(file.path)}
 			/>
 		</Bar>

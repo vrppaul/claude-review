@@ -80,6 +80,13 @@
 		review.sections.keyboardToThread(thread.id);
 	}
 
+	/** Hand over everything said so far; the button goes with it, and the keyboard stays with the thread. */
+	function askNow() {
+		const handedOver = review.threads.ask(thread.id);
+		review.sections.keyboardToThread(thread.id);
+		void asking(handedOver);
+	}
+
 	/** Wait for a question to be handed over, and say so if it could not be. */
 	async function asking(handedOver: Promise<void>) {
 		failed = null;
@@ -111,7 +118,7 @@
 {#snippet conversation()}
 	<!-- Asking the agent stands at the reader's last words, which it hands over with everything said before them -->
 	<Conversation testId="thread-turns">
-		<ThreadConversation {thread} onAsk={() => asking(review.threads.ask(thread.id))} askFailed={failed} />
+		<ThreadConversation {thread} onAsk={askNow} askFailed={failed} />
 	</Conversation>
 {/snippet}
 

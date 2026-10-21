@@ -89,10 +89,12 @@ export class ThreadReading {
 		return this.#awaiting.get(threadId) ?? NOTHING_AWAITED;
 	}
 
-	/** A question in the thread was handed over, and is now waited on. */
+	/** A question in the thread was handed over, and is now waited on: one taken back before is asked again. */
 	asked(threadId: string, questionId: string): void {
 		const waiting = this.awaiting(threadId);
 		this.#awaiting.set(threadId, [...waiting, { id: questionId, at: Date.now() }]);
+		const takenBack = this.#takenBack.get(threadId)?.filter((question) => question.id !== questionId);
+		if (takenBack !== undefined) this.#takenBack.set(threadId, takenBack);
 	}
 
 	/**

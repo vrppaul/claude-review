@@ -1055,9 +1055,6 @@
 .cr-ui-frame-dashed {
 	border-left-style: dashed;
 }
-.cr-ui-frame-reader {
-	border-left-color: var(--cr-mark);
-}
 .cr-ui-frame-agent {
 	border-left-color: var(--cr-agent);
 }
@@ -1069,26 +1066,6 @@
 }
 .cr-ui-frame-warning.cr-ui-frame-tinted {
 	background: var(--cr-warning-tint);
-}
-/* Something settled, its edge a line between surfaces */
-.cr-ui-frame-quiet {
-	border-left-color: var(--color-base-300);
-}
-/*
- * The reader's words and something settled lay the card's ground: the
- * reader's mark's own tint is what they marked in the code (--cr-marked),
- * and a frame of theirs on it would read as lines they picked
- */
-.cr-ui-frame-reader.cr-ui-frame-tinted,
-.cr-ui-frame-quiet.cr-ui-frame-tinted {
-	background: var(--cr-ground-card);
-}
-/* A copy of lines a thread lost: on the reading ground inside the card, its edge faint */
-.cr-ui-frame-stale {
-	border-left-color: var(--cr-faint);
-}
-.cr-ui-frame-stale.cr-ui-frame-tinted {
-	background: var(--cr-ground-reading);
 }
 
 /*
@@ -2048,19 +2025,12 @@
 	}
 }
 /*
- * A row nobody says stands in the column of what was said: what it holds one
- * under another at its start (an act on the whole conversation, and why it
- * failed), or across it between two rules (where a round ended, what the
- * review did)
+ * A row nobody says stands in the column of what was said: across it
+ * between two rules (where a round ended, what the review did), or a line
+ * of its own under the turn it is about (TakenBack)
  */
 .cr-ui-turn-aside {
 	padding-left: calc(var(--cr-turn-avatar-size) + var(--cr-turn-gap));
-}
-.cr-ui-turn-aside-stacked {
-	display: flex;
-	flex-direction: column;
-	align-items: flex-start;
-	gap: --spacing(2);
 }
 .cr-ui-turn-aside-across {
 	display: flex;

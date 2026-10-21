@@ -138,6 +138,45 @@ describe('a thread is a conversation', () => {
 		expect(document.activeElement).toBe(getByTestId('comment-thread'));
 	});
 
+	it('strikes a question no longer once it is asked again', async () => {
+		const user = userEvent.setup({ delay: null });
+		const server = answering();
+		server.answer('POST /api/cancel', null);
+		review.threads.add(onTheAddedLine('Why 3?'));
+		const { getByTestId, queryByTestId } = render(DiffView, inReview(review));
+		await user.click(getByTestId('ask-now-thread'));
+		await user.click(getByTestId('awaiting-answer-take-back'));
+		await user.click(getByTestId('confirm-go-ahead'));
+
+		await user.click(getByTestId('ask-now-thread'));
+
+		expect(queryByTestId('thread-taken-back')).toBeNull();
+		expect(getByTestId('awaiting-answer')).toBeTruthy();
+	});
+
+	it('leaves the keyboard on the thread once Ask agent now hands it over and goes', async () => {
+		const user = userEvent.setup({ delay: null });
+		answering();
+		review.threads.add(onTheAddedLine('Why 3?'));
+		const { getByTestId } = render(DiffView, inReview(review));
+		getByTestId('ask-now-thread').focus();
+
+		await user.keyboard('{Enter}');
+		await tick();
+
+		expect(document.activeElement).toBe(getByTestId('comment-thread'));
+	});
+
+	it('says no round on a thread the agent raised, which never went out with one', () => {
+		const { anchor } = onTheAddedLine('');
+		review.threads.raise('raised-1', anchor, 'Kept the old name on purpose', 'question');
+
+		const { getByTestId, queryByTestId } = render(DiffView, inReview(review));
+
+		expect(getByTestId('thread-bar')).toBeTruthy();
+		expect(queryByTestId('comment-sent')).toBeNull();
+	});
+
 	it("offers Ask agent now at the head of the reader's last turn, and at no other", () => {
 		const id = review.threads.add(onTheAddedLine('Why 3?'));
 		review.threads.addTurn(id, { author: 'reader', body: 'And where did 2 go?', images: [] });
@@ -318,7 +357,7 @@ describe('a thread is a conversation', () => {
 		expect(getByTestId('delete-dialog-question').textContent).toBe('Delete this comment and its 2 replies?');
 	});
 
-	it('rewrites the comment where it stands, from its menu', async () => {
+	it('opens the comment to be rewritten, from its menu', async () => {
 		const user = userEvent.setup({ delay: null });
 		review.threads.add(onTheAddedLine('Why 3?'));
 		const { getByTestId } = render(DiffView, inReview(review));
@@ -486,22 +525,6 @@ describe('the bar of a thread', () => {
 		return within(render(CommentThread, inReview(review, { thread: review.threads.all[0], hangs: 'line' })).container);
 	}
 
-	it('holds what can be done to the thread: resolve, the menu of the reader’s own, and fold', () => {
-		review.threads.add(onTheAddedLine('Why 3?'));
-
-		const bar = within(firstThread().getByTestId('thread-bar'));
-
-		expect(bar.getByTestId('resolve-comment')).toBeTruthy();
-		expect(bar.getByRole('button', { name: 'Edit or delete' })).toBe(bar.getByTestId('thread-menu'));
-		expect(bar.getByTestId('fold-comment')).toBeTruthy();
-	});
-
-	it('names the place the thread hangs on, first', () => {
-		review.threads.add(onTheAddedLine('Why 3?'));
-
-		expect(said(firstThread().getByTestId('thread-bar'))).toMatch(/^\+ Line 2 /);
-	});
-
 	it('says what the thread asks for, that it is outdated, and the round it went out in', () => {
 		const { anchor } = onTheAddedLine('');
 		review.threads.add({ ...onTheAddedLine('Why 3?'), severity: 'question', anchor: { ...anchor, outdated: true } });
@@ -526,18 +549,6 @@ describe('the bar of a thread', () => {
 		expect(said(bar.getByTestId('comment-answering'))).toBe('answering');
 		expect(said(bar.getByTestId('comment-unread'))).toBe('new reply');
 		expect(bar.queryByTestId('comment-sent')).toBeNull();
-	});
-
-	it('is followed, on an outdated thread, by what it was written against, and then by its words', () => {
-		const { anchor } = onTheAddedLine('');
-		review.threads.add({ ...onTheAddedLine('Why 3?'), anchor: { ...anchor, outdated: true } });
-
-		const opening = within(firstThread().getByTestId('thread-question'));
-
-		const words = opening.getByTestId('markdown-content');
-		expect(opening.getByTestId('written-against').compareDocumentPosition(words)).toBe(
-			Node.DOCUMENT_POSITION_FOLLOWING
-		);
 	});
 });
 

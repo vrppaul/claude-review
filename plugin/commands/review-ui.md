@@ -14,9 +14,9 @@ review runs in the background and you stay in its loop.
 
 Waiting on it in the foreground is the other shape, and it is right only
 when there is nothing to talk about — it is at the end of this file. Do not
-start there: a review nobody is attached to shows the user an "Ask now"
-button on every thread and a panel that says, when they finally click,
-that nobody is listening.
+start there: a review nobody is attached to tells the user on every thread
+that no agent is listening, where "Ask agent now" would stand, and gives
+them a panel they cannot write in.
 
 Usage:
 - No argument: review current git changes
@@ -340,8 +340,8 @@ claude-review diff
 ```
 
 The review is printed to stdout when they send it; read it and address each
-comment. Everything above still exists on their screen — the "Ask now"
-button, the panel, the offer of a round — but nothing answers, and the panel
-says so when they look. So choose this only for a review you know will be
+comment. Everything above still exists on their screen — the threads, the
+panel, the offer of a round — but nothing answers, and the threads and the
+panel say so. So choose this only for a review you know will be
 one-way: a quick look at a small change, or a machine with no way to keep a
 process alive.

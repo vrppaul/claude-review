@@ -111,12 +111,10 @@
 
 	/*
 	 * A frame with an edge at its start (lib/ui EdgeFrame) — the agent's words
-	 * in a story, a warning, a thread folded to a line: its edge, a strong
-	 * line; how far its words stand in from it and from its other side, as
-	 * far as a card stands what it holds in from its own edge, so the two
-	 * stand their words alike and a thread folded to a frame keeps what stands
-	 * at its end where it stood; and the room it keeps above and below what it
-	 * holds.
+	 * in a story, a warning: its edge, a strong line; how far its words stand
+	 * in from it and from its other side, as far as a card stands what it
+	 * holds in from its own edge, so the two stand their words alike; and the
+	 * room it keeps above and below what it holds.
 	 */
 	--cr-edge-width: var(--cr-line-strong);
 	--cr-edge-inset: var(--cr-card-room);

@@ -70,7 +70,7 @@
 	{/if}
 	{#if thread.resolved}
 		<Standing tone="done" testId="comment-resolved"><Icon name="check" size="xs" tone="done" /> resolved</Standing>
-	{:else if sentIn !== undefined && !folded}
+	{:else if sentIn !== undefined && !folded && !raised}
 		<Standing tone="quiet" testId="comment-sent">sent in round {sentIn}</Standing>
 	{/if}
 	{#if answering}
@@ -106,7 +106,6 @@
 			{folded}
 			subject="this thread"
 			testId={folded ? 'unfold-thread' : 'fold-comment'}
-			tone="quiet"
 			onToggle={toggleFold}
 		/>
 	{/snippet}

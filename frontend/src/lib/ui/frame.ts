@@ -18,17 +18,11 @@
 
 /**
  * Whose or what the framed words are, and the ground the tone lays:
- * - reader: a thread of the reader's folded away; on a card's ground, as
- *   their mark's own wash is the tint of the one they are at
- * - agent: what the agent says, in a story or in a thread it raised; on its
- *   wash
+ * - agent: what the agent says in a story; on its wash
  * - warning: what the review warns about, where to doubt it, what it costs;
  *   on its wash
- * - quiet: something settled, stepping back; on a card's ground
- * - stale: a copy of lines a thread has lost; on the page's own ground,
- *   inside the card
  */
-export type FrameTone = 'reader' | 'agent' | 'warning' | 'quiet' | 'stale';
+export type FrameTone = 'agent' | 'warning';
 
 /** Whether the frame lays its tone's ground under the words, or stands them on what is under it. */
 export type FrameGround = 'tint' | 'none';
@@ -43,11 +37,8 @@ export interface FrameLook {
 
 // The class of each tone, and of a ground, in the library's stylesheet
 export const FRAME_TONES: Record<FrameTone, string> = {
-	reader: 'cr-ui-frame-reader',
 	agent: 'cr-ui-frame-agent',
-	warning: 'cr-ui-frame-warning',
-	quiet: 'cr-ui-frame-quiet',
-	stale: 'cr-ui-frame-stale'
+	warning: 'cr-ui-frame-warning'
 };
 
 export const FRAME_GROUNDS: Record<FrameGround, string | null> = { tint: 'cr-ui-frame-tinted', none: null };
