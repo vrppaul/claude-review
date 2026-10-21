@@ -96,6 +96,7 @@
 		<IconButton
 			tone="secondary"
 			size="xs"
+			shape="square"
 			label={EDIT}
 			testId="edit-comment"
 			onclick={() => review.threads.writing.openEdit(thread)}
@@ -114,7 +115,7 @@
 			onGoAhead={remove}
 		>
 			{#snippet trigger(control)}
-				<IconButton {...control} tone="secondary" size="xs" label={DELETE} testId="delete-comment">
+				<IconButton {...control} tone="secondary" size="xs" shape="square" label={DELETE} testId="delete-comment">
 					<Icon name="trash" size="xs" tone="danger" />
 				</IconButton>
 			{/snippet}

@@ -57,7 +57,7 @@
 			said {since(lastAnswer)}
 		</span>
 	{/if}
-	<IconButton tone="quiet" size="xs" label="Hide the agent panel" testId="close-panel" onclick={putAway}>
+	<IconButton tone="quiet" size="xs" shape="square" label="Hide the agent panel" testId="close-panel" onclick={putAway}>
 		<Icon name="chevron" size="xs" pointing="right" />
 	</IconButton>
 </Bar>

@@ -38,7 +38,7 @@
 					<span>The story is ready: {chaptersIn(review.story.contents.chapters.length)}.</span>
 				{/snippet}
 				{#snippet others()}
-					<IconButton tone="quiet" size="sm" label="Close" testId="story-ready-close" onclick={putAway}>
+					<IconButton tone="quiet" size="sm" shape="square" label="Close" testId="story-ready-close" onclick={putAway}>
 						<Icon name="cross" size="xs" />
 					</IconButton>
 				{/snippet}

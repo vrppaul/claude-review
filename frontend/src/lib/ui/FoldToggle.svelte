@@ -23,6 +23,7 @@
 <IconButton
 	{tone}
 	size="xs"
+	shape="square"
 	label={folded ? `Unfold ${subject}` : `Fold ${subject} away`}
 	{testId}
 	data-role={FOLD_TOGGLE_ROLE}

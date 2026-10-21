@@ -74,6 +74,7 @@
 				bind:element={putAwayButton}
 				tone="quiet"
 				size="xs"
+				shape="square"
 				label={putAway}
 				testId={testIds.putAway}
 				onclick={() => column.toggle()}

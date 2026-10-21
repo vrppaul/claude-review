@@ -103,6 +103,7 @@
 				<IconButton
 					tone="quiet"
 					size="sm"
+					shape="square"
 					label="Previous comment"
 					testId="prev-comment"
 					onclick={() => review.navigator.step(-1)}
@@ -112,6 +113,7 @@
 				<IconButton
 					tone="quiet"
 					size="sm"
+					shape="square"
 					label="Next comment"
 					testId="next-comment"
 					onclick={() => review.navigator.step(1)}

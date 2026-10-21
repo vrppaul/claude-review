@@ -32,7 +32,7 @@
 	out of the header, where only what is switched while reading belongs -->
 <Popover bind:open label={SETTINGS} heading={SETTINGS} placement="below-end" width="medium" testId="settings-menu">
 	{#snippet trigger(control)}
-		<IconButton {...control} tone="quiet" size="sm" label={SETTINGS} testId="settings-toggle">
+		<IconButton {...control} tone="quiet" size="sm" shape="square" label={SETTINGS} testId="settings-toggle">
 			<Icon name="settings" size="base" />
 		</IconButton>
 	{/snippet}

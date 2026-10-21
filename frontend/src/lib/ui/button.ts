@@ -43,3 +43,17 @@ export const BUTTON_TONES: Record<ButtonTone, string> = {
 };
 
 export const BUTTON_SIZES: Record<ButtonSize, string> = { xs: 'cr-ui-xs', sm: 'cr-ui-sm' };
+
+/**
+ * - square: an icon alone, as tall as it is wide.
+ * - notification: a mark with a figure on its corner, how many of what it
+ *   opens wait: a button's room either side of its icon, so the figure
+ *   stands over its edge and not over the icon, and as wide with no figure
+ *   on it as with one.
+ */
+export type IconButtonShape = 'square' | 'notification';
+
+export const ICON_BUTTON_SHAPES: Record<IconButtonShape, string> = {
+	square: 'cr-ui-icon-button',
+	notification: 'cr-ui-notification'
+};

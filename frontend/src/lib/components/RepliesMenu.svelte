@@ -59,6 +59,11 @@
 	</Button>
 {/snippet}
 
+<!-- How many answers wait unread, on the mark's corner while any do -->
+{#snippet unreadFigure()}
+	<Count tone="unread" count={unread} aria-hidden testId="unread-count" />
+{/snippet}
+
 <Popover
 	bind:open
 	label={REPLIES}
@@ -69,13 +74,16 @@
 	testId="replies-list"
 >
 	{#snippet trigger(control)}
-		<IconButton {...control} tone="quiet" size="sm" label={repliesNamed} testId="replies-menu">
+		<IconButton
+			{...control}
+			tone="quiet"
+			size="sm"
+			shape="notification"
+			label={repliesNamed}
+			testId="replies-menu"
+			corner={unread > 0 ? unreadFigure : undefined}
+		>
 			<Icon name="reply" size="sm" />
-			{#snippet corner()}
-				{#if unread > 0}
-					<Count tone="unread" count={unread} aria-hidden testId="unread-count" />
-				{/if}
-			{/snippet}
 		</IconButton>
 	{/snippet}
 

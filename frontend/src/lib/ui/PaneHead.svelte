@@ -21,6 +21,7 @@
 	<IconButton
 		tone="quiet"
 		size="xs"
+		shape="square"
 		label={head.closing ?? `Close ${head.heading}`}
 		testId="{testId}-close"
 		onclick={head.close}

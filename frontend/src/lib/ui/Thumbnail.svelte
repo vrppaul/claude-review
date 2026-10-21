@@ -59,6 +59,7 @@
 				<IconButton
 					tone="secondary"
 					size="xs"
+					shape="square"
 					label={props.removing.label}
 					testId={props.removing.testId}
 					disabled={props.removing.disabled}
