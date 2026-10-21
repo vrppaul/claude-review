@@ -87,6 +87,7 @@ select = [
     "W",        # pycodestyle warnings
     "RUF",      # Ruff-specific rules
     "ASYNC",    # async anti-patterns
+    "FAST",     # FastAPI as its docs write it: a dependency or a parameter's rules in Annotated
     "T20",      # no print() in source (use structlog)
     "RSE",      # unnecessary parens on raise
     "PERF",     # performance anti-patterns
@@ -119,7 +120,6 @@ select = [
     "PLR2004",  # no number or string in a comparison without a name
 ]
 ignore = [
-    "B008",     # function call in argument defaults (common in FastAPI)
     "SIM108",   # ternary operator — if/else often more readable
 ]
 

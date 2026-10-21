@@ -8,11 +8,10 @@ null or left out is not.
 from collections.abc import Callable
 
 import structlog
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 from pydantic import BaseModel
 
-from claude_review.domain import models
-from claude_review.presentation.dependencies import get_guide_service, get_review, get_settings_service
+from claude_review.presentation.dependencies import GuideServiceDep, ReviewDep, SettingsServiceDep
 from claude_review.presentation.errors import Takes, refusals
 from claude_review.presentation.schemas.base import Schema
 from claude_review.presentation.schemas.records import (
@@ -23,7 +22,6 @@ from claude_review.presentation.schemas.records import (
     SettingsChange,
 )
 from claude_review.services.reader_record_service import ReaderRecordService
-from claude_review.services.review.review import Review
 
 log = structlog.get_logger()
 
@@ -32,14 +30,14 @@ router = APIRouter()
 
 @router.get("/settings")
 async def reader_settings(
-    settings: ReaderRecordService[models.ReaderSettings] = Depends(get_settings_service),
+    settings: SettingsServiceDep,
 ) -> KeptRecord[ReaderSettings]:
     """Say how this reader reads, as chosen in any review on this machine."""
     return await _kept(settings, ReaderSettings.from_domain)
 
 
 @router.put("/settings", responses=refusals(takes=Takes.JSON_BODY))
-async def change_reader_settings(request: SettingsChange, review: Review = Depends(get_review)) -> ReaderSettings:
+async def change_reader_settings(request: SettingsChange, review: ReviewDep) -> ReaderSettings:
     """Keep a choice the reader made, for this review and every later one; stories turned on or off ask or stop here."""
     changed = ReaderSettings.from_domain(await review.change_settings(request))
     log.info("settings_changed", changed=sorted(request.model_fields_set))
@@ -48,7 +46,7 @@ async def change_reader_settings(request: SettingsChange, review: Review = Depen
 
 @router.get("/guide")
 async def guide_state(
-    guide: ReaderRecordService[models.GuideState] = Depends(get_guide_service),
+    guide: GuideServiceDep,
 ) -> KeptRecord[GuideState]:
     """Say how far this reader has been shown around, in any review on this machine."""
     return await _kept(guide, GuideState.from_domain)
@@ -57,7 +55,7 @@ async def guide_state(
 @router.put("/guide", responses=refusals(takes=Takes.JSON_BODY))
 async def change_guide_state(
     request: GuideChange,
-    guide: ReaderRecordService[models.GuideState] = Depends(get_guide_service),
+    guide: GuideServiceDep,
 ) -> GuideState:
     """Remember what the reader has now been shown."""
     return GuideState.from_domain(await guide.change(request))

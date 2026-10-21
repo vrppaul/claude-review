@@ -1,8 +1,9 @@
 """What the review's own page asks of it: its content, the threads asked about, the panel, the rounds."""
 
 from http import HTTPStatus
+from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Query, Request
 from fastapi.responses import FileResponse
 
 from claude_review.domain.exceptions import (
@@ -23,8 +24,7 @@ from claude_review.domain.exceptions import (
     UnknownVersionError,
 )
 from claude_review.domain.models import FIRST_LINE, MAX_ID_LENGTH, MAX_PATH_LENGTH
-from claude_review.presentation.broadcast import BrowserBroadcast
-from claude_review.presentation.dependencies import get_broadcast, get_release, get_review
+from claude_review.presentation.dependencies import BroadcastDep, ReleaseDep, ReviewDep
 from claude_review.presentation.errors import Takes, refusals
 from claude_review.presentation.schemas.agent import (
     AgentStatus,
@@ -65,17 +65,12 @@ from claude_review.presentation.version_labels import (
     shown_base,
 )
 from claude_review.services.image_service import IMAGE_FORMATS, MAX_IMAGE_BYTES
-from claude_review.services.review.review import Review
 
 router = APIRouter()
 
 
 @router.get("/review")
-async def get_the_review(
-    review: Review = Depends(get_review),
-    release: str = Depends(get_release),
-    broadcast: BrowserBroadcast = Depends(get_broadcast),
-) -> ReviewResponse:
+async def get_the_review(review: ReviewDep, release: ReleaseDep, broadcast: BroadcastDep) -> ReviewResponse:
     """Say what the review is and where it stands: what a page opening, or coming back, must learn."""
     standing = review.standing()
     work = review.work_under_way()
@@ -99,7 +94,7 @@ async def get_the_review(
 
 
 @router.get("/threads")
-async def held_threads(review: Review = Depends(get_review)) -> ThreadsResponse:
+async def held_threads(review: ReviewDep) -> ThreadsResponse:
     """Say what threads the review holds, for a page that opens with no draft of them.
 
     Another browser, a private window, cleared site data: the page has none
@@ -112,7 +107,7 @@ async def held_threads(review: Review = Depends(get_review)) -> ThreadsResponse:
 
 
 @router.get("/conversation")
-async def held_conversation(review: Review = Depends(get_review)) -> ConversationResponse:
+async def held_conversation(review: ReviewDep) -> ConversationResponse:
     """Say what was said in the panel, for a page to draw as it opens.
 
     What the agent said before any page was open is pushed to nobody, and a
@@ -124,7 +119,7 @@ async def held_conversation(review: Review = Depends(get_review)) -> Conversatio
 
 
 @router.get("/story")
-async def held_story(review: Review = Depends(get_review)) -> StoryResponse:
+async def held_story(review: ReviewDep) -> StoryResponse:
     """Say what story the review holds: the last the agent told of its change, each step with what it shows.
 
     None while nobody has told one, which is no refusal: a review is read
@@ -139,7 +134,7 @@ async def held_story(review: Review = Depends(get_review)) -> StoryResponse:
 @router.post(
     "/story/request", status_code=HTTPStatus.NO_CONTENT, responses=refusals(NoRepositoryError, takes=Takes.NOTHING)
 )
-async def ask_for_a_story(review: Review = Depends(get_review)) -> None:
+async def ask_for_a_story(review: ReviewDep) -> None:
     """Take the reader's asking for a story of the change, for an agent to pick up.
 
     Asked once however often it is sent: two pages open on the review, or
@@ -150,7 +145,7 @@ async def ask_for_a_story(review: Review = Depends(get_review)) -> None:
 
 
 @router.post("/story/cancel", status_code=HTTPStatus.NO_CONTENT)
-async def stop_the_story(review: Review = Depends(get_review)) -> None:
+async def stop_the_story(review: ReviewDep) -> None:
     """Stop the story the reader asked for, taken by an agent or not.
 
     Nothing is refused: with no story awaited there is nothing to stop,
@@ -163,9 +158,9 @@ async def stop_the_story(review: Review = Depends(get_review)) -> None:
 @router.get("/diff", responses=refusals(UnknownVersionError, NoRepositoryError, takes=Takes.PARAMETERS))
 async def get_diff(
     *,
-    ignore_whitespace: bool = Query(default=False),
-    base: str | None = Query(default=None, max_length=MAX_ID_LENGTH),
-    review: Review = Depends(get_review),
+    ignore_whitespace: Annotated[bool, Query()] = False,
+    base: Annotated[str | None, Query(max_length=MAX_ID_LENGTH)] = None,
+    review: ReviewDep,
 ) -> DiffResponse:
     """Serve the review's content against the base the page asks for, the review's own when it names none.
 
@@ -186,7 +181,7 @@ async def get_diff(
 
 
 @router.get("/versions")
-async def offered_versions(review: Review = Depends(get_review)) -> VersionsResponse:
+async def offered_versions(review: ReviewDep) -> VersionsResponse:
     """Say what the working tree can be compared against: nothing at all, for files or a conversation."""
     opened_against = review.standing().opened_against
     return VersionsResponse(versions=[review_version(offered, opened_against) for offered in await review.offer()])
@@ -206,10 +201,10 @@ async def offered_versions(review: Review = Depends(get_review)) -> VersionsResp
 async def get_file_window(
     # Any path the diff draws, a name holding a control character too: one
     # that cannot be commented on can still be read wider
-    path: str = Query(min_length=1, max_length=MAX_PATH_LENGTH),
-    start: int = Query(ge=FIRST_LINE),
-    end: int = Query(ge=FIRST_LINE),
-    review: Review = Depends(get_review),
+    path: Annotated[str, Query(min_length=1, max_length=MAX_PATH_LENGTH)],
+    start: Annotated[int, Query(ge=FIRST_LINE)],
+    end: Annotated[int, Query(ge=FIRST_LINE)],
+    review: ReviewDep,
 ) -> FileWindowResponse:
     """Serve lines a hunk left out, so the reader can widen its context."""
     window = await review.file_window(path, start, end)
@@ -217,7 +212,7 @@ async def get_file_window(
 
 
 @router.post("/anchors/follow", responses=refusals(takes=Takes.JSON_BODY))
-async def follow_anchors(request: FollowRequest, review: Review = Depends(get_review)) -> FollowResponse:
+async def follow_anchors(request: FollowRequest, review: ReviewDep) -> FollowResponse:
     """Say where each anchor is in the review's content as it now stands.
 
     The page holds the threads and the review holds the content, so after a
@@ -236,7 +231,7 @@ async def follow_anchors(request: FollowRequest, review: Review = Depends(get_re
         QuestionNotInThreadError, AnchorLinesNotShownError, AgentWordsChangedError, takes=Takes.JSON_BODY
     ),
 )
-async def ask_about_thread(request: AskRequest, review: Review = Depends(get_review)) -> None:
+async def ask_about_thread(request: AskRequest, review: ReviewDep) -> None:
     """Take a question asked in one thread, for whoever is answering to pick up.
 
     The reader does not wait here: the answer arrives later, pushed down the
@@ -250,7 +245,7 @@ async def ask_about_thread(request: AskRequest, review: Review = Depends(get_rev
     status_code=HTTPStatus.NO_CONTENT,
     responses=refusals(ImagesNotKeptError, AnchorLinesNotShownError, AgentWordsChangedError, takes=Takes.JSON_BODY),
 )
-async def take_panel_message(request: MessageRequest, review: Review = Depends(get_review)) -> None:
+async def take_panel_message(request: MessageRequest, review: ReviewDep) -> None:
     """Take what the reader typed in the panel, for the agent to pick up.
 
     Everything typed there goes now — the panel has no "add to review",
@@ -266,7 +261,7 @@ async def take_panel_message(request: MessageRequest, review: Review = Depends(g
 
 
 @router.post("/cancel", status_code=HTTPStatus.NO_CONTENT, responses=refusals(takes=Takes.JSON_BODY))
-async def cancel_panel_message(request: CancelRequest, review: Review = Depends(get_review)) -> None:
+async def cancel_panel_message(request: CancelRequest, review: ReviewDep) -> None:
     """Take back a message the agent has not answered yet.
 
     A request rather than a kill: it joins the queue behind whatever else is
@@ -286,7 +281,7 @@ IMAGE_REPLY = {HTTPStatus.OK: {"description": "The image, as it was pasted", "co
 @router.post(
     "/images", responses=refusals(ImageRefusedError, ImageTooLargeError, takes=Takes.RAW_BODY), openapi_extra=IMAGE_BODY
 )
-async def keep_an_image(http_request: Request, review: Review = Depends(get_review)) -> ImageResponse:
+async def keep_an_image(http_request: Request, review: ReviewDep) -> ImageResponse:
     """Keep an image the reader is about to send, and say what it is called.
 
     Taken on its own, before the message: the reader sees it attached while
@@ -318,7 +313,7 @@ async def _read_capped(http_request: Request, *, limit: int) -> bytes:
     response_class=FileResponse,
     responses={**IMAGE_REPLY, **refusals(UnknownImageError, takes=Takes.PARAMETERS)},
 )
-async def serve_an_image(image_id: SafeId, review: Review = Depends(get_review)) -> FileResponse:
+async def serve_an_image(image_id: SafeId, review: ReviewDep) -> FileResponse:
     """Hand back an image this review keeps, to be drawn in the panel."""
     stored = review.kept_image(image_id)
     return FileResponse(stored.path, media_type=stored.media_type)
@@ -329,7 +324,7 @@ async def serve_an_image(image_id: SafeId, review: Review = Depends(get_review))
     status_code=HTTPStatus.NO_CONTENT,
     responses=refusals(UnknownImageError, ImageAlreadySentError, takes=Takes.PARAMETERS),
 )
-async def discard_an_image(image_id: SafeId, review: Review = Depends(get_review)) -> None:
+async def discard_an_image(image_id: SafeId, review: ReviewDep) -> None:
     """Drop an image the reader took off the message before sending it.
 
     One that went out with a message stays: the agent may still be about to
@@ -342,7 +337,7 @@ async def discard_an_image(image_id: SafeId, review: Review = Depends(get_review
     "/submit",
     responses=refusals(ReviewEndedError, AnchorLinesNotShownError, AgentWordsChangedError, takes=Takes.JSON_BODY),
 )
-async def submit_review(request: SubmitRequest, review: Review = Depends(get_review)) -> SubmitResponse:
+async def submit_review(request: SubmitRequest, review: ReviewDep) -> SubmitResponse:
     """Send what has been written, and either end the review or carry on.
 
     Ending is the plain case: one send, and the agent reads the result on
@@ -358,7 +353,7 @@ async def submit_review(request: SubmitRequest, review: Review = Depends(get_rev
 
 
 @router.post("/retake", responses=refusals(NoRepositoryError, takes=Takes.NOTHING))
-async def retake_diff(review: Review = Depends(get_review)) -> RetakeResponse:
+async def retake_diff(review: ReviewDep) -> RetakeResponse:
     """Take the diff again, after the work a round asked for: the agent asks, and so does the page.
 
     The pages on screen are told to reload it rather than being handed the
@@ -375,6 +370,6 @@ async def retake_diff(review: Review = Depends(get_review)) -> RetakeResponse:
 
 
 @router.post("/end", status_code=HTTPStatus.NO_CONTENT)
-async def end_review(review: Review = Depends(get_review)) -> None:
+async def end_review(review: ReviewDep) -> None:
     """End a review that has been kept open for rounds."""
     review.end()

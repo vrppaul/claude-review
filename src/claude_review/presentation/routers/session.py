@@ -7,6 +7,7 @@ Both directions run side by side, and either one ending ends the socket.
 """
 
 import asyncio
+from typing import Annotated
 
 import structlog
 from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect
@@ -14,7 +15,7 @@ from pydantic import ValidationError
 
 from claude_review.presentation.asgi import WEBSOCKET_DISCONNECT
 from claude_review.presentation.broadcast import BrowserBroadcast
-from claude_review.presentation.dependencies import get_broadcast, get_review
+from claude_review.presentation.dependencies import BroadcastDep, ReviewDep
 from claude_review.presentation.schemas.session import PushNumber, Resume, ReviewName, RunName
 from claude_review.presentation.schemas.threads import HeldThreads, ReceivedHello
 from claude_review.services.review.review import Review
@@ -30,9 +31,9 @@ FELL_BEHIND = 1013
 
 
 def _resume_named(
-    identity: ReviewName | None = Query(default=None),
-    instance: RunName | None = Query(default=None),
-    after: PushNumber | None = Query(default=None),
+    identity: Annotated[ReviewName | None, Query()] = None,
+    instance: Annotated[RunName | None, Query()] = None,
+    after: Annotated[PushNumber | None, Query()] = None,
 ) -> Resume | None:
     """Where the page had got to, as its socket's address names it; nothing from a page still reading its review."""
     if identity is None or instance is None or after is None:
@@ -43,9 +44,9 @@ def _resume_named(
 @router.websocket("/session")
 async def session(
     websocket: WebSocket,
-    resume: Resume | None = Depends(_resume_named),
-    review: Review = Depends(get_review),
-    broadcast: BrowserBroadcast = Depends(get_broadcast),
+    resume: Annotated[Resume | None, Depends(_resume_named)],
+    review: ReviewDep,
+    broadcast: BroadcastDep,
 ) -> None:
     """Hold the review open for as long as the page has it on screen, and tell the page what happens.
 

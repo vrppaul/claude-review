@@ -1,7 +1,7 @@
 """What the agent answering the review asks of it: what to answer next, what the review holds, where to say things."""
 
 from http import HTTPStatus
-from typing import assert_never
+from typing import Annotated, assert_never
 
 from fastapi import APIRouter, Depends, Query, Request
 
@@ -16,7 +16,7 @@ from claude_review.domain.exceptions import (
     UnknownThreadError,
 )
 from claude_review.presentation.asgi import HTTP_DISCONNECT
-from claude_review.presentation.dependencies import get_review
+from claude_review.presentation.dependencies import ReviewDep
 from claude_review.presentation.errors import Takes, refusals
 from claude_review.presentation.schemas.agent import (
     AgentStatus,
@@ -50,10 +50,9 @@ from claude_review.presentation.schemas.threads import (
     ThreadSummary,
 )
 from claude_review.services.review.agent_inbox import Silence
-from claude_review.services.review.review import Review
 
 
-async def note_the_agent(review: Review = Depends(get_review)) -> None:
+async def note_the_agent(review: ReviewDep) -> None:
     """Whatever the agent asks says it is still there: every call renews its lease."""
     review.agent_called()
 
@@ -64,8 +63,8 @@ router = APIRouter(dependencies=[Depends(note_the_agent)])
 @router.post("/events", responses=refusals(takes=Takes.PARAMETERS))
 async def next_event(
     http_request: Request,
-    wait_seconds: float = Query(default=DEFAULT_WAIT_SECONDS, gt=0, le=MAX_WAIT_SECONDS),
-    review: Review = Depends(get_review),
+    review: ReviewDep,
+    wait_seconds: Annotated[float, Query(gt=0, le=MAX_WAIT_SECONDS)] = DEFAULT_WAIT_SECONDS,
 ) -> EventResponse:
     """Wait for the next thing the reader hands over, and take it.
 
@@ -112,7 +111,7 @@ def _envelope(taken: models.AgentEvent | Silence) -> EventResponse:
 
 
 @router.get("/catch-up")
-async def catch_up(review: Review = Depends(get_review)) -> CatchUpResponse:
+async def catch_up(review: ReviewDep) -> CatchUpResponse:
     """Say what this review holds, for an agent that has just arrived.
 
     An agent restarted mid-review knows nothing: `events` hands over what
@@ -138,7 +137,7 @@ async def catch_up(review: Review = Depends(get_review)) -> CatchUpResponse:
 @router.post("/catch-up/threads/{thread_id}", responses=refusals(UnknownThreadError, takes=Takes.PARAMETERS))
 async def read_thread(
     thread_id: SafeId,
-    review: Review = Depends(get_review),
+    review: ReviewDep,
 ) -> Thread:
     """Hand over one thread the review holds, in full: every turn, its lines, its images.
 
@@ -150,13 +149,13 @@ async def read_thread(
 
 
 @router.post("/reply", status_code=HTTPStatus.NO_CONTENT, responses=refusals(UnknownThreadError, takes=Takes.JSON_BODY))
-async def reply_to_thread(request: ReplyRequest, review: Review = Depends(get_review)) -> None:
+async def reply_to_thread(request: ReplyRequest, review: ReviewDep) -> None:
     """Push an answer into a thread of a review that is still open."""
     review.answer_thread(thread_id=request.thread_id, question_id=request.question_id, body=request.body)
 
 
 @router.post("/say", status_code=HTTPStatus.NO_CONTENT, responses=refusals(takes=Takes.JSON_BODY))
-async def say_in_panel(request: SayRequest, review: Review = Depends(get_review)) -> None:
+async def say_in_panel(request: SayRequest, review: ReviewDep) -> None:
     """Push what the agent has to say into a review still open.
 
     An answer names the message it answers. A message that names nothing is
@@ -167,7 +166,7 @@ async def say_in_panel(request: SayRequest, review: Review = Depends(get_review)
 
 
 @router.post("/progress", status_code=HTTPStatus.NO_CONTENT, responses=refusals(takes=Takes.JSON_BODY))
-async def report_progress(request: ProgressRequest, review: Review = Depends(get_review)) -> None:
+async def report_progress(request: ProgressRequest, review: ReviewDep) -> None:
     """Say what is being done, while it is being done.
 
     Waiting says only that something is happening. This says what: which
@@ -184,7 +183,7 @@ async def report_progress(request: ProgressRequest, review: Review = Depends(get
 
 
 @router.post("/show", status_code=HTTPStatus.NO_CONTENT, responses=refusals(UnknownFileError, takes=Takes.JSON_BODY))
-async def show_a_file(request: ShowRequest, review: Review = Depends(get_review)) -> None:
+async def show_a_file(request: ShowRequest, review: ReviewDep) -> None:
     """Take the reader to a file, and mark it for a moment when they arrive.
 
     The only thing here that moves somebody else's screen, so it is only
@@ -202,7 +201,7 @@ async def show_a_file(request: ShowRequest, review: Review = Depends(get_review)
         takes=Takes.JSON_BODY,
     ),
 )
-async def raise_a_thread(request: PointRequest, review: Review = Depends(get_review)) -> PointResponse:
+async def raise_a_thread(request: PointRequest, review: ReviewDep) -> PointResponse:
     """Put a thread on a line, from the side that wrote the change.
 
     "Here I did it differently from what you asked" belongs on the line it
@@ -215,7 +214,7 @@ async def raise_a_thread(request: PointRequest, review: Review = Depends(get_rev
 
 
 @router.post("/status", status_code=HTTPStatus.NO_CONTENT, responses=refusals(takes=Takes.JSON_BODY))
-async def report_status(request: StatusRequest, review: Review = Depends(get_review)) -> None:
+async def report_status(request: StatusRequest, review: ReviewDep) -> None:
     """Take what the agent says about itself, and pass it on unchanged.
 
     Which model, and how much of its context is spent: neither can be
@@ -225,7 +224,7 @@ async def report_status(request: StatusRequest, review: Review = Depends(get_rev
 
 
 @router.put("/story", responses=refusals(StoryRefusedError, NoRepositoryError, takes=Takes.JSON_BODY))
-async def tell_the_story(request: StoryRequest, review: Review = Depends(get_review)) -> StoryTakenResponse:
+async def tell_the_story(request: StoryRequest, review: ReviewDep) -> StoryTakenResponse:
     """Take the story the agent tells of the change, whole, in place of any it told before.
 
     A PUT: the story is sent in one piece and replaced in one piece, never
