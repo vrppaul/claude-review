@@ -300,6 +300,20 @@ describe('the agent panel', () => {
 		expect(getByTestId('panel-taken-back').textContent).toContain('Taken back 0s ago. The agent was asked to drop it.');
 	});
 
+	it('leaves the keyboard on the conversation once the message is taken back and the turn at work goes', async () => {
+		const user = userEvent.setup({ delay: null });
+		listeningToThePanel();
+		const { getByTestId } = render(AgentPanel, inReview(review));
+		await user.type(getByTestId('panel-input'), 'Never mind');
+		await user.click(getByTestId('send-message'));
+		await user.click(getByTestId('panel-working-take-back'));
+
+		await user.keyboard('{Tab}{Enter}');
+		await tick();
+
+		expect(document.activeElement).toBe(getByTestId('panel-turns'));
+	});
+
 	it('says under the turn why it could not take the message back, and keeps the cross to try again', async () => {
 		const user = userEvent.setup({ delay: null });
 		const server = listeningToThePanel();

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { focusWhatRemains } from '$lib/dom/keyboard';
 	import { useReview } from '$lib/review/context';
 	import Dot from '$lib/ui/Dot.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
@@ -11,14 +12,22 @@
 		since: number;
 		/** The message being worked on, which the reader may take back; none for work nobody asked for. */
 		messageId?: string | undefined;
+		/** What takes the keyboard once the message is taken back and this turn goes: the conversation it stood in. */
+		whatRemains?: (() => HTMLElement | null) | undefined;
 	}
 
-	let { since, messageId }: Props = $props();
+	let { since, messageId, whatRemains }: Props = $props();
 	const review = useReview();
 
 	const work = $derived(review.answerer.work);
 	// Only a message the reader sent can be taken back; the agent decides what to do about it
-	const takeBack = $derived(messageId === undefined ? undefined : () => review.conversation.cancel(messageId));
+	const takeBack = $derived(messageId === undefined ? undefined : () => takeBackAndStay(messageId));
+
+	/** Take the message back; this turn goes with it, and the keyboard stays in the conversation, never on nothing. */
+	async function takeBackAndStay(message: string) {
+		await review.conversation.cancel(message);
+		focusWhatRemains(() => whatRemains?.());
+	}
 </script>
 
 <!-- The agent at work in the panel, as an answer awaited in a thread is: what it says it is doing, replaced as

@@ -255,8 +255,11 @@
   agent has answered can no longer be taken back: the review refuses, where
   a take-back crossing the answer on its way struck out what was answered.
   The panel marks a message taken back once the review has heard it, as a
-  thread does, so a failure there is said under the turn, where it was lost. The agent's work reads as a checklist, its line in
-  ink and bold, its steps without the rail they hung from. A turn's head
+  thread does, so a failure there is said under the turn, where it was
+  lost, and the keyboard stays in the conversation once the turn at work
+  goes, where it was left on nothing. The agent's work reads as a
+  checklist, its line in ink and bold, its steps without the rail they
+  hung from. A turn's head
   stands as tall as its avatar. What the reader writes in the panel keeps
   its line breaks, and a word longer than a turn breaks where the turn
   ends rather than scrolling the panel sideways.

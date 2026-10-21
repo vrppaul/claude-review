@@ -70,11 +70,19 @@
 	let putAwayButton: HTMLButtonElement | undefined = $state();
 	let rail: HTMLButtonElement | undefined = $state();
 
+	// Whether the reader put the column away or brought it back while it has been drawn: only then does it move.
+	// Whose the change was is the layout's to say (changedByReader); that it happened in this drawing, the column's
+	// own, since a column drawn anew — at first, or as its view comes back on screen — stands at once
+	let drawnOnce = false;
+	let movedByReader = $state(false);
+
 	// Put away or brought back, by its own control or by a key, the column takes with it whatever held
 	// the keyboard in it: the control pressed, an entry. Looked at before the page redraws it: the
 	// keyboard then goes to the control that undoes what was done, and is never left on nothing
 	$effect.pre(() => {
 		const open = column.open;
+		if (drawnOnce) movedByReader = column.changedByReader;
+		drawnOnce = true;
 		const drawnBefore = open ? rail : columnElement;
 		if (drawnBefore?.contains(document.activeElement)) focusWhatRemains(() => (open ? putAwayButton : rail));
 	});
@@ -104,7 +112,7 @@
 		'cr-ui-side-column',
 		drawn.drawnAs,
 		!column.open && 'cr-ui-side-column-away',
-		column.changedByReader && 'cr-ui-side-column-moving'
+		movedByReader && 'cr-ui-side-column-moving'
 	]}
 	style:--cr-column-width="{column.width}px"
 >
@@ -115,7 +123,7 @@
 			data-testid={testIds.column}
 			data-tour={tour}
 			aria-label={label}
-			class={['cr-ui-column', column.changedByReader && 'cr-ui-column-coming']}
+			class={['cr-ui-column', movedByReader && 'cr-ui-column-coming']}
 		>
 			<EdgeGrip {column} grows={drawn.grows} label={resizing} testId={testIds.resize} />
 			<Bar heads="column" testId={testIds.head}>
@@ -143,7 +151,7 @@
 			testId={testIds.bringBack}
 			data-tour={tour}
 			{marks}
-			marksComeIn={column.changedByReader}
+			marksComeIn={movedByReader}
 			onclick={() => column.toggle()}
 		/>
 	{/if}

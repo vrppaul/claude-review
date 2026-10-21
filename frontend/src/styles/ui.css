@@ -54,14 +54,16 @@
  * one of the header's whose pane is open: a small thing chosen, so reversed,
  * in ink whatever its tone (tokens.css). One in a turn or a card whose
  * question or menu is open keeps its look, as the boards TakeBack and
- * ThreadKinds draw it: what it asks stands beside it
+ * ThreadKinds draw it: what it asks stands beside it. Where it stands adds
+ * nothing to how strongly the rule holds (:where): a rule that draws a
+ * chosen segment its own way still wins by coming later
  */
-.cr-pressable:is([aria-pressed='true'], .cr-ui-bar-page [aria-haspopup][aria-expanded='true']) {
+.cr-pressable:is([aria-pressed='true'], :where(.cr-ui-bar-page) [aria-haspopup][aria-expanded='true']) {
 	background-color: var(--color-base-content);
 	color: var(--cr-on-ink);
 }
 /* A key on it is part of its name, not a mark of a colour of its own: in its words, edged in them */
-.cr-pressable:is([aria-pressed='true'], .cr-ui-bar-page [aria-haspopup][aria-expanded='true']) .cr-ui-key {
+.cr-pressable:is([aria-pressed='true'], :where(.cr-ui-bar-page) [aria-haspopup][aria-expanded='true']) .cr-ui-key {
 	border-color: currentColor;
 	color: inherit;
 }
@@ -1318,7 +1320,7 @@
 .cr-ui-primary .cr-ui-count {
 	margin-inline-start: --spacing(1.5);
 }
-.cr-ui-primary:not([aria-pressed='true'], .cr-ui-bar-page [aria-haspopup][aria-expanded='true']) .cr-ui-count {
+.cr-ui-primary:not([aria-pressed='true'], :where(.cr-ui-bar-page) [aria-haspopup][aria-expanded='true']) .cr-ui-count {
 	background-color: var(--cr-on-control);
 	color: var(--cr-control-fill);
 }

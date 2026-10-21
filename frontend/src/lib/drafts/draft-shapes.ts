@@ -13,8 +13,8 @@
  * each field uploaded itself, which files were read and folded away, and
  * the round the review had reached, rather than read back from the marks
  * its threads carry; a message taken back in the panel says when; and it is
- * kept under the name the review gives itself rather than
- * under its title, which another review on the same port may share. A
+ * kept under the name the review gives itself rather than under its title,
+ * which another review on the same port may share. A
  * draft a release kept is brought up to date — never thrown away: it is an
  * hour of somebody's reading. The shapes between the last released one and
  * this were never released, and are not read.

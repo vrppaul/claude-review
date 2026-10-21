@@ -20,6 +20,7 @@ from tests.helpers import (
     CONVERSATION_ROUTE,
     EVENTS_ROUTE,
     FIRST_THREAD_ID,
+    GLANCE_AT_EVENTS,
     PANEL_MESSAGE_ID,
     REVIEW_ROUTE,
     REVIEWED_FILE,
@@ -186,14 +187,16 @@ async def test_a_message_taken_back_is_held_as_taken_back_and_when(reviews: Revi
 
 
 async def test_a_message_the_agent_answered_cannot_be_taken_back(client: AsyncClient) -> None:
-    """The answer is there to read: a take-back crossing it would strike out what was answered."""
+    """The answer is there to read: a take-back crossing it would strike out what was answered, and ask it dropped."""
     await client.post("/api/message", json=MESSAGE)
+    await client.post(EVENTS_ROUTE, params=WAIT_FOR_EVENT)
     await client.post("/api/say", json={"message_id": PANEL_MESSAGE_ID, "body": "Two fail."})
 
     refused = await client.post("/api/cancel", json={"message_id": PANEL_MESSAGE_ID})
     [asked, _answer] = (await client.get(CONVERSATION_ROUTE)).json()["said"]
+    picked_up = (await client.post(EVENTS_ROUTE, params=GLANCE_AT_EVENTS)).json()
 
-    assert (refused.status_code, asked["taken_back_at"]) == (HTTPStatus.CONFLICT, None)
+    assert (refused.status_code, asked["taken_back_at"], picked_up["type"]) == (HTTPStatus.CONFLICT, None, "timeout")
 
 
 async def test_stopping_is_a_request_the_agent_picks_up(client: AsyncClient) -> None:

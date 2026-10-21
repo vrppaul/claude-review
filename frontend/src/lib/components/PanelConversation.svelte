@@ -89,11 +89,13 @@
 	{/if}
 {/snippet}
 
-<!-- A log: what the agent and the reader say is read out as it arrives, in order -->
+<!-- A log: what the agent and the reader say is read out as it arrives, in order. It takes the keyboard where a
+	turn that held it goes, as a thread does -->
 <div
 	data-testid="panel-turns"
 	role="log"
 	aria-label="Conversation with the agent"
+	tabindex="-1"
 	bind:this={stream}
 	onscroll={onScroll}
 	class="cr-scroller min-h-0 flex-1 px-3 py-3"
@@ -177,7 +179,7 @@
 			{/each}
 
 			{#if working}
-				<AgentAtWork since={working.at} messageId={working.id} />
+				<AgentAtWork since={working.at} messageId={working.id} whatRemains={() => stream} />
 			{:else if review.answerer.work}
 				<!-- Work nobody is waiting on: what a round asked for, or what
 					the agent took on itself. Without a row of its own it could not
