@@ -48,6 +48,7 @@ describe('the component library', () => {
 		const { getByTestId } = render(IconButton, {
 			tone: 'quiet',
 			size: 'xs',
+			shape: 'square',
 			label: WORDS,
 			testId: TEST_ID,
 			children: drawn

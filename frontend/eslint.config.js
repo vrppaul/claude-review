@@ -222,6 +222,11 @@ const SIZED_BY_A_TOKEN = 'Size a box by a token by name (tokens.css): w-(--cr-â€
 const SIZE_OFF_THE_SCALE = `/${UTILITY_START}(min-|max-)?(w|h|size|basis)-((?!(0|[0-9]+\\/[0-9]+)${UTILITY_END})[0-9]|(px|[2-3]xs|xs|sm|md|lg|xl|[2-7]xl|prose|screen-[a-z0-9]+)${UTILITY_END})/`;
 // A value written in place: `grid-cols-[4rem_1fr]`, `w-[26rem]`, `text-[13px]`
 const ARBITRARY_VALUE = `/${UTILITY_START}[a-z0-9-]+-\\[/`;
+// A property written in place, past every utility and so past every rule above: `[transition:opacity_1s]`,
+// `[background:#f00]`, `[z-index:99]`, `[--tw-duration:150ms]`
+const ARBITRARY_PROPERTY = `/${UTILITY_START}\\[[a-z-]+:/`;
+const WRITTEN_IN_A_STYLESHEET =
+	'Write the property in a stylesheet, from its token, where stylelint holds it; never in place in the markup.';
 // Words at a size off the scale, with a leading or a spacing of their own beside their size's, or in a weight off
 // it: `text-base`, `text-2xl`, `text-sm/6`, `leading-relaxed`, `tracking-wide`, `font-medium`; a colour at a
 // strength, `text-warning/80`, is no size of words
@@ -259,6 +264,7 @@ const NO_INLINE_STYLING = [
 	...inClassLists(ROOM_OFF_THE_SCALE, ON_THE_SCALE),
 	...inClassLists(SIZE_OFF_THE_SCALE, SIZED_BY_A_TOKEN),
 	...inClassLists(ARBITRARY_VALUE, ON_THE_SCALE),
+	...inClassLists(ARBITRARY_PROPERTY, WRITTEN_IN_A_STYLESHEET),
 	...inClassLists(WORDS_OFF_THE_SCALE, ON_THE_SCALE),
 	...inClassLists(MEASURE_OFF_THE_SCALE, ON_THE_SCALE),
 	...inClassLists(MOTION_UTILITY, MOVED_BY_A_NAMED_RULE),
