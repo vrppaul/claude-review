@@ -179,9 +179,8 @@ const AT_A_STRENGTH_OF_ITS_OWN = `/${UTILITY_START}${PAINTS}-(?!(2xs|xs|sm|base|
 // Every shadow utility: `shadow`, `shadow-lg`, `drop-shadow-…`, `inset-shadow-…`
 const SHADOW_UTILITY = `/${UTILITY_START}(drop-|inset-)?shadow(-|${UTILITY_END})/`;
 // A state — under the pointer, pressed, holding the keyboard, the one of a set the reader is at — is drawn by
-// the stylesheet with its token (tokens.css), set there for both themes and measured against what it stands on: a
-// state variant in markup paints with a colour of its own that nobody measured, as `hover:bg-base-200` did, at
-// 1.06:1 in the dark
+// the stylesheet with its token (tokens.css), set there for both themes as the design board draws it: a state
+// variant in markup paints with a colour of its own the board never drew, as `hover:bg-base-200` did
 const PAINTED_BY_STATE_TOKENS =
 	'Draw a state in the stylesheet with its token (--cr-hover, --cr-selected, --cr-focus-ring), not with a variant in markup.';
 // A variant of a state, the element's own or one it stands in: `hover:`, `focus-visible:`, `aria-pressed:`, `group-hover:`
@@ -203,11 +202,13 @@ const SCROLLING_UTILITY = `/${UTILITY_START}overflow-(y-)?(auto|scroll)${UTILITY
 const ON_THE_SCALE =
 	'Take the size off the scale (tokens.css): a spacing step it has, a size and weight of its words, or a token by name.';
 // What moves is a rule of a stylesheet stylelint names by its selector (WHAT_MOVES, stylelint.config.js), where a
-// reader who asked for less motion stops it: never a utility in markup, `transition-colors`, `animate-spin`, nor
-// Svelte's `transition:`, `in:`, `out:` and `animate:`
+// reader who asked for less motion stops it: never a utility in markup, of any part of a motion — `transition`,
+// `transition-colors`, `animate-spin`, `animate-(--…)`, `duration-(--…)`, `delay-150`, `ease-in` (a duration alone
+// moves every property, as `transition-property` starts at `all`) — nor Svelte's `transition:`, `in:`, `out:` and
+// `animate:`
 const MOVED_BY_A_NAMED_RULE =
 	'Move it in a rule stylelint names by its selector (WHAT_MOVES, stylelint.config.js), never from the markup.';
-const MOTION_UTILITY = `/${UTILITY_START}(transition(-[a-z]+)?|animate-[a-z-]+)${UTILITY_END}/`;
+const MOTION_UTILITY = `/${UTILITY_START}(transition|animate|duration|delay|ease)(-\\S+)?${UTILITY_END}/`;
 // A utility of room or of where a thing stands at a step off the scale or a hairline, behind any variants and its
 // sign: `gap-2.5`, `md:pl-3.5`, `-mt-5`, `top-5`, `-translate-y-2.5`, `scroll-mt-5`, `indent-5`, `p-px`; a share
 // of what it stands in, `left-1/2`, is a place, no size
@@ -225,10 +226,11 @@ const ARBITRARY_VALUE = `/${UTILITY_START}[a-z0-9-]+-\\[/`;
 // it: `text-base`, `text-2xl`, `text-sm/6`, `leading-relaxed`, `tracking-wide`, `font-medium`; a colour at a
 // strength, `text-warning/80`, is no size of words
 const WORDS_OFF_THE_SCALE = `/${UTILITY_START}(text-(base|[2-9]xl)(${UTILITY_END}|\\/)|text-(2xs|xs|sm|lg|xl)\\/|leading-|tracking-|font-(thin|extralight|light|medium|bold|extrabold|black)${UTILITY_END})/`;
-// A corner, a line, a ring, a strength or a time at a step of Tailwind's own beside the scale's: `rounded`,
-// `rounded-sm`, `rounded-t-lg`, `border-4`, `divide-y-2`, `ring-2`, `outline-offset-2`, `opacity-50`, `duration-300`;
-// and a corner by the name DaisyUI gave it, which Tailwind no longer has, so it draws nothing: `rounded-box`
-const MEASURE_OFF_THE_SCALE = `/${UTILITY_START}(rounded(-(t|r|b|l|s|e|tl|tr|bl|br|ss|se|es|ee))?(-(none|xs|sm|md|lg|xl|[2-4]xl|box|field|selector))?${UTILITY_END}|(border(-[xytblrse])?|divide-[xy])-(?!0${UTILITY_END})[0-9]|(ring|outline)(-offset)?-[0-9]|opacity-(?!(0|100)${UTILITY_END})[0-9]|(duration|delay)-[0-9])/`;
+// A corner, a line, a ring or a strength at a step of Tailwind's own beside the scale's: `rounded`, `rounded-sm`,
+// `rounded-t-lg`, `border-4`, `divide-y-2`, `ring-2`, `outline-offset-2`, `opacity-50`; and a corner by the name
+// DaisyUI gave it, which Tailwind no longer has, so it draws nothing: `rounded-box`. A time is a motion's, refused
+// in markup whatever it is (MOTION_UTILITY)
+const MEASURE_OFF_THE_SCALE = `/${UTILITY_START}(rounded(-(t|r|b|l|s|e|tl|tr|bl|br|ss|se|es|ee))?(-(none|xs|sm|md|lg|xl|[2-4]xl|box|field|selector))?${UTILITY_END}|(border(-[xytblrse])?|divide-[xy])-(?!0${UTILITY_END})[0-9]|(ring|outline)(-offset)?-[0-9]|opacity-(?!(0|100)${UTILITY_END})[0-9])/`;
 
 /** Selectors for every way a class list is written in markup, holding a pattern. */
 function inClassLists(pattern, message) {

@@ -84,6 +84,9 @@ const THE_SCALES_WORDS = {
 	'stroke-width': A_DRAWN_LINE,
 	'stroke-dasharray': A_DRAWN_LINE
 };
+// What a property may hold, in every stylesheet: a layer and a shadow by their tokens; words, a strength and a
+// drawn line as the scale names them
+const WHAT_A_PROPERTY_MAY_HOLD = { 'z-index': A_LAYER, 'box-shadow': A_SHADOW, ...THE_SCALES_WORDS };
 // What scrolls down the page is a cr-scroller, as eslint holds the markup to: the box its contents are placed in, so
 // words kept for a screen reader scroll with them and never stretch the page. Its rule, and the reading area's own,
 // say so where they turn this off
@@ -104,7 +107,7 @@ export default {
 		'color-no-hex': true,
 		'color-named': 'never',
 		'function-disallowed-list': WRITTEN_IN_THE_TOKENS,
-		'declaration-property-value-allowed-list': { 'z-index': A_LAYER, 'box-shadow': A_SHADOW, ...THE_SCALES_WORDS },
+		'declaration-property-value-allowed-list': WHAT_A_PROPERTY_MAY_HOLD,
 		'declaration-property-value-disallowed-list': {
 			'/.*/': [
 				...A_WRITTEN_SIZE,
@@ -154,9 +157,7 @@ export default {
 				'rule-selector-property-disallowed-list': null,
 				'property-disallowed-list': ['/^(transition|animation)-/'],
 				'declaration-property-value-allowed-list': {
-					'z-index': A_LAYER,
-					'box-shadow': A_SHADOW,
-					...THE_SCALES_WORDS,
+					...WHAT_A_PROPERTY_MAY_HOLD,
 					'/^(transition|animation)$/': ['none']
 				}
 			}

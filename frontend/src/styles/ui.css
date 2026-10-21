@@ -28,9 +28,8 @@
  * Whatever can be pressed is lit under the pointer the same way: the
  * pointer's light laid over whatever it is drawn on, as an image above its
  * own ground, so a chip keeps its colour under it. Not while it cannot be
- * pressed; and not the one of a set the reader is at, which is lit already
- * and stays as it is, so the words on it keep their contrast. Pressed, it
- * keeps the same light (tokens.css says why).
+ * pressed; nor a chosen one — the one of a set the reader is at, one pressed
+ * or one whose pane is open — which the board draws as it is, unlit.
  */
 .cr-pressable:not(:disabled, [aria-disabled='true']):not(
 		.cr-ui-row-current,
@@ -781,7 +780,7 @@
 }
 /*
  * A target this thin needs more than the pointer's light to be found under
- * it: it shows itself in muted ink, at 3:1 on any surface
+ * it: it shows itself in muted ink
  */
 .cr-ui-grip:hover {
 	background-color: var(--cr-muted);
@@ -1242,7 +1241,7 @@
 	font-weight: var(--font-weight-normal);
 	text-overflow: ellipsis;
 }
-/* What the reader has finished with steps back, in faint words that still read at 4.5:1 */
+/* What the reader has finished with steps back, in faint words */
 .cr-ui-row-viewed {
 	color: var(--cr-faint);
 }

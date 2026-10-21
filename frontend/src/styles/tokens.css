@@ -352,23 +352,21 @@
 	--cr-hover-on-control-fill: var(--cr-hover-on-fill);
 
 	/*
-	 * The states of whatever can be pressed, each one token for both themes.
-	 * Under the pointer, a thing is lit by the page's words laid faintly over
-	 * whatever it is drawn on (--cr-hover, in each theme below): that
-	 * lightens a dark ground as it darkens a light one, where a hover that
-	 * only darkens leaves a near-black ground near-black (1.02:1). It stands
-	 * off its ground at about 1.15:1 and no more, since the words on it lose
-	 * as much: every colour of words is held at 4.5:1 on it. Pressed, a thing
-	 * keeps the same light: a stronger one would take the quietest words
-	 * below 4.5:1. A saturated fill — a filled button's — moves less under the
-	 * same light, so it takes a stronger one of its own (--cr-hover-on-fill,
-	 * in each theme below), which only parts it further from the words on it.
+	 * The states of whatever can be pressed, each one token for both themes,
+	 * at the design board's values. Under the pointer, a thing is lit by the
+	 * page's words laid faintly over whatever it is drawn on (--cr-hover, in
+	 * each theme below): that lightens a dark ground as it darkens a light
+	 * one, where a hover that only darkens leaves a near-black ground
+	 * near-black. Pressed, a thing keeps the same light. A saturated fill — a
+	 * filled button's — moves less under the same light, so it takes a
+	 * stronger one of its own (--cr-hover-on-fill, in each theme below).
 	 *
 	 * What is chosen is drawn in ink, never in a hue, and marked the more
 	 * weakly the larger it is. A small thing chosen — a segment pressed, a
 	 * toggle on, a control whose pane is open — is reversed: the page's words
-	 * its ground, the page's plainest ground its words; a dot, an icon or a
-	 * count of a colour of its own keeps it, as the design board draws them.
+	 * its ground, the page's plainest ground its words. The board's rule for
+	 * it reverses the control alone, so a dot, an icon or a count of a colour
+	 * of its own keeps it, as Colours draws a pressed toggle keeping its dot.
 	 * The row or band the reader is at — the file they are in, the option the
 	 * keys lit, the block a thread of theirs hangs open under — stands on the
 	 * ink's tint, rounded, with no edge, its words in ink. The pointer leaves
@@ -395,7 +393,7 @@
 	--cr-underline-offset: 0.2em;
 	/* An answer or a thread from the agent that the reader has not looked at yet: an arrival of the agent's */
 	--cr-unread: var(--cr-agent);
-	/* A figure on that colour, how many answers wait unread: the page's plainest ground (7.5:1 light, 8.5:1 dark) */
+	/* A figure on that colour, how many answers wait unread: the page's plainest ground, as the board draws it */
 	--cr-on-unread: var(--color-base-100);
 	/* Something done, or ready: a thread settled, a branch of work finished, a file viewed, an agent listening */
 	--cr-done: var(--cr-add-text);
@@ -404,7 +402,7 @@
 	--cr-done-chip: color-mix(in srgb, var(--cr-done) var(--cr-strength-chip), var(--cr-ground-reading));
 	--cr-done-tint: color-mix(in srgb, var(--cr-done) var(--cr-strength-tint), transparent);
 	--cr-done-wash: color-mix(in srgb, var(--cr-done) var(--cr-strength-wash), transparent);
-	/* What a field says before anything is written in it: quieter than what is written, still read at 4.5:1 */
+	/* What a field says before anything is written in it: quieter than what is written, in faint words */
 	--cr-placeholder: var(--cr-faint);
 
 	/*
@@ -444,11 +442,9 @@
 
 	/*
 	 * What differs inside a changed line, in the change's own colour at the
-	 * chip's strength, laid over its row rather than mixed with the reading
-	 * ground: still a band at a glance over its row, marked or not, and faint
-	 * enough that code in every colour it is highlighted in reads at 4.5:1 on
-	 * it (4.64:1 at the least, the dark theme's comments on an added word in
-	 * a marked row)
+	 * chip's strength, as the design spec moves it onto the ladder; laid over
+	 * its row rather than mixed with the reading ground, so it is a band over
+	 * its row whatever the row stands on, marked or not
 	 */
 	--cr-add-word: color-mix(in srgb, var(--cr-add) var(--cr-strength-chip), transparent);
 	--cr-del-word: color-mix(in srgb, var(--cr-del) var(--cr-strength-chip), transparent);
@@ -527,7 +523,7 @@
 	--cr-ground-column: var(--color-base-100);
 	/* Words on a fill: the control's, a primary button's or the reader's count; a warning's; an error's */
 	--cr-on-control: #ffffff;
-	/* The control's blue as a fill, dark enough for white words on it (4.99:1); its marks, rings and edges keep --cr-mark */
+	/* The control's blue as a fill, the board's darker blue under white words; its marks, rings and edges keep --cr-mark */
 	--cr-control-fill: #2c6bd9;
 	--color-warning: #e8c440;
 	--color-warning-content: #1c1608;
@@ -537,18 +533,11 @@
 	--cr-add: #3f9d54;
 	--cr-del: #cf4249;
 	--cr-mark: #5b8def;
-	/*
-	 * The reader's mark as words: on its own tint, and on a chip inside a
-	 * message written on that tint, it has to read at 4.5:1, which the mark
-	 * drawn as an edge or a fill does not need to
-	 */
+	/* The reader's mark as words: lighter than the mark drawn as an edge or a fill, as the board writes it */
 	--cr-mark-text: #90b2f4;
 	/* What the tour lays over everything it is not pointing at */
 	--cr-shade: rgb(6 9 14 / 0.6);
-	/*
-	 * The agent's colour reads at 4.5:1 as words on its chip under the pointer on a card — a file named in its
-	 * answer — with a tenth to spare for how a browser rounds the layers
-	 */
+	/* The agent's colour, for its words, its edges and its fills alike */
 	--cr-agent: #bca6ea;
 	/* The edge of a pane, and of a button that acts on what is read: a step above the lines between surfaces */
 	--cr-pane-edge: #2f3a48;
@@ -564,17 +553,14 @@
 	--cr-gutter-fg: #8694a8;
 	--cr-muted: #98a5b6;
 	--cr-faint: #8894a4;
-	/* The pointer's light: the page's words at the least strength that stands off every ground at 1.15:1 */
+	/* The pointer's light: the page's words, laid faintly over what it lights */
 	--cr-hover: color-mix(in srgb, var(--color-base-content) 7%, transparent);
-	/*
-	 * And over a filled button's own fill under dark words, the error's: the
-	 * least that stands off it at 1.15:1 as the screen draws it
-	 */
+	/* And over a filled button's own fill under dark words, the error's: stronger, as a saturated fill moves less */
 	--cr-hover-on-fill: color-mix(in srgb, var(--color-base-content) 22%, transparent);
 	/*
 	 * And over the control's fill, under white words: the darkest ground laid
-	 * over it at the least that stands off it at 1.15:1 (1.18), its words then
-	 * at 5.9:1, where the light above would take them to 3.65:1
+	 * over it, so the light moves the fill away from its words. No board draws
+	 * a filled button under the pointer: this waits to be drawn
 	 */
 	--cr-hover-on-control-fill: color-mix(in srgb, var(--color-base-100) 12%, transparent);
 	--cr-add-text: #59c470;
@@ -610,7 +596,6 @@
 	--cr-mark: #2c6bd9;
 	--cr-mark-text: #1b4fa9;
 	--cr-shade: rgb(27 36 48 / 0.45);
-	/* As in the dark theme: words on its chip under the pointer on a card at 4.5:1, a tenth to spare */
 	--cr-agent: #5f40a8;
 	--cr-pane-edge: #c3cdd9;
 	--cr-axis: #d0d8e2;

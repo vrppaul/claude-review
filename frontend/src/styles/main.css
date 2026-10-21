@@ -286,8 +286,8 @@
 	opacity: var(--cr-absent-strength);
 }
 
-/* Muted text carries the same weight in both themes rather than being an
-   alpha of the body colour, which light loses a fifth of its contrast to. */
+/* Muted text is a colour of its own in each theme rather than an alpha of
+   the body colour, which would change with every ground it stands on. */
 .cr-muted {
 	color: var(--cr-muted);
 }
