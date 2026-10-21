@@ -35,6 +35,9 @@ export type DiffFile = Schemas['DiffFile'];
 export type Unshown = Schemas['Unshown'];
 /** What the review is and where it stands, read as the page opens. */
 export type ReviewResponse = Schemas['ReviewResponse'];
+/** Where the change under review is: its repository, and the branch or the commit it had checked out. */
+export type RepositoryAt = Schemas['RepositoryAt'];
+export type Checkout = RepositoryAt['checkout'];
 export type DiffResponse = Schemas['DiffResponse'];
 /** The story the review holds, if the agent told one. */
 export type StoryResponse = Schemas['StoryResponse'];

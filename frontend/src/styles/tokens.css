@@ -73,6 +73,8 @@
 	--cr-comment-leading: 1.6;
 	/* How wide written words run before they wrap, prose rendered from Markdown as a comment's */
 	--cr-prose-measure: 72ch;
+	/* The widest the header says the branch or the commit checked out, cut short past it, its whole name on the pointer */
+	--cr-checkout-widest: 10rem;
 	/*
 	 * A field (lib/ui/field.ts): the tallest one being written in grows with
 	 * its text, before it scrolls instead; the least each stands while

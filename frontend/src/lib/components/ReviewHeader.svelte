@@ -20,6 +20,7 @@
 	import RepliesMenu from './RepliesMenu.svelte';
 	import SettingsMenu from './SettingsMenu.svelte';
 	import ViewSwitch from './ViewSwitch.svelte';
+	import WhereTheChangeIs from './WhereTheChangeIs.svelte';
 
 	/** What the header says in place of everything else once the review is over, and the notice it says it in. */
 	interface Over {
@@ -62,36 +63,28 @@
 {:else}
 	<!-- One row while it fits; on a narrow screen the controls wrap onto another, none cut off -->
 	<Bar heads="page" testId="top-bar">
-		<span class="font-semibold">Review</span>
+		<WhereTheChangeIs />
 		<HelpMenu />
 		<!-- Right after Help, where it never moves, whatever else the header shows -->
 		<ViewSwitch />
-		<!-- What the diff is compared against, as a control. The repository it is
-		of is in the tab's title; the header has room only for what changes. A
-		story is of the review's own diff whatever base the files are read
-		against, so it shows none. -->
-		{#if review.views.onScreen.name === 'files'}
-			{#if review.diff.phrase}
-				<BasePicker />
-				{#if review.settings.current.ignore_whitespace}
-					<!-- Said here as well as in the settings, because it hides changes: in the reader's mark, as a
-						narrower base is, since it narrows the diff too. Pressed, it shows them again -->
-					<Button
-						tone="marked"
-						size="xs"
-						testId="whitespace-hidden"
-						aria-label={SHOW_WHITESPACE_AGAIN}
-						title={SHOW_WHITESPACE_AGAIN}
-						onclick={() => review.setIgnoreWhitespace(false)}
-					>
-						No whitespace
-						<Icon name="cross" size="xs" />
-					</Button>
-				{/if}
-			{:else if review.title}
-				<span data-testid="review-title" class="cr-muted truncate font-mono text-xs">
-					{review.title}
-				</span>
+		<!-- What the diff is compared against, as a control. A story is of the review's own diff whatever base the
+		files are read against, so it shows none -->
+		{#if review.views.onScreen.name === 'files' && review.diff.phrase}
+			<BasePicker />
+			{#if review.settings.current.ignore_whitespace}
+				<!-- Said here as well as in the settings, because it hides changes: in the reader's mark, as a
+					narrower base is, since it narrows the diff too. Pressed, it shows them again -->
+				<Button
+					tone="marked"
+					size="xs"
+					testId="whitespace-hidden"
+					aria-label={SHOW_WHITESPACE_AGAIN}
+					title={SHOW_WHITESPACE_AGAIN}
+					onclick={() => review.setIgnoreWhitespace(false)}
+				>
+					No whitespace
+					<Icon name="cross" size="xs" />
+				</Button>
 			{/if}
 		{/if}
 

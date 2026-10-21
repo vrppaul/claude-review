@@ -147,6 +147,12 @@
   that id as `said_id`.
 
 ### Changed
+- **The header says where the change is.** In place of the word "Review",
+  the repository's name over the branch it had checked out, or the
+  commit's short id where it was on none, each by its mark, the branch cut
+  short past 10rem and said whole on the pointer. A review of files or of a
+  conversation says what it is called, by its mark, where the header's
+  middle said it before.
 - **What is chosen is drawn in ink.** A segment pressed, a toggle on and a
   button whose pane is open are reversed, the page's words their ground
   and what is drawn in them in those words, where they stood on the

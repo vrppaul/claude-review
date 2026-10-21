@@ -1,10 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { flushSync, tick } from 'svelte';
-import { render, screen } from '@testing-library/svelte';
+import { render, screen, within } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import ReviewHeader from '$lib/components/ReviewHeader.svelte';
 import ReviewScreen from '$lib/components/ReviewScreen.svelte';
 import type { Review } from '$lib/review/review.svelte';
+import type { ReviewResponse } from '$lib/types';
 import { contextLine, diffFile, hunk } from '../diff';
 import { fakeServer, SERVER_ERROR } from '../fake-server';
 import { newComment } from '../new-comment';
@@ -120,24 +121,32 @@ describe('a review that cannot be reached', () => {
 });
 
 describe('the review header', () => {
-	it('says what is under review', () => {
-		const review = openReview({
-			files: [file],
-			facts: { title: 'claude-review: uncommitted changes' },
-			diff: READ_WHOLE
+	it('says where the change is: the repository over its branch or its commit, else what is reviewed', () => {
+		// Each kind of review, and the lines its header says where the change is in
+		const reviews: { facts: Partial<ReviewResponse>; lines: string[] }[] = [
+			{
+				facts: { mode: 'diff', repository: { name: 'shop', checkout: { at: 'branch', branch: 'feature/cart' } } },
+				lines: ['shop', 'feature/cart']
+			},
+			{
+				facts: { mode: 'diff', repository: { name: 'shop', checkout: { at: 'commit', commit: 'a1b2c3d' } } },
+				lines: ['shop', 'a1b2c3d']
+			},
+			{ facts: { mode: 'files', repository: null, title: 'plan.md, notes.md' }, lines: ['plan.md, notes.md'] },
+			{
+				facts: { mode: 'transcript', repository: null, title: 'Conversation 63b8ade4' },
+				lines: ['Conversation 63b8ade4']
+			}
+		];
+
+		const said = reviews.map(({ facts }) => {
+			const { container } = render(ReviewHeader, inReview(openReview({ files: [file], facts, diff: READ_WHOLE })));
+			return within(container)
+				.getAllByTestId('where-line')
+				.map((line) => line.textContent?.trim());
 		});
 
-		const { getByTestId } = render(ReviewHeader, inReview(review));
-
-		expect(getByTestId('review-title').textContent?.trim()).toBe('claude-review: uncommitted changes');
-	});
-
-	it('leaves the title out when the server sent none', () => {
-		const review = openReview({ files: [file], facts: { title: '' }, diff: READ_WHOLE });
-
-		const { queryByTestId } = render(ReviewHeader, inReview(review));
-
-		expect(queryByTestId('review-title')).toBeNull();
+		expect(said).toEqual(reviews.map(({ lines }) => lines));
 	});
 
 	it('offers comment navigation only once there is a comment', async () => {

@@ -68,6 +68,24 @@ export const ICONS = {
 		],
 		drawn: { kind: 'traced', width: 1.6 }
 	},
+	// A line forking off another: the branch the change is made on
+	branch: {
+		viewBox: '0 0 16 16',
+		paths: [
+			'M3.5 3.5a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0-3 0',
+			'M3.5 12.5a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0-3 0',
+			'M9.5 5.5a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0-3 0',
+			'M5 5v6',
+			'M11 7c0 2.5-2.5 3-6 4'
+		],
+		drawn: TRACED
+	},
+	// A point on a line: the commit checked out where no branch is
+	commit: {
+		viewBox: '0 0 16 16',
+		paths: ['M5.5 8a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0', 'M1.5 8h4M10.5 8h4'],
+		drawn: TRACED
+	},
 	// One version against another: what the diff is taken against
 	compare: {
 		viewBox: '0 0 16 16',

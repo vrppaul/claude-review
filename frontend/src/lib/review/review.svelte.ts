@@ -42,6 +42,7 @@ import type {
 	DiffResponse,
 	FollowOutcome,
 	HeldThread,
+	RepositoryAt,
 	ReviewMode,
 	ReviewResponse,
 	SaidInPanel,
@@ -86,6 +87,8 @@ export interface ReaderParts {
 export class Review {
 	/** What is under review — which repository, and against what. */
 	readonly title: string;
+	/** Where the change is, for a review of a repository's change; none for a review of files or a conversation. */
+	readonly repository: RepositoryAt | null;
 	/** What makes it the same review whenever it is opened: its draft is kept under it. */
 	readonly identity: string;
 	readonly mode: ReviewMode;
@@ -149,6 +152,7 @@ export class Review {
 
 	constructor({ facts, firstDiff, draft, draftSetAside, held, said, story }: Opening, reader: ReaderParts) {
 		this.title = facts.title;
+		this.repository = facts.repository;
 		this.identity = facts.identity;
 		this.mode = facts.mode;
 		this.limits = facts.limits;
