@@ -42,6 +42,12 @@ export const ICONS = {
 	},
 	// A pencil: rewriting what was said
 	pencil: { viewBox: '0 0 16 16', paths: ['M10.5 3 13 5.5 6 12.5H3.5V10z'], drawn: TRACED_FINE },
+	// A page with a line taken away and one put in: a change suggested in a comment
+	suggestion: {
+		viewBox: '0 0 16 16',
+		paths: ['M4 2.5h5l3 3v8H4z', 'M6.5 7.5h3M8 6v3M6.5 11h3'],
+		drawn: TRACED_FINE
+	},
 	// Three dots in a row: more that can be done to a thing, in a menu
 	more: {
 		viewBox: '0 0 16 16',

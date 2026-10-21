@@ -260,6 +260,13 @@
   figure captioned "Written against". The keyboard brought to a thread by
   n or p turns its edge blue, as a field's, where it ringed the space
   round it.
+- **A comment being written is the card it becomes, on a dashed edge.**
+  Its bar says where it hangs, offers Suggest a change beside that, and
+  ends with what it asks for, Note, Question or Blocker; the field and
+  its acts stand at the card's foot. The keys the field takes are said at
+  the start of its acts, "Ctrl+Enter adds", or "Ctrl+Enter saves" for an
+  edit, whose main button says Save; the line of keys under the buttons is
+  gone.
 - **Ask agent now stands at what the reader said last.** In a thread it is
   a small button at the head of the reader's last turn, no longer a row
   under the conversation, and it is called Ask agent now there, in the

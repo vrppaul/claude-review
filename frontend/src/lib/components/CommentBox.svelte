@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { CommentSeverity } from '$lib/types';
+	import type { CommentSeverity, WrittenAt } from '$lib/types';
 	import type { CommentField } from '$lib/review/comment-field.svelte';
 	import { isComposingText } from '$lib/dom/keyboard';
 	import { tourStop } from '$lib/guide/tour';
@@ -8,10 +8,11 @@
 	import Button from '$lib/ui/Button.svelte';
 	import Card from '$lib/ui/Card.svelte';
 	import type { CardHanging } from '$lib/ui/card';
+	import CardBar from '$lib/ui/CardBar.svelte';
 	import ConfirmPopover from '$lib/ui/ConfirmPopover.svelte';
-	import Conversation from '$lib/ui/Conversation.svelte';
 	import Failure from '$lib/ui/Failure.svelte';
 	import Field from '$lib/ui/Field.svelte';
+	import Icon from '$lib/ui/Icon.svelte';
 	import Segment from '$lib/ui/Segment.svelte';
 	import Segmented from '$lib/ui/Segmented.svelte';
 	import type { Voice } from '$lib/ui/voice';
@@ -34,12 +35,29 @@
 		{ value: 'question', label: 'Question' },
 		{ value: 'blocker', label: 'Blocker' }
 	];
+	const SUGGEST_A_CHANGE = 'Suggest a change';
+
+	/** What the field's chord and its main button do, by what is being written: said at the start of its acts. */
+	interface MainAct {
+		keys: string;
+		act: string;
+	}
+
+	const MAIN_ACTS: Record<WrittenAt['kind'], MainAct> = {
+		new: { keys: `${FIELD_KEYS} adds`, act: 'Add to review' },
+		story: { keys: `${FIELD_KEYS} adds`, act: 'Add to review' },
+		reply: { keys: `${FIELD_KEYS} adds`, act: 'Add to review' },
+		edit: { keys: `${FIELD_KEYS} saves`, act: 'Save' }
+	};
 
 	/**
-	 * Where it is written: as the card it becomes, hanging where that will, a card of the reader's; or as a reply,
-	 * inside the thread it joins, whose card is drawn round it already, edged in the colour of whose thread it is.
+	 * Where it is written: as the card it becomes, hanging where that will, a card of the reader's, headed by where
+	 * it hangs; or as a reply, inside the thread it joins, whose card is drawn round it already, edged in the colour
+	 * of whose thread it is.
 	 */
-	type WrittenAs = { hangs: CardHanging; voice?: never } | { hangs: 'in-its-thread'; voice: Voice };
+	type WrittenAs =
+		/** label: where the comment hangs, said at the start of its card's bar: "Line 42". */
+		{ hangs: CardHanging; label: string; voice?: never } | { hangs: 'in-its-thread'; voice: Voice; label?: never };
 
 	type Props = WrittenAs & {
 		/** What is being written: held by the review, so it outlives this field. */
@@ -49,8 +67,6 @@
 		/** Hand this one over now, rather than with the rest of the review. */
 		onAsk?: (() => void) | undefined;
 		onCancel: () => void;
-		/** Where the comment hangs, said above the field: "Line 42". */
-		label?: string | undefined;
 		/** The lines being commented on, so a suggestion can start from them. */
 		suggestFrom?: string[] | undefined;
 		/** A reply has no weight of its own: the thread's belongs to the comment. */
@@ -152,46 +168,69 @@
 	}
 </script>
 
-<!-- A comment being written is drawn as the card it becomes: where the card will stand, as wide, pointing up
-	at what it is about. A reply is written inside the card it joins, and is no card of its own -->
+<!-- A comment being written is drawn as the card it becomes, on a dashed edge: where the card will stand, as wide,
+	pointing up at what it is about, its bar saying where it hangs, the way to suggest a change and what it asks for.
+	A reply is written at the foot of the card it joins, and is no card of its own -->
 {#if hangs === 'in-its-thread'}
-	<div data-testid="comment-box" class="space-y-2">
+	<div data-testid="comment-box" class="flex flex-col gap-2">
 		{@render writing()}
 	</div>
 {:else}
 	<Card
 		tone="reader"
 		{hangs}
+		beingWritten
 		testId="comment-box"
 		data-tour={field.at.kind === 'new' ? tourStop('comment-field') : undefined}
+		foot={writingInTheCard}
 	>
-		<Conversation testId="comment-parts">
-			{@render writing()}
-		</Conversation>
+		{#snippet bar()}
+			<CardBar testId="comment-bar">
+				{#snippet place()}
+					<label for={fieldId}>{label}</label>
+				{/snippet}
+				{#if suggestFrom && suggestFrom.length > 0}
+					<Button
+						tone="secondary"
+						size="xs"
+						testId="suggest-change"
+						disabled={hasSuggestion(field.text)}
+						onclick={suggest}
+					>
+						<Icon name="suggestion" size="xs" />
+						{SUGGEST_A_CHANGE}
+					</Button>
+				{/if}
+				{#snippet end()}
+					{#if severityPicker}
+						<Segmented label="What the comment asks for" size="xs" testId="severity-picker">
+							{#each SEVERITIES as choice (choice.value)}
+								<Segment
+									testId="severity-{choice.value}"
+									pressed={field.severity === choice.value}
+									onclick={() => (field.severity = choice.value)}
+								>
+									{choice.label}
+								</Segment>
+							{/each}
+						</Segmented>
+					{/if}
+				{/snippet}
+			</CardBar>
+		{/snippet}
 	</Card>
 {/if}
 
-<!-- The field and what goes with it: where it hangs, what it asks for, its images, and what can be done with it -->
-{#snippet writing()}
-	<div class="flex items-center gap-3">
-		{#if label}
-			<label for={fieldId} class="cr-comment-ref font-mono text-xs">{label}</label>
-		{/if}
-		<div class="flex-1"></div>
-		{#if severityPicker}
-			<Segmented label="What the comment asks for" size="xs" testId="severity-picker">
-				{#each SEVERITIES as choice (choice.value)}
-					<Segment
-						testId="severity-{choice.value}"
-						pressed={field.severity === choice.value}
-						onclick={() => (field.severity = choice.value)}
-					>
-						{choice.label}
-					</Segment>
-				{/each}
-			</Segmented>
-		{/if}
+<!-- At the foot of the card the comment becomes, the field and its acts one under another -->
+{#snippet writingInTheCard()}
+	<div class="flex flex-col gap-2">
+		{@render writing()}
 	</div>
+{/snippet}
+
+<!-- The field and what goes with it: its images, why it could not be added, and what can be done with it, the
+	keys the field takes said at the start of its acts -->
+{#snippet writing()}
 	<Field
 		bind:element={textarea}
 		bind:value={field.text}
@@ -211,11 +250,7 @@
 	{/if}
 	<Actions testId="comment-actions">
 		{#snippet aside()}
-			{#if suggestFrom && suggestFrom.length > 0}
-				<Button tone="quiet" size="sm" testId="suggest-change" disabled={hasSuggestion(field.text)} onclick={suggest}>
-					Suggest a change
-				</Button>
-			{/if}
+			<span data-testid="comment-keys" class="cr-faint text-xs">{MAIN_ACTS[field.at.kind].keys}</span>
 		{/snippet}
 		{#snippet others()}
 			<!-- Asked over Cancel, which asks it, or as Escape does in the field: over the words it would lose, inside
@@ -238,14 +273,9 @@
 			{/if}
 		{/snippet}
 		{#snippet main()}
-			<Button tone="primary" size="sm" testId="save-comment" disabled={!sayable} onclick={save}>Add to review</Button>
+			<Button tone="primary" size="sm" testId="save-comment" disabled={!sayable} onclick={save}>
+				{MAIN_ACTS[field.at.kind].act}
+			</Button>
 		{/snippet}
 	</Actions>
-	<p class="cr-faint text-xs">
-		{#if onAsk}
-			{FIELD_KEYS} adds it to the review. {ASK_AGENT_NOW} sends this one straight away.
-		{:else}
-			{FIELD_KEYS} to save.
-		{/if}
-	</p>
 {/snippet}

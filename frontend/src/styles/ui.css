@@ -1125,6 +1125,10 @@
 .cr-ui-card-done {
 	border-color: var(--cr-done-border);
 }
+/* What it holds not there yet, a comment being written: the card it becomes, its edge broken until it is added */
+.cr-ui-card-being-written {
+	border-style: dashed;
+}
 /*
  * A card headed by a bar (CardBar), laid out by its parts: the bar on the
  * tone's wash over the card's ground, and its tail with it; under it what

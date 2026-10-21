@@ -2,7 +2,9 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import DiffView from '$lib/components/DiffView.svelte';
+import { FIELD_KEYS } from '$lib/components/keymap';
 import { flushSync } from 'svelte';
+import { said } from '../elements';
 import { addedLine, contextLine, diffFile, diffResponse, hunk, removedLine, sinceRound } from '../diff';
 import { fakeServer, keepingSettings } from '../fake-server';
 import { newComment } from '../new-comment';
@@ -213,6 +215,19 @@ describe('a reply or an edit being written in a thread', () => {
 		await user.click(within(thread).getByTestId('unfold-thread'));
 
 		expect(fieldsSaying()).toEqual(['my reply']);
+	});
+
+	it('says at the start of its acts what its keys do: add a reply, save an edit', async () => {
+		const user = userEvent.setup();
+		render(DiffView, inReview(review));
+		await user.click(screen.getByTestId('open-reply'));
+		const replying = said(screen.getByTestId('comment-keys'));
+		await user.click(screen.getByTestId('cancel-comment'));
+		await user.click(screen.getByTestId('thread-menu'));
+		await user.click(screen.getByTestId('edit-comment'));
+
+		expect([replying, said(screen.getByTestId('comment-keys'))]).toEqual([`${FIELD_KEYS} adds`, `${FIELD_KEYS} saves`]);
+		expect(said(screen.getByTestId('save-comment'))).toBe('Save');
 	});
 
 	it('brings a reply and an edit back after a reload', async () => {

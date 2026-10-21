@@ -14,9 +14,11 @@
 		children?: Snippet | undefined;
 		/** What stands at its foot, under what it holds: a card headed by a bar alone has one. */
 		foot?: Snippet | undefined;
+		/** Whether what it holds is not there yet, a comment being written: drawn as the card it becomes, on a dashed edge. */
+		beingWritten?: boolean;
 	}
 
-	let { tone, hangs, testId, bar, children, foot, ...attributes }: Props = $props();
+	let { tone, hangs, testId, bar, children, foot, beingWritten = false, ...attributes }: Props = $props();
 </script>
 
 <!-- What it holds boxed apart from what stands round it, edged in its tone's colour (lib/ui/card.ts); where it
@@ -29,7 +31,8 @@
 		'cr-ui-card',
 		bar ? 'cr-ui-card-barred' : 'cr-ui-card-content',
 		CARD_TONES[tone],
-		hangs && CARD_HANGINGS[hangs]
+		hangs && CARD_HANGINGS[hangs],
+		beingWritten && 'cr-ui-card-being-written'
 	]}
 >
 	{@render bar?.()}

@@ -222,14 +222,9 @@ of it is built yet.
       panel's head.
 - [ ] `feat(ui)`: a new look for the rows of the tree of files, and a new
       design of the tree itself.
-- [ ] `feat(ui)`: a new look for the buttons under a comment being written
-      and the line of keys under them.
 - [ ] `feat(ui)`: a new look for a chapter's frames: its warning, its why
       and where to doubt it.
 - [ ] `feat(ui)`: a new look for the "also in chapter N" chip.
-- [ ] `feat(ui)`: a new look for the line that says who wrote a thread's
-      turn and when.
-- [ ] `feat(ui)`: a new look for the arrows.
 - [ ] `feat(ui)`: every chip, looked at again.
 - [ ] `feat(ui)`: animations.
 
