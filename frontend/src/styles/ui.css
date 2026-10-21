@@ -102,6 +102,12 @@
 	height: var(--cr-button-sm);
 	padding-inline: --spacing(3);
 }
+/* One of the ways on a pane lists (Button's `listed`): across the pane, its words at its start, its icon further off */
+.cr-ui-button-listed {
+	width: 100%;
+	justify-content: flex-start;
+	gap: --spacing(2);
+}
 /* An icon alone: as wide as it is tall */
 .cr-ui-icon-button {
 	aspect-ratio: 1;
@@ -1200,10 +1206,23 @@
 	background-color: var(--cr-unread);
 	color: var(--cr-on-unread);
 }
-/* A chip names a thread or a file in the code's face, on the tint of whoever named it */
+/*
+ * A chip names a thread or a file in the code's face, a small label's
+ * weight, on the tint of whoever named it; on one line, cut where the room
+ * it stands in ends, so a long place never breaks inside its name
+ */
 .cr-ui-chip {
+	min-width: 0;
+	max-width: 100%;
 	gap: --spacing(0.5);
 	font-family: var(--font-mono);
+	font-weight: var(--font-weight-medium);
+}
+.cr-ui-chip-words {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 .cr-ui-chip-reader {
 	background-color: var(--cr-mark-chip);
@@ -1243,11 +1262,10 @@
  * of the tree, a part of a story in its contents, a fold, an option of a
  * pane — its words small and strong, a path in the code's face; set in as
  * far as its folder stands deep in the tree. One line of words stands in the
- * middle of a row's height, the least a row stands; a title of more lines,
- * or what a row holds in full under its line, keeps that room above and
- * below them, and what stands before and after the title stays level with
- * its first line. The pointer lights it, whole, as it lights whatever can be
- * pressed.
+ * middle of a row's height, the least a row stands; a title of more lines
+ * keeps that room above and below them, and what stands before and after
+ * the title stays level with its first line. The pointer lights it, whole,
+ * as it lights whatever can be pressed.
  */
 .cr-ui-row {
 	display: block;
@@ -1270,11 +1288,6 @@
 	display: flex;
 	align-items: flex-start;
 	gap: var(--cr-list-row-gap);
-}
-/* What it holds in full under its line — a comment's words — in their own weight, stepping back with the row */
-.cr-ui-row-below {
-	display: block;
-	font-weight: var(--font-weight-normal);
 }
 /* What stands before its label and at its end: never squeezed, level with its first line, its end at the far side */
 .cr-ui-row-leading,
@@ -1333,6 +1346,62 @@
 }
 
 /*
+ * An item of a list that holds words (ItemCard): what goes with a round,
+ * boxed apart as a card of one room, type and height whatever it lists, on
+ * the ground a step off the pane's and edged as a pane is. Its place and
+ * what is said of it stand on one line, its words under that, cut where two
+ * lines end: the card leads to the thread, where they are read whole
+ */
+.cr-ui-item-card {
+	display: block;
+	width: 100%;
+	padding: --spacing(2) --spacing(3);
+	border: var(--cr-line) solid var(--cr-pane-edge);
+	border-radius: var(--radius-box);
+	background-color: var(--color-base-100);
+	color: var(--color-base-content);
+	font-size: var(--text-xs);
+	line-height: var(--text-xs--line-height);
+	text-align: left;
+}
+/* A comment still being written is the card it becomes, not there yet: on a dashed edge, on no ground */
+.cr-ui-item-card-being-written {
+	border-style: dashed;
+	background-color: transparent;
+}
+/* What went out with a round already steps back, in faint words */
+.cr-ui-item-card-viewed {
+	color: var(--cr-faint);
+}
+.cr-ui-item-card-line,
+.cr-ui-item-card-end {
+	display: flex;
+	align-items: center;
+	gap: var(--cr-list-row-gap);
+}
+/* What is said of it keeps its words whole at the line's end; its place gives way, cut, before they do */
+.cr-ui-item-card-end {
+	flex-shrink: 0;
+	margin-inline-start: auto;
+	white-space: nowrap;
+}
+/*
+ * Its words at a comment's size, run together, a step and a half under its
+ * place, cut after the lines a card shows: words with an ellipsis, and a
+ * suggestion's change, which is no line of words, at as tall
+ */
+.cr-ui-item-card-below {
+	display: -webkit-box;
+	max-height: calc(var(--cr-item-card-lines) * var(--cr-one-line));
+	margin-top: --spacing(1.5);
+	overflow: hidden;
+	font-size: var(--cr-comment-size);
+	line-height: var(--cr-comment-leading);
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: var(--cr-item-card-lines);
+}
+
+/*
  * What a column beside what is read leaves standing where it stood, put
  * away (ColumnRail): a strip as wide as the rail, from the column's head to
  * its foot, so the way back is wherever the reader reaches for it, its
@@ -1366,6 +1435,40 @@
 	font-size: var(--text-xs);
 	font-weight: var(--font-weight-normal);
 	line-height: var(--text-xs--line-height);
+}
+/* One listed against what it does is drawn as the key itself: edged as a pane, its foot deeper, in ink */
+.cr-ui-key-listed {
+	padding: 0 --spacing(1.5);
+	border-color: var(--cr-pane-edge);
+	border-bottom-width: var(--cr-line-strong);
+	background-color: var(--color-base-100);
+	color: var(--color-base-content);
+}
+
+/*
+ * Keys listed against what they do (KeyList): two columns, the keys
+ * right-aligned and the words left-aligned, so each key stands close by
+ * what it does
+ */
+.cr-ui-key-list {
+	display: grid;
+	grid-template-columns: max-content minmax(0, 1fr);
+	align-items: baseline;
+	gap: --spacing(2) --spacing(3);
+}
+/* A row is its key and its words, standing in the list's own two columns */
+.cr-ui-key-list-row {
+	display: contents;
+}
+.cr-ui-key-list-keys {
+	color: var(--cr-muted);
+	font-size: var(--text-xs);
+	line-height: var(--text-xs--line-height);
+	text-align: right;
+}
+.cr-ui-key-list-does {
+	font-size: var(--text-sm);
+	line-height: var(--text-sm--line-height);
 }
 
 /* A dot (Dot, lib/ui/dot.ts): round, in its tone's colour */

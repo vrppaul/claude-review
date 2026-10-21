@@ -4,15 +4,15 @@
 	import Heading from '$lib/ui/Heading.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import Key from '$lib/ui/Key.svelte';
+	import KeyList from '$lib/ui/KeyList.svelte';
 	import Popover from '$lib/ui/Popover.svelte';
-	import Row from '$lib/ui/Row.svelte';
 	import { HELP_BUTTON_ROLE, keysOf } from './keymap';
 
 	// What the pane is called, said to whoever cannot see it, and what heads it
 	const CALLED = 'Getting around, and the keyboard';
 	const HEADING = 'Help';
-	// What stands between two keys that do opposite things: a slash, as what they do is written
-	const OPPOSITES_APART = ' / ';
+	// The list's own key, and every open pane's: not one the review answers, so listed after those it does
+	const CLOSING_KEY = { keys: ['Esc'], does: 'Close it' };
 
 	const review = useReview();
 
@@ -60,56 +60,29 @@
 			title="The tour, what is new, and the keys (?)"
 		>
 			<!-- Its key alone once the window narrows, its name kept for a screen reader and on the pointer -->
-			<Key keys="?" testId="help-key" />
+			<Key keys="?" stands="inline" testId="help-key" />
 			<span class="max-cr-header-narrow:sr-only">Help</span>
 		</Button>
 	{/snippet}
 
 	<div class="flex flex-col p-3">
-		<!-- The ways back to the tour and the news, a row each -->
-		<div class="mb-4 flex flex-col gap-1">
-			<Row names="title" testId="take-tour" onclick={takeTour}>
-				{#snippet leading()}
-					<Icon name="compass" size="xl" tone="reader" />
-				{/snippet}
-				{#snippet label()}
-					Take the tour again
-				{/snippet}
-				{#snippet trailing()}
-					<span class="cr-faint">{review.guide.stepCount} stops</span>
-				{/snippet}
-			</Row>
+		<!-- The ways back to the tour and the news, a button each, one under the other -->
+		<div class="mb-4 flex flex-col gap-1.5">
+			<Button tone="secondary" size="sm" listed testId="take-tour" onclick={takeTour}>
+				<Icon name="compass" size="sm" tone="reader" />
+				Take the tour again
+				<span class="cr-faint ms-auto font-normal">{review.guide.stepCount} stops</span>
+			</Button>
 			{#if review.guide.latestNews}
-				{@const news = review.guide.latestNews}
-				<Row names="title" testId="read-news" onclick={readNews}>
-					{#snippet leading()}
-						<span class="cr-guide-plus"><Icon name="plus" size="xl" /></span>
-					{/snippet}
-					{#snippet label()}
-						What's new in {news.release}
-					{/snippet}
-				</Row>
+				<Button tone="secondary" size="sm" listed testId="read-news" onclick={readNews}>
+					<Icon name="plus" size="sm" tone="reader" />
+					What's new in {review.guide.latestNews.release}
+				</Button>
 			{/if}
 		</div>
 		<section class="flex flex-col gap-3">
 			<Heading tag="h3" heads="list">Keyboard</Heading>
-			<dl data-testid="shortcuts-list" class="space-y-2">
-				{#each keysOf(review) as row (row.does)}
-					<div class="flex items-baseline gap-4">
-						<dt class="cr-muted w-(--cr-key-column-width) shrink-0 text-xs">
-							{#each row.keys as key, position (key)}
-								{#if position > 0}{OPPOSITES_APART}{/if}<Key keys={key} testId="shortcut-key" />
-							{/each}
-						</dt>
-						<dd class="text-sm">{row.does}</dd>
-					</div>
-				{/each}
-				<!-- The list's own key, and every open pane's: not one the review answers -->
-				<div class="flex items-baseline gap-4">
-					<dt class="w-(--cr-key-column-width) shrink-0 text-xs"><Key keys="Esc" testId="shortcut-key" /></dt>
-					<dd class="text-sm">Close it</dd>
-				</div>
-			</dl>
+			<KeyList rows={[...keysOf(review), CLOSING_KEY]} testId="shortcuts-list" keyTestId="shortcut-key" />
 		</section>
 	</div>
 </Popover>

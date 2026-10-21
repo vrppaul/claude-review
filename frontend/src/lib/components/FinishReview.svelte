@@ -6,14 +6,15 @@
 	import Actions from '$lib/ui/Actions.svelte';
 	import BreathingDots from '$lib/ui/BreathingDots.svelte';
 	import Button from '$lib/ui/Button.svelte';
+	import Chip from '$lib/ui/Chip.svelte';
 	import Count from '$lib/ui/Count.svelte';
 	import Failure from '$lib/ui/Failure.svelte';
 	import Field from '$lib/ui/Field.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import IconButton from '$lib/ui/IconButton.svelte';
+	import ItemCard from '$lib/ui/ItemCard.svelte';
 	import PassingNote from '$lib/ui/PassingNote.svelte';
 	import Popover from '$lib/ui/Popover.svelte';
-	import Row from '$lib/ui/Row.svelte';
 	import Tag from '$lib/ui/Tag.svelte';
 	import { raisedByAgent } from '$lib/utils/speakers';
 	import { splitSuggestions } from '$lib/utils/suggestion';
@@ -55,15 +56,22 @@
 	}
 </script>
 
-<!-- What a comment says, in full: its words as written, and a suggestion as the change it makes -->
+<!-- What a comment says, on its card: its words run together, and a suggestion as the change it makes -->
 {#snippet said(body: string, anchor: Anchor)}
 	{#each splitSuggestions(body) as part, partIndex (partIndex)}
 		{#if part.kind === 'suggestion'}
 			<SuggestionDiff replaced={anchorReplaces(anchor)} suggested={part.text} />
 		{:else}
-			<span class="cr-comment-body mt-0.5 block whitespace-pre-wrap">{part.text}</span>
+			{part.text}
 		{/if}
 	{/each}
+{/snippet}
+
+<!-- Where a comment hangs, on its card: a chip of the reader's, the card being the way there, its whole place on
+	the pointer where the line's end cuts it -->
+{#snippet placed(anchor: Anchor, testId: string)}
+	{@const place = anchorPlace(anchor)}
+	<Chip voice="reader" reachedByItsHolder title={place} {testId}>{place}</Chip>
 {/snippet}
 
 <!-- How many comments go, beside the pane's heading: those unsent of all, in a review in rounds -->
@@ -193,9 +201,15 @@
 					</p>
 					<ul class="flex flex-col gap-1.5">
 						{#each open as { field, anchor } (field.key)}
-							<li data-testid="open-field" class="px-2 py-1.5">
-								<span class="cr-comment-ref font-mono text-xs">{anchorPlace(anchor)}</span>
-								{@render said(field.text, anchor)}
+							<li>
+								<ItemCard beingWritten testId="open-field">
+									{#snippet place()}
+										{@render placed(anchor, 'open-field-place')}
+									{/snippet}
+									{#snippet below()}
+										{@render said(field.text, anchor)}
+									{/snippet}
+								</ItemCard>
 							</li>
 						{/each}
 					</ul>
@@ -206,15 +220,15 @@
 					<p class="cr-faint text-sm">Nothing written yet. A summary on its own is a review too.</p>
 				{/if}
 			{:else}
-				<!-- Each comment a row, one press to its thread, all of it: where it hangs on its line and what it says
-				in full under that; one sent with a round steps back -->
+				<!-- Each comment a card, one press to its thread, read whole there: where it hangs and what is said of it
+				on one line, its words under that; one sent with a round steps back -->
 				<ul class="flex flex-col gap-1.5">
 					{#each review.threads.all as thread (thread.id)}
 						{@const sent = review.threads.sentInRound(thread.id)}
 						<li>
-							<Row names="path" testId="finish-comment" viewed={sent !== undefined} onclick={() => jump(thread)}>
-								{#snippet label()}
-									<span data-testid="modal-comment-ref" class="cr-comment-ref">{anchorPlace(thread.anchor)}</span>
+							<ItemCard testId="finish-comment" viewed={sent !== undefined} onclick={() => jump(thread)}>
+								{#snippet place()}
+									{@render placed(thread.anchor, 'modal-comment-ref')}
 								{/snippet}
 								{#snippet trailing()}
 									{#if thread.severity !== 'note'}
@@ -233,7 +247,7 @@
 								{#snippet below()}
 									{@render said(thread.body, thread.anchor)}
 								{/snippet}
-							</Row>
+							</ItemCard>
 						</li>
 					{/each}
 				</ul>

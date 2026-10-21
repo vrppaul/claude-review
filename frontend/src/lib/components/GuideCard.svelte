@@ -168,7 +168,9 @@
 						</Button>
 					{/snippet}
 				</Actions>
-				<p class="cr-faint text-xs">You can take it later from the <Key keys="?" testId="guide-help-key" /> list.</p>
+				<p class="cr-faint text-xs">
+					You can take it later from the <Key keys="?" stands="inline" testId="guide-help-key" /> list.
+				</p>
 			</div>
 		</Pane>
 	</div>

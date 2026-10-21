@@ -34,8 +34,6 @@
 		said?: Snippet;
 		/** What stands at its end: a count, the lines a file changes, how long ago. */
 		trailing?: Snippet;
-		/** What it holds in full under its line, in the words' own weight, pressed with the rest: a comment's words. */
-		below?: Snippet | undefined;
 	}
 
 	let {
@@ -49,14 +47,13 @@
 		label,
 		said,
 		trailing,
-		below,
 		...attributes
 	}: Props = $props();
 </script>
 
 <!-- A row of a list, one press to where it leads: on its line what stands before it, what it is called and what it
 	says of that, what stands at its end, and, where it folds what is under it, the chevron that says whether that
-	is open; under its line, what it holds in full -->
+	is open -->
 <button
 	type="button"
 	{...attributes}
@@ -82,7 +79,4 @@
 			</span>
 		{/if}
 	</span>
-	{#if below}
-		<span data-testid="{testId}-below" class="cr-ui-row-below">{@render below()}</span>
-	{/if}
 </button>

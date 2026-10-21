@@ -25,7 +25,8 @@
  * px, written `p-2` in the markup and `--spacing(2)` in a stylesheet, here
  * too. Words are set at one of Tailwind's sizes — xs, sm, lg, xl — at a
  * mark's (2xs), at code's or at a comment's, each at its own leading, and in
- * one of two weights, normal and semibold. A corner is a field's or a box's,
+ * one of three weights: normal for what is read, medium for a small label,
+ * semibold for what heads it. A corner is a field's or a box's,
  * or round; a line is one of the two below. Whatever else has a size, a time
  * or a strength — a row, a pane, an arrow, a breath — is named here once.
  * stylelint refuses one written as a number in any other stylesheet, and
@@ -167,6 +168,8 @@
 	 */
 	--cr-list-row-dot-slot: 0.5rem;
 	--cr-list-row-mark-slot: 0.75rem;
+	/* How many lines of a comment's words a card of a list (lib/ui ItemCard) shows: the rest is read on its thread */
+	--cr-item-card-lines: 2;
 
 	/*
 	 * How wide a pane is drawn (lib/ui/pane.ts): one of rows — controls,
@@ -174,8 +177,6 @@
 	 */
 	--cr-pane-medium: 20rem;
 	--cr-pane-wide: 24rem;
-	/* The column the help lists its keys in, beside what each does */
-	--cr-key-column-width: 8rem;
 	/* The tallest the list of threads to mention stands over the field, before it scrolls itself */
 	--cr-mention-list-tallest: 15rem;
 	/*

@@ -212,6 +212,18 @@
   pointer. A button or a segment eases into its pressed or open look over
   150 ms, but for a reader who asked for less motion. A chevron is a line,
   where it was filled.
+- **The small panes, redrawn.** The round's pane lists each comment as a
+  card: its place a chip of the reader's, cut with an ellipsis where the
+  line's end leaves it no room and said whole on the pointer, what it asks
+  for and the round it went with at the line's end, and its words run
+  together under that, cut after two lines; a comment still being written
+  is the card it becomes, on a dashed edge. A chip of any kind is set at a
+  small label's weight, between the words' and a heading's, and never
+  breaks inside its name. Help lists its keys right-aligned against what
+  they do, each drawn as a key, and its tour and its news are two buttons,
+  one under the other. A question before something is lost, "Delete this
+  comment?" or "Discard this comment?", stands on one line with its two
+  answers. The bases stand on the edges of the field that filters them.
 - **One ladder of colour.** Each colour that says whose a thing is or
   what it means — the reader's blue, the agent's violet, the diff's green
   and red, what is done, a warning, an error, and the ink of the words —

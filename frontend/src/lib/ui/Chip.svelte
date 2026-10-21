@@ -18,6 +18,11 @@
 	let { voice, title, testId, children, ...reach }: Props = $props();
 </script>
 
+<!-- What it names, on one line, cut where the room it stands in ends -->
+{#snippet words()}
+	<span class="cr-ui-chip-words">{@render children()}</span>
+{/snippet}
+
 <!-- A thread or a file named in what is said, in the colour of whoever named it (lib/ui/chip.ts) -->
 {#if 'onclick' in reach}
 	<button
@@ -27,11 +32,11 @@
 		class={['cr-ui-chip cr-pressable', CHIP_VOICES[voice]]}
 		onclick={reach.onclick}
 	>
-		{@render children()}
+		{@render words()}
 	</button>
 {:else if 'onRemove' in reach}
 	<span data-testid={testId} {title} class={['cr-ui-chip', CHIP_VOICES[voice]]}>
-		{@render children()}
+		{@render words()}
 		<button
 			type="button"
 			data-testid="{testId}-remove"
@@ -43,8 +48,12 @@
 			<Icon name="cross" size="xs" />
 		</button>
 	</span>
-{:else}
+{:else if 'outOfReach' in reach}
 	<span data-testid={testId} {title} class={['cr-ui-chip cr-ui-chip-out-of-reach', CHIP_VOICES[voice]]}>
-		{@render children()}
+		{@render words()}
+	</span>
+{:else}
+	<span data-testid={testId} {title} class={['cr-ui-chip', CHIP_VOICES[voice]]}>
+		{@render words()}
 	</span>
 {/if}

@@ -196,7 +196,7 @@ const SCROLLS_IN_ITS_OWN_BOX = 'Make what scrolls a cr-scroller: it is the box i
 const SCROLLING_UTILITY = `/${UTILITY_START}overflow-(y-)?(auto|scroll)${UTILITY_END}/`;
 // Every size is taken off one scale (tokens.css), in markup as in a stylesheet, where stylelint holds the same
 // steps: what stands apart, stands in or is set in, and where a thing stands, is one of its steps of Tailwind's
-// spacing; words are set at one of its sizes, at that size's own leading, in one of its two weights; a corner is a
+// spacing; words are set at one of its sizes, at that size's own leading, in one of its three weights; a corner is a
 // field's or a box's, and a line, a strength or a time a token; and nothing is written as an arbitrary value, a
 // token being named instead, as a colour is (`grid-cols-(--cr-…)`)
 const ON_THE_SCALE =
@@ -228,9 +228,9 @@ const ARBITRARY_PROPERTY = `/${UTILITY_START}\\[[a-z-]+:/`;
 const WRITTEN_IN_A_STYLESHEET =
 	'Write the property in a stylesheet, from its token, where stylelint holds it; never in place in the markup.';
 // Words at a size off the scale, with a leading or a spacing of their own beside their size's, or in a weight off
-// it: `text-base`, `text-2xl`, `text-sm/6`, `leading-relaxed`, `tracking-wide`, `font-medium`; a colour at a
+// it: `text-base`, `text-2xl`, `text-sm/6`, `leading-relaxed`, `tracking-wide`, `font-bold`; a colour at a
 // strength, `text-warning/80`, is no size of words
-const WORDS_OFF_THE_SCALE = `/${UTILITY_START}(text-(base|[2-9]xl)(${UTILITY_END}|\\/)|text-(2xs|xs|sm|lg|xl)\\/|leading-|tracking-|font-(thin|extralight|light|medium|bold|extrabold|black)${UTILITY_END})/`;
+const WORDS_OFF_THE_SCALE = `/${UTILITY_START}(text-(base|[2-9]xl)(${UTILITY_END}|\\/)|text-(2xs|xs|sm|lg|xl)\\/|leading-|tracking-|font-(thin|extralight|light|bold|extrabold|black)${UTILITY_END})/`;
 // A corner, a line, a ring or a strength at a step of Tailwind's own beside the scale's: `rounded`, `rounded-sm`,
 // `rounded-t-lg`, `border-4`, `divide-y-2`, `ring-2`, `outline-offset-2`, `opacity-50`; and a corner by the name
 // DaisyUI gave it, which Tailwind no longer has, so it draws nothing: `rounded-box`. A time is a motion's, refused

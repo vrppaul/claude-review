@@ -9,7 +9,9 @@
  * it. One named in a message still being written is taken out of it by its
  * own cross, inside the chip and as tall as its line, in its colour. One
  * that names what the review does not hold is out of reach: named, not a
- * way there, its edge broken.
+ * way there, its edge broken. One named on what the reader presses whole to
+ * go to what it names — a thread's place on the round's card of it — is
+ * that way's mark and no press of its own: a press inside a press is none.
  */
 
 import type { Voice } from './voice';
@@ -17,7 +19,10 @@ import type { Voice } from './voice';
 // The class of each voice, whose words named it, in the library's stylesheet
 export const CHIP_VOICES: Record<Voice, string> = { reader: 'cr-ui-chip-reader', agent: 'cr-ui-chip-agent' };
 
-/** What a chip does: takes the reader to what it names; is taken out of a message by its cross; or names what is out of reach. */
+/**
+ * What a chip does: takes the reader to what it names; is taken out of a message by its cross; names what is out of
+ * reach; or marks what its holder, pressed, takes the reader to.
+ */
 export type ChipReach =
 	| { onclick: () => void }
 	| {
@@ -25,4 +30,5 @@ export type ChipReach =
 			removing: string;
 			onRemove: () => void;
 	  }
-	| { outOfReach: true };
+	| { outOfReach: true }
+	| { reachedByItsHolder: true };

@@ -33,10 +33,11 @@
 	}
 </script>
 
-<!-- A question before something written is lost, by the control that asked it. Its answers are its ways out:
-	the safe one first, which takes the keyboard; the other loses what was written, drawn as what destroys -->
+<!-- A question before something written is lost, by the control that asked it, on one line that never wraps.
+	Its answers are its ways out, closer to one another than to the question: the safe one first, which takes the
+	keyboard; the other loses what was written, drawn as what destroys -->
 <Popover bind:open label={question} {placement} width="fitted" {testId} {trigger}>
-	<div class="flex flex-col gap-3 p-3">
+	<div class="flex items-center gap-4 py-2 pr-2 pl-3 whitespace-nowrap">
 		<PaneQuestion {question} testId="{testId}-question" />
 		<Actions testId="{testId}-actions">
 			{#snippet others()}

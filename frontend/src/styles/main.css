@@ -779,9 +779,6 @@
 	font-size: var(--text-xs);
 	color: var(--cr-control-text);
 }
-.cr-guide-plus {
-	color: var(--cr-muted);
-}
 /* What is new, shown rather than told: a picture (lib/ui Picture), or a drawing in the theme */
 .cr-illustration {
 	display: flex;

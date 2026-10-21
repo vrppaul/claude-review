@@ -142,7 +142,7 @@ describe('the component library', () => {
 	});
 
 	it('says a key is a key of the keyboard, to whoever cannot see its box', () => {
-		const { getByTestId } = render(Key, { keys: CHORD, testId: TEST_ID });
+		const { getByTestId } = render(Key, { keys: CHORD, stands: 'inline', testId: TEST_ID });
 
 		expect(getByTestId(TEST_ID).tagName).toBe('KBD');
 		expect(getByTestId(TEST_ID).textContent).toBe(CHORD);

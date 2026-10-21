@@ -103,12 +103,12 @@
 		<Filter bind:value={filter} label="Filter the bases" testId="base-filter" placeholder="filter" />
 	</div>
 
-	<!-- Each base a row, inside the pane's margin, its words as far in as the heading's -->
-	<div class="px-1 pb-1">
+	<!-- Each base a row on the filter field's edges, a section's name as far in as a row's words -->
+	<div class="px-3 pb-1">
 		{#each sections as section (section.kind)}
 			{@const listed = matching.filter((version) => version.kind === section.kind)}
 			{#if listed.length > 0}
-				<p class="cr-faint px-2 pt-2 pb-1 text-xs">{section.title}</p>
+				<p class="cr-faint px-(--cr-list-row-room) pt-2 pb-1 text-xs">{section.title}</p>
 				{#each listed as version (version.key)}
 					{@const inForce = version.key === review.diff.base}
 					<Row names="path" testId="base-option" current={inForce} onclick={() => pick(version)}>
