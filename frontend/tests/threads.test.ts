@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { flushSync } from 'svelte';
+import { flushSync, tick } from 'svelte';
 import { AGENT_STOPPED_LISTENING } from '$lib/components/agent-waits';
 import { render, screen, within } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
@@ -120,6 +120,46 @@ describe('a thread is a conversation', () => {
 		expect(getByTestId('ask-now-thread')).toBeTruthy();
 	});
 
+	it('says under a question taken back that it was, and when, and leaves the keyboard on the thread', async () => {
+		const user = userEvent.setup({ delay: null });
+		const server = answering();
+		server.answer('POST /api/cancel', null);
+		review.threads.add(onTheAddedLine('Why 3?'));
+		const { getByTestId } = render(DiffView, inReview(review));
+		await user.click(getByTestId('ask-now-thread'));
+		await user.click(getByTestId('awaiting-answer-take-back'));
+
+		await user.keyboard('{Tab}{Enter}');
+		await tick();
+
+		expect(getByTestId('thread-taken-back').textContent).toContain(
+			'Taken back 0s ago. The agent was asked to drop it.'
+		);
+		expect(document.activeElement).toBe(getByTestId('comment-thread'));
+	});
+
+	it("offers Ask agent now at the head of the reader's last turn, and at no other", () => {
+		const id = review.threads.add(onTheAddedLine('Why 3?'));
+		review.threads.addTurn(id, { author: 'reader', body: 'And where did 2 go?', images: [] });
+
+		const { getAllByTestId } = render(DiffView, inReview(review));
+		const [first, last] = getAllByTestId('thread-question');
+
+		expect(within(first).queryByTestId('ask-now-thread')).toBeNull();
+		expect(said(within(last).getByTestId('ask-now-thread'))).toBe('Ask agent now');
+	});
+
+	it('says where Ask agent now would stand that nobody is listening, and where what was written goes', () => {
+		review.answerer.setAttached(false);
+		review.threads.add(onTheAddedLine('Why 3?'));
+
+		const { getByTestId } = render(DiffView, inReview(review));
+
+		expect(said(within(getByTestId('thread-question')).getByTestId('ask-hint'))).toBe(
+			'No agent listening: this goes with the next round'
+		);
+	});
+
 	it('keeps waiting on a question that could not be taken back, and says why', async () => {
 		const user = userEvent.setup({ delay: null });
 		const server = answering();
@@ -137,7 +177,7 @@ describe('a thread is a conversation', () => {
 		expect(getByTestId('awaiting-answer-take-back')).toBeTruthy();
 	});
 
-	it('offers no Ask now in a reply while the review cannot be reached, as a new comment offers none', async () => {
+	it('offers no Ask agent now in a reply while the review cannot be reached, as a new comment offers none', async () => {
 		const id = review.threads.add(onTheAddedLine('Why 3?'));
 		review.threads.writing.openReply(id);
 		const { getByTestId, queryByTestId } = render(DiffView, inReview(review));
@@ -402,9 +442,11 @@ describe('a thread is a conversation', () => {
 		const { findByTestId, getByTestId, queryByTestId } = render(DiffView, inReview(review));
 		await user.click(getByTestId('ask-now-thread'));
 
-		// The refusal is read off the server's answer before it is shown
-		expect(await findByTestId('ask-error')).toBeTruthy();
+		// The refusal is read off the server's answer before it is shown, under the words it was asked about
+		const failure = await findByTestId('ask-error');
+		expect(getByTestId('thread-question').contains(failure)).toBe(true);
 		expect(queryByTestId('awaiting-answer')).toBeNull();
+		expect(getByTestId('ask-now-thread')).toBeTruthy();
 	});
 
 	it('keeps saying why a question could not be sent once nothing is there to ask', async () => {

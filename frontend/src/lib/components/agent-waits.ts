@@ -1,7 +1,8 @@
 /**
  * What is said of something waiting on the agent — a message in the panel,
- * a question in a thread — once the agent has stopped listening, and what
- * taking back the unanswered is called: one set of words wherever it waits.
+ * a question in a thread — once the agent has stopped listening, what
+ * taking back the unanswered is called, and what asking it now is called:
+ * one set of words wherever it waits.
  */
 
 /** Said in place of how long it has been worked on, or waited for, once the agent has stopped listening. */
@@ -16,3 +17,9 @@ export const KEEP_WAITING = 'Keep waiting';
 
 /** What is said under a message or a question taken back, after the words that say it was. */
 export const ASKED_TO_DROP_IT = 'The agent was asked to drop it.';
+
+/** What handing what the reader wrote to the agent at once is called, on every button that does it. */
+export const ASK_AGENT_NOW = 'Ask agent now';
+
+/** Said where Ask agent now would stand, while no agent is there to hear it. */
+export const NOBODY_LISTENING = 'No agent listening: this goes with the next round';

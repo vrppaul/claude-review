@@ -184,6 +184,12 @@ export interface AwaitedQuestion {
 	at: number;
 }
 
+/** A question the reader took back while it was waited on, and when. */
+export interface TakenBackQuestion {
+	id: string;
+	at: number;
+}
+
 /**
  * A thread hanging on something the reader reads: what it says.
  *

@@ -126,7 +126,7 @@ export const TOUR_STEPS: TourStep[] = [
 				says: 'Waits with your other comments. All of them go together when you send a round.'
 			},
 			{
-				label: 'Ask now',
+				label: 'Ask agent now',
 				primary: false,
 				says: 'Goes to the agent at once, on its own. The answer lands in the thread while you read on.'
 			}

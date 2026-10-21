@@ -16,6 +16,7 @@
 	import Segmented from '$lib/ui/Segmented.svelte';
 	import type { Voice } from '$lib/ui/voice';
 	import { hasSuggestion, withSuggestion } from '$lib/utils/suggestion';
+	import { ASK_AGENT_NOW } from './agent-waits';
 	import AttachedImages from './AttachedImages.svelte';
 	import { FIELD_KEYS, isFieldChord } from './keymap';
 	import { PLACEHOLDERS } from './placeholders';
@@ -233,7 +234,7 @@
 				{/snippet}
 			</ConfirmPopover>
 			{#if onAsk}
-				<Button tone="asking" size="sm" testId="ask-now" disabled={!sayable} onclick={ask}>Ask now</Button>
+				<Button tone="asking" size="sm" testId="ask-now" disabled={!sayable} onclick={ask}>{ASK_AGENT_NOW}</Button>
 			{/if}
 		{/snippet}
 		{#snippet main()}
@@ -242,7 +243,7 @@
 	</Actions>
 	<p class="cr-faint text-xs">
 		{#if onAsk}
-			{FIELD_KEYS} adds it to the review. Ask now sends this one straight away.
+			{FIELD_KEYS} adds it to the review. {ASK_AGENT_NOW} sends this one straight away.
 		{:else}
 			{FIELD_KEYS} to save.
 		{/if}

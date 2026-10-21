@@ -3,13 +3,19 @@
 	import { anchorQuoteReads, anchorReplaces, anchorWrittenAgainst } from '$lib/anchors/views';
 	import { tourStop } from '$lib/guide/tour';
 	import { useReview } from '$lib/review/context';
+	import Button from '$lib/ui/Button.svelte';
+	import Failure from '$lib/ui/Failure.svelte';
+	import Icon from '$lib/ui/Icon.svelte';
 	import KeptQuote from '$lib/ui/KeptQuote.svelte';
+	import TakenBack from '$lib/ui/TakenBack.svelte';
 	import Turn from '$lib/ui/Turn.svelte';
 	import TurnAside from '$lib/ui/TurnAside.svelte';
+	import { AGENT } from '$lib/utils/speakers';
 	import { splitSuggestions } from '$lib/utils/suggestion';
 	import { exchangesOf } from '$lib/utils/thread-exchanges';
 	import { timeAgo } from '$lib/utils/time';
 	import AgentOnItsWay from './AgentOnItsWay.svelte';
+	import { ASK_AGENT_NOW, ASKED_TO_DROP_IT, NOBODY_LISTENING } from './agent-waits';
 	import MarkdownRenderer from './MarkdownRenderer.svelte';
 	import SaidImages from './SaidImages.svelte';
 	import SuggestionDiff from './SuggestionDiff.svelte';
@@ -20,12 +26,19 @@
 
 	interface Props {
 		thread: Thread;
+		/** Hand over everything said so far, from the reader's last turn. */
+		onAsk: () => void;
+		/** Why it could not be handed over, said under the words it was asked about; none while nothing failed. */
+		askFailed: string | null;
 	}
 
-	let { thread }: Props = $props();
+	let { thread, onAsk, askFailed }: Props = $props();
 	const review = useReview();
 
 	const exchanges = $derived(exchangesOf(thread));
+	// Who spoke last: after an answer there is nothing new to hand over until the reader says something. On a
+	// thread the agent raised, the opening is already the agent's word
+	const lastWord = $derived(thread.turns.at(-1)?.author ?? thread.raised_by);
 	// What a suggestion in the thread replaces: what the comment was written on
 	const replaced = $derived(anchorReplaces(thread.anchor));
 	// What it was written against, kept for when the place it hangs on is gone, and how that reads
@@ -33,6 +46,14 @@
 	const quoteReads = $derived(anchorQuoteReads(thread.anchor));
 	// Questions in this thread still with the agent, oldest first
 	const awaiting = $derived(review.threads.reading.awaiting(thread.id));
+	// Whether what the reader said last is theirs to hand over: nothing waited on, and the last word theirs
+	const yoursToAsk = $derived(awaiting.length === 0 && lastWord !== AGENT);
+
+	/** Take a question back; its turn of the agent's goes, and the keyboard stays with the thread. */
+	async function takeBackAndStay(questionId: string) {
+		await review.threads.takeBack(thread.id, questionId);
+		review.sections.keyboardToThread(thread.id);
+	}
 
 	/** How long ago a turn was said, by the review's clock, which ticks while it is drawn. */
 	function howLongAgo(at: number): string {
@@ -51,15 +72,22 @@
 	outdated thread was written against -->
 {#each exchanges as exchange, index (exchange.id)}
 	{@const waitedOn = askedAt(exchange.id)}
-	<!-- The first question is the comment that opened the thread -->
+	{@const takenBackAt = review.threads.reading.takenBackAt(thread.id, exchange.id)}
+	<!-- The first question is the comment that opened the thread; the last, what the reader said last -->
 	{@const opening = index === 0}
+	{@const last = index === exchanges.length - 1}
 	{#if exchange.startsRound}
 		<!-- Where one round ended and the next began, in this thread -->
 		<TurnAside lays="across" testId="round-mark">
 			<span class="cr-faint text-xs">round {exchange.round}</span>
 		</TurnAside>
 	{/if}
-	<Turn speaker={TURN_VOICES[exchange.by]} testId="thread-question">
+	<Turn
+		speaker={TURN_VOICES[exchange.by]}
+		testId="thread-question"
+		takenBack={takenBackAt !== undefined}
+		headEnd={last && yoursToAsk ? askingNow : undefined}
+	>
 		{#snippet head()}
 			{#if exchange.at !== undefined}
 				<span>{howLongAgo(exchange.at)}</span>
@@ -77,7 +105,13 @@
 			{/if}
 		{/each}
 		<SaidImages images={exchange.images} />
+		{#if last && askFailed}
+			<Failure stands="apart" testId="ask-error" said={askFailed} />
+		{/if}
 	</Turn>
+	{#if takenBackAt !== undefined}
+		<TakenBack ago={howLongAgo(takenBackAt)} said={ASKED_TO_DROP_IT} testId="thread-taken-back" />
+	{/if}
 
 	{#each exchange.answers as answer (answer.id)}
 		<Turn
@@ -101,7 +135,20 @@
 			testId="awaiting-answer"
 			tour="awaited-answer"
 			waited={`asked ${howLongAgo(waitedOn)} — keep reading, the answer lands here`}
-			takeBack={() => review.threads.takeBack(thread.id, exchange.id)}
+			takeBack={() => takeBackAndStay(exchange.id)}
 		/>
 	{/if}
 {/each}
+
+<!-- At the head of what the reader said last, while it is theirs to hand over: the way to hand it over now, or, with
+	no agent there to hear it, where it goes instead. With the review not reached, neither -->
+{#snippet askingNow()}
+	{#if review.canAsk}
+		<Button tone="asking" size="xs" testId="ask-now-thread" onclick={onAsk}>
+			<Icon name="conversation" size="xs" />
+			{ASK_AGENT_NOW}
+		</Button>
+	{:else if !review.answerer.attached}
+		<span data-testid="ask-hint" class="cr-muted text-xs">{NOBODY_LISTENING}</span>
+	{/if}
+{/snippet}

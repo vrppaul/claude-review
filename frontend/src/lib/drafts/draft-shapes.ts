@@ -7,7 +7,7 @@
  * the review has grown a conversation in the agent panel, and the message
  * being written there; what a thread hangs on has moved into an anchor of
  * its own, and every turn carries an id a question can name; how a thread
- * is read — folded, unread, waited on — has moved out of the thread; the
+ * is read — folded, unread, waited on, taken back — has moved out of the thread; the
  * draft says how far the server's telling had got for it; it keeps what
  * was being written in the threads and not said yet, which pasted images
  * each field uploaded itself, which files were read and folded away, and
@@ -22,6 +22,7 @@
 
 import type {
 	AwaitedQuestion,
+	TakenBackQuestion,
 	CommentSeverity,
 	Composer,
 	LineSide,
@@ -35,7 +36,7 @@ import { COMMENT_ID_PREFIX, IdSequence, TURN_ID_PREFIX } from '$lib/utils/ids';
 import { AGENT, READER } from '$lib/utils/speakers';
 
 /** The shape drafts are kept in now. */
-export const DRAFT_SHAPE = 18;
+export const DRAFT_SHAPE = 19;
 // The round every review begins in
 const FIRST_ROUND = 1;
 
@@ -45,12 +46,14 @@ export interface IssuedIds {
 	turns: number;
 }
 
-/** How the page was reading the threads: folded, unread, and waiting on an answer. */
+/** How the page was reading the threads: folded, unread, waiting on an answer, and what was taken back. */
 export interface ThreadsRead {
 	folded: string[];
 	unread: string[];
 	/** Questions with the agent, oldest first, by the thread they were asked in. */
 	awaiting: Record<string, AwaitedQuestion[]>;
+	/** Questions the reader took back, and when, by the thread they were asked in. */
+	takenBack: Record<string, TakenBackQuestion[]>;
 }
 
 /** A comment being written when the draft was kept: where, and what it held. */
@@ -199,7 +202,7 @@ export function emptyDraft(round: number): Draft {
 	return {
 		version: DRAFT_SHAPE,
 		threads: [],
-		read: { folded: [], unread: [], awaiting: {} },
+		read: { folded: [], unread: [], awaiting: {}, takenBack: {} },
 		writing: [],
 		reviewBody: '',
 		sent: {},
@@ -239,7 +242,9 @@ export function upToDate(kept: ReleasedDraft): Draft {
 			unread: comments.filter((comment) => comment.unread).map(idOf),
 			awaiting: Object.fromEntries(
 				comments.filter((comment) => comment.awaiting.length > 0).map((comment) => [comment.id, comment.awaiting])
-			)
+			),
+			// A question in a thread was never kept as taken back before
+			takenBack: {}
 		},
 		// Nothing being written was kept until the fields were held by the review
 		writing: [],

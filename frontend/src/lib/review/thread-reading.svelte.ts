@@ -1,7 +1,8 @@
 /**
  * How this page reads the threads, apart from what the threads say: which
- * are folded away, which carry an answer nobody has looked at, and which
- * questions are with the agent and not answered yet.
+ * are folded away, which carry an answer nobody has looked at, which
+ * questions are with the agent and not answered yet, and which the reader
+ * took back.
  *
  * None of it goes on the wire — it is how the threads are read, not what
  * they say — so folding a thread or reading its answer tells the server
@@ -12,7 +13,7 @@
 import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 
 import type { ThreadsRead } from '$lib/drafts/draft-shapes';
-import type { AwaitedQuestion } from '$lib/types';
+import type { AwaitedQuestion, TakenBackQuestion } from '$lib/types';
 
 /** What a thread with nothing asked of it is waiting for: nothing. */
 const NOTHING_AWAITED: readonly AwaitedQuestion[] = [];
@@ -30,6 +31,8 @@ export class ThreadReading {
 	readonly #unread = new SvelteMap<string, readonly string[]>();
 	// Questions with the agent, by thread, oldest first
 	readonly #awaiting = new SvelteMap<string, AwaitedQuestion[]>();
+	// Questions the reader took back while they were waited on, by thread, and when
+	readonly #takenBack = new SvelteMap<string, TakenBackQuestion[]>();
 
 	/** @param read how the threads were being read before a reload */
 	constructor(read: ThreadsRead) {
@@ -37,6 +40,9 @@ export class ThreadReading {
 		for (const threadId of read.unread) this.#unread.set(threadId, NO_ANSWERS);
 		for (const [threadId, waiting] of Object.entries(read.awaiting)) {
 			this.#awaiting.set(threadId, waiting);
+		}
+		for (const [threadId, takenBack] of Object.entries(read.takenBack)) {
+			this.#takenBack.set(threadId, takenBack);
 		}
 	}
 
@@ -108,11 +114,24 @@ export class ThreadReading {
 		else this.#awaiting.set(threadId, waiting);
 	}
 
+	/** A question waited on was taken back by the reader: it is waited on no more, and stays seen as taken back. */
+	tookBack(threadId: string, questionId: string): void {
+		this.settled(threadId, questionId);
+		const takenBack = this.#takenBack.get(threadId) ?? [];
+		this.#takenBack.set(threadId, [...takenBack, { id: questionId, at: Date.now() }]);
+	}
+
+	/** When the reader took back a question of the thread, if they did. */
+	takenBackAt(threadId: string, questionId: string): number | undefined {
+		return this.#takenBack.get(threadId)?.find((question) => question.id === questionId)?.at;
+	}
+
 	/** The thread is gone: nothing about reading it is worth keeping. */
 	forget(threadId: string): void {
 		this.#folded.delete(threadId);
 		this.#unread.delete(threadId);
 		this.#awaiting.delete(threadId);
+		this.#takenBack.delete(threadId);
 	}
 
 	/** How the threads were being read, as the draft keeps it. */
@@ -120,7 +139,8 @@ export class ThreadReading {
 		return {
 			folded: [...this.#folded],
 			unread: [...this.#unread.keys()],
-			awaiting: Object.fromEntries(this.#awaiting)
+			awaiting: Object.fromEntries(this.#awaiting),
+			takenBack: Object.fromEntries(this.#takenBack)
 		};
 	}
 }

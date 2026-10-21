@@ -199,7 +199,12 @@ const UP_TO_DATE_1_5_0: Draft = {
 			at: 1120
 		}
 	],
-	read: { folded: ['comment-2'], unread: ['comment-2'], awaiting: { 'comment-2': [{ id: 'turn-3', at: 1150 }] } },
+	read: {
+		folded: ['comment-2'],
+		unread: ['comment-2'],
+		awaiting: { 'comment-2': [{ id: 'turn-3', at: 1150 }] },
+		takenBack: {}
+	},
 	writing: [],
 	reviewBody: 'Overall fine',
 	sent: { 'comment-2': 1, 'raised-1': 2 },
@@ -272,7 +277,12 @@ describe('a draft this release kept', () => {
 		const kept: Draft = {
 			version: DRAFT_SHAPE,
 			threads: [fullThread()],
-			read: { folded: ['comment-1'], unread: [], awaiting: { 'comment-1': [{ id: 'comment-1', at: 40 }] } },
+			read: {
+				folded: ['comment-1'],
+				unread: [],
+				awaiting: { 'comment-1': [{ id: 'comment-1', at: 40 }] },
+				takenBack: { 'comment-1': [{ id: 'turn-2', at: 60 }] }
+			},
 			writing: [
 				{
 					at: { kind: 'reply', thread: 'comment-1' },
@@ -411,7 +421,7 @@ describe('a draft written by an older release', () => {
 
 		expect(draft?.threads[0].body).toBe('written before threads existed');
 		expect(draft?.threads[0].turns).toEqual([]);
-		expect(draft?.read).toEqual({ folded: [], unread: [], awaiting: {} });
+		expect(draft?.read).toEqual({ folded: [], unread: [], awaiting: {}, takenBack: {} });
 		expect(draft?.sent).toEqual({});
 	});
 
@@ -424,7 +434,8 @@ describe('a draft written by an older release', () => {
 		expect(draft?.read).toEqual({
 			folded: ['comment-1'],
 			unread: ['comment-1'],
-			awaiting: { 'comment-1': [{ id: 'comment-1', at: 40 }] }
+			awaiting: { 'comment-1': [{ id: 'comment-1', at: 40 }] },
+			takenBack: {}
 		});
 	});
 

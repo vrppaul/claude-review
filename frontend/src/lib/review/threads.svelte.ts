@@ -362,7 +362,7 @@ export class Threads {
 	 */
 	async takeBack(threadId: string, questionId: string): Promise<void> {
 		await cancelMessage({ message_id: questionId });
-		this.reading.settled(threadId, questionId);
+		this.reading.tookBack(threadId, questionId);
 	}
 
 	/**

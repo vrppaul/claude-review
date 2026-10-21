@@ -260,6 +260,18 @@
   figure captioned "Written against". The keyboard brought to a thread by
   n or p turns its edge blue, as a field's, where it ringed the space
   round it.
+- **Ask agent now stands at what the reader said last.** In a thread it is
+  a small button at the head of the reader's last turn, no longer a row
+  under the conversation, and it is called Ask agent now there, in the
+  comment box and in the tour alike, where it was "Ask about this", "Ask
+  about all this" and "Ask now". With no agent listening, a hint stands in
+  its place: "No agent listening: this goes with the next round". Why a
+  question could not be handed over is said under the words it was about,
+  and the button stays. A question taken back in a thread is struck
+  through, with "Taken back 40s ago. The agent was asked to drop it." on a
+  row of its own under it, as in the panel; Ask agent now comes back at
+  it, and the keyboard stays with the thread, where it was left on
+  nothing. The draft keeps which questions were taken back, and when.
 - **Taking back asks first.** A message or a question the agent is still on
   is taken back by a red cross at its turn's head, which asks "Take it
   back?" on one line, Keep waiting or Take back; where taking it back

@@ -2,16 +2,12 @@
 	import type { Thread } from '$lib/types';
 	import type { CommentField } from '$lib/review/comment-field.svelte';
 	import { useReview } from '$lib/review/context';
-	import Button from '$lib/ui/Button.svelte';
 	import Card from '$lib/ui/Card.svelte';
 	import type { CardHanging, CardTone } from '$lib/ui/card';
 	import Conversation from '$lib/ui/Conversation.svelte';
-	import Failure from '$lib/ui/Failure.svelte';
 	import FieldButton from '$lib/ui/FieldButton.svelte';
-	import Icon from '$lib/ui/Icon.svelte';
-	import TurnAside from '$lib/ui/TurnAside.svelte';
 	import { messageOf } from '$lib/utils/errors';
-	import { AGENT, raisedByAgent } from '$lib/utils/speakers';
+	import { raisedByAgent } from '$lib/utils/speakers';
 	import CommentBox from './CommentBox.svelte';
 	import { PLACEHOLDERS } from './placeholders';
 	import ThreadBar from './ThreadBar.svelte';
@@ -35,17 +31,12 @@
 	const review = useReview();
 	const writing = review.threads.writing;
 
+	// Why what was asked could not be handed over, said under the words it was asked about
 	let failed = $state<string | null>(null);
 
 	// The reply being written here, held by the review so that folding the
 	// thread or its file, or reloading the page, keeps it
 	const replying = $derived(writing.reply(thread.id));
-	const awaiting = $derived(review.threads.reading.awaiting(thread.id));
-	// Who spoke last: after an answer there is nothing new to hand over until
-	// the reader says something. On a thread the agent raised, the opening
-	// is already the agent's word.
-	const lastWord = $derived(thread.turns.at(-1)?.author ?? thread.raised_by);
-	const askable = $derived(review.canAsk && awaiting.length === 0 && lastWord !== AGENT);
 	// The field to reply in is edged in the colour of whose thread it is
 	const voice = $derived(threadVoice(thread));
 	// What has gone out with a round reads as read by the other side; what is
@@ -118,24 +109,9 @@
 </Card>
 
 {#snippet conversation()}
+	<!-- Asking the agent stands at the reader's last words, which it hands over with everything said before them -->
 	<Conversation testId="thread-turns">
-		<ThreadConversation {thread} />
-
-		{#if askable || failed}
-			<!-- Hands over everything said so far, the comment included: a row of its own under the last of it, in
-				the column of what was said, rather than beside the empty field below; and why it could not be -->
-			<TurnAside lays="stacked" testId="ask-row">
-				{#if askable}
-					<Button tone="asking" size="sm" testId="ask-now-thread" onclick={() => asking(review.threads.ask(thread.id))}>
-						<Icon name="conversation" size="xs" />
-						{thread.turns.length === 0 ? 'Ask about this' : 'Ask about all this'}
-					</Button>
-				{/if}
-				{#if failed}
-					<Failure stands="apart" testId="ask-error" said={failed} />
-				{/if}
-			</TurnAside>
-		{/if}
+		<ThreadConversation {thread} onAsk={() => asking(review.threads.ask(thread.id))} askFailed={failed} />
 	</Conversation>
 {/snippet}
 
