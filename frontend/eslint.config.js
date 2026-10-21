@@ -170,11 +170,18 @@ const PALETTE = `((slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|gr
 // A colour written in place, as an arbitrary value
 const RAW_COLOUR = '\\[(#|(rgba?|hsla?|hwb|lab|lch|oklab|oklch|color|color-mix)\\b)';
 const COLOUR_UTILITY = `/${UTILITY_START}${PAINTS}-(${PALETTE}|${RAW_COLOUR})/`;
+// A colour is drawn at a strength tokens.css names — a hue at a step of its ladder, the ink at a state's — as
+// stylelint holds every stylesheet to; a strength written after a slash, which Tailwind mixes in place, is one of
+// its own: `bg-(--cr-mark)/10`, `bg-base-content/5`, `text-warning/[0.8]`. Words at a size with a leading of their
+// own, `text-sm/6`, are words off the scale
+const ON_THE_LADDER = 'Name the colour at its strength by its token (tokens.css: --cr-mark-tint, --cr-selected).';
+const AT_A_STRENGTH_OF_ITS_OWN = `/${UTILITY_START}${PAINTS}-(?!(2xs|xs|sm|base|lg|[2-9]?xl)\\/)[^\\s\\/]+\\/[0-9\\[(]/`;
 // Every shadow utility: `shadow`, `shadow-lg`, `drop-shadow-…`, `inset-shadow-…`
 const SHADOW_UTILITY = `/${UTILITY_START}(drop-|inset-)?shadow(-|${UTILITY_END})/`;
 // A state — under the pointer, pressed, holding the keyboard, the one of a set the reader is at — is drawn by
-// the stylesheet with its token (tokens.css), which the palette test holds in both themes: a state variant in
-// markup paints with a colour of its own, unseen by that test, as `hover:bg-base-200` did at 1.06:1 in the dark
+// the stylesheet with its token (tokens.css), set there for both themes and measured against what it stands on: a
+// state variant in markup paints with a colour of its own that nobody measured, as `hover:bg-base-200` did, at
+// 1.06:1 in the dark
 const PAINTED_BY_STATE_TOKENS =
 	'Draw a state in the stylesheet with its token (--cr-hover, --cr-selected, --cr-focus-ring), not with a variant in markup.';
 // A variant of a state, the element's own or one it stands in: `hover:`, `focus-visible:`, `aria-pressed:`, `group-hover:`
@@ -237,6 +244,7 @@ const NO_INLINE_STYLING = [
 	{ selector: `Literal[value=${SCROLLING_UTILITY}]`, message: SCROLLS_IN_ITS_OWN_BOX },
 	{ selector: `TemplateElement[value.raw=${SCROLLING_UTILITY}]`, message: SCROLLS_IN_ITS_OWN_BOX },
 	...inClassLists(COLOUR_UTILITY, PAINTED_BY_TOKENS),
+	...inClassLists(AT_A_STRENGTH_OF_ITS_OWN, ON_THE_LADDER),
 	...inClassLists(SHADOW_UTILITY, PAINTED_BY_TOKENS),
 	...inClassLists(STATE_VARIANT, PAINTED_BY_STATE_TOKENS),
 	...inClassLists(SCROLLING_UTILITY, SCROLLS_IN_ITS_OWN_BOX),

@@ -177,9 +177,13 @@
   the reader's count are a darker blue under white words (4.99:1), where
   they were the mark's own under dark ones, and the button darkens under
   the pointer. The light theme's warning is a step darker, so its words
-  read at 4.8:1 on its tint where the reader is at it. stylelint refuses
-  any of those colours mixed at a strength off the ladder. The diff's own
-  green and red stand outside the ladder still.
+  read at 4.8:1 on its tint where the reader is at it. The diff's green
+  and red climb the ladder too: a changed row stands on its colour's tint,
+  12% of the colour at its edge, where it stood at 8 or 9% of a green or
+  a red of its own, a little stronger; and what changed inside it at the
+  chip's strength, 18% where it was 20%. stylelint refuses any of those
+  colours mixed at a strength off the ladder, and eslint a colour given a
+  strength of its own in markup (`bg-(--cr-mark)/10`).
 - **One conversation.** The panel's conversation with the agent reads as
   a thread's does: a turn to a row, each by the avatar of who said it,
   their name and how long ago it was said — "2m ago", where the panel said

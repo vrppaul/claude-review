@@ -263,9 +263,9 @@
 	 * One ladder of strengths every hue that says whose a thing is or what it
 	 * means is drawn at, in both themes: its edge, its chip and its tint, each
 	 * made from the hue's one value, so a theme sets one value per hue.
-	 * stylelint refuses the reader's, the agent's, done's, a warning's or an
-	 * error's colour mixed at a strength written in. The diff's own green and
-	 * red — its added and removed rows and words — stand outside it still.
+	 * stylelint refuses the reader's, the agent's, done's, a warning's, an
+	 * error's or the diff's added or removed colour mixed at a strength
+	 * written in.
 	 */
 	--cr-strength-border: 35%;
 	--cr-strength-chip: 18%;
@@ -281,6 +281,9 @@
 	--cr-agent-tint: color-mix(in srgb, var(--cr-agent) var(--cr-strength-tint), transparent);
 	--cr-agent-chip: color-mix(in srgb, var(--cr-agent) var(--cr-strength-chip), var(--cr-ground-reading));
 	--cr-agent-border: color-mix(in srgb, var(--cr-agent) var(--cr-strength-border), transparent);
+	/* What the diff added and removed: a changed row on its hue's tint, with the hue itself at its edge */
+	--cr-add-tint: color-mix(in srgb, var(--cr-add) var(--cr-strength-tint), transparent);
+	--cr-del-tint: color-mix(in srgb, var(--cr-del) var(--cr-strength-tint), transparent);
 	/*
 	 * The ground of the avatar the reader, and the agent, speak by in a
 	 * thread: their tint over the card's ground, opaque, so the spine behind
@@ -407,12 +410,15 @@
 	--cr-drawn-field-height: 1.75rem;
 
 	/*
-	 * What differs inside a changed line, in the change's own colour: still a
-	 * band at a glance over its row, marked or not, and faint enough that code
-	 * in every colour it is highlighted in reads at 4.5:1 on it
+	 * What differs inside a changed line, in the change's own colour at the
+	 * chip's strength, laid over its row rather than mixed with the reading
+	 * ground: still a band at a glance over its row, marked or not, and faint
+	 * enough that code in every colour it is highlighted in reads at 4.5:1 on
+	 * it (4.64:1 at the least, the dark theme's comments on an added word in
+	 * a marked row)
 	 */
-	--cr-add-word: color-mix(in srgb, var(--cr-add-edge) 20%, transparent);
-	--cr-del-word: color-mix(in srgb, var(--cr-del-edge) 20%, transparent);
+	--cr-add-word: color-mix(in srgb, var(--cr-add) var(--cr-strength-chip), transparent);
+	--cr-del-word: color-mix(in srgb, var(--cr-del) var(--cr-strength-chip), transparent);
 	/* How tall that band is: shorter than its line, so the bands of rows one under another never touch as one block */
 	--cr-word-band: 1.2em;
 	/*
@@ -488,10 +494,8 @@
 	--color-error: #fb5c62;
 	--color-error-content: #1c0a0c;
 
-	--cr-add-edge: #3f9d54;
-	--cr-add-tint: rgb(79 184 101 / 0.09);
-	--cr-del-edge: #cf4249;
-	--cr-del-tint: rgb(242 84 91 / 0.09);
+	--cr-add: #3f9d54;
+	--cr-del: #cf4249;
 	--cr-mark: #5b8def;
 	/*
 	 * The reader's mark as words: on its own tint, and on a chip inside a
@@ -567,10 +571,8 @@
 	--color-error: #c22c37;
 	--color-error-content: #ffffff;
 
-	--cr-add-edge: #2f9e4f;
-	--cr-add-tint: rgb(31 139 58 / 0.08);
-	--cr-del-edge: #d24049;
-	--cr-del-tint: rgb(200 50 60 / 0.08);
+	--cr-add: #2f9e4f;
+	--cr-del: #d24049;
 	--cr-mark: #2c6bd9;
 	--cr-mark-text: #1b4fa9;
 	--cr-shade: rgb(27 36 48 / 0.45);

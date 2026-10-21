@@ -157,13 +157,13 @@
 	background: var(--cr-add-tint);
 }
 .cr-row-add > td:first-child {
-	border-left-color: var(--cr-add-edge);
+	border-left-color: var(--cr-add);
 }
 .cr-row-del {
 	background: var(--cr-del-tint);
 }
 .cr-row-del > td:first-child {
-	border-left-color: var(--cr-del-edge);
+	border-left-color: var(--cr-del);
 }
 /* What the reader marked outranks the change underneath it: it is their own mark */
 .cr-row-marked {
@@ -266,10 +266,10 @@
 	border-left: var(--cr-line-strong) solid transparent;
 }
 .cr-edge-add {
-	border-left-color: var(--cr-add-edge);
+	border-left-color: var(--cr-add);
 }
 .cr-edge-del {
-	border-left-color: var(--cr-del-edge);
+	border-left-color: var(--cr-del);
 }
 .cr-edge-marked {
 	border-left-color: var(--cr-marked-edge);
@@ -400,12 +400,12 @@
 }
 .cr-sugg-del {
 	background: var(--cr-del-tint);
-	border-left-color: var(--cr-del-edge);
+	border-left-color: var(--cr-del);
 	color: var(--cr-del-text);
 }
 .cr-sugg-add {
 	background: var(--cr-add-tint);
-	border-left-color: var(--cr-add-edge);
+	border-left-color: var(--cr-add);
 	color: var(--cr-add-text);
 }
 
@@ -837,7 +837,7 @@
 }
 .cr-illustration-line-added {
 	width: 70%;
-	background: var(--cr-add-edge);
+	background: var(--cr-add);
 }
 .cr-illustration-line-short {
 	width: 55%;
@@ -889,7 +889,7 @@
 	/* The diagram's heart, the edge of a step's reason, and the lines its code added */
 	--cr-sketch-lit: var(--cr-agent);
 	--cr-sketch-reason: var(--cr-agent);
-	--cr-sketch-added-edge: var(--cr-add-edge);
+	--cr-sketch-added-edge: var(--cr-add);
 	--cr-sketch-added-tint: var(--cr-add-tint);
 	/* What the agent writes first, as it stands in a story told: the first chapter, read, and the task */
 	--cr-sketch-read-fill: var(--cr-done-tint);

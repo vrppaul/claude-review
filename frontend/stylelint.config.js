@@ -33,10 +33,11 @@ const WRITTEN_IN_THE_TOKENS = [
 	'cubic-bezier'
 ];
 // Every hue that says whose a thing is or what it means — the reader's, under its names as a control too, the
-// agent's, under its name as what is unread, done's, a warning's, an error's — is drawn at a step of tokens.css's
-// one ladder of strengths, named as that step: one mixed at a strength written in, before or after it and in any
-// space, is a step of its own, as the reader's mark was drawn at five strengths and the agent's at four
-const A_HUE = 'var\\(--(cr-(mark|agent|done|control|unread)|color-(warning|error))\\)';
+// agent's, under its name as what is unread, done's, a warning's, an error's, what the diff added and removed — is
+// drawn at a step of tokens.css's one ladder of strengths, named as that step: one mixed at a strength written in,
+// before or after it and in any space, is a step of its own, as the reader's mark was drawn at five strengths and
+// the agent's at four
+const A_HUE = 'var\\(--(cr-(mark|agent|done|control|unread|add|del)|color-(warning|error))\\)';
 const A_HUE_AT_A_WRITTEN_STRENGTH = [`/color-mix\\(in [a-z]+, (${A_HUE}\\s+\\d|\\d[\\d.]*%\\s+${A_HUE})/`];
 // Every size is taken off one scale, which tokens.css sets out: a number with a unit, either way up and in any
 // case, is named there once and named everywhere else — every unit but those of a turn and of a grid's share,
