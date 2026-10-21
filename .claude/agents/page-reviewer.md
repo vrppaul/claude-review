@@ -28,10 +28,10 @@ What no gate sees, and you hold:
   in as a prop (a width, a tone, a size passed as data to slip past a gate). Extending is a variant added inside the
   library component, with the reason a reader needs it.
 - A new variant that repeats another or differs by a pixel.
-- A state painted from a token of another meaning: hover is the hover token, current is the selected token and its
-  edge, focus is the ring. Every state of every new pressable thing in both themes — rest, hover, pressed, focus,
-  current, disabled, open — measured, not judged by eye: hover at least 1.15:1 against its ground, a state a reader
-  needs and the focus ring at least 3:1, words in any state at least 4.5:1.
+- A state painted from a token of another meaning: hover is the hover token, current is the selected token, focus
+  is the ring. Every state of every new pressable thing in both themes — rest, hover, pressed, focus, current,
+  disabled, open — compared value by value with the owner's approved design board: a colour, size or order off the
+  board is a finding; a contrast figure is not, the board decides a colour.
 - A guard, override or exception that hides a wrong look, with the construction that let it exist.
 - Heading levels in order (no smaller heading above a larger one); one way to close a pane; the same thing drawn the
   same in Files and Story.
