@@ -15,7 +15,7 @@
 		arrow: boolean;
 		/** What it says by its edge, where it says anything by it. */
 		edge?: PaneEdge | undefined;
-		/** Whether it fades as its time runs out; one that does not shows the time left itself. */
+		/** Whether it fades as its time runs out; one that does not shows the time left by a bar along its foot. */
 		fades: boolean;
 		testId: string;
 		/** Called once the note goes, by itself or as it is put away, for whoever drew it to stop drawing it. */
@@ -65,5 +65,8 @@
 		{testId}
 	>
 		{@render children(putAway)}
+		{#if !fades}
+			<div data-testid="{testId}-time-left" class="cr-ui-note-time-left" aria-hidden="true"></div>
+		{/if}
 	</PopoverPanel>
 </div>

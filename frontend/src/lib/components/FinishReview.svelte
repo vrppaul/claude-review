@@ -10,6 +10,7 @@
 	import Failure from '$lib/ui/Failure.svelte';
 	import Field from '$lib/ui/Field.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
+	import IconButton from '$lib/ui/IconButton.svelte';
 	import PassingNote from '$lib/ui/PassingNote.svelte';
 	import Popover from '$lib/ui/Popover.svelte';
 	import Row from '$lib/ui/Row.svelte';
@@ -241,18 +242,26 @@
 	</Popover>
 	{#if submission.failed}
 		{@const failed = submission.failed}
+		<!-- As the note of a story that arrived stands under Story: pointing at Send, in the colour of what failed,
+			its time running out along its foot, and put away by its cross -->
 		<PassingNote
 			pointsAt={sendButton}
 			label="The review was not sent"
 			placement="below-end"
-			arrow={false}
-			fades
+			arrow
+			edge="failure"
+			fades={false}
 			testId="send-failed"
 			onGone={() => submission.putFailureAway()}
 		>
-			<div class="px-3 py-2">
-				<Failure stands="apart" testId="submit-error" said={failed} />
-			</div>
+			{#snippet children(putAway: () => void)}
+				<div class="flex items-center gap-2 py-2 pr-2 pl-3">
+					<Failure stands="inline" testId="submit-error" said={failed} />
+					<IconButton tone="quiet" size="sm" shape="square" label="Close" testId="send-failed-close" onclick={putAway}>
+						<Icon name="cross" size="xs" />
+					</IconButton>
+				</div>
+			{/snippet}
 		</PassingNote>
 	{/if}
 </div>

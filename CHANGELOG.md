@@ -187,10 +187,11 @@
   dots and its name; from 960 Story, Files and the base keep their marks;
   from 760 the branch and the round's number go, and Send keeps its word
   and its count. A send that failed puts its pane away and says why in a
-  note under Send, lined up with it, for four seconds, as the note of a
-  story that arrived stands under Story; it stood in the header's row.
-  Send opens the pane again on everything the send held, and the note
-  goes as it does.
+  note under Send, as the note of a story that arrived stands under
+  Story: pointing at Send, edged in the colour of what failed, its four
+  seconds running out along its foot, and put away by its cross; it stood
+  in the header's row. Send opens the pane again on everything the send
+  held, and the note goes as it does.
 - **What is chosen is drawn in ink.** A segment pressed, a toggle on and a
   button whose pane is open are reversed, the page's words their ground
   and its plainest ground their words, where they stood on the reader's

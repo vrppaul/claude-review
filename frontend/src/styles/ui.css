@@ -546,12 +546,19 @@
 	right: 0;
 	left: 0;
 }
-/* A pane that speaks for the agent, or of what it brought that is not read yet: its edge, and its arrow's, in that colour */
+/*
+ * A pane that speaks for the agent, of what it brought that is not read yet,
+ * or of what failed: its edge, its arrow's and the time a note has left, in
+ * that colour
+ */
 .cr-ui-pane-agent {
-	border-color: var(--cr-agent);
+	--cr-pane-edge: var(--cr-agent);
 }
 .cr-ui-pane-unread {
-	border-color: var(--cr-unread);
+	--cr-pane-edge: var(--cr-unread);
+}
+.cr-ui-pane-failure {
+	--cr-pane-edge: var(--color-error);
 }
 /*
  * What heads a pane (PaneHead): its name at the one size a pane's heading
@@ -689,6 +696,26 @@
 	}
 	100% {
 		opacity: 0;
+	}
+}
+/*
+ * How long a note that does not fade has left: a bar along its foot, in its
+ * edge's colour, that runs out over the time the note stands. The bar only
+ * shows the time: the note keeps its own clock, and goes by it where the bar
+ * does not run
+ */
+.cr-ui-note-time-left {
+	height: var(--cr-line-strong);
+	background: var(--cr-pane-edge);
+	transform-origin: left;
+	animation: cr-run-out var(--cr-note-lasts) linear forwards;
+}
+@keyframes cr-run-out {
+	from {
+		transform: scaleX(1);
+	}
+	to {
+		transform: scaleX(0);
 	}
 }
 /*

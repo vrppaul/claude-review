@@ -57,11 +57,11 @@ const WHAT_MOVES = [
 	'\\.cr-ui-checkbox-check',
 	'\\.cr-ui-icon',
 	'\\.cr-ui-pane-fading',
+	'\\.cr-ui-note-time-left',
 	'\\.cr-ui-dot-breathing(:nth-of-type\\(\\d\\))?',
 	'\\.cr-ui-turn-landing',
 	'\\.cr-sketch-writing',
 	'\\.cr-marked',
-	'\\.cr-note-time-left',
 	'\\.cr-guide-spot-gliding'
 ];
 const MOTION_ELSEWHERE = { [`/^(?!(${WHAT_MOVES.join('|')})$)/`]: ['/^transition/', '/^animation/'] };

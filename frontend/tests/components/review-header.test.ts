@@ -355,6 +355,20 @@ describe('the pane the review is sent from', () => {
 		expect(screen.queryByTestId('submit-error')).toBeNull();
 	});
 
+	it('stops saying why a send did not go once its cross is pressed', async () => {
+		const user = userEvent.setup();
+		fakeServer().fail('POST /api/submit', SERVER_ERROR);
+		const review = openReview({ files: [file], facts: { answerer_attached: true } });
+		review.threads.add(newComment({ file: 'test.py', body: 'fix' }));
+		onScreen(review);
+		await user.click(screen.getByTestId('quick-submit'));
+		await user.click(screen.getByTestId('modal-submit'));
+
+		await user.click(screen.getByTestId('send-failed-close'));
+
+		expect(screen.queryByTestId('submit-error')).toBeNull();
+	});
+
 	it('says why a send did not go until its four seconds are out', async () => {
 		await sendFailedOnTheClock();
 

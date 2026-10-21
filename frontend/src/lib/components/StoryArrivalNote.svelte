@@ -48,6 +48,5 @@
 				{/snippet}
 			</Actions>
 		</div>
-		<div data-testid="story-ready-time-left" class="cr-note-time-left" aria-hidden="true"></div>
 	{/snippet}
 </PassingNote>

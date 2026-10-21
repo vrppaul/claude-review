@@ -649,28 +649,6 @@
 }
 
 /*
- * How long the note of a story's arrival has left, as it goes by itself: a
- * bar along its foot, in the colour of what is not read yet, as the note's
- * edge is, that runs out over the time the note stands (--cr-note-lasts,
- * which PassingNote gives). The bar only shows the time: the note keeps its
- * own clock, and goes by it where the bar does not run.
- */
-.cr-note-time-left {
-	height: var(--cr-line-strong);
-	background: var(--cr-unread);
-	transform-origin: left;
-	animation: cr-run-out var(--cr-note-lasts) linear forwards;
-}
-@keyframes cr-run-out {
-	from {
-		transform: scaleX(1);
-	}
-	to {
-		transform: scaleX(0);
-	}
-}
-
-/*
  * The branches of a piece of the agent's work, hanging off the line that
  * spawned them, in the agent's colour.
  *
