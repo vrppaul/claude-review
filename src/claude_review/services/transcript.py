@@ -149,7 +149,7 @@ def _transcript_of(path: Path) -> Transcript:
 
 
 def _session_of(entries: list[TranscriptEntry]) -> str:
-    """The session the conversation is: Claude Code names it on every entry it writes.
+    """The session the conversation is, which Claude Code names on every entry but its records of a file's history.
 
     Raises:
         UnreadableContentError: If no entry names it, so the file is no conversation Claude Code kept.

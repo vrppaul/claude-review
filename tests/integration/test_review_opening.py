@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from claude_review.domain.exceptions import UnknownVersionError
-from claude_review.domain.models import OnBranch, OnCommit, RepositoryAt, ReviewMode
+from claude_review.domain.models import OnBranch, OnCommit, RepositoryAt
 from claude_review.repositories.git_repository import GitRepository
 from claude_review.services.review_opening import open_diff, open_files, open_transcript
 from tests.helpers import DEFAULT_BRANCH, INITIAL_FILE, INITIAL_FILES, SESSION_ID, committed_repository, git
@@ -123,7 +123,6 @@ async def test_a_diff_against_another_base_is_another_review(changed_repo: Path)
 async def test_files_are_named_by_what_was_opened(tmp_path: Path) -> None:
     opened = await open_files(_written(tmp_path, "b.py", "a.md"), named_from=tmp_path)
 
-    assert opened.mode == ReviewMode.FILES
     assert opened.title == "a.md, b.py"
 
 

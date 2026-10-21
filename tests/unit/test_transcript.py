@@ -250,7 +250,7 @@ class TestRead:
     async def test_a_transcript_no_entry_of_which_names_its_session_is_refused(
         self, tmp_path: Path, entries: list[dict]
     ) -> None:
-        """Claude Code names the session on every entry it writes: without one, this is not its conversation."""
+        """Claude Code names the session on every entry but its records of a file's history: none, no conversation."""
         with pytest.raises(UnreadableContentError, match="No entry names the session"):
             await _turns_of(_write_jsonl(tmp_path, entries))
 

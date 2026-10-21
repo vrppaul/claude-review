@@ -21,11 +21,13 @@ holds there all the same. A name is refused whatever is done with it —
 `model_copy` also where it changes no field — since a name does not show
 which use it is.
 
-No list leaves out an item it cannot read: pydantic's `OnErrorOmit` drops
-such an item unsaid, and a bound on the list counts only what it kept, so
-a list far past its bound is taken. A list whose items may not all be read
-keeps each, as what could be read of it or as it came. Refused by its name
-wherever a file writes it — brought in, asked of the module, or used bare.
+Pydantic's `OnErrorOmit` is not used: it drops an item of a list it cannot
+read, unsaid, and a bound on the list counts only what it kept, so a list
+far past its bound is taken. A list whose items may not all be read keeps
+each, as what could be read of it or as it came. The check refuses the
+name wherever a file writes it — brought in, asked of the module, or used
+bare; a list that leaves items out its own way, as a reader of another
+program's format may, is past what it sees.
 
 The module `copy` is known by the names the file's own imports give it,
 wherever in the file they stand, so a file that does not import it may
