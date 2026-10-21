@@ -5,7 +5,6 @@
 	import Bar from '$lib/ui/Bar.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import Dot from '$lib/ui/Dot.svelte';
-	import Failure from '$lib/ui/Failure.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import IconButton from '$lib/ui/IconButton.svelte';
 	import type { IconName } from '$lib/ui/icons';
@@ -72,8 +71,8 @@
 			<BasePicker />
 			{#if review.settings.current.ignore_whitespace}
 				<!-- Said here as well as in the settings, because it hides changes: in the reader's mark, as a
-					narrower base is, since it narrows the diff too. Pressed, it shows them again. Not on the design
-					board yet, so it keeps its words at every width until it is drawn -->
+					narrower base is, since it narrows the diff too. Pressed, it shows them again. As the window
+					narrows its words give way with Help's, to the pilcrow, the mark of what is not printed -->
 				<Button
 					tone="marked"
 					size="sm"
@@ -82,17 +81,14 @@
 					title={SHOW_WHITESPACE_AGAIN}
 					onclick={() => review.setIgnoreWhitespace(false)}
 				>
-					No whitespace
+					<span class="hidden max-cr-header-narrow:flex"><Icon name="pilcrow" size="xs" /></span>
+					<span class="max-cr-header-narrow:sr-only">No whitespace</span>
 					<Icon name="cross" size="xs" />
 				</Button>
 			{/if}
 		{/if}
 
 		<div class="flex-1"></div>
-
-		{#if review.submission.failed}
-			<Failure stands="inline" testId="submit-error" said={review.submission.failed} />
-		{/if}
 
 		{#if review.threads.answered.length > 0}
 			<RepliesMenu />

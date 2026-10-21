@@ -344,22 +344,18 @@
 	 * where that blue is too light for white words on it, a darker one.
 	 */
 	--cr-control-fill: var(--cr-control);
-	/*
-	 * The light that fill takes under the pointer: a fill's own, which moves
-	 * it away from the words on it, but in the dark theme, where the light
-	 * for a fill brightens it toward its white words, a darker one (below)
-	 */
-	--cr-hover-on-control-fill: var(--cr-hover-on-fill);
 
 	/*
-	 * The states of whatever can be pressed, each one token for both themes,
-	 * at the design board's values. Under the pointer, a thing is lit by the
-	 * page's words laid faintly over whatever it is drawn on (--cr-hover, in
-	 * each theme below): that lightens a dark ground as it darkens a light
-	 * one, where a hover that only darkens leaves a near-black ground
+	 * The states of whatever can be pressed, each one token for both themes.
+	 * Under the pointer, a thing is lit by the page's words laid faintly over
+	 * whatever it is drawn on (--cr-hover, in each theme below), as the
+	 * design board draws it: that lightens a dark ground as it darkens a
+	 * light one, where a hover that only darkens leaves a near-black ground
 	 * near-black. Pressed, a thing keeps the same light. A saturated fill — a
-	 * filled button's — moves less under the same light, so it takes a
-	 * stronger one of its own (--cr-hover-on-fill, in each theme below).
+	 * filled button's, the control's blue or the error's red — moves less
+	 * under that light, so every fill takes one stronger light, the same for
+	 * each (--cr-hover-on-fill, in each theme below), which no board draws
+	 * and the owner picked.
 	 *
 	 * What is chosen is drawn in ink, never in a hue, and marked the more
 	 * weakly the larger it is. A small thing chosen — a segment pressed, a
@@ -556,14 +552,8 @@
 	--cr-faint: #8894a4;
 	/* The pointer's light: the page's words, laid faintly over what it lights */
 	--cr-hover: color-mix(in srgb, var(--color-base-content) 7%, transparent);
-	/* And over a filled button's own fill under dark words, the error's: stronger, as a saturated fill moves less */
+	/* And over a filled button's fill, the control's blue or the error's red: stronger, as a saturated fill moves less */
 	--cr-hover-on-fill: color-mix(in srgb, var(--color-base-content) 22%, transparent);
-	/*
-	 * And over the control's fill, under white words: the darkest ground laid
-	 * over it, so the light moves the fill away from its words. No board draws
-	 * a filled button under the pointer: this waits to be drawn
-	 */
-	--cr-hover-on-control-fill: color-mix(in srgb, var(--color-base-100) 12%, transparent);
 	--cr-add-text: #59c470;
 	--cr-del-text: #ff8086;
 

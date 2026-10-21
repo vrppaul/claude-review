@@ -45,13 +45,16 @@ const AN_ALPHA_WRITTEN = ['/(rgb|hsl|hwb|lab|lch|oklab|oklch)a?\\([^)]*\\//'];
 // Every property but those that may hold an alpha of their own: a shadow, and the shade laid behind a modal
 const HOLDS_NO_ALPHA = '/^(?!--cr-(shadow-[a-z-]+|shade)$)/';
 // The rules that move something, each by its whole selector, and no other: a button's or a segment's state
-// easing in, a chevron turning, a pane fading, work breathing, what arrived lit, the tour's light gliding.
+// easing in, a box filling as it is ticked and its check drawn in, a chevron turning, a pane fading, work
+// breathing, what arrived lit, the tour's light gliding.
 // Whatever else is selected holds none, a row and a band the keys move above all, however a stylesheet selects
 // them: the keys outrun it, and two rows would stand lit at once. Where a reader asked for less motion it all
 // stops, in a stylesheet of its own that may say `none` and nothing else of motion; and eslint refuses motion
 // written in the markup (MOTION_UTILITY, eslint.config.js)
 const WHAT_MOVES = [
 	'\\.cr-ui-button,\\s*\\.cr-ui-segment',
+	'\\.cr-ui-checkbox-box',
+	'\\.cr-ui-checkbox-check',
 	'\\.cr-ui-icon',
 	'\\.cr-ui-pane-fading',
 	'\\.cr-ui-dot-breathing(:nth-of-type\\(\\d\\))?',

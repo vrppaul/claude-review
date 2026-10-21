@@ -92,6 +92,12 @@ export const ICONS = {
 		paths: ['M2.5 5h9', 'M9 2.5L11.5 5 9 7.5', 'M13.5 11h-9', 'M7 8.5L4.5 11 7 13.5'],
 		drawn: TRACED
 	},
+	// A pilcrow, the mark of what is not printed: the changes in whitespace, while the diff hides them
+	pilcrow: {
+		viewBox: '0 0 16 16',
+		paths: ['M9.5 3v10', 'M12.5 3v10', 'M13.5 3H8a2.75 2.75 0 0 0 0 5.5h1.5'],
+		drawn: TRACED
+	},
 	reply: { viewBox: '0 0 16 16', paths: ['M4 3v5.5a2 2 0 0 0 2 2h6', 'M9.5 8l3 2.5-3 2.5'], drawn: TRACED },
 	// A speech bubble: a word with the agent, in its panel or about a block of the story
 	conversation: { viewBox: '0 0 16 16', paths: ['M2.5 4.5h11v7h-6l-3 2.5v-2.5h-2z'], drawn: TRACED },

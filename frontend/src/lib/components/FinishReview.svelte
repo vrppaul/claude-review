@@ -7,6 +7,7 @@
 	import BreathingDots from '$lib/ui/BreathingDots.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import Count from '$lib/ui/Count.svelte';
+	import Failure from '$lib/ui/Failure.svelte';
 	import Field from '$lib/ui/Field.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import Popover from '$lib/ui/Popover.svelte';
@@ -125,6 +126,13 @@
 				{/snippet}
 			</Actions>
 		</div>
+		{#if submission.failed}
+			<!-- Why the send did not go, under the acts that sent it, which stay to try again: every send is made
+				from this pane, its keys too, so this is where it failed -->
+			<div class="mt-2">
+				<Failure stands="apart" testId="submit-error" said={submission.failed} />
+			</div>
+		{/if}
 	</div>
 {/snippet}
 

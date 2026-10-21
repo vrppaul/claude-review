@@ -11,9 +11,11 @@
 	import StoryIntroduction from './StoryIntroduction.svelte';
 	import StoryOptIn from './StoryOptIn.svelte';
 
-	// What each view is called, on its segment and on the pointer, where its words give way first
+	// What each view is called, on its segment and on the pointer, where its words give way first; and what Story
+	// adds while the agent writes it, which gives way before its name, to the dots that say it already
 	const STORY = 'Story';
-	const STORY_BEING_WRITTEN = 'Story · writing';
+	const BEING_WRITTEN = ' · writing';
+	const STORY_BEING_WRITTEN = `${STORY}${BEING_WRITTEN}`;
 	const FILES = 'Files';
 
 	const review = useReview();
@@ -88,7 +90,9 @@
 			>
 				{#if storySays === 'writing'}
 					<BreathingDots tone="agent" testId="story-writing-dots" />
-					<span class="max-cr-header-narrower:sr-only">{STORY_BEING_WRITTEN}</span>
+					<span class="max-cr-header-narrower:sr-only"
+						>{STORY}<span class="max-cr-header-narrow:sr-only">{BEING_WRITTEN}</span></span
+					>
 				{:else}
 					<Icon name="story" size="sm" />
 					<span class="max-cr-header-narrower:sr-only">{STORY}</span>

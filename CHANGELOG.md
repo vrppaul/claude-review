@@ -176,9 +176,12 @@
   small button (32 px), Story and Files with them. Where it wrapped onto a
   second row, its words now give way to their marks as the window
   narrows, each name kept for a screen reader and said on the pointer:
-  from 1200 px down Help keeps its key; from 960 Story, Files and the base
-  keep their marks; from 760 the branch and the round's number go, and
-  Send keeps its word and its count.
+  from 1200 px down Help keeps its key, the note that whitespace is hidden
+  its pilcrow and its cross, and Story, while the agent writes it, its
+  dots and its name; from 960 Story, Files and the base keep their marks;
+  from 760 the branch and the round's number go, and Send keeps its word
+  and its count. A send that failed says why in Send's pane, under the
+  acts that sent it, where it stood in the header's row.
 - **What is chosen is drawn in ink.** A segment pressed, a toggle on and a
   button whose pane is open are reversed, the page's words their ground
   and its plainest ground their words, where they stood on the reader's
@@ -187,7 +190,9 @@
   keys lit and the block a thread hangs open under stand on a grey tint
   with no edge at their start, their words in ink even once viewed; a row
   is rounded at a box's corner, under the pointer as where the reader is.
-  A box ticks in ink. The lines the reader marked to comment on keep their
+  A setting's box is the page's own, 16 px on the plainest ground: ticked,
+  it fills with ink and its check is drawn in over 150 ms, where it was
+  the browser's. The lines the reader marked to comment on keep their
   blue. A field the keyboard is in is edged twice as strong in blue, with
   no ring outside it, and a column's edge to drag shows in grey under the
   pointer. A button or a segment eases into its pressed or open look over
@@ -207,9 +212,9 @@
   and the cards are grey beside the white reading area, where only the
   bars were; in the dark theme the reading area is the lighter ground and
   the columns and cards the darker. In the dark theme a primary button and
-  the reader's count are a darker blue under white words (4.99:1), where
-  they were the mark's own under dark ones, and the button darkens under
-  the pointer. The diff's green
+  the reader's count are a darker blue under white words, where they were
+  the mark's own under dark ones; under the pointer every filled button,
+  the blue and the red alike, takes one stronger light. The diff's green
   and red climb the ladder too: a changed row stands on its colour's tint,
   12% of the colour at its edge, where it stood at 8 or 9% of a green or
   a red of its own, a little stronger; and what changed inside it at the

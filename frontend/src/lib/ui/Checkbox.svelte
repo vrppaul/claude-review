@@ -45,7 +45,11 @@
 				<span class="cr-ui-setting-note">{note}</span>
 			{/if}
 		</span>
-		{@render box('cr-ui-checkbox')}
+		<!-- The box drawn by the page, and the library's check over it, drawn in as it is ticked -->
+		<span class="cr-ui-checkbox">
+			{@render box('cr-ui-checkbox-box')}
+			<span class="cr-ui-checkbox-check"><Icon name="check" size="xs" /></span>
+		</span>
 	</label>
 {:else}
 	<label class="cr-ui-check-chip cr-pressable">
