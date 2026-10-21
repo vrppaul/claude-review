@@ -43,7 +43,6 @@ from claude_review.domain.models import (
     LineType,
     OfConversation,
     OfFiles,
-    ReviewMode,
     StoryAnchor,
     StoryBlock,
     Thread,
@@ -64,7 +63,7 @@ from claude_review.repositories.git_repository import GitRepository
 from claude_review.repositories.system_clock import SystemClock
 from claude_review.services.review.review_lifetime import EndReason, ReviewLifetime
 from claude_review.services.review_opening import OpenedRepository, ReviewOpening, open_diff
-from tests.held_still import RepositoryHeldStill, change_held_still
+from tests.without_git import RepositoryHeldStill, change_held_still
 
 # Where a review built in the test process is reached. Its own page names
 # itself by this origin, and the host is what the origin guard checks.
@@ -390,30 +389,20 @@ class ReviewFactory:
         diff_files: list[DiffFile],
         *,
         title: str = "",
-        too_large: frozenset[str] = frozenset(),
         clock: Clock | None = None,
     ) -> HostedReview:
-        """A review of these files as a repository's change, over a repository held still (tests/held_still.py)."""
+        """A review of these files as a repository's change, over a repository held still (tests/without_git.py)."""
         return self.hosted(
-            change_held_still(diff_files, title=title),
-            clock=clock,
-            repository=RepositoryHeldStill(diff_files, too_large=too_large),
+            change_held_still(diff_files, title=title), clock=clock, repository=RepositoryHeldStill(diff_files)
         )
 
     def app(self, opening: ReviewOpening, *, keeps_marks: bool = True, clock: Clock | None = None) -> FastAPI:
         """The app that serves the review, for a test that speaks to it and to nothing else."""
         return self.hosted(opening, keeps_marks=keeps_marks, clock=clock).app
 
-    def app_of_change(
-        self,
-        diff_files: list[DiffFile],
-        *,
-        title: str = "",
-        too_large: frozenset[str] = frozenset(),
-        clock: Clock | None = None,
-    ) -> FastAPI:
+    def app_of_change(self, diff_files: list[DiffFile], *, title: str = "", clock: Clock | None = None) -> FastAPI:
         """The app that serves a review of these files as a repository's change, held still."""
-        return self.hosted_change(diff_files, title=title, too_large=too_large, clock=clock).app
+        return self.hosted_change(diff_files, title=title, clock=clock).app
 
 
 @contextlib.asynccontextmanager

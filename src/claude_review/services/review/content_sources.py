@@ -19,7 +19,7 @@ to read (`RoundBeingWritten`), which a retake reads once its turn comes.
 import asyncio
 from abc import abstractmethod
 from collections.abc import AsyncIterator
-from typing import override
+from typing import assert_never, override
 
 import structlog
 from pydantic import BaseModel
@@ -323,3 +323,5 @@ def content_source(opening: ReviewOpening, *, repository: ReviewedRepository, cl
             return RepositorySource(opening, opened, repository=repository, clock=clock)
         case OfFiles() | OfConversation():
             return FixedSource(opening)
+        case _:
+            assert_never(opening.source)

@@ -12,7 +12,7 @@ from claude_review.domain.exceptions import QuestionNotInThreadError
 class ReviewMode(StrEnum):
     """What kind of content is being reviewed.
 
-    DIFF  — git changes (the default): two-column line numbers, add/delete styling.
+    DIFF  — git changes: two-column line numbers, add/delete styling.
     FILES — plain text files (plans, docs): single line numbers, no diff decoration.
     TRANSCRIPT — conversation messages: each message is a reviewable block.
     """

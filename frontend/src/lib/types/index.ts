@@ -21,7 +21,7 @@ export type FileStatus = Schemas['FileStatus'];
  * Where the change under review is, one kind to each kind of review: a repository's change, with the
  * repository; or files or a conversation read once, called by the review's title.
  */
-export type WhereTheChangeIs = Schemas['ReviewResponse']['where'];
+export type WhereTheChangeIs = Schemas['WhereTheChangeIs'];
 /** What kind of review it is: the kind of where its change is. */
 export type ReviewMode = WhereTheChangeIs['kind'];
 /** Whether a diff reads down one column or across two. */
@@ -42,7 +42,7 @@ export type Unshown = Schemas['Unshown'];
 /** What the review is and where it stands, read as the page opens. */
 export type ReviewResponse = Schemas['ReviewResponse'];
 /** What the repository of the change under review had checked out: a branch, or a commit on none. */
-export type Checkout = Schemas['RepositoryAt']['checkout'];
+export type Checkout = Schemas['Checkout'];
 export type DiffResponse = Schemas['DiffResponse'];
 /** The story the review holds, if the agent told one. */
 export type StoryResponse = Schemas['StoryResponse'];

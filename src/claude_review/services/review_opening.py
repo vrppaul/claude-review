@@ -10,7 +10,7 @@ were named.
 import asyncio
 import hashlib
 from pathlib import Path
-from typing import Annotated, Literal
+from typing import Annotated, Literal, assert_never
 
 import structlog
 from pydantic import BaseModel, ConfigDict, Field
@@ -122,6 +122,8 @@ class ReviewOpening(BaseModel):
                 return named_base
             case OfFiles() | OfConversation():
                 return None
+            case _:
+                assert_never(self.source)
 
     @property
     def where(self) -> WhereTheChangeIs:
@@ -131,6 +133,8 @@ class ReviewOpening(BaseModel):
                 return repository.where
             case OfFiles() | OfConversation() as read_once:
                 return read_once
+            case _:
+                assert_never(self.source)
 
 
 async def open_diff(location: Path, base: str | None, repository: Repository) -> ReviewOpening:

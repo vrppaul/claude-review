@@ -8,29 +8,16 @@ offered depends on the marks alone.
 """
 
 import contextlib
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from pathlib import Path
 from typing import override
 
-from claude_review.domain.interfaces import Repository, StagedTree
-from claude_review.domain.models import (
-    ChangedSinceRound,
-    Checkout,
-    DiffFile,
-    GitRef,
-    OnBranch,
-    RoundKey,
-    VersionOnOffer,
-)
+from claude_review.domain.interfaces import StagedTree
+from claude_review.domain.models import ChangedSinceRound, DiffFile, RoundKey, VersionOnOffer
 from claude_review.services.review.review_versions import ReviewVersions
-from claude_review.services.review_opening import OpenedRepository
 from tests.helpers import FixedClock
+from tests.without_git import ROOT, RepositoryWithoutGit, opened_without_git
 
-ROOT = Path("/repository")
-# The commit the review opened on: its uncommitted changes, as HEAD stood then
-OPENED_ON = "commit-at-opening"
-# What the repository had checked out as the review opened
-CHECKED_OUT = OnBranch(branch="main")
 # When every mark here is left, on the review's clock
 MARKED_AT = 1_791_000_000_000
 # What the repository says differs from a base: one file, named after the base
@@ -60,7 +47,7 @@ class TreeThatMoves(StagedTree):
         return set()
 
 
-class RepositoryThatMoves(Repository):
+class RepositoryThatMoves(RepositoryWithoutGit):
     """A repository whose working tree moves between any two stagings."""
 
     def __init__(self) -> None:
@@ -72,36 +59,8 @@ class RepositoryThatMoves(Repository):
 
     @override
     @contextlib.asynccontextmanager
-    async def staged(self, path: Path) -> AsyncIterator[TreeThatMoves]:
+    async def staged(self, path: Path) -> AsyncGenerator[TreeThatMoves]:
         yield TreeThatMoves(self)
-
-    @override
-    async def list_refs(self, path: Path) -> list[GitRef]:
-        return []
-
-    @override
-    async def top_level(self, path: Path) -> Path | None:
-        return path
-
-    @override
-    async def changed_paths(self, path: Path) -> list[str]:
-        return []
-
-    @override
-    async def commit_named(self, path: Path, revision: str) -> str | None:
-        return OPENED_ON
-
-    @override
-    async def empty_tree(self, path: Path) -> str:
-        return "empty-tree"
-
-    @override
-    async def checked_out(self, path: Path) -> Checkout:
-        return CHECKED_OUT
-
-    @override
-    async def diff_between(self, path: Path, earlier: str, later: str) -> str:
-        return ""
 
 
 class MarkingReview:
@@ -109,16 +68,7 @@ class MarkingReview:
 
     def __init__(self) -> None:
         self._repository = RepositoryThatMoves()
-        self.versions = ReviewVersions(
-            self._repository,
-            FixedClock(MARKED_AT),
-            OpenedRepository(
-                root=ROOT,
-                named_base=None,
-                pinned_base=OPENED_ON,
-                checkout=CHECKED_OUT,
-            ),
-        )
+        self.versions = ReviewVersions(self._repository, FixedClock(MARKED_AT), opened_without_git())
 
     async def mark(self, round_number: int) -> None:
         async with self._repository.staged(ROOT) as staged:

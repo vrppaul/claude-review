@@ -19,28 +19,26 @@ repository is one that holds each staging until the test lets it go.
 
 import asyncio
 import contextlib
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from pathlib import Path
 from typing import override
 
-from claude_review.domain.interfaces import GitError, ReviewedRepository, StagedTree
-from claude_review.domain.models import (
-    FIRST_ROUND,
-    FIRST_TAKE,
-    Checkout,
-    DiffFile,
-    GitRef,
-    OnBranch,
-)
+from claude_review.domain.interfaces import GitError, StagedTree
+from claude_review.domain.models import FIRST_ROUND, FIRST_TAKE, DiffFile, FileStatus
 from claude_review.services.review.review import Review
-from claude_review.services.review_opening import OpenedRepository, ReviewOpening
-from tests.helpers import LOOK_EVERY_SECONDS, SETTLE_SECONDS, TEST_IDENTITY, FixedClock, ReviewFactory, one_line_file
+from claude_review.services.review_opening import ReviewOpening
+from tests.helpers import (
+    LOOK_EVERY_SECONDS,
+    SETTLE_SECONDS,
+    TEST_IDENTITY,
+    FixedClock,
+    ReviewFactory,
+    added_line,
+    diff_file,
+    one_line_file,
+)
+from tests.without_git import RepositoryWithoutGit, opened_without_git, unified_diff_of
 
-ROOT = Path("/repository")
-# The commit the review opened on: its uncommitted changes, as HEAD stood then
-OPENED_ON = "commit-at-opening"
-# What the repository had checked out as the review opened
-CHECKED_OUT = OnBranch(branch="main")
 # When every mark here is left, on the review's clock
 MARKED_AT = 1_791_000_000_000
 # The one file each staging finds changed, in the order the stagings are made:
@@ -55,9 +53,13 @@ NOTHING_READ: list[DiffFile] = []
 A_ROUND = "Another word for it, please."
 
 
+# The one line each file a staging finds was added with
+ADDED_LINE = "x"
+
+
 def _diff_adding(path: str) -> str:
     """What git says of a file added with one line in it."""
-    return f"diff --git a/{path} b/{path}\nnew file mode 100644\n--- /dev/null\n+++ b/{path}\n@@ -0,0 +1 @@\n+x\n"
+    return unified_diff_of([diff_file(path, [added_line(1, ADDED_LINE)], FileStatus.ADDED)])
 
 
 class HeldStaging(StagedTree):
@@ -87,7 +89,7 @@ class HeldStaging(StagedTree):
         return set()
 
 
-class RepositoryBeingWorkedOn(ReviewedRepository):
+class RepositoryBeingWorkedOn(RepositoryWithoutGit):
     """A working tree the agent changes between any two stagings of it: the opening's, then two retakes'."""
 
     def __init__(self) -> None:
@@ -97,40 +99,8 @@ class RepositoryBeingWorkedOn(ReviewedRepository):
 
     @override
     @contextlib.asynccontextmanager
-    async def staged(self, path: Path) -> AsyncIterator[HeldStaging]:
+    async def staged(self, path: Path) -> AsyncGenerator[HeldStaging]:
         yield next(self._next)
-
-    @override
-    async def top_level(self, path: Path) -> Path | None:
-        return path
-
-    @override
-    async def changed_paths(self, path: Path) -> list[str]:
-        return []
-
-    @override
-    async def list_refs(self, path: Path) -> list[GitRef]:
-        return []
-
-    @override
-    async def commit_named(self, path: Path, revision: str) -> str | None:
-        return OPENED_ON
-
-    @override
-    async def empty_tree(self, path: Path) -> str:
-        return "empty-tree"
-
-    @override
-    async def checked_out(self, path: Path) -> Checkout:
-        return CHECKED_OUT
-
-    @override
-    async def diff_between(self, path: Path, earlier: str, later: str) -> str:
-        return ""
-
-    @override
-    async def is_tracked(self, root: Path, relative_path: str) -> bool:
-        return True
 
 
 class RepositoryGitWillNotStage(RepositoryBeingWorkedOn):
@@ -144,17 +114,7 @@ class RepositoryGitWillNotStage(RepositoryBeingWorkedOn):
 
 async def _opened(reviews: ReviewFactory, repository: RepositoryBeingWorkedOn, read_for_it: list[DiffFile]) -> Review:
     """A review of the repository's uncommitted changes, put together and opened as the server opens it."""
-    opening = ReviewOpening(
-        source=OpenedRepository(
-            root=ROOT,
-            named_base=None,
-            pinned_base=OPENED_ON,
-            checkout=CHECKED_OUT,
-        ),
-        diff_files=read_for_it,
-        title="",
-        identity=TEST_IDENTITY,
-    )
+    opening = ReviewOpening(source=opened_without_git(), diff_files=read_for_it, title="", identity=TEST_IDENTITY)
     review = reviews.hosted(opening, clock=FixedClock(MARKED_AT), repository=repository).review
     await review.open()
     return review

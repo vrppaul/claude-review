@@ -11,6 +11,7 @@ import pytest
 from httpx import AsyncClient
 
 from claude_review.domain.models import MAX_PATH_LENGTH, DiffFile, FileStatus, Unshown
+from claude_review.presentation.schemas.refusal import Refusal
 from claude_review.repositories.git_repository import GitRepository
 from claude_review.services.review_opening import ReviewOpening, open_diff
 from claude_review.services.text_files import read_text_files
@@ -121,9 +122,7 @@ async def test_a_file_shown_without_its_lines_is_served_saying_why(reviews: Revi
     too_large = DiffFile(path="generated.log", status=FileStatus.ADDED, hunks=[], unshown=Unshown.TOO_LARGE)
     binary = DiffFile(path="logo.png", status=FileStatus.ADDED, hunks=[], unshown=Unshown.BINARY)
 
-    async with http_client(
-        reviews.app_of_change([too_large, binary, *_handler_change()], too_large=frozenset({too_large.path}))
-    ) as client:
+    async with http_client(reviews.app_of_change([too_large, binary, *_handler_change()])) as client:
         served = (await client.get(DIFF_ROUTE)).json()["files"]
 
     assert [(file["path"], file["unshown"]) for file in served] == [
@@ -392,11 +391,12 @@ async def test_file_window_rejects_a_line_number_below_one(repo_backed_client: A
     assert response.status_code == HTTPStatus.UNPROCESSABLE_CONTENT
 
 
-async def test_file_window_is_absent_without_a_repository(client: AsyncClient) -> None:
+async def test_file_window_is_absent_without_a_repository(files_client: AsyncClient) -> None:
     """A review of files read once has no tree to widen context from."""
-    response = await client.get("/api/file-window", params={"path": "a.py", "start": 1, "end": 2})
+    response = await files_client.get("/api/file-window", params={"path": "a.py", "start": 1, "end": 2})
 
     assert response.status_code == HTTPStatus.NOT_FOUND
+    assert "No repository" in Refusal.model_validate_json(response.content).detail
 
 
 async def _committed_then_changed(repo: Path, committed: str, changed: str) -> ReviewOpening:

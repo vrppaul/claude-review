@@ -230,7 +230,7 @@ class InRepository(Schema):
 
     @classmethod
     def from_domain(cls, where: models.InRepository) -> Self:
-        return cls(repository=RepositoryAt.from_domain(where.repository))
+        return cls(kind=where.kind, repository=RepositoryAt.from_domain(where.repository))
 
 
 class OfFiles(Schema):
@@ -238,11 +238,19 @@ class OfFiles(Schema):
 
     kind: Literal[ReviewMode.FILES] = ReviewMode.FILES
 
+    @classmethod
+    def from_domain(cls, where: models.OfFiles) -> Self:
+        return cls(kind=where.kind)
+
 
 class OfConversation(Schema):
     """A review of a conversation Claude Code kept: in no repository, and called by its title."""
 
     kind: Literal[ReviewMode.TRANSCRIPT] = ReviewMode.TRANSCRIPT
+
+    @classmethod
+    def from_domain(cls, where: models.OfConversation) -> Self:
+        return cls(kind=where.kind)
 
 
 type WhereTheChangeIs = Annotated[InRepository | OfFiles | OfConversation, Field(discriminator="kind")]
@@ -254,9 +262,9 @@ def where_from_domain(where: models.WhereTheChangeIs) -> WhereTheChangeIs:
         case models.InRepository():
             return InRepository.from_domain(where)
         case models.OfFiles():
-            return OfFiles()
+            return OfFiles.from_domain(where)
         case models.OfConversation():
-            return OfConversation()
+            return OfConversation.from_domain(where)
         case _:
             assert_never(where)
 
