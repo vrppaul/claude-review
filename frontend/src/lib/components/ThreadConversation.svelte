@@ -15,7 +15,7 @@
 	import { exchangesOf } from '$lib/utils/thread-exchanges';
 	import { timeAgo } from '$lib/utils/time';
 	import AgentOnItsWay from './AgentOnItsWay.svelte';
-	import { ASK_AGENT_NOW, ASKED_TO_DROP_IT, HANDED_WHILE_REWRITTEN, NOBODY_LISTENING } from './agent-waits';
+	import { ASK_AGENT_NOW, ASKED_TO_DROP_IT, NOBODY_LISTENING } from './agent-waits';
 	import CommentBox from './CommentBox.svelte';
 	import MarkdownRenderer from './MarkdownRenderer.svelte';
 	import SaidImages from './SaidImages.svelte';
@@ -49,7 +49,9 @@
 	// Questions in this thread still with the agent, oldest first
 	const awaiting = $derived(review.threads.reading.awaiting(thread.id));
 	// Whether what the reader said last is theirs to hand over: nothing waited on, and the last word theirs
-	const yoursToAsk = $derived(awaiting.length === 0 && lastWord !== AGENT);
+	// Whether words of the reader's in it are being rewritten, which asking now would hand over as they were
+	const rewriting = $derived(exchanges.some((exchange) => review.threads.writing.edit(thread.id, exchange.id)));
+	const yoursToAsk = $derived(awaiting.length === 0 && lastWord !== AGENT && !rewriting);
 
 	/** Take a question back; its turn of the agent's goes, and the keyboard stays with the thread. */
 	async function takeBackAndStay(questionId: string) {
@@ -87,8 +89,8 @@
 	{@const last = index === exchanges.length - 1}
 	{@const editing = review.threads.writing.edit(thread.id, exchange.id)}
 	{@const handed = review.threads.handing.has(thread.id, exchange.id)}
-	<!-- Neither asking nor the menu stands at words being rewritten -->
-	{@const asks = last && yoursToAsk && editing === undefined}
+	<!-- Asking stands at the last words while none of the thread's are being rewritten; the menu, at no words that are -->
+	{@const asks = last && yoursToAsk}
 	{@const rewritable = exchange.by === READER && !handed && editing === undefined}
 	{#if exchange.startsRound}
 		<!-- Where one round ended and the next began, in this thread -->
@@ -128,7 +130,6 @@
 				onSave={() => editDone(() => review.threads.say(editing))}
 				onCancel={() => editDone(() => review.threads.writing.discard(editing))}
 				severityPicker={opening}
-				unsayable={handed ? HANDED_WHILE_REWRITTEN : undefined}
 				hangs="in-its-thread"
 				voice={threadVoice(thread)}
 			/>

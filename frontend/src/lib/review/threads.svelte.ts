@@ -460,10 +460,14 @@ export class Threads {
 		const { at } = field;
 		if (at.kind === 'new' || at.kind === 'story') return [{ field, anchor: anchorWrittenOn(at) }];
 		const thread = this.#all.find((candidate) => candidate.id === at.thread);
-		// An edit holding nothing the reader put in it says what its thread says already; one of words the agent was
-		// handed since it opened can no longer be said
-		if (!thread || (at.kind === 'edit' && (!field.holdsWork || this.handing.has(at.thread, at.said)))) return [];
+		// An edit holding nothing the reader put in it says what its thread says already
+		if (!thread || (at.kind === 'edit' && !field.holdsWork) || this.rewritesHanded(field)) return [];
 		return [{ field, anchor: thread.anchor }];
+	}
+
+	/** Whether a field rewrites words the agent was handed since it opened: what it holds can no longer be said. */
+	rewritesHanded({ at }: CommentField): boolean {
+		return at.kind === 'edit' && this.handing.has(at.thread, at.said);
 	}
 
 	#replace(id: string, change: (thread: Thread) => Thread): void {

@@ -17,7 +17,7 @@
 	import Segmented from '$lib/ui/Segmented.svelte';
 	import type { Voice } from '$lib/ui/voice';
 	import { hasSuggestion, withSuggestion } from '$lib/utils/suggestion';
-	import { ASK_AGENT_NOW } from './agent-waits';
+	import { ASK_AGENT_NOW, HANDED_WHILE_REWRITTEN } from './agent-waits';
 	import AttachedImages from './AttachedImages.svelte';
 	import { FIELD_KEYS, isFieldChord } from './keymap';
 	import { PLACEHOLDERS } from './placeholders';
@@ -77,11 +77,6 @@
 		suggestFrom?: string[] | undefined;
 		/** A reply has no weight of its own: the thread's belongs to the comment. */
 		severityPicker?: boolean;
-		/**
-		 * Why what it holds can no longer be said, where it cannot: an edit of words the agent was handed since it
-		 * opened. Said in place of its keys, its main act off.
-		 */
-		unsayable?: string | undefined;
 	};
 
 	let {
@@ -92,7 +87,6 @@
 		label,
 		suggestFrom,
 		severityPicker = true,
-		unsayable,
 		hangs,
 		voice = 'reader'
 	}: Props = $props();
@@ -106,7 +100,9 @@
 
 	// A screenshot can be the whole comment, so words are not required; an
 	// image still on its way is waited for
-	const sayable = $derived(field.sayable && unsayable === undefined);
+	// An edit of words the agent was handed since it opened can no longer be said: it says why where its keys stand
+	const handedSince = $derived(review.threads.rewritesHanded(field));
+	const sayable = $derived(field.sayable && !handedSince);
 
 	// The cursor goes to the field when it is opened, or asked for again — not
 	// whenever it is drawn: one drawn again, a file unfolded or the page
@@ -268,8 +264,8 @@
 	{/if}
 	<Actions testId="comment-actions">
 		{#snippet aside()}
-			{#if unsayable}
-				<span data-testid="comment-unsayable" class="cr-muted text-xs">{unsayable}</span>
+			{#if handedSince}
+				<span data-testid="comment-unsayable" class="cr-muted text-xs">{HANDED_WHILE_REWRITTEN}</span>
 			{:else}
 				<span data-testid="comment-keys" class="cr-faint text-xs">{MAIN_ACTS[field.at.kind].keys}</span>
 			{/if}

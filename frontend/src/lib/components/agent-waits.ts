@@ -29,4 +29,4 @@ export const NOBODY_LISTENING = 'No agent listening: this goes with the next rou
  * Said where the keys of words being rewritten stand, once the agent was handed them as they were: it reads them
  * once, so they cannot be saved over, and what the reader means now goes in a reply.
  */
-export const HANDED_WHILE_REWRITTEN = 'The agent has read these words now: say it in a reply';
+export const HANDED_WHILE_REWRITTEN = 'The agent has read what this said: say more in a reply';

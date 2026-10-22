@@ -396,11 +396,11 @@ describe('a thread is a conversation', () => {
 		await user.click(getByTestId('turn-menu'));
 		await user.click(getByTestId('edit-turn'));
 		const field = within(getByTestId('thread-question')).getByTestId('comment-input') as HTMLTextAreaElement;
-		const opened = [field.value, document.activeElement === field, getByTestId('thread-bar') !== null];
+		const opened = [field.value, document.activeElement === field, said(getByTestId('resolve-comment'))];
 		await user.type(field, ' And 4?');
 		await user.click(getByTestId('save-comment'));
 
-		expect(opened).toEqual(['Why 3?', true, true]);
+		expect(opened).toEqual(['Why 3?', true, 'Resolve']);
 		expect(review.threads.all[0].body).toBe('Why 3? And 4?');
 		expect(said(getByTestId('thread-question'))).toContain('Why 3? And 4?');
 	});
@@ -437,6 +437,31 @@ describe('a thread is a conversation', () => {
 		await user.click(getByTestId('save-comment'));
 
 		expect([pickedInAReply, review.threads.all[0].severity]).toEqual([false, 'blocker']);
+	});
+
+	it('leaves out of a send words being rewritten that the agent was handed meanwhile', () => {
+		const id = review.threads.add(onTheAddedLine('Why 3?'));
+		const [thread] = review.threads.all;
+		review.threads.writing.openEdit(thread, id);
+		const field = review.threads.writing.edit(id, id);
+		if (!field) throw new Error('No edit was opened');
+		field.text = 'Why 4?';
+
+		handOverNext(review, handedPush(review.threads.all));
+
+		expect(review.threads.open).toEqual([]);
+	});
+
+	it('offers no asking while words of the thread are being rewritten, which it would hand over as they were', async () => {
+		const user = userEvent.setup({ delay: null });
+		const id = review.threads.add(onTheAddedLine('Why 3?'));
+		review.threads.addTurn(id, { author: 'reader', body: 'And 4?', images: [] });
+		const { getAllByTestId, queryByTestId } = render(DiffView, inReview(review));
+
+		await user.click(getAllByTestId('turn-menu')[0]);
+		await user.click(getAllByTestId('edit-turn')[0]);
+
+		expect(queryByTestId('ask-now-thread')).toBeNull();
 	});
 
 	it('cannot save words rewritten while the agent was handed them, and says why', async () => {
