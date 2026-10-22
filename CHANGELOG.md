@@ -264,6 +264,17 @@
   the start of its acts, "Ctrl+Enter adds", or "Ctrl+Enter saves" for an
   edit, whose main button says Save; the line of keys under the buttons is
   gone.
+- **A story's head and the change in short, as the board draws them.** The
+  round a story was told in stands under its title in plain words, in the
+  agent's colour while its code is current and in yellow once a later round
+  moved it on, where it was a tag beside the title. A story told from the
+  commits says so under its head, "Reconstructed." on the agent's tint,
+  where a tag and a dashed frame said it. Task, Done and Doubt are a card
+  each, on the wash of whose they are: what was asked in the reader's blue,
+  what was done in the agent's violet, what to doubt in yellow, a step
+  stronger; each starts with its mark on a tile. Pointed at, the whole card
+  lights and offers "Ask about this" inside its top right corner; with a
+  question open under it, it is where the reader is.
 - **The reader rewrites or deletes only what the agent has not read.** Three
   dots at the head of each of the reader's own turns, the comment and each
   reply, offer Edit and Delete until the agent is handed it: with a round,

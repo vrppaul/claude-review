@@ -57,7 +57,7 @@
 			<!-- A round changed code the chapter tells after it was told, as the review says: said first, in a
 				warning's frame, since what the agent says below was said of the code before; and that the agent
 				is updating it, only while it is -->
-			<EdgeFrame {...A_WARNING} testId="chapter-changed">
+			<EdgeFrame look={A_WARNING} testId="chapter-changed">
 				{@render warningHead(CHANGED_AFTER_TOLD_HEAD)}
 				<p>
 					{stepsChanged(told.changed_steps)}

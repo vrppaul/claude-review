@@ -24,10 +24,11 @@
 export type HeadingKind = 'story' | 'part' | 'pane' | 'list' | 'piece';
 
 /**
- * The tone it is said in, where it is not the page's own words: the agent's,
- * a warning, quieter, or stepping back as what is finished with does.
+ * The tone it is said in, where it is not the page's own words: the reader's,
+ * the agent's, a warning, quieter, or stepping back as what is finished with
+ * does.
  */
-export type HeadingTone = 'agent' | 'warning' | 'quiet' | 'faint';
+export type HeadingTone = 'reader' | 'agent' | 'warning' | 'quiet' | 'faint';
 
 /**
  * What it is to whoever goes through the page by its headings: a heading at
@@ -44,6 +45,7 @@ export const HEADING_KINDS: Record<HeadingKind, string> = {
 };
 
 export const HEADING_TONES: Record<HeadingTone, string> = {
+	reader: 'cr-ui-heading-reader',
 	agent: 'cr-ui-heading-agent',
 	warning: 'cr-ui-heading-warning',
 	quiet: 'cr-ui-heading-quiet',

@@ -55,7 +55,7 @@
 				<p data-testid="step-reason">{askable}</p>
 			</AskableBlock>
 		{:else}
-			<EdgeFrame {...AGENTS_VOICE} testId="step-reason-frame">
+			<EdgeFrame look={AGENTS_VOICE} testId="step-reason-frame">
 				<p data-testid="step-reason">{told.reason}</p>
 			</EdgeFrame>
 		{/if}

@@ -1,10 +1,15 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
-	import { CARD_HANGINGS, CARD_TONES, type CardHanging, type CardTone } from './card';
+	import { CARD_HANGINGS, CARD_TONES, type CardHanging, type CardTone, type WashedTone } from './card';
 
-	interface Props extends Omit<HTMLAttributes<HTMLDivElement>, 'class' | 'style' | 'children'> {
-		tone: CardTone;
+	/**
+	 * Whose it is, or where what it holds stands; and whether its tone's wash lies over the whole of it, a line of
+	 * a story in short, in place of the card's ground, which only a tone a card is washed in can.
+	 */
+	type Washing = { tone: CardTone; washed?: false } | { tone: WashedTone; washed: true };
+
+	interface CardProps extends Omit<HTMLAttributes<HTMLDivElement>, 'class' | 'style' | 'children'> {
 		/** Where it hangs under what it is about; none for a card that stands where it is drawn. */
 		hangs?: CardHanging | undefined;
 		testId: string;
@@ -18,7 +23,19 @@
 		beingWritten?: boolean;
 	}
 
-	let { tone, hangs, testId, bar, children, foot, beingWritten = false, ...attributes }: Props = $props();
+	type Props = CardProps & Washing;
+
+	let {
+		tone,
+		hangs,
+		testId,
+		bar,
+		children,
+		foot,
+		beingWritten = false,
+		washed = false,
+		...attributes
+	}: Props = $props();
 </script>
 
 <!-- What it holds boxed apart from what stands round it, edged in its tone's colour (lib/ui/card.ts); where it
@@ -32,7 +49,8 @@
 		bar ? 'cr-ui-card-barred' : 'cr-ui-card-content',
 		CARD_TONES[tone],
 		hangs && CARD_HANGINGS[hangs],
-		beingWritten && 'cr-ui-card-being-written'
+		beingWritten && 'cr-ui-card-being-written',
+		washed && 'cr-ui-card-washed'
 	]}
 >
 	{@render bar?.()}

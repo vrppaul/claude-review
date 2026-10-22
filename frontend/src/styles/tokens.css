@@ -95,8 +95,6 @@
 	--cr-contents-indent: calc(var(--cr-contents-node) + var(--cr-list-row-gap));
 	/* The room either side of a story's words in its area; its code reaches through it, as a file's does */
 	--cr-story-gutter: --spacing(6);
-	/* A line of a story's overview on a screen wide enough: what it is, in a column this wide, beside its words */
-	--cr-overview-columns: 4rem minmax(0, 1fr);
 
 	/*
 	 * A card (lib/ui Card) — a thread, a comment being written, the facts of a

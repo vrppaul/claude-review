@@ -51,8 +51,9 @@ const TOLD = storyHeld({
 	left_out: [{ piece: LEFT_OUT_OF_A, changed_lines: 1 }],
 	housekeeping: ['uv.lock']
 });
-// What a story told from commits says of itself, by how it begins
-const NOT_THE_AGENTS_OWN_CHANGE = /^The agent did not make this change\./;
+// What a story told from commits says of itself, by how it begins, and what it says after its first word
+const SAID_TO_BE_RECONSTRUCTED = /^Reconstructed\. The agent did not make this change:/;
+const NOT_THE_AGENTS_OWN_CHANGE = /The agent did not make this change/;
 
 let review: Review;
 
@@ -652,14 +653,12 @@ describe('a review read as its story', () => {
 		review.views.choose('story');
 		render(ReviewScreen, { props: { review } });
 
-		expect(screen.getByTestId('story-reconstructed').textContent).toBe('reconstructed');
-		expect(screen.getByText(NOT_THE_AGENTS_OWN_CHANGE)).toBeTruthy();
+		expect(said(screen.getByTestId('story-reconstruction'))).toMatch(SAID_TO_BE_RECONSTRUCTED);
 	});
 
 	it('says nothing of a reconstruction where the agent told it from memory', () => {
 		render(ReviewScreen, { props: { review } });
 
-		expect(screen.queryByTestId('story-reconstructed')).toBeNull();
 		expect(screen.queryByText(NOT_THE_AGENTS_OWN_CHANGE)).toBeNull();
 	});
 });

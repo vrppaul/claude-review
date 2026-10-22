@@ -295,6 +295,9 @@
 	line-height: var(--text-sm--line-height);
 	overflow-wrap: anywhere;
 }
+.cr-ui-heading-reader {
+	color: var(--cr-mark-text);
+}
 .cr-ui-heading-agent {
 	color: var(--cr-agent);
 }
@@ -1032,6 +1035,10 @@
 .cr-ui-bands-headed {
 	margin-top: var(--cr-button-xs);
 }
+/* Blocks each on a card of its own, which holds its offer inside it: as close as cards in a stack */
+.cr-ui-bands:has(> .cr-ui-band-block-carded) {
+	row-gap: --spacing(3);
+}
 /* Pointed at, or holding the keyboard, in the pointer's light, the frame's wash showing through */
 .cr-ui-band:not(.cr-ui-band-current):is(:hover, :focus-within) {
 	background-image: linear-gradient(var(--cr-hover), var(--cr-hover));
@@ -1052,8 +1059,21 @@
 .cr-ui-band:is(:hover, :focus-within) > .cr-ui-band-offer {
 	opacity: 1;
 }
-.cr-ui-frame-dashed {
-	border-left-style: dashed;
+/*
+ * A band on a card of its own (Card, washed) fills the card: it reaches past
+ * its words into the card's room on every side, to the card's edge and its
+ * corner, so the whole card lights; its offer stands inside the card's top
+ * right corner, over room no word takes
+ */
+.cr-ui-band-on-a-card {
+	margin: calc(-1 * var(--cr-card-room));
+	padding: var(--cr-card-room);
+	border-radius: calc(var(--radius-box) - var(--cr-line));
+}
+.cr-ui-band-on-a-card > .cr-ui-band-offer {
+	top: --spacing(3);
+	right: --spacing(3);
+	bottom: auto;
 }
 .cr-ui-frame-agent {
 	border-left-color: var(--cr-agent);
@@ -1101,6 +1121,19 @@
 }
 .cr-ui-card-done {
 	border-color: var(--cr-done-border);
+}
+.cr-ui-card-warning {
+	border-color: var(--cr-warning-border);
+}
+/* Washed in its tone over the whole of it, a line of a story in short; what to look at a step stronger */
+.cr-ui-card-washed.cr-ui-card-reader {
+	background-color: var(--cr-mark-wash);
+}
+.cr-ui-card-washed.cr-ui-card-agent {
+	background-color: var(--cr-agent-wash);
+}
+.cr-ui-card-washed.cr-ui-card-warning {
+	background-color: var(--cr-warning-tint);
 }
 /* What it holds not there yet, a comment being written: the card it becomes, its edge broken until it is added */
 .cr-ui-card-being-written {
@@ -1215,14 +1248,28 @@
 	text-overflow: ellipsis;
 	color: var(--cr-muted);
 }
-/* A few small words of where a thing stands (Standing), in the colour of what they say */
+/*
+ * A few small words of where a thing stands (Standing), in the colour of what
+ * they say: on a bar's line at the size of its small words, under a title a
+ * step smaller
+ */
 .cr-ui-standing {
 	display: inline-flex;
 	align-items: center;
 	gap: --spacing(1);
 	white-space: nowrap;
+}
+.cr-ui-standing-on-a-bar {
 	font-size: var(--text-xs);
 	line-height: var(--text-xs--line-height);
+}
+.cr-ui-standing-under-a-heading {
+	font-size: var(--text-2xs);
+	line-height: var(--text-2xs--line-height);
+}
+/* Breathing dots keep half a step more room from the words they stand before: three marks, not one */
+.cr-ui-standing > .cr-ui-breathing-dots {
+	margin-inline-end: --spacing(0.5);
 }
 .cr-ui-standing-quiet {
 	color: var(--cr-muted);
@@ -1232,7 +1279,6 @@
 	font-weight: var(--font-weight-semibold);
 }
 .cr-ui-standing-agent {
-	gap: --spacing(1.5);
 	color: var(--cr-agent);
 }
 .cr-ui-standing-unread {
@@ -1240,6 +1286,9 @@
 }
 .cr-ui-standing-faint {
 	color: var(--cr-faint);
+}
+.cr-ui-standing-warning {
+	color: var(--color-warning);
 }
 /*
  * A menu (Menu): its acts (MenuItem) one under another, each as tall as a
@@ -1442,6 +1491,37 @@
 .cr-ui-notice-quiet {
 	background: var(--color-base-200);
 	color: var(--cr-muted);
+}
+
+/*
+ * A callout (Callout, lib/ui/callout.ts): what a part says of itself before
+ * what it heads, on its tone's tint, at the box's corner, with no edge; its
+ * mark at its start, on the first line of its words, and its first words in
+ * its tone's colour
+ */
+.cr-ui-callout {
+	display: flex;
+	align-items: flex-start;
+	gap: --spacing(3);
+	padding: --spacing(2) --spacing(3);
+	border-radius: var(--radius-box);
+	font-size: var(--text-sm);
+	line-height: var(--text-sm--line-height);
+}
+.cr-ui-callout > .cr-ui-icon {
+	margin-top: --spacing(0.5);
+}
+.cr-ui-callout > p {
+	max-width: var(--cr-prose-measure);
+}
+.cr-ui-callout-lead {
+	font-weight: var(--font-weight-semibold);
+}
+.cr-ui-callout-agent {
+	background-color: var(--cr-agent-tint);
+}
+.cr-ui-callout-agent .cr-ui-callout-lead {
+	color: var(--cr-agent);
 }
 
 /*
@@ -1903,6 +1983,32 @@
 .cr-ui-avatar-agent {
 	background-color: var(--cr-avatar-agent);
 	color: var(--cr-agent);
+}
+/*
+ * A tile (Tile, lib/ui/tile.ts): a mark on its colour's chip, square at the
+ * box's corner and as tall as a small button, at the start of a card in that
+ * colour
+ */
+.cr-ui-tile {
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	justify-content: center;
+	width: var(--cr-button-sm);
+	height: var(--cr-button-sm);
+	border-radius: var(--radius-box);
+}
+.cr-ui-tile-reader {
+	background-color: var(--cr-mark-chip);
+	color: var(--cr-mark-text);
+}
+.cr-ui-tile-agent {
+	background-color: var(--cr-agent-chip);
+	color: var(--cr-agent);
+}
+.cr-ui-tile-warning {
+	background-color: var(--cr-warning-chip);
+	color: var(--color-warning);
 }
 /*
  * What the reader asked for and took back: its words muted and struck

@@ -12,28 +12,45 @@
  * frame of its own draws that frame itself; what hangs under the block hangs
  * from where its band ends. Blocks one under another (Bands) stand as far
  * apart as that offer is tall, so it lies over none of the words above it.
- * The frame, the band and their stack are drawn together here and in the
- * library's stylesheet, so nothing outside the library lays out round them.
+ *
+ * A block may stand on a card of its own instead (Card, washed): one line of
+ * what a story says in short, on the wash of whose it is. Its band fills the
+ * card, lit to the card's edge, and offers its act inside the card's top
+ * right corner; cards one under another stand as close as cards in a stack.
+ *
+ * The frame, the card, the band and their stack are drawn together here and
+ * in the library's stylesheet, so nothing outside the library lays out round
+ * them.
  */
+
+import type { WashedTone } from './card';
 
 /**
  * Whose or what the framed words are, and the ground the tone lays:
- * - agent: what the agent says in a story; on its wash
+ * - agent: what the agent says in a story; on its tint
  * - warning: what the review warns about, where to doubt it, what it costs;
- *   on its wash
+ *   on its tint
  */
 export type FrameTone = 'agent' | 'warning';
 
 /** Whether the frame lays its tone's ground under the words, or stands them on what is under it. */
 export type FrameGround = 'tint' | 'none';
 
-/** How a frame is drawn: for whoever hands one on, as a block of a story hands on the frame its words stand in. */
-export interface FrameLook {
+/** A frame with an edge at its start: whose its words are, and whether it lays their colour's ground. */
+export interface EdgeLook {
+	shape: 'edge';
 	tone: FrameTone;
 	ground: FrameGround;
-	/** Its edge broken: words read out of the code, not said by whoever made it. */
-	dashed?: boolean | undefined;
 }
+
+/** A card of a block's own, washed in its tone: whose the block is, or that it is what to look at. */
+interface CardLook {
+	shape: 'card';
+	tone: WashedTone;
+}
+
+/** How a frame is drawn: for whoever hands one on, as a block of a story hands on the frame its words stand in. */
+export type FrameLook = EdgeLook | CardLook;
 
 // The class of each tone, and of a ground, in the library's stylesheet
 export const FRAME_TONES: Record<FrameTone, string> = {

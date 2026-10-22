@@ -41,7 +41,7 @@
 				The agent that made the change tells it as a story: a short overview, then chapters with its reason above each
 				piece of code.
 			</p>
-			<EdgeFrame {...A_WARNING} testId="story-cost">
+			<EdgeFrame look={A_WARNING} testId="story-cost">
 				<p class="cr-cost-note">
 					<span class="mt-0.5"><Icon name="notice" size="base" tone="warning" /></span>
 					<span>

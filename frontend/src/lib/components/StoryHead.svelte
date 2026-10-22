@@ -1,12 +1,11 @@
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
 	import type { StoryHeld } from '$lib/types';
-	import EdgeFrame from '$lib/ui/EdgeFrame.svelte';
+	import Callout from '$lib/ui/Callout.svelte';
 	import Heading from '$lib/ui/Heading.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
-	import Tag from '$lib/ui/Tag.svelte';
-	import { AGENTS_READING } from './story-frames';
-	import { CODE_CURRENT, codeMovedOnIn } from './story-words';
+	import Standing from '$lib/ui/Standing.svelte';
+	import { CODE_CURRENT, codeMovedOnIn, NOT_THE_AGENTS_OWN_CHANGE, RECONSTRUCTED } from './story-words';
 
 	interface Props {
 		/** The story as the review holds it: the round it was told in, and whether a later one moved its code on. */
@@ -17,37 +16,30 @@
 
 	let { held, heading }: Props = $props();
 
-	// Told from the commits by an agent that did not make the change: the story says so wherever it speaks of itself
+	// Told from the commits by an agent that did not make the change: the story says so under its title
 	const reconstructed = $derived(held.story.told_from === 'commits');
 </script>
 
-<!-- What the change is called, the round its story was told in, and whether the story is the memory of
-	whoever made the change or a reading of it -->
-<header class="flex flex-wrap items-baseline gap-3">
-	<Heading {...heading} tag="h1" heads="story" testId="part-head">
-		<span data-testid="story-title">{held.story.title}</span>
-	</Heading>
-	<!-- The round the story was told in, tagged as the page tags a thing: in the agent's colour while its
-		code is current; in the warning's, saying when, once a later round moved the code on under it -->
-	<Tag tone={held.moved_on === null ? 'agent' : 'warning'} testId="story-round">
-		<Icon name="round" size="xs" />
-		round {held.round}
-		{#if held.moved_on === null}
-			<span class="cr-muted">{CODE_CURRENT}</span>
-		{:else}
-			<span>{codeMovedOnIn(held.moved_on.round)}</span>
-		{/if}
-	</Tag>
+<!-- What the change is called, the round its story was told in under it, and, where the agent that told it did not
+	make the change, that the story is its reading -->
+<header class="flex flex-col gap-4">
+	<div class="flex flex-col items-start gap-0.5">
+		<Heading {...heading} tag="h1" heads="story" testId="part-head">
+			<span data-testid="story-title">{held.story.title}</span>
+		</Heading>
+		<!-- In the agent's colour while its code is current; in the warning's, saying when, once a later round
+			moved the code on under it -->
+		<Standing tone={held.moved_on === null ? 'agent' : 'warning'} stands="under-a-heading" testId="story-round">
+			<Icon name="round" size="xs" />
+			round {held.round}
+			{#if held.moved_on === null}
+				<span class="cr-muted">{CODE_CURRENT}</span>
+			{:else}
+				<span>{codeMovedOnIn(held.moved_on.round)}</span>
+			{/if}
+		</Standing>
+	</div>
 	{#if reconstructed}
-		<Tag tone="agent" testId="story-reconstructed">reconstructed</Tag>
+		<Callout tone="agent" lead={RECONSTRUCTED} testId="story-reconstruction">{NOT_THE_AGENTS_OWN_CHANGE}</Callout>
 	{/if}
 </header>
-
-{#if reconstructed}
-	<EdgeFrame {...AGENTS_READING} testId="story-reconstruction">
-		<p class="text-sm">
-			The agent did not make this change. The reasons below are its reading of the code and of the commit messages, not
-			what was decided at the time.
-		</p>
-	</EdgeFrame>
-{/if}

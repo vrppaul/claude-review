@@ -68,24 +68,27 @@
 		<Tag tone="warning" testId="comment-outdated">outdated</Tag>
 	{/if}
 	{#if thread.resolved}
-		<Standing tone="done" testId="comment-resolved"><Icon name="check" size="xs" tone="done" /> resolved</Standing>
+		<Standing tone="done" stands="on-a-bar" testId="comment-resolved"
+			><Icon name="check" size="xs" tone="done" /> resolved</Standing
+		>
 	{:else if sentIn !== undefined && !folded && !raised}
-		<Standing tone="quiet" testId="comment-sent">sent in round {sentIn}</Standing>
+		<Standing tone="quiet" stands="on-a-bar" testId="comment-sent">sent in round {sentIn}</Standing>
 	{/if}
 	{#if answering}
-		<Standing tone="agent" testId="comment-answering"
+		<Standing tone="agent" stands="on-a-bar" testId="comment-answering"
 			><BreathingDots tone="quiet" testId="comment-answering-dots" /> answering</Standing
 		>
 	{/if}
 	{#if unread}
-		<Standing tone="unread" testId="comment-unread"
+		<Standing tone="unread" stands="on-a-bar" testId="comment-unread"
 			><Dot tone="unread" testId="comment-unread-dot" /> new reply</Standing
 		>
 	{/if}
 	{#if folded}
 		<FoldedSummary voice={threadVoice(thread)} words={plainWords(thread.body) || AN_IMAGE} testId="folded-summary" />
 		{#if thread.turns.length > 0}
-			<Standing tone="faint" testId="folded-replies">{counted(thread.turns.length, REPLIES)}</Standing>
+			<Standing tone="faint" stands="on-a-bar" testId="folded-replies">{counted(thread.turns.length, REPLIES)}</Standing
+			>
 		{/if}
 	{/if}
 	{#snippet end()}

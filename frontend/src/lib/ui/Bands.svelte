@@ -17,7 +17,8 @@
 </script>
 
 <!-- Blocks the reader may ask about, one under another, as far apart as the offer over a band is tall, so the
-	offer lies over none of the words above it (lib/ui/frame.ts) -->
+	offer lies over none of the words above it, or as close as cards in a stack where each block is a card holding
+	its offer inside (lib/ui/frame.ts) -->
 {#if listed}
 	<ul data-testid={testId} class={laidOut}>{@render children()}</ul>
 {:else}

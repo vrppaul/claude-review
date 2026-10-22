@@ -1,10 +1,9 @@
 /**
  * A tag (Tag): a word or two said beside a heading or a name — what a
- * thread asks for, that it is outdated, resolved or the agent's; the round a
- * story was told in, where else a step's file is told; a measure said
- * quietly — on the chip of the colour they are said in, with no edge. Its
- * words are shown as they are written: a tag holds a measure too, and "1M"
- * lowercased would read as "1m".
+ * thread asks for, that it is outdated, resolved or the agent's; where else
+ * a step's file is told; a measure said quietly — on the chip of the colour
+ * they are said in, with no edge. Its words are shown as they are written:
+ * a tag holds a measure too, and "1M" lowercased would read as "1m".
  *
  * A count (Count) and a chip (Chip, lib/ui/chip.ts) stand in the same box,
  * so marks in one line stand as tall, whatever line that is: small words at
@@ -17,11 +16,10 @@
  * - quiet: something settled, a thread resolved, or a measure said quietly,
  *   as the release something is new in
  * - reader: asked by the reader
- * - agent: the agent's — what it asks, that it raised a thread, the round
- *   its story was told in, where else it tells a file
+ * - agent: the agent's — what it asks, that it raised a thread, where else
+ *   it tells a file
  * - warning: what the reader is warned of or must deal with — a blocker, a
- *   thread out of date, a story whose code moved on, threads the view on
- *   screen does not show
+ *   thread out of date, threads the view on screen does not show
  */
 export type TagTone = 'quiet' | 'reader' | 'agent' | 'warning';
 

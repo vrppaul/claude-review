@@ -39,7 +39,7 @@ const CHANGED_AFTER_TOLD = 'changed after it was told';
 // What stands between a step's place among its chapter's steps and how many they are, and between chapters read and
 // how many there are
 const OUT_OF = 'of';
-// What the tag beside a story's title says once a later round moved the code on, before that round
+// What the round under a story's title says once a later round moved the code on, before that round
 const CODE_MOVED_ON_IN_ROUND = 'the code moved on in round';
 // What a chapter's warning says of the steps a round changed, after how many
 const IN_THIS_CHAPTER_CHANGED = `in this ${A_CHAPTER} changed`;
@@ -53,8 +53,13 @@ const IS_NO_LONGER_FOUND = 'is no longer found';
 // What stands between how much a story left out when it was told and how much it leaves out now
 const THEN_AND_NOW = ' → ';
 
-/** What the tag beside a story's title says of the code under it while that is the code it was told of. */
+/** What the round under a story's title says of the code under it while that is the code it was told of. */
 export const CODE_CURRENT = 'current';
+
+/** What a story told from the commits says of itself under its title: what it is, then why that matters. */
+export const RECONSTRUCTED = 'Reconstructed.';
+export const NOT_THE_AGENTS_OWN_CHANGE =
+	'The agent did not make this change: the reasons below are its reading of the code and of the commit messages, not what was decided at the time.';
 
 /** What heads the warning of a chapter whose code a round changed after the story was told. */
 export const CHANGED_AFTER_TOLD_HEAD = 'Changed after it was told.';
@@ -91,7 +96,7 @@ export function changedStepNamed(number: string): string {
 	return `${stepNamed(number)}, ${CHANGED_AFTER_TOLD}`;
 }
 
-/** What that tag says once a later round moved the code on: "the code moved on in round 2". */
+/** What the round under a story's title says once a later round moved the code on: "the code moved on in round 2". */
 export function codeMovedOnIn(round: number): string {
 	return `${CODE_MOVED_ON_IN_ROUND} ${round}`;
 }

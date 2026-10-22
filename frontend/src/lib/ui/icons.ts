@@ -22,6 +22,8 @@ const FILLED: HowDrawn = { kind: 'filled' };
 const TRACED: HowDrawn = { kind: 'traced', width: 1.5 };
 // The finer line of what can be done to a thread, at the size it is drawn at there
 const TRACED_FINE: HowDrawn = { kind: 'traced', width: 1.4 };
+// The firmer line of a mark read at a glance: a cross, a wait, what a card in a colour is about
+const TRACED_FIRM: HowDrawn = { kind: 'traced', width: 1.6 };
 // A window with rounded corners, which a side column's toggle draws a column in
 const WINDOW = 'M3.5 3h9a1.5 1.5 0 0 1 1.5 1.5v7a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 11.5v-7A1.5 1.5 0 0 1 3.5 3z';
 
@@ -74,7 +76,7 @@ export const ICONS = {
 		paths: ['M2 2h8v8h-8z', 'M3.8 6.1l1.5 1.5 2.9-3.2'],
 		drawn: { kind: 'traced', width: 1.2 }
 	},
-	cross: { viewBox: '0 0 12 12', paths: ['M3 3l6 6M9 3l-6 6'], drawn: { kind: 'traced', width: 1.6 } },
+	cross: { viewBox: '0 0 12 12', paths: ['M3 3l6 6M9 3l-6 6'], drawn: TRACED_FIRM },
 	// A ring of six dashes: what has not happened yet, and is waited for
 	awaited: {
 		viewBox: '0 0 16 16',
@@ -86,7 +88,7 @@ export const ICONS = {
 			'M5.25 3.24A5.5 5.5 0 0 1 8 2.5',
 			'M10.75 3.24A5.5 5.5 0 0 1 12.76 5.25'
 		],
-		drawn: { kind: 'traced', width: 1.6 }
+		drawn: TRACED_FIRM
 	},
 	// A line forking off another: the branch the change is made on
 	branch: {
@@ -121,6 +123,14 @@ export const ICONS = {
 	reply: { viewBox: '0 0 16 16', paths: ['M4 3v5.5a2 2 0 0 0 2 2h6', 'M9.5 8l3 2.5-3 2.5'], drawn: TRACED },
 	// A speech bubble: a word with the agent, in its panel or about a block of the story
 	conversation: { viewBox: '0 0 16 16', paths: ['M2.5 4.5h11v7h-6l-3 2.5v-2.5h-2z'], drawn: TRACED },
+	// Two rings, one inside the other: what was asked, the task a story begins with
+	target: {
+		viewBox: '0 0 16 16',
+		paths: ['M2.5 8a5.5 5.5 0 1 0 11 0a5.5 5.5 0 1 0 -11 0', 'M6 8a2 2 0 1 0 4 0a2 2 0 1 0 -4 0'],
+		drawn: TRACED_FIRM
+	},
+	// A triangle with a mark in it: what to look at, where a story says to doubt its change
+	warning: { viewBox: '0 0 16 16', paths: ['M8 2.5l6 11H2z', 'M8 7v2.8', 'M8 11.6v.1'], drawn: TRACED_FIRM },
 	notice: {
 		viewBox: '0 0 16 16',
 		paths: ['M8 4.5v4', 'M8 11.2v.3', 'M2 8a6 6 0 1 0 12 0a6 6 0 1 0 -12 0'],

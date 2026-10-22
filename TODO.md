@@ -121,6 +121,13 @@ tests. Remove items when done — don't check them off.
       agent has is matched to the page's turns by id (`turnsTheAgentHas`), so
       one page may take another's turn for its own. Read in the code, not
       reproduced.
+- [ ] `fix(ui)`: at a 760 px window the page itself scrolls sideways
+      (scrollWidth 784): `--breakpoint-cr-side-column-beside` (46rem,
+      `tokens.css`) leaves out the right column's 48 px rail. Measured by the
+      review of chunk 7 part 1, in a look.
+- [ ] `fix(ui)`: "Not now" on the tour's offer leaves the keyboard on Help
+      (`open-help`), one stop before the control the reader pressed. Seen by
+      the review of chunk 7 part 1; why, not traced.
 
 ## The story, from the reviews of its server side
 

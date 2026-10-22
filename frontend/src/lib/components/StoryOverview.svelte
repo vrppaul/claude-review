@@ -11,10 +11,14 @@
 	import { OVERVIEW_PART } from '$lib/review/story-keys';
 	import type { OverviewList, OverviewText, StoryHeld } from '$lib/types';
 	import Bands from '$lib/ui/Bands.svelte';
+	import type { WashedTone } from '$lib/ui/card';
 	import EdgeFrame from '$lib/ui/EdgeFrame.svelte';
 	import Heading from '$lib/ui/Heading.svelte';
 	import type { HeadingTone } from '$lib/ui/heading';
+	import type { IconName } from '$lib/ui/icons';
 	import Row from '$lib/ui/Row.svelte';
+	import Tile from '$lib/ui/Tile.svelte';
+	import type { TileTone } from '$lib/ui/tile';
 	import AskableBlock from './AskableBlock.svelte';
 	import StoryDiagram from './StoryDiagram.svelte';
 	import { AGENTS_VOICE } from './story-frames';
@@ -29,11 +33,18 @@
 
 	let { held }: Props = $props();
 
-	// The tone each of the overview's three lines is headed in, as its lists are: quietly, but what to doubt, a warning
-	const HEADING_TONES: Record<OverviewText, HeadingTone> = {
-		task: 'quiet',
-		done: 'quiet',
-		doubt: 'warning'
+	/** How one of the overview's three lines is drawn: on a card of its own, and the mark on the card's tile. */
+	interface LineLook {
+		/** Whose the line is, or what it is: its card, its tile and its term are drawn in it, so a tone all three have. */
+		tone: WashedTone & TileTone & HeadingTone;
+		mark: IconName;
+	}
+
+	// What was asked is the reader's, what was done the agent's, and what to doubt is what to look at
+	const LINE_LOOKS: Record<OverviewText, LineLook> = {
+		task: { tone: 'reader', mark: 'target' },
+		done: { tone: 'agent', mark: 'check' },
+		doubt: { tone: 'warning', mark: 'warning' }
 	};
 
 	// What each list of the overview is headed by
@@ -64,21 +75,24 @@
 	}
 </script>
 
-<!-- One of the overview's three lines, which the reader may ask about: what the story heads it with, then
-	its words. What to doubt is a warning, and says so in yellow -->
+<!-- One of the overview's three lines, which the reader may ask about, on a card of its own in its colour: its
+	mark, what the story heads it with, then its words -->
 {#snippet line(block: OverviewBlock, words: string, testId: string)}
-	<AskableBlock {block} {words} {testId}>
-		<!-- A term and what it says, as a list of them would be: the thread under it stands outside any list. On
-			a narrow screen the term stands over what it says, which keeps the line's whole width -->
-		<div class="grid grid-cols-1 items-baseline gap-x-4 gap-y-1 sm:grid-cols-(--cr-overview-columns)">
-			<Heading tag="p" heads="list" tone={HEADING_TONES[block.text]} role="term">{blockLabel(block)}</Heading>
-			<p role="definition" data-testid="block-words">{words}</p>
+	{@const look = LINE_LOOKS[block.text]}
+	<AskableBlock {block} {words} {testId} frame={{ shape: 'card', tone: look.tone }}>
+		<!-- A term and what it says, as a list of them would be: the thread under it stands outside any list -->
+		<div class="flex items-start gap-3">
+			<Tile tone={look.tone} icon={look.mark} />
+			<div class="flex max-w-(--cr-prose-measure) min-w-0 flex-1 flex-col gap-0.5">
+				<Heading tag="p" heads="list" tone={look.tone} role="term">{blockLabel(block)}</Heading>
+				<p role="definition" data-testid="block-words">{words}</p>
+			</div>
 		</div>
 	</AskableBlock>
 {/snippet}
 
 <!-- The story before its first chapter, one part of it: what the change is called, then the change in
-	short. The agent's voice carries its colour down the edge -->
+	short, a card to each line -->
 <StoryPart partKey={OVERVIEW_PART} testId="story-overview" class="flex flex-col gap-8">
 	{#snippet head(heading)}
 		<StoryHead {held} {heading} />
@@ -86,15 +100,13 @@
 
 	<section>
 		<Heading tag="h2" heads="part" seen={false}>The change in short</Heading>
-		<EdgeFrame {...AGENTS_VOICE} testId="story-in-short">
-			<Bands testId="overview-lines">
-				{@render line(overviewLine('task'), overview.task, 'overview-task')}
-				{@render line(overviewLine('done'), overview.done, 'overview-done')}
-				{#if overview.doubt}
-					{@render line(overviewLine('doubt'), overview.doubt, 'overview-doubt')}
-				{/if}
-			</Bands>
-		</EdgeFrame>
+		<Bands testId="overview-lines">
+			{@render line(overviewLine('task'), overview.task, 'overview-task')}
+			{@render line(overviewLine('done'), overview.done, 'overview-done')}
+			{#if overview.doubt}
+				{@render line(overviewLine('doubt'), overview.doubt, 'overview-doubt')}
+			{/if}
+		</Bands>
 	</section>
 
 	{#if overview.diagram}
@@ -110,7 +122,7 @@
 				{/snippet}
 			</Row>
 			{#if listsOpen}
-				<EdgeFrame {...AGENTS_VOICE} testId="overview-lists">
+				<EdgeFrame look={AGENTS_VOICE} testId="overview-lists">
 					<div class="flex flex-col gap-4">
 						{#each OVERVIEW_LISTS_IN_ORDER as list (list)}
 							{#if overview[list].length > 0}
