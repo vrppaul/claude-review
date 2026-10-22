@@ -1,12 +1,13 @@
 /**
  * What is being written in the threads, and not said yet: comments started
- * on lines or on a block of the story's words, replies, and edits of the
- * comment that opened a thread.
+ * on lines or on a block of the story's words, replies, and edits of what
+ * the reader said in a thread — the comment that opened it, or a reply.
  *
  * Several comments can be started on one file, each on its own lines; a
  * block of the story has one at a time, and a thread one reply and one
- * edit. Each stays until its words are added, asked or put away — not when
- * its field stops being drawn — and the draft keeps them across a reload.
+ * edit of each thing said in it. Each stays until its words are added,
+ * asked or put away — not when its field stops being drawn — and the draft
+ * keeps them across a reload.
  * What happens to each is told to whoever follows the comment fields: the
  * tour.
  */
@@ -32,18 +33,35 @@ function beganFrom({ text, severity, images }: Omit<KeptField, 'at'>): BeganFrom
 }
 
 /**
- * What a field a reload brought back began from: an edit, from its thread
- * as the draft kept it, which the edit has not touched yet; anything else,
- * from nothing.
+ * What a field a reload brought back began from: an edit, from what it
+ * rewrites as the draft kept it, which the edit has not touched yet;
+ * anything else, from nothing.
  */
 function beganBefore(at: WrittenAt, threads: readonly Thread[]): BeganFrom {
-	const edited = at.kind === 'edit' ? threads.find((thread) => thread.id === at.thread) : undefined;
-	if (edited === undefined) return beganFrom(nothingWritten());
-	return { text: edited.body, severity: edited.severity, images: [...edited.images] };
+	if (at.kind !== 'edit') return beganFrom(nothingWritten());
+	const edited = threads.find((thread) => thread.id === at.thread);
+	return (edited && rewritten(edited, at.said)) ?? beganFrom(nothingWritten());
+}
+
+/**
+ * What an edit of something the reader said in a thread begins from: the
+ * comment that opened it, with what it asks for, which is the thread's; or a
+ * reply, which asks for nothing of its own and keeps the thread's, never
+ * shown. Nothing, where the thread no longer holds it.
+ */
+function rewritten(thread: Thread, said: string): BeganFrom | undefined {
+	if (said === thread.id) return { text: thread.body, severity: thread.severity, images: [...thread.images] };
+	const reply = thread.turns.find((turn) => turn.id === said);
+	return reply && { text: reply.body, severity: thread.severity, images: [...reply.images] };
 }
 
 function isOnLines(field: CommentField): field is CommentField<WrittenOnLines> {
 	return field.at.kind === 'new';
+}
+
+/** Whether a field is written in a thread: a reply in it, or an edit of something said in it. */
+function writtenIn(at: WrittenAt, thread: string): boolean {
+	return (at.kind === 'reply' || at.kind === 'edit') && at.thread === thread;
 }
 
 export class ThreadWriting {
@@ -112,18 +130,16 @@ export class ThreadWriting {
 		this.#open({ kind: 'reply', thread }, nothingWritten());
 	}
 
-	/** The edit being made of a thread's opening comment, if one is. */
-	edit(thread: string): CommentField | undefined {
-		return this.#fields.get(fieldKey({ kind: 'edit', thread }));
+	/** The edit being made of something said in a thread — its opening by the thread's id, a reply by its own — if one is. */
+	edit(thread: string, said: string): CommentField | undefined {
+		return this.#fields.get(fieldKey({ kind: 'edit', thread, said }));
 	}
 
-	/** Start editing a thread's opening comment, from what it says now. */
-	openEdit(thread: Thread): void {
-		this.#open(
-			{ kind: 'edit', thread: thread.id },
-			// The thread's images are handed in: the field did not upload them, and lets none go
-			{ text: thread.body, severity: thread.severity, images: [...thread.images], uploaded: [] }
-		);
+	/** Start rewriting something the reader said in a thread, from what it says now. */
+	openEdit(thread: Thread, said: string): void {
+		const rewrites = rewritten(thread, said);
+		// Its images are handed in: the field did not upload them, and lets none go
+		if (rewrites) this.#open({ kind: 'edit', thread: thread.id, said }, { ...rewrites, uploaded: [] });
 	}
 
 	/** Its words went into the review: the field goes, and what was pasted into it stays with them. */
@@ -142,11 +158,9 @@ export class ThreadWriting {
 		this.#end(field, 'closed');
 	}
 
-	/** A thread is gone, and whatever was being written in it goes too. */
+	/** A thread is gone, and whatever was being written in it goes too: its reply, and every edit. */
 	forget(thread: string): void {
-		for (const field of [this.reply(thread), this.edit(thread)]) {
-			if (field) this.discard(field);
-		}
+		for (const field of [...this.#fields.values()].filter((open) => writtenIn(open.at, thread))) this.discard(field);
 	}
 
 	/** Every field being written, as the draft keeps them. */

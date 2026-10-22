@@ -2,7 +2,8 @@
  * What is said of something waiting on the agent — a message in the panel,
  * a question in a thread — once the agent has stopped listening, what
  * taking back the unanswered is called, and what asking it now is called:
- * one set of words wherever it waits.
+ * one set of words wherever it waits. And what is said of words the agent
+ * was handed while the reader rewrote them.
  */
 
 /** Said in place of how long it has been worked on, or waited for, once the agent has stopped listening. */
@@ -23,3 +24,9 @@ export const ASK_AGENT_NOW = 'Ask agent now';
 
 /** Said where Ask agent now would stand, while no agent is there to hear it. */
 export const NOBODY_LISTENING = 'No agent listening: this goes with the next round';
+
+/**
+ * Said where the keys of words being rewritten stand, once the agent was handed them as they were: it reads them
+ * once, so they cannot be saved over, and what the reader means now goes in a reply.
+ */
+export const HANDED_WHILE_REWRITTEN = 'The agent has read these words now: say it in a reply';

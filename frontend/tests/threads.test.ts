@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { flushSync, tick } from 'svelte';
-import { AGENT_STOPPED_LISTENING } from '$lib/components/agent-waits';
+import { AGENT_STOPPED_LISTENING, HANDED_WHILE_REWRITTEN } from '$lib/components/agent-waits';
 import { render, screen, within } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import CommentThread from '$lib/components/CommentThread.svelte';
@@ -11,6 +11,7 @@ import { fakeServer, SERVER_ERROR, type FakeServer } from './fake-server';
 import { newComment } from './new-comment';
 import type { Review } from '$lib/review/review.svelte';
 import type { Turn } from '$lib/types';
+import { handOverNext } from './pushes';
 import { inReview, openReview } from './review';
 
 let review: Review;
@@ -296,17 +297,27 @@ describe('a thread is a conversation', () => {
 		expect(review.threads.unread).toHaveLength(0);
 	});
 
-	it('offers no menu on a thread the agent raised: the reader answers its words and settles it, never rewrites or deletes it', () => {
-		const { anchor } = onTheAddedLine('');
-		review.threads.raise('raised-1', anchor, 'Kept the old name on purpose', 'note');
-		review.threads.add(onTheAddedLine('Why 3?'));
+	it('offers to rewrite or delete each of the reader’s own words the agent has not been handed, and nothing it has', () => {
+		const id = review.threads.add(onTheAddedLine('Why 3?'));
+		handOverNext(review, { type: 'handed', thread_id: id, said: [id] });
+		review.threads.addTurn(id, { author: 'reader', body: 'And 4?', images: [] });
+		review.threads.addTurn(id, { author: 'reader', body: 'And 5?', images: [] });
 
 		const { getAllByTestId } = render(DiffView, inReview(review));
 
-		expect(getAllByTestId('comment-thread')).toHaveLength(2);
-		expect(getAllByTestId('thread-menu')).toHaveLength(1);
-		expect(getAllByTestId('open-reply')).toHaveLength(2);
-		expect(getAllByTestId('resolve-comment')).toHaveLength(2);
+		const offered = getAllByTestId('thread-question').map((turn) => within(turn).queryByTestId('turn-menu') !== null);
+		expect(offered).toEqual([false, true, true]);
+	});
+
+	it('offers nothing to rewrite in the words the agent raised a thread with, only in the reader’s answer to them', () => {
+		const { anchor } = onTheAddedLine('');
+		review.threads.raise('raised-1', anchor, 'Kept the old name on purpose', 'note');
+		review.threads.addTurn('raised-1', { author: 'reader', body: 'Why keep it?', images: [] });
+
+		const { getAllByTestId } = render(DiffView, inReview(review));
+
+		const offered = getAllByTestId('thread-question').map((turn) => within(turn).queryByTestId('turn-menu') !== null);
+		expect(offered).toEqual([false, true]);
 	});
 
 	it('opens a thread the agent raised with the agent speaking', () => {
@@ -326,20 +337,20 @@ describe('a thread is a conversation', () => {
 		expect(said(getByTestId('open-reply'))).toBe('Reply…');
 	});
 
-	it('asks, from its menu, before a thread is deleted, and deletes it only on yes', async () => {
+	it('asks, from the comment’s own menu, before the thread is deleted, and deletes it only on yes', async () => {
 		const user = userEvent.setup({ delay: null });
 		review.threads.add(onTheAddedLine('Why 3?'));
 		const { getByTestId, queryByTestId } = render(DiffView, inReview(review));
 
-		await user.click(getByTestId('thread-menu'));
-		await user.click(getByTestId('delete-comment'));
+		await user.click(getByTestId('turn-menu'));
+		await user.click(getByTestId('delete-turn'));
 		expect(getByTestId('delete-dialog-question').textContent).toBe('Delete this comment?');
 		await user.click(getByTestId('confirm-keep'));
 		expect(review.threads.count).toBe(1);
 		expect(queryByTestId('delete-dialog-question')).toBeNull();
 
-		await user.click(getByTestId('thread-menu'));
-		await user.click(getByTestId('delete-comment'));
+		await user.click(getByTestId('turn-menu'));
+		await user.click(getByTestId('delete-turn'));
 		await user.click(getByTestId('confirm-go-ahead'));
 		expect(review.threads.count).toBe(0);
 	});
@@ -347,25 +358,102 @@ describe('a thread is a conversation', () => {
 	it('names, in the question before a thread is deleted, the replies that go with it', async () => {
 		const user = userEvent.setup({ delay: null });
 		const id = review.threads.add(onTheAddedLine('Why 3?'));
-		review.threads.receiveReply(id, 'It moved into the config default', null);
-		review.threads.receiveReply(id, 'And the old one is gone', null);
-		const { getByTestId } = render(DiffView, inReview(review));
+		review.threads.addTurn(id, { author: 'reader', body: 'And 4?', images: [] });
+		review.threads.addTurn(id, { author: 'reader', body: 'And 5?', images: [] });
+		const { getAllByTestId, getByTestId } = render(DiffView, inReview(review));
 
-		await user.click(getByTestId('thread-menu'));
-		await user.click(getByTestId('delete-comment'));
+		await user.click(getAllByTestId('turn-menu')[0]);
+		await user.click(getByTestId('delete-turn'));
 
 		expect(getByTestId('delete-dialog-question').textContent).toBe('Delete this comment and its 2 replies?');
 	});
 
-	it('opens the comment to be rewritten, from its menu', async () => {
+	it('deletes one reply, asking first, and keeps the rest of the thread', async () => {
+		const user = userEvent.setup({ delay: null });
+		const id = review.threads.add(onTheAddedLine('Why 3?'));
+		review.threads.addTurn(id, { author: 'reader', body: 'And 4?', images: [] });
+		review.threads.addTurn(id, { author: 'reader', body: 'And 5?', images: [] });
+		const { getAllByTestId, getByTestId } = render(DiffView, inReview(review));
+
+		await user.click(getAllByTestId('turn-menu')[1]);
+		await user.click(getByTestId('delete-turn'));
+		const asked = getByTestId('delete-dialog-question').textContent;
+		await user.click(getByTestId('confirm-go-ahead'));
+
+		expect(asked).toBe('Delete this reply?');
+		expect(getAllByTestId('thread-question').map(said)).toEqual([
+			expect.stringContaining('Why 3?'),
+			expect.stringContaining('And 5?')
+		]);
+		expect(document.activeElement).toBe(getByTestId('comment-thread'));
+	});
+
+	it('rewrites the comment where it stands: its words become the field, the thread round them as it was', async () => {
 		const user = userEvent.setup({ delay: null });
 		review.threads.add(onTheAddedLine('Why 3?'));
 		const { getByTestId } = render(DiffView, inReview(review));
 
-		await user.click(getByTestId('thread-menu'));
-		await user.click(getByTestId('edit-comment'));
+		await user.click(getByTestId('turn-menu'));
+		await user.click(getByTestId('edit-turn'));
+		const field = within(getByTestId('thread-question')).getByTestId('comment-input') as HTMLTextAreaElement;
+		const opened = [field.value, document.activeElement === field, getByTestId('thread-bar') !== null];
+		await user.type(field, ' And 4?');
+		await user.click(getByTestId('save-comment'));
 
-		expect((getByTestId('comment-input') as HTMLTextAreaElement).value).toBe('Why 3?');
+		expect(opened).toEqual(['Why 3?', true, true]);
+		expect(review.threads.all[0].body).toBe('Why 3? And 4?');
+		expect(said(getByTestId('thread-question'))).toContain('Why 3? And 4?');
+	});
+
+	it('rewrites one reply where it stands, and nothing else of the thread', async () => {
+		const user = userEvent.setup({ delay: null });
+		const id = review.threads.add(onTheAddedLine('Why 3?'));
+		review.threads.addTurn(id, { author: 'reader', body: 'And 4?', images: [] });
+		const { getAllByTestId, getByTestId } = render(DiffView, inReview(review));
+
+		await user.click(getAllByTestId('turn-menu')[1]);
+		await user.click(getByTestId('edit-turn'));
+		await user.clear(getByTestId('comment-input'));
+		await user.type(getByTestId('comment-input'), 'And 5?');
+		await user.click(getByTestId('save-comment'));
+
+		const [thread] = review.threads.all;
+		expect([thread.body, thread.turns.map((turn) => turn.body)]).toEqual(['Why 3?', ['And 5?']]);
+	});
+
+	it('rewrites what the comment asks for with its words, and never with a reply’s', async () => {
+		const user = userEvent.setup({ delay: null });
+		const id = review.threads.add(onTheAddedLine('Why 3?'));
+		review.threads.addTurn(id, { author: 'reader', body: 'And 4?', images: [] });
+		const { getAllByTestId, getByTestId, queryByTestId } = render(DiffView, inReview(review));
+
+		await user.click(getAllByTestId('turn-menu')[1]);
+		await user.click(getByTestId('edit-turn'));
+		const pickedInAReply = queryByTestId('severity-picker') !== null;
+		await user.click(getByTestId('cancel-comment'));
+		await user.click(getAllByTestId('turn-menu')[0]);
+		await user.click(getByTestId('edit-turn'));
+		await user.click(getByTestId('severity-blocker'));
+		await user.click(getByTestId('save-comment'));
+
+		expect([pickedInAReply, review.threads.all[0].severity]).toEqual([false, 'blocker']);
+	});
+
+	it('cannot save words rewritten while the agent was handed them, and says why', async () => {
+		const user = userEvent.setup({ delay: null });
+		const id = review.threads.add(onTheAddedLine('Why 3?'));
+		const { getByTestId } = render(DiffView, inReview(review));
+		await user.click(getByTestId('turn-menu'));
+		await user.click(getByTestId('edit-turn'));
+		await user.type(getByTestId('comment-input'), ' And 4?');
+
+		handOverNext(review, { type: 'handed', thread_id: id, said: [id] });
+		flushSync();
+		await user.type(getByTestId('comment-input'), '{Control>}{Enter}{/Control}');
+
+		expect((getByTestId('save-comment') as HTMLButtonElement).disabled).toBe(true);
+		expect(said(getByTestId('comment-unsayable'))).toBe(HANDED_WHILE_REWRITTEN);
+		expect(review.threads.all[0].body).toBe('Why 3?');
 	});
 
 	it('keeps every turn rather than overwriting the last one', () => {

@@ -34,7 +34,7 @@ import type {
 	Turn
 } from '$lib/types';
 import { COMMENT_ID_PREFIX, IdSequence, TURN_ID_PREFIX } from '$lib/utils/ids';
-import { threadOnTheWire } from '$lib/api/thread-wire';
+import { threadOfHeld, threadOnTheWire } from '$lib/api/thread-wire';
 import { AGENT, READER } from '$lib/utils/speakers';
 
 /** When the agent last answered in a thread; 0 for a thread it never answered. */
@@ -65,25 +65,6 @@ export interface OpenField {
 /** Whether a thread the review holds is as the agent raised it: nothing settled, and nothing said in it by the reader. */
 function isAsRaised(held: HeldThread): boolean {
 	return held.raised_by === AGENT && !held.resolved && held.turns.every((turn) => turn.author !== READER);
-}
-
-/**
- * A thread the review holds, as this page holds one. When it was written was
- * never told, nor which question an answer belongs to; the round it was
- * written in is no later than the first thing said in it, nor than now.
- */
-function threadOfHeld(held: HeldThread, currentRound: number): Thread {
-	return {
-		id: held.thread_id,
-		anchor: held.anchor,
-		severity: held.severity,
-		body: held.body,
-		images: held.images,
-		turns: held.turns.map(({ turn_id, author, body, round, images }) => ({ id: turn_id, author, body, round, images })),
-		raised_by: held.raised_by,
-		resolved: held.resolved,
-		round: Math.min(currentRound, ...held.turns.map((turn) => turn.round))
-	};
 }
 
 /** Words put into the review and asked about straight away: the thread they went into, and the asking. */
@@ -270,6 +251,15 @@ export class Threads {
 		this.#replace(id, (thread) => ({ ...thread, body, severity, images }));
 	}
 
+	/** Rewrite a reply of the reader's in a thread; nothing else of the thread changes. */
+	updateTurn(id: string, turnId: string, body: string, images: string[]): void {
+		this.#sending.changedByReader(id);
+		this.#replace(id, (thread) => ({
+			...thread,
+			turns: thread.turns.map((turn) => (turn.id === turnId ? { ...turn, body, images } : turn))
+		}));
+	}
+
 	remove(id: string): void {
 		this.#sending.changedByReader(id);
 		this.reading.forget(id);
@@ -277,11 +267,16 @@ export class Threads {
 		this.#all = this.#all.filter((thread) => thread.id !== id);
 	}
 
+	/** Delete a reply of the reader's from a thread; the rest of the thread stays. */
+	removeTurn(id: string, turnId: string): void {
+		this.#sending.changedByReader(id);
+		this.#replace(id, (thread) => ({ ...thread, turns: thread.turns.filter((turn) => turn.id !== turnId) }));
+	}
+
 	/**
 	 * Put what a field holds into the review, and close the field: a comment
 	 * on lines or on a block of the story becomes a thread, a reply a turn of
-	 * its thread, an edit the thread's opening comment. Returns the thread it
-	 * went into.
+	 * its thread, an edit what it rewrites. Returns the thread it went into.
 	 */
 	say(field: CommentField): string {
 		const thread = this.#writeOut(field, field.severity);
@@ -461,7 +456,8 @@ export class Threads {
 				this.addTurn(at.thread, { author: READER, body, images });
 				return at.thread;
 			case 'edit':
-				this.update(at.thread, body, severity, images);
+				if (at.said === at.thread) this.update(at.thread, body, severity, images);
+				else this.updateTurn(at.thread, at.said, body, images);
 				return at.thread;
 		}
 	}
@@ -471,8 +467,9 @@ export class Threads {
 		const { at } = field;
 		if (at.kind === 'new' || at.kind === 'story') return [{ field, anchor: anchorWrittenOn(at) }];
 		const thread = this.#all.find((candidate) => candidate.id === at.thread);
-		// An edit holding nothing the reader put in it says what its thread says already
-		if (!thread || (at.kind === 'edit' && !field.holdsWork)) return [];
+		// An edit holding nothing the reader put in it says what its thread says already; one of words the agent was
+		// handed since it opened can no longer be said
+		if (!thread || (at.kind === 'edit' && (!field.holdsWork || this.handing.has(at.thread, at.said)))) return [];
 		return [{ field, anchor: thread.anchor }];
 	}
 

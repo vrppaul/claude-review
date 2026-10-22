@@ -258,8 +258,8 @@ describe('a comment still open in its field as the review is finished', () => {
 		const [thread] = review.threads.all;
 		if (!thread) throw new Error('No thread');
 		review.answerer.setAttached(true);
-		review.threads.writing.openEdit(thread);
-		const field = review.threads.writing.edit(thread.id);
+		review.threads.writing.openEdit(thread, thread.id);
+		const field = review.threads.writing.edit(thread.id, thread.id);
 		if (!field) throw new Error('No edit');
 		field.severity = 'blocker';
 
@@ -275,7 +275,7 @@ describe('a comment still open in its field as the review is finished', () => {
 		if (!thread) throw new Error('No thread');
 		review.threads.markSent(review.threads.carry([thread]), 1);
 		review.answerer.setAttached(true);
-		review.threads.writing.openEdit(thread);
+		review.threads.writing.openEdit(thread, thread.id);
 
 		const { queryByTestId } = render(FinishReview, inReview(review));
 

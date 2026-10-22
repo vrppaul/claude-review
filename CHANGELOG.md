@@ -246,20 +246,17 @@
   says where the thread hangs, in the page's own words, what it asks for,
   that it is outdated, whether it is settled or the round it went out in,
   whether the agent is answering and whether a reply is new; then Resolve
-  or Reopen, three dots on the reader's own thread for Edit and Delete,
-  and the fold's chevron. Folded, the card is its bar alone, which says
-  who began the thread, their first words and how many replies are under
-  it, and still says the agent is answering and a reply is new; the round
-  it went out in drops, as the grey says it. Deleting asks in the menu's
-  own pane and names the replies that go with the comment: "Delete this
-  comment and its 2 replies?". A settled thread is green, its bar on the
-  tint of what is done; the agent's on its violet wash, the reader's on
-  their blue's, one sent on grey. The "from the agent" tag is gone, the
-  violet card says it. The field to reply in stands at the card's foot. A
-  thread whose place is gone shows what it was written against in a
-  figure captioned "Written against". The keyboard brought to a thread by
-  n or p turns its edge blue, as a field's, where it ringed the space
-  round it.
+  or Reopen, and the fold's chevron. Folded, the card is its bar alone,
+  which says who began the thread, their first words and how many replies
+  are under it, and still says the agent is answering and a reply is new;
+  the round it went out in drops, as the grey says it. A settled thread is
+  green, its bar on the tint of what is done; the agent's on its violet
+  wash, the reader's on their blue's, one sent on grey. The "from the
+  agent" tag is gone, the violet card says it. The field to reply in
+  stands at the card's foot. A thread whose place is gone shows what it
+  was written against in a figure captioned "Written against". The
+  keyboard brought to a thread by n or p turns its edge blue, as a
+  field's, where it ringed the space round it.
 - **A comment being written is the card it becomes, on a dashed edge.**
   Its bar says where it hangs, offers Suggest a change beside that, and
   ends with what it asks for, Note, Question or Blocker; the field and
@@ -267,6 +264,23 @@
   the start of its acts, "Ctrl+Enter adds", or "Ctrl+Enter saves" for an
   edit, whose main button says Save; the line of keys under the buttons is
   gone.
+- **The reader rewrites or deletes only what the agent has not read.** Three
+  dots at the head of each of the reader's own turns, the comment and each
+  reply, offer Edit and Delete until the agent is handed it: with a round,
+  by Ask agent now, in a message pointing at the thread, or read by an
+  agent arriving late. The agent reads once, so from then on the words are
+  its to read as they were, and the reader says more in a reply. Edit turns
+  the words into the field where they stand, the bar and the rest of the
+  thread as they were, the comment's with what it asks for beside its keys;
+  an edit was a new comment's card in the thread's place. Deleting the
+  comment deletes the thread and names its replies, "Delete this comment
+  and its 2 replies?"; deleting a reply asks "Delete this reply?" and leaves
+  the rest. Words the agent is handed while they are being rewritten can no
+  longer be saved, and the field says "The agent has read these words now:
+  say it in a reply". The review says what the agent has of each thread to
+  every page, and keeps it with the draft; it refuses a thread that comes
+  back changed in it, the agent's own opening among them, with a conflict
+  (409) where that one was refused as unacceptable (422).
 - **Ask agent now stands at what the reader said last.** In a thread it is
   a small button at the head of the reader's last turn, no longer a row
   under the conversation, and it is called Ask agent now there, in the

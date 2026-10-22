@@ -22,8 +22,9 @@ export function fieldKey(at: WrittenAt): string {
 		case 'story':
 			return blockFieldKey(at.block);
 		case 'reply':
-		case 'edit':
 			return `${at.kind}:${at.thread}`;
+		case 'edit':
+			return `${at.kind}:${at.thread}:${at.said}`;
 	}
 }
 
@@ -39,7 +40,7 @@ export function blockFieldKey(block: StoryBlock): string {
  */
 type FieldOpening = 'opened' | 'restored';
 
-/** What a field began from: what it was opened with — nothing, or the comment being edited. */
+/** What a field began from: what it was opened with — nothing, or the words being rewritten. */
 export type BeganFrom = Pick<KeptField, 'text' | 'severity' | 'images'>;
 
 /** Whether two lists of images hold the same images, in the same order. */

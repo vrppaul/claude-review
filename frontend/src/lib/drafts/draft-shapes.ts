@@ -13,7 +13,8 @@
  * each field uploaded itself, which files were read and folded away, and
  * the round the review had reached, rather than read back from the marks
  * its threads carry; a message taken back in the panel says when; it keeps
- * what the agent has of each thread, as the review said it; and it is
+ * what the agent has of each thread, as the review said it, and an edit
+ * says which of the reader's words in its thread it rewrites; and it is
  * kept under the name the review gives itself rather than under its title,
  * which another review on the same port may share. A
  * draft a release kept is brought up to date — never thrown away: it is an
@@ -37,7 +38,7 @@ import { COMMENT_ID_PREFIX, IdSequence, TURN_ID_PREFIX } from '$lib/utils/ids';
 import { AGENT, READER } from '$lib/utils/speakers';
 
 /** The shape drafts are kept in now. */
-export const DRAFT_SHAPE = 20;
+export const DRAFT_SHAPE = 21;
 // The round every review begins in
 const FIRST_ROUND = 1;
 // Where in a thread the agent heard it last, when it never did: before its opening

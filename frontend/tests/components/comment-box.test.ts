@@ -51,13 +51,22 @@ function saved() {
 	return thread;
 }
 
+/** A reply being written in a thread, as its field at the thread's foot opens one. */
+function replyOf(): CommentField {
+	const id = review.threads.add(newComment());
+	review.threads.writing.openReply(id);
+	const field = review.threads.writing.reply(id);
+	if (!field) throw new Error('No reply was opened');
+	return field;
+}
+
 /** The edit of a comment already written, as its Edit button opens one. */
 function editOf(written: Partial<NewComment>): CommentField {
 	const id = review.threads.add({ ...newComment(), ...written });
 	const thread = review.threads.all.find((candidate) => candidate.id === id);
 	if (!thread) throw new Error('The comment was not written');
-	review.threads.writing.openEdit(thread);
-	const field = review.threads.writing.edit(id);
+	review.threads.writing.openEdit(thread, id);
+	const field = review.threads.writing.edit(id, id);
 	if (!field) throw new Error('No edit was opened');
 	return field;
 }
@@ -117,21 +126,6 @@ describe('a comment field', () => {
 		);
 
 		expect(getByText('Lines 10-15')).toBeTruthy();
-	});
-
-	it('reopens with what the comment already says', () => {
-		const { getByTestId } = render(
-			CommentBox,
-			inReview(review, {
-				field: editOf({ body: 'existing text' }),
-				onSave: vi.fn(),
-				onCancel: vi.fn(),
-				hangs: UNDER_ITS_LINE
-			})
-		);
-
-		const input = getByTestId('comment-input') as HTMLTextAreaElement;
-		expect(input.value).toBe('existing text');
 	});
 });
 
@@ -264,8 +258,8 @@ describe('how a comment is meant', () => {
 				field: editOf({ severity: 'blocker' }),
 				onSave: vi.fn(),
 				onCancel: vi.fn(),
-				label: 'Line 1',
-				hangs: UNDER_ITS_LINE
+				hangs: IN_ITS_THREAD,
+				voice: 'reader'
 			})
 		);
 
@@ -293,14 +287,23 @@ describe('a comment field, to whoever cannot see it', () => {
 		expect(getByLabelText('Line 5')).toBe(getByTestId('comment-input'));
 	});
 
-	it('is a reply where it hangs on nothing of its own', () => {
-		const field = newField();
+	it.each([
+		{ written: 'a reply', opened: replyOf, name: 'Reply' },
+		{ written: 'words rewritten', opened: () => editOf({ body: 'As it was' }), name: 'Rewrite' }
+	])('is named as $written where it is written inside its thread', ({ opened, name }) => {
 		const { getByLabelText, getByTestId } = render(
 			CommentBox,
-			inReview(review, { field, onSave: vi.fn(), onCancel: vi.fn(), severityPicker: false, hangs: IN_ITS_THREAD })
+			inReview(review, {
+				field: opened(),
+				onSave: vi.fn(),
+				onCancel: vi.fn(),
+				severityPicker: false,
+				hangs: IN_ITS_THREAD,
+				voice: 'reader'
+			})
 		);
 
-		expect(getByLabelText('Reply')).toBe(getByTestId('comment-input'));
+		expect(getByLabelText(name)).toBe(getByTestId('comment-input'));
 	});
 
 	it('asks for a reply in the words that opened it, and for a comment in its own', () => {
@@ -460,7 +463,7 @@ describe('putting a comment away', () => {
 		const [edited] = review.threads.all;
 		leavePage();
 		review = openReview();
-		const restored = review.threads.writing.edit(edited.id);
+		const restored = review.threads.writing.edit(edited.id, edited.id);
 		if (!restored) throw new Error('The edit did not come back');
 		const { getByTestId, queryByTestId, onCancel } = drawnPuttingAway(restored);
 

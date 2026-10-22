@@ -397,8 +397,8 @@ describe('a comment on a file the diff no longer has', () => {
 		review.threads.add(onTheRevertedFile);
 		const { getByTestId, queryByTestId } = render(DiffView, inReview(review));
 
-		await user.click(within(getByTestId('unplaced-threads')).getByTestId('thread-menu'));
-		await user.click(getByTestId('delete-comment'));
+		await user.click(within(getByTestId('unplaced-threads')).getByTestId('turn-menu'));
+		await user.click(getByTestId('delete-turn'));
 		await user.click(getByTestId('confirm-go-ahead'));
 
 		expect(review.threads.all).toEqual([]);
@@ -424,8 +424,8 @@ describe('editing a comment', () => {
 		review.threads.add(newComment({ file: 'src/handler.ts', side: 'old', startLine: 2, body: 'why was this dropped' }));
 
 		const { getByText, getByTestId } = render(DiffView, inReview(review));
-		await user.click(getByTestId('thread-menu'));
-		await user.click(getByTestId('edit-comment'));
+		await user.click(getByTestId('turn-menu'));
+		await user.click(getByTestId('edit-turn'));
 
 		expect(getByTestId('comment-input')).toBeTruthy();
 		expect(getByText('Removed line 2')).toBeTruthy();

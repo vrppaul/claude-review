@@ -145,8 +145,9 @@ export interface PickedLines {
 
 /**
  * Where a comment is being written: on lines of a file, on a block of the
- * story's words, as a reply in a thread, or over the comment that opened a
- * thread.
+ * story's words, as a reply in a thread, or over something the reader said
+ * in a thread — the comment that opened it, by the thread's own id, or a
+ * reply, by its own.
  */
 export type WrittenAt =
 	| {
@@ -163,7 +164,7 @@ export type WrittenAt =
 			words: string;
 	  }
 	| { kind: 'reply'; thread: string }
-	| { kind: 'edit'; thread: string };
+	| { kind: 'edit'; thread: string; said: string };
 
 /** A comment being written on lines of a file. */
 export type WrittenOnLines = Extract<WrittenAt, { kind: 'new' }>;

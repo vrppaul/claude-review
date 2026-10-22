@@ -223,8 +223,8 @@ describe('a reply or an edit being written in a thread', () => {
 		await user.click(screen.getByTestId('open-reply'));
 		const replying = said(screen.getByTestId('comment-keys'));
 		await user.click(screen.getByTestId('cancel-comment'));
-		await user.click(screen.getByTestId('thread-menu'));
-		await user.click(screen.getByTestId('edit-comment'));
+		await user.click(screen.getByTestId('turn-menu'));
+		await user.click(screen.getByTestId('edit-turn'));
 
 		expect([replying, said(screen.getByTestId('comment-keys'))]).toEqual([`${FIELD_KEYS} adds`, `${FIELD_KEYS} saves`]);
 		expect(said(screen.getByTestId('save-comment'))).toBe('Save');
@@ -235,15 +235,15 @@ describe('a reply or an edit being written in a thread', () => {
 		render(DiffView, inReview(review));
 		await user.click(screen.getByTestId('open-reply'));
 		await user.type(screen.getByTestId('comment-input'), 'my reply');
-		await user.click(screen.getByTestId('thread-menu'));
-		await user.click(screen.getByTestId('edit-comment'));
+		await user.click(screen.getByTestId('turn-menu'));
+		await user.click(screen.getByTestId('edit-turn'));
 		await user.type(screen.getAllByTestId('comment-input')[0], ', and three');
 
 		reload();
 
-		// The thread draws its edit in place of what it says; the reply waits under it
-		expect(fieldsSaying()).toEqual(['why two, and three']);
-		await user.click(screen.getByTestId('save-comment'));
+		// The comment's words are the field they are rewritten in; the reply waits at the thread's foot
+		expect(fieldsSaying()).toEqual(['why two, and three', 'my reply']);
+		await user.click(screen.getAllByTestId('save-comment')[0]);
 		expect(fieldsSaying()).toEqual(['my reply']);
 	});
 
@@ -255,8 +255,8 @@ describe('a reply or an edit being written in a thread', () => {
 		await paste(screen.getByTestId('comment-input'), screenshot());
 		await screen.findByTestId('attached-image');
 
-		await user.click(screen.getByTestId('thread-menu'));
-		await user.click(screen.getByTestId('delete-comment'));
+		await user.click(screen.getByTestId('turn-menu'));
+		await user.click(screen.getByTestId('delete-turn'));
 		await user.click(screen.getByTestId('confirm-go-ahead'));
 
 		expect(server.requests.at(-1)).toMatchObject({ method: 'DELETE', path: `/api/images/${KEPT_AS}` });
@@ -288,8 +288,8 @@ describe('a comment with images of its own', () => {
 		review.threads.add(newComment({ file: file.path, startLine: 2, body: 'see this', images: ['kept.png'] }));
 		const server = fakeServer();
 		render(DiffView, inReview(review));
-		await user.click(screen.getByTestId('thread-menu'));
-		await user.click(screen.getByTestId('edit-comment'));
+		await user.click(screen.getByTestId('turn-menu'));
+		await user.click(screen.getByTestId('edit-turn'));
 
 		await user.click(screen.getByTestId('cancel-comment'));
 
@@ -301,8 +301,8 @@ describe('a comment with images of its own', () => {
 		review.threads.add(newComment({ file: file.path, startLine: 2, body: 'see this', images: ['kept.png'] }));
 		const server = fakeServer();
 		render(DiffView, inReview(review));
-		await user.click(screen.getByTestId('thread-menu'));
-		await user.click(screen.getByTestId('edit-comment'));
+		await user.click(screen.getByTestId('turn-menu'));
+		await user.click(screen.getByTestId('edit-turn'));
 
 		await user.click(screen.getByTestId('detach-image'));
 		await user.click(screen.getByTestId('cancel-comment'));

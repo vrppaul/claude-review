@@ -28,8 +28,14 @@
 	const KEEP_WRITING = 'Keep writing';
 	// What the field says when it took off an image it could not show
 	const IMAGE_LOST = 'An image could not be shown and was taken off the comment';
-	// What a field with no place said above it is called: a reply, inside the thread it answers
-	const REPLY = 'Reply';
+	// What a field is called where no place is said above it: inside its thread, a reply or words rewritten. A
+	// comment on lines or on the story's words is named by its place, said on its card's bar
+	const NAMES_IN_ITS_THREAD: Record<WrittenAt['kind'], string> = {
+		new: 'Comment',
+		story: 'Comment',
+		reply: 'Reply',
+		edit: 'Rewrite'
+	};
 	const SEVERITIES: { value: CommentSeverity; label: string }[] = [
 		{ value: 'note', label: 'Note' },
 		{ value: 'question', label: 'Question' },
@@ -52,7 +58,7 @@
 
 	/**
 	 * Where it is written: as the card it becomes, hanging where that will, a card of the reader's, headed by where
-	 * it hangs; or as a reply, inside the thread it joins, whose card is drawn round it already, edged in the colour
+	 * it hangs; or inside the thread it joins or rewrites, whose card is drawn round it already, edged in the colour
 	 * of whose thread it is.
 	 */
 	type WrittenAs =
@@ -71,6 +77,11 @@
 		suggestFrom?: string[] | undefined;
 		/** A reply has no weight of its own: the thread's belongs to the comment. */
 		severityPicker?: boolean;
+		/**
+		 * Why what it holds can no longer be said, where it cannot: an edit of words the agent was handed since it
+		 * opened. Said in place of its keys, its main act off.
+		 */
+		unsayable?: string | undefined;
 	};
 
 	let {
@@ -81,6 +92,7 @@
 		label,
 		suggestFrom,
 		severityPicker = true,
+		unsayable,
 		hangs,
 		voice = 'reader'
 	}: Props = $props();
@@ -94,7 +106,7 @@
 
 	// A screenshot can be the whole comment, so words are not required; an
 	// image still on its way is waited for
-	const sayable = $derived(field.sayable);
+	const sayable = $derived(field.sayable && unsayable === undefined);
 
 	// The cursor goes to the field when it is opened, or asked for again — not
 	// whenever it is drawn: one drawn again, a file unfolded or the page
@@ -203,23 +215,29 @@
 				{/if}
 				{#snippet end()}
 					{#if severityPicker}
-						<Segmented label="What the comment asks for" size="xs" testId="severity-picker">
-							{#each SEVERITIES as choice (choice.value)}
-								<Segment
-									testId="severity-{choice.value}"
-									pressed={field.severity === choice.value}
-									onclick={() => (field.severity = choice.value)}
-								>
-									{choice.label}
-								</Segment>
-							{/each}
-						</Segmented>
+						{@render severities()}
 					{/if}
 				{/snippet}
 			</CardBar>
 		{/snippet}
 	</Card>
 {/if}
+
+<!-- What the comment asks for, picked: at its card's bar's end, or beside its keys where it is rewritten in its
+	thread, whose bar is the thread's -->
+{#snippet severities()}
+	<Segmented label="What the comment asks for" size="xs" testId="severity-picker">
+		{#each SEVERITIES as choice (choice.value)}
+			<Segment
+				testId="severity-{choice.value}"
+				pressed={field.severity === choice.value}
+				onclick={() => (field.severity = choice.value)}
+			>
+				{choice.label}
+			</Segment>
+		{/each}
+	</Segmented>
+{/snippet}
 
 <!-- At the foot of the card the comment becomes, the field and its acts one under another -->
 {#snippet writingInTheCard()}
@@ -229,7 +247,7 @@
 {/snippet}
 
 <!-- The field and what goes with it: its images, why it could not be added, and what can be done with it, the
-	keys the field takes said at the start of its acts -->
+	keys the field takes said at the start of its acts, or why it can no longer be said -->
 {#snippet writing()}
 	<Field
 		bind:element={textarea}
@@ -238,7 +256,7 @@
 		{voice}
 		testId="comment-input"
 		id={fieldId}
-		aria-label={label ? undefined : REPLY}
+		aria-label={label ? undefined : NAMES_IN_ITS_THREAD[field.at.kind]}
 		placeholder={PLACEHOLDERS[field.at.kind]}
 		maxlength={review.limits.max_text_length}
 		onkeydown={handleKeydown}
@@ -250,7 +268,14 @@
 	{/if}
 	<Actions testId="comment-actions">
 		{#snippet aside()}
-			<span data-testid="comment-keys" class="cr-faint text-xs">{MAIN_ACTS[field.at.kind].keys}</span>
+			{#if unsayable}
+				<span data-testid="comment-unsayable" class="cr-muted text-xs">{unsayable}</span>
+			{:else}
+				<span data-testid="comment-keys" class="cr-faint text-xs">{MAIN_ACTS[field.at.kind].keys}</span>
+			{/if}
+			{#if severityPicker && hangs === 'in-its-thread'}
+				{@render severities()}
+			{/if}
 		{/snippet}
 		{#snippet others()}
 			<!-- Asked over Cancel, which asks it, or as Escape does in the field: over the words it would lose, inside

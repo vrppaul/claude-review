@@ -16,7 +16,6 @@
 	import { headingOf } from './anchor-headings';
 	import ReopenButton from './ReopenButton.svelte';
 	import { severityTone } from './severity-tone';
-	import ThreadMenu from './ThreadMenu.svelte';
 	import { threadVoice } from './thread-voice';
 
 	// What everything said under the comment that opened a thread is called, counted: the agent's and the reader's alike
@@ -37,8 +36,7 @@
 	const sentIn = $derived(review.threads.sentInRound(thread.id));
 	const answering = $derived(review.threads.reading.awaiting(thread.id).length > 0);
 	const unread = $derived(review.threads.reading.isUnread(thread.id));
-	// A thread the agent raised is the agent's: the reader answers its words and settles it, and never rewrites it
-	// nor deletes it — the review keeps it whatever a page says, and it would come back
+	// A thread the agent raised went out with nobody's round: the agent has it from the start
 	const raised = $derived(raisedByAgent(thread));
 
 	/** Fold the thread away or open it; the keyboard stays on the toggle, drawn anew on the bar as it now stands. */
@@ -57,7 +55,8 @@
 <!-- The bar heading a thread's card, the same open and folded: where it hangs, what it asks for and where it
 	stands — settled, or the round it went out in, which the grey of a folded one says already — whether the agent
 	is answering and whether a reply is new, which a folded thread still says; folded, who began it, their first
-	words and how many replies are under it; then Resolve or Reopen, the reader's own thread's menu, and the fold -->
+	words and how many replies are under it; then Resolve or Reopen, and the fold. What the reader said is rewritten
+	or deleted from its own turn (TurnMenu) -->
 <CardBar testId="thread-bar">
 	{#snippet place()}
 		<AnchorHeading anchor={thread.anchor} />
@@ -98,9 +97,6 @@
 				<Icon name="check" size="xs" tone="done" />
 				Resolve
 			</Button>
-		{/if}
-		{#if !raised}
-			<ThreadMenu {thread} />
 		{/if}
 		<FoldToggle
 			{folded}
