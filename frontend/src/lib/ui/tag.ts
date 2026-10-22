@@ -1,11 +1,11 @@
 /**
  * A tag (Tag): a word or two said beside a heading or a name — what a
- * thread asks for, that it is outdated, resolved or the agent's; where else
- * a step's file is told; a measure said quietly — on the chip of the colour
- * they are said in, with no edge. Its words are shown as they are written:
- * a tag holds a measure too, and "1M" lowercased would read as "1m".
+ * thread asks for, that it is outdated, resolved or the agent's; a measure
+ * said quietly — on the chip of the colour they are said in, with no edge.
+ * Its words are shown as they are written: a tag holds a measure too, and
+ * "1M" lowercased would read as "1m".
  *
- * A count (Count) and a chip (Chip, lib/ui/chip.ts) stand in the same box,
+ * A count (Count) and a chip naming a place (Chip, lib/ui/chip.ts) stand in the same box,
  * so marks in one line stand as tall, whatever line that is: small words at
  * a leading of their own, at a field's corner, as a button at that size has
  * it, never a pill. All three are written in styles/ui.css.
@@ -16,8 +16,7 @@
  * - quiet: something settled, a thread resolved, or a measure said quietly,
  *   as the release something is new in
  * - reader: asked by the reader
- * - agent: the agent's — what it asks, that it raised a thread, where else
- *   it tells a file
+ * - agent: the agent's — what it asks, that it raised a thread
  * - warning: what the reader is warned of or must deal with — a blocker, a
  *   thread out of date, threads the view on screen does not show
  */

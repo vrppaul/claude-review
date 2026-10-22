@@ -1,10 +1,13 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import { CHIP_VOICES, type ChipReach } from './chip';
+	import { CHIP_NAMES, CHIP_VOICES, type ChipReach } from './chip';
 	import Icon from './Icon.svelte';
 	import type { Voice } from './voice';
 
-	type Props = ChipReach & {
+	/** What it names, and what it does: a thread's place or a file, in any reach; a chapter, only as a way to it. */
+	type Naming = ({ names: 'place' } & ChipReach) | { names: 'chapter'; onclick: () => void };
+
+	type Props = Naming & {
 		/** Whose words named it. */
 		voice: Voice;
 		/** What it names in full, shown under the pointer, where its words are short of that. */
@@ -15,7 +18,9 @@
 		children: Snippet;
 	};
 
-	let { voice, title, testId, children, ...reach }: Props = $props();
+	let { voice, names, title, testId, children, ...reach }: Props = $props();
+
+	const drawn = $derived(['cr-ui-chip', CHIP_VOICES[voice], CHIP_NAMES[names]]);
 </script>
 
 <!-- What it names, on one line, cut where the room it stands in ends -->
@@ -23,19 +28,13 @@
 	<span class="cr-ui-chip-words">{@render children()}</span>
 {/snippet}
 
-<!-- A thread or a file named in what is said, in the colour of whoever named it (lib/ui/chip.ts) -->
+<!-- A thread, a file or a chapter named, in the colour of whoever named it (lib/ui/chip.ts) -->
 {#if 'onclick' in reach}
-	<button
-		type="button"
-		data-testid={testId}
-		{title}
-		class={['cr-ui-chip cr-pressable', CHIP_VOICES[voice]]}
-		onclick={reach.onclick}
-	>
+	<button type="button" data-testid={testId} {title} class={[drawn, 'cr-pressable']} onclick={reach.onclick}>
 		{@render words()}
 	</button>
 {:else if 'onRemove' in reach}
-	<span data-testid={testId} {title} class={['cr-ui-chip', CHIP_VOICES[voice]]}>
+	<span data-testid={testId} {title} class={drawn}>
 		{@render words()}
 		<button
 			type="button"
@@ -49,11 +48,11 @@
 		</button>
 	</span>
 {:else if 'outOfReach' in reach}
-	<span data-testid={testId} {title} class={['cr-ui-chip cr-ui-chip-out-of-reach', CHIP_VOICES[voice]]}>
+	<span data-testid={testId} {title} class={[drawn, 'cr-ui-chip-out-of-reach']}>
 		{@render words()}
 	</span>
 {:else}
-	<span data-testid={testId} {title} class={['cr-ui-chip', CHIP_VOICES[voice]]}>
+	<span data-testid={testId} {title} class={drawn}>
 		{@render words()}
 	</span>
 {/if}

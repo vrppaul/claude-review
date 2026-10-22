@@ -170,6 +170,11 @@ tests. Remove items when done — don't check them off.
 - [ ] `feat(ui)`: each view opens at its top when the reader switches back
       to it. `FileSections.readingPlace` / `returnTo` name a section by
       its key and can carry the place.
+- [ ] `fix(ui)`: a node of the story's diagram takes the reader to its
+      chapter and leaves the keyboard on the node, out of sight, so the
+      next Tab scrolls back (`StoryDiagram.svelte`, `parts.goTo`); a way
+      to a chapter on a piece's head hands it on (`parts.takeTo`). Read in
+      the code by the review of chunk 7 part 2, not run.
 - [ ] `fix(ui)`: deep in a chapter, the step its bar and the contents say
       is being read changes late. The band that says which section is read
       begins at the top of the reading area (`dom/reading-band.svelte.ts`),
@@ -255,8 +260,10 @@ of it is built yet.
       design of the tree itself.
 - [ ] `feat(ui)`: a new look for a chapter's frames: its warning, its why
       and where to doubt it.
-- [ ] `feat(ui)`: a new look for the "also in chapter N" chip.
-- [ ] `feat(ui)`: every chip, looked at again.
+- [ ] `feat(ui)`: every chip, looked at again: a chip naming a file or a
+      thread is 11 px with room 0/6 (`.cr-ui-chip-place`), where the Chips
+      board draws a way to a file at 12 px with room 2/8, as a way to a
+      chapter is now. The owner's call.
 - [ ] `feat(ui)`: animations.
 
 ## The page's library, what its steps left

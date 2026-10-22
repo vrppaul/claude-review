@@ -22,14 +22,22 @@ import {
 } from '$lib/review/story-keys';
 import type { DiffFile, FollowedChapter, FollowedStep, LeftOut, ToldStory } from '$lib/types';
 
+/** Another chapter, as a file's listing names it: by its number, and as a way to it. */
+interface OtherChapter {
+	/** Where it stands among the story's chapters: what it is numbered by. */
+	place: number;
+	/** What its part of the page is known by: where a way to it takes the reader. */
+	part: string;
+}
+
 /** A file as a chapter lists it: once, however many of the chapter's steps tell lines of it. */
 export interface FileListed {
 	/** The first of the chapter's pieces of the file, which says the file: its path, and what became of it. */
 	firstPiece: DiffFile;
 	/** What the section of the chapter's first step of the file is known by: where a reader who picks the file is taken. */
 	opensAt: string;
-	/** The other chapters that tell the file, by their places among the story's chapters, in the story's order. */
-	alsoIn: number[];
+	/** The other chapters that tell the file, in the story's order. */
+	alsoIn: OtherChapter[];
 }
 
 /** What a step shows of its file, where its code is in the change. */
@@ -93,9 +101,10 @@ export interface StoryContents {
 // What is above the first part, or above none
 const NONE_ABOVE: ReadonlySet<string> = new Set();
 
-/** The files a chapter, by its place among the story's, shows code of. */
+/** The files a chapter shows code of, with where it stands and what its part is known by. */
 interface ChapterTelling {
 	place: number;
+	part: string;
 	paths: ReadonlySet<string>;
 }
 
@@ -106,12 +115,18 @@ function heldUnder<Held>(table: ReadonlyMap<string, Held>, key: string | null): 
 
 /** The files a chapter tells, each once: those it shows code of, by the paths of the pieces it shows. */
 function chapterTelling(chapter: FollowedChapter, place: number): ChapterTelling {
-	return { place, paths: new Set(chapter.steps.flatMap((step) => (step.now === null ? [] : [step.now.piece.path]))) };
+	return {
+		place,
+		part: chapterPartKey(chapter.id),
+		paths: new Set(chapter.steps.flatMap((step) => (step.now === null ? [] : [step.now.piece.path])))
+	};
 }
 
-/** The places of the chapters other than one that tell a file, in the story's order. */
-function alsoTelling(path: string, chapterPlace: number, telling: readonly ChapterTelling[]): number[] {
-	return telling.filter(({ place, paths }) => place !== chapterPlace && paths.has(path)).map(({ place }) => place);
+/** The chapters other than one that tell a file, in the story's order. */
+function alsoTelling(path: string, chapterPlace: number, telling: readonly ChapterTelling[]): OtherChapter[] {
+	return telling
+		.filter(({ place, paths }) => place !== chapterPlace && paths.has(path))
+		.map(({ place, part }) => ({ place, part }));
 }
 
 /**
@@ -119,7 +134,7 @@ function alsoTelling(path: string, chapterPlace: number, telling: readonly Chapt
  * it tells the file.
  */
 export function tellsFirst(chapter: ChapterListed, listed: FileListed): boolean {
-	return listed.alsoIn.every((other) => other > chapter.place);
+	return listed.alsoIn.every((other) => other.place > chapter.place);
 }
 
 /**

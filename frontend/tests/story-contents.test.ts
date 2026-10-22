@@ -50,8 +50,8 @@ describe('what a story lists of itself', () => {
 	});
 
 	it('says of a file the other chapters that tell it, by their places, in the order the story tells them', () => {
-		expect(ofTheFirst.files.map(({ alsoIn }) => alsoIn)).toEqual([[1, 2], [1]]);
-		expect(ofTheSecond.files.map(({ alsoIn }) => alsoIn)).toEqual([[0], [0, 2]]);
+		expect(ofTheFirst.files.map(({ alsoIn }) => alsoIn.map(({ place }) => place))).toEqual([[1, 2], [1]]);
+		expect(ofTheSecond.files.map(({ alsoIn }) => alsoIn.map(({ place }) => place))).toEqual([[0], [0, 2]]);
 	});
 
 	it('says whether a chapter is the first to tell a file', () => {

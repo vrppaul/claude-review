@@ -19,7 +19,7 @@
 import { Announced, type Announcement } from '$lib/dom/announced';
 import { Crossing } from '$lib/dom/crossing';
 import type { Jumps } from '$lib/dom/jump';
-import { lendKeyboardToWhatRemains } from '$lib/dom/keyboard';
+import { lendKeyboard, lendKeyboardToWhatRemains } from '$lib/dom/keyboard';
 
 /** A part as it announced itself: what whoever draws it knows it by, the whole of it, which the band reads it by, and its head. */
 interface Part extends Announcement {
@@ -92,6 +92,23 @@ export class ReadingParts {
 	goTo(key: string): void {
 		const part = this.#parts.get(key);
 		if (!part) return;
+		this.#land(part);
+	}
+
+	/**
+	 * Take the reader to a part from a way to it that stands in what is
+	 * read, and goes out of sight as they are taken: as `goTo`, and the
+	 * part's head takes the keyboard, so the next key starts where they
+	 * were taken, not back where the way stood.
+	 */
+	takeTo(key: string): void {
+		const part = this.#parts.get(key);
+		if (!part) return;
+		this.#land(part);
+		lendKeyboard(part.head);
+	}
+
+	#land(part: Part): void {
 		// Where the reader is taken is its head: in view from now on, before what watches the heads has looked again
 		this.#headsInView.countIn(part.head);
 		this.#jumps.land(this.#parts.band, part.element);

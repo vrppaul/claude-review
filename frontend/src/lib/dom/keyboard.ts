@@ -147,7 +147,7 @@ function takeBackOnceLeft(element: HTMLElement, lent: AbortController): void {
  * keyboard takes it on a press too, and a press on words must put it on
  * nothing: so the words can hold it only until it leaves them.
  */
-function lendKeyboard(element: HTMLElement): void {
+export function lendKeyboard(element: HTMLElement): void {
 	const lent = new AbortController();
 	element.tabIndex = KEYBOARD_BY_THE_PAGE_ONLY;
 	element.classList.add(LENT_CLASS);

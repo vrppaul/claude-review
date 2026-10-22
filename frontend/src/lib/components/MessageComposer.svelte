@@ -145,7 +145,7 @@
 	{#if pointed.length > 0}
 		<div class="mb-2 flex flex-wrap gap-1">
 			{#each pointed as thread (thread.id)}
-				<Chip voice="reader" testId="pointed-thread" removing={DROP_THREAD} onRemove={() => drop(thread)}>
+				<Chip voice="reader" names="place" testId="pointed-thread" removing={DROP_THREAD} onRemove={() => drop(thread)}>
 					{anchorShortPlace(thread.anchor)}
 				</Chip>
 			{/each}

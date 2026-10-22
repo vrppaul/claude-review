@@ -6,7 +6,7 @@ import ReviewScreen from '$lib/components/ReviewScreen.svelte';
 import type { Review } from '$lib/review/review.svelte';
 import type { FollowedStep, StoryHeld } from '$lib/types';
 import { A_LATER_TAKE, addedLine, diffFile, diffResponse, hunk, sinceRound } from '../diff';
-import { said } from '../elements';
+import { broughtIntoView, said } from '../elements';
 import { fakeServer, keepingSettings, SERVER_ERROR } from '../fake-server';
 import { newComment } from '../new-comment';
 import { handOverNext } from '../pushes';
@@ -189,7 +189,7 @@ describe('a review read as its story', () => {
 		expect(within(leftOutOfA).queryByTestId('also-in')).toBeNull();
 	});
 
-	it('names every other chapter that tells the file of a piece, where they are several', () => {
+	it('offers a way to every other chapter that tells the file of a piece, where they are several', () => {
 		const chapters = [
 			toldChapter('ch-1', [toldStep('a.py', 1)]),
 			toldChapter('ch-2', [toldStep('a.py', 5)]),
@@ -201,7 +201,19 @@ describe('a review read as its story', () => {
 
 		const [, inTheSecond] = pieces();
 
-		expect(within(inTheSecond).getByTestId('also-in').textContent).toBe('also in chapters 1, 3');
+		expect(within(inTheSecond).getAllByTestId('also-in').map(said)).toEqual(['also in chapter 1', 'also in chapter 3']);
+	});
+
+	it('takes the reader and the keyboard to the other chapter that tells the file of a piece when its way is pressed', async () => {
+		render(ReviewScreen, { props: { review } });
+		const [ofAInTheFirst] = pieces();
+		const [, theSecond] = screen.getAllByTestId('story-chapter');
+		const toTheSecond = broughtIntoView(theSecond);
+
+		await userEvent.setup().click(within(ofAInTheFirst).getByTestId('also-in'));
+
+		expect(toTheSecond).toHaveBeenCalled();
+		expect(document.activeElement).toBe(within(theSecond).getByTestId('part-head'));
 	});
 
 	it('says where to doubt a chapter, where the agent said', () => {

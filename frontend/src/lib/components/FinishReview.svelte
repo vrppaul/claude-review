@@ -73,7 +73,7 @@
 	the pointer where the line's end cuts it -->
 {#snippet placed(anchor: Anchor, testId: string)}
 	{@const place = anchorPlace(anchor)}
-	<Chip voice="reader" reachedByItsHolder title={place} {testId}>{place}</Chip>
+	<Chip voice="reader" names="place" reachedByItsHolder title={place} {testId}>{place}</Chip>
 {/snippet}
 
 <!-- How many comments go, beside the pane's heading: those unsent of all, in a review in rounds -->

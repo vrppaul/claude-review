@@ -1,14 +1,15 @@
 <script lang="ts">
 	import { askableReason, stepReason } from '$lib/anchors/story';
+	import { useReview } from '$lib/review/context';
 	import type { StepListed } from '$lib/review/story-contents';
+	import Chip from '$lib/ui/Chip.svelte';
 	import EdgeFrame from '$lib/ui/EdgeFrame.svelte';
 	import Heading from '$lib/ui/Heading.svelte';
-	import Tag from '$lib/ui/Tag.svelte';
 	import AskableBlock from './AskableBlock.svelte';
 	import { reportBroken } from './broken-parts';
 	import PartFailed from './PartFailed.svelte';
 	import { AGENTS_VOICE } from './story-frames';
-	import { alsoInChapters, changedStepNamed, codeNoLongerFound, linesSaid, stepNamed } from './story-words';
+	import { alsoInChapter, changedStepNamed, codeNoLongerFound, linesSaid, stepNamed } from './story-words';
 	import StoryPiece from './StoryPiece.svelte';
 
 	interface Props {
@@ -19,6 +20,7 @@
 	}
 
 	let { step, number }: Props = $props();
+	const review = useReview();
 
 	const told = $derived(step.told);
 	// Its reason, where the reader may ask about it
@@ -97,11 +99,13 @@
 			{#snippet beside()}
 				<span data-testid="step-lines" class="cr-muted font-mono text-xs">{linesSaid(shown.lines)}</span>
 			{/snippet}
-			{#snippet atFarEnd()}
-				{#if shown.fileListed.alsoIn.length > 0}
-					<!-- One file, several chapters: where else the agent tells of it, in the agent's colour -->
-					<Tag tone="agent" testId="also-in">{alsoInChapters(shown.fileListed.alsoIn)}</Tag>
-				{/if}
+			{#snippet afterTheFile()}
+				<!-- One file, several chapters: a way to each other chapter the agent tells it in, in the agent's colour -->
+				{#each shown.fileListed.alsoIn as other (other.part)}
+					<Chip voice="agent" names="chapter" testId="also-in" onclick={() => review.parts.takeTo(other.part)}>
+						{alsoInChapter(other.place)}
+					</Chip>
+				{/each}
 			{/snippet}
 		</StoryPiece>
 		{#snippet failed(error, retry)}

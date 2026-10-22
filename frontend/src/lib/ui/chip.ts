@@ -1,9 +1,13 @@
 /**
- * A chip (Chip): a thread or a file named in what is said — in a message to
- * the agent, in its answer, in what it is working on, in the panel's note of
- * a thread it raised — in the code's face, on the tint of whoever named it,
- * in a tag's box (lib/ui/tag.ts), so a chip, a tag and a count in one line
- * stand as tall. Its look is written in styles/ui.css.
+ * A chip (Chip): what is named, on the tint of whoever named it — a thread
+ * or a file named in what is said, in a message to the agent, in its answer,
+ * in what it is working on, in the panel's note of a thread it raised; or a
+ * chapter of the story, named on a piece's head as another chapter that
+ * tells its file. A thread or a file is named in the code's face, in a tag's
+ * box (lib/ui/tag.ts), so a chip, a tag and a count in one line stand as
+ * tall; a chapter in the page's own face, a step larger, with room round its
+ * words, as the story's boards draw a way to one, and is only ever a way to
+ * it. Its look is written in styles/ui.css.
  *
  * Pressed, it takes the reader to what it names, by what its caller hands
  * it. One named in a message still being written is taken out of it by its
@@ -18,6 +22,16 @@ import type { Voice } from './voice';
 
 // The class of each voice, whose words named it, in the library's stylesheet
 export const CHIP_VOICES: Record<Voice, string> = { reader: 'cr-ui-chip-reader', agent: 'cr-ui-chip-agent' };
+
+/**
+ * What a chip names, which sets its face and its size:
+ * - place: a thread's place or a file, in the code's face, in a tag's box
+ * - chapter: a chapter of the story, in the page's face, a step larger, with room round its words
+ */
+type ChipNames = 'place' | 'chapter';
+
+// The class of each in the library's stylesheet
+export const CHIP_NAMES: Record<ChipNames, string> = { place: 'cr-ui-chip-place', chapter: 'cr-ui-chip-chapter' };
 
 /**
  * What a chip does: takes the reader to what it names; is taken out of a message by its cross; names what is out of

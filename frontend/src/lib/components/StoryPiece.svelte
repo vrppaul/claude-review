@@ -22,8 +22,8 @@
 		numbered?: Snippet;
 		/** What is said beside the file's name: the lines a step tells. */
 		beside?: Snippet;
-		/** What is said at the far end of the header: where else a step's file is told. */
-		atFarEnd?: Snippet;
+		/** What follows the file and its change on the header: the ways to the other chapters that tell a step's file. */
+		afterTheFile?: Snippet;
 	}
 
 	// What the file's name is in the piece's header: the piece's heading, or plain words where a step's
@@ -31,7 +31,7 @@
 	const AS_ITS_HEADING = 'h3';
 	const AS_PLAIN_WORDS = 'p';
 
-	let { sectionKey, piece, shows, above, numbered, beside, atFarEnd }: Props = $props();
+	let { sectionKey, piece, shows, above, numbered, beside, afterTheFile }: Props = $props();
 	const review = useReview();
 
 	const fileNamed = $derived(numbered === undefined ? AS_ITS_HEADING : AS_PLAIN_WORDS);
@@ -58,8 +58,7 @@
 		<Bar heads="section" testId="story-piece-header">
 			{@render numbered?.()}
 			<FileTitle file={piece} element={fileNamed} testId="piece-file" showsChange {threads} {beside} />
-			<div class="flex-1"></div>
-			{@render atFarEnd?.()}
+			{@render afterTheFile?.()}
 		</Bar>
 	{/snippet}
 </LinesSection>

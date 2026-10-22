@@ -1525,14 +1525,14 @@
 }
 
 /*
- * A tag, a count and a chip (Tag, Count, lib/ui/tag.ts; Chip,
- * lib/ui/chip.ts): a mark standing in a line of words, in one box for all
- * three, as tall whatever line it stands in — small words at a leading of
- * their own, room either side, an edge, a field's corner
+ * A tag, a count and a chip naming a place (Tag, Count, lib/ui/tag.ts;
+ * Chip, lib/ui/chip.ts): a mark standing in a line of words, in one box for
+ * all three, as tall whatever line it stands in — small words at a leading
+ * of their own, room either side, an edge, a field's corner
  */
 .cr-ui-tag,
 .cr-ui-count,
-.cr-ui-chip {
+.cr-ui-chip-place {
 	display: inline-flex;
 	align-items: center;
 	gap: --spacing(1);
@@ -1589,16 +1589,32 @@
 	color: var(--cr-on-unread);
 }
 /*
- * A chip names a thread or a file in the code's face, a small label's
- * weight, on the tint of whoever named it; on one line, cut where the room
- * it stands in ends, so a long place never breaks inside its name
+ * A chip names what it is a way to in a small label's weight, on the tint
+ * of whoever named it, at a field's corner; on one line, cut where the room
+ * it stands in ends, so a long name never breaks inside itself
  */
 .cr-ui-chip {
+	display: inline-flex;
+	align-items: center;
 	min-width: 0;
 	max-width: 100%;
 	gap: --spacing(0.5);
-	font-family: var(--font-mono);
+	border-radius: var(--radius-field);
 	font-weight: var(--font-weight-medium);
+}
+/* A thread's place or a file, in the code's face, in a tag's box */
+.cr-ui-chip-place {
+	font-family: var(--font-mono);
+}
+/*
+ * A chapter, in the page's own face, a step larger than a place, with room
+ * round its words and no edge, as the story's boards draw a way to one
+ */
+.cr-ui-chip-chapter {
+	padding: --spacing(0.5) --spacing(2);
+	font-family: var(--font-sans);
+	font-size: var(--text-xs);
+	line-height: var(--text-xs--line-height);
 }
 .cr-ui-chip-words {
 	min-width: 0;

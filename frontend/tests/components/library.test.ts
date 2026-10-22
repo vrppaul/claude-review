@@ -91,7 +91,7 @@ describe('the component library', () => {
 
 	it('draws a chip that names a way somewhere as a button, which takes the reader there when pressed', async () => {
 		const onclick = vi.fn();
-		const { getByTestId } = render(Chip, { voice: 'agent', onclick, testId: TEST_ID, children: drawn });
+		const { getByTestId } = render(Chip, { voice: 'agent', names: 'place', onclick, testId: TEST_ID, children: drawn });
 
 		await userEvent.click(getByTestId(TEST_ID));
 
@@ -103,6 +103,7 @@ describe('the component library', () => {
 		const onRemove = vi.fn();
 		const { getByTestId } = render(Chip, {
 			voice: 'reader',
+			names: 'place',
 			removing: REMOVING,
 			onRemove,
 			testId: TEST_ID,
@@ -116,7 +117,13 @@ describe('the component library', () => {
 	});
 
 	it('draws a chip whose name is out of reach as words, with nothing to press', () => {
-		const { getByTestId } = render(Chip, { voice: 'agent', outOfReach: true, testId: TEST_ID, children: drawn });
+		const { getByTestId } = render(Chip, {
+			voice: 'agent',
+			names: 'place',
+			outOfReach: true,
+			testId: TEST_ID,
+			children: drawn
+		});
 
 		expect(getByTestId(TEST_ID).textContent).toBe(WORDS);
 		expect(getByTestId(TEST_ID).querySelector('button')).toBeNull();

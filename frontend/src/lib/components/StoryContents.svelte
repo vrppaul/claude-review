@@ -136,7 +136,9 @@
 										{#if tellsFirst(chapter, listed)}
 											<ChangedLines changed={review.story.pieces.changeOf(file.path)} />
 										{:else}
-											<span class="cr-faint whitespace-nowrap">{alsoInShort(listed.alsoIn)}</span>
+											<span class="cr-faint whitespace-nowrap"
+												>{alsoInShort(listed.alsoIn.map(({ place }) => place))}</span
+											>
 										{/if}
 									{/snippet}
 								</FileRow>

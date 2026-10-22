@@ -24,12 +24,12 @@
 {#if held}
 	<!-- Where the view on screen draws the file, the reader is taken there; where it draws none of
 		it — a story that does not tell it, a narrower base — the files come on screen for it, whole -->
-	<Chip voice="agent" {testId} title={path} onclick={() => review.navigator.showFile(path)}>
+	<Chip voice="agent" names="place" {testId} title={path} onclick={() => review.navigator.showFile(path)}>
 		{fileName(path)}
 	</Chip>
 {:else}
 	<!-- Named, and nothing to take the reader to: said, not a way there -->
-	<Chip voice="agent" outOfReach {testId} title="{path} — {NOT_IN_THE_DIFF}">
+	<Chip voice="agent" names="place" outOfReach {testId} title="{path} — {NOT_IN_THE_DIFF}">
 		{fileName(path)}<span class="sr-only"> — {NOT_IN_THE_DIFF}</span>
 	</Chip>
 {/if}

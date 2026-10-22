@@ -5,7 +5,7 @@
  */
 
 import type { FollowedChapter, FollowedStep } from '$lib/types';
-import { counted, type CountedWords, FILES, wordsFor } from '$lib/utils/words';
+import { counted, type CountedWords, FILES } from '$lib/utils/words';
 
 // What joins the first line of a step to its last, and a chapter's number to a step's
 const RANGE_DASH = '–';
@@ -191,15 +191,12 @@ function numbersOf(places: readonly number[]): string {
 	return places.map(chapterNumber).join(BETWEEN_NUMBERS);
 }
 
-/**
- * The other chapters that tell the file of a piece, by their places, as its
- * head says them: "also in chapter 1", "also in chapters 1, 4".
- */
-export function alsoInChapters(places: readonly number[]): string {
-	return `${ALSO_IN} ${wordsFor(places.length, CHAPTERS)} ${numbersOf(places)}`;
+/** Another chapter that tells the file of a piece, by its place, as a way to it on the piece's head says it: "also in chapter 4". */
+export function alsoInChapter(place: number): string {
+	return `${ALSO_IN} ${A_CHAPTER} ${chapterNumber(place)}`;
 }
 
-/** The same in the contents, a column with no room for the word: "also in 1", "also in 1, 4". */
+/** The other chapters that tell a file, by their places, in the contents, a column with no room for the word: "also in 1", "also in 1, 4". */
 export function alsoInShort(places: readonly number[]): string {
 	return `${ALSO_IN} ${numbersOf(places)}`;
 }

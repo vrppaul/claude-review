@@ -69,7 +69,7 @@
 		{#each threadIds as threadId (threadId)}
 			{@const thread = threadNamed(threadId)}
 			{#if thread}
-				<Chip {voice} {testId} onclick={() => review.navigator.reveal(thread)}>
+				<Chip {voice} names="place" {testId} onclick={() => review.navigator.reveal(thread)}>
 					{anchorShortPlace(thread.anchor)}
 				</Chip>
 			{/if}
@@ -135,7 +135,12 @@
 					<TurnAside lays="across" testId="panel-event">
 						{#if raised}
 							<!-- A thread the agent raised: the agent's arrival, in its colour -->
-							<Chip voice="agent" testId="panel-thread-ref" onclick={() => review.navigator.reveal(raised)}>
+							<Chip
+								voice="agent"
+								names="place"
+								testId="panel-thread-ref"
+								onclick={() => review.navigator.reveal(raised)}
+							>
 								{turn.body}
 							</Chip>
 						{:else}

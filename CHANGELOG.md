@@ -275,6 +275,13 @@
   stronger; each starts with its mark on a tile. Pointed at, the whole card
   lights and offers "Ask about this" inside its top right corner; with a
   question open under it, it is where the reader is.
+- **"also in chapter N" is a way to that chapter.** On a step's file bar,
+  right after the file's change, each other chapter that tells the file is
+  a chip of its own in the agent's colour, "also in chapter 2", "also in
+  chapter 4", where one tag said "also in chapters 2, 4" at the bar's far
+  end; pressed, it takes the reader to that chapter's head, and the
+  keyboard with them, so the next key starts there. It names the chapter in
+  the page's own face, a step larger than a file's chip.
 - **The reader rewrites or deletes only what the agent has not read.** Three
   dots at the head of each of the reader's own turns, the comment and each
   reply, offer Edit and Delete until the agent is handed it: with a round,
