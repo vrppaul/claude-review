@@ -443,8 +443,7 @@ describe('a thread is a conversation', () => {
 		const id = review.threads.add(onTheAddedLine('Why 3?'));
 		const [thread] = review.threads.all;
 		review.threads.writing.openEdit(thread, id);
-		const field = review.threads.writing.edit(id, id);
-		if (!field) throw new Error('No edit was opened');
+		const [field] = review.threads.writing.fields;
 		field.text = 'Why 4?';
 
 		handOverNext(review, handedPush(review.threads.all));

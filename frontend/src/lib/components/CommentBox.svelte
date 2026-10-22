@@ -98,10 +98,10 @@
 	// Whether the reader is being asked if what they wrote may be dropped
 	let askingToDiscard = $state(false);
 
-	// A screenshot can be the whole comment, so words are not required; an
-	// image still on its way is waited for
 	// An edit of words the agent was handed since it opened can no longer be said: it says why where its keys stand
 	const handedSince = $derived(review.threads.rewritesHanded(field));
+	// A screenshot can be the whole comment, so words are not required; an
+	// image still on its way is waited for
 	const sayable = $derived(field.sayable && !handedSince);
 
 	// The cursor goes to the field when it is opened, or asked for again — not

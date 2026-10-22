@@ -48,9 +48,10 @@
 	const quoteReads = $derived(anchorQuoteReads(thread.anchor));
 	// Questions in this thread still with the agent, oldest first
 	const awaiting = $derived(review.threads.reading.awaiting(thread.id));
-	// Whether what the reader said last is theirs to hand over: nothing waited on, and the last word theirs
 	// Whether words of the reader's in it are being rewritten, which asking now would hand over as they were
 	const rewriting = $derived(exchanges.some((exchange) => review.threads.writing.edit(thread.id, exchange.id)));
+	// Whether what the reader said last is theirs to hand over: nothing waited on, the last word theirs, and none of
+	// their words being rewritten
 	const yoursToAsk = $derived(awaiting.length === 0 && lastWord !== AGENT && !rewriting);
 
 	/** Take a question back; its turn of the agent's goes, and the keyboard stays with the thread. */

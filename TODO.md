@@ -365,8 +365,50 @@ of it is built yet.
       is the answer in both; anything else should raise, as `checked_out`
       does since 8800edb.
 
+## Logic the page holds that the server could: after everything else
+
+From an audit of the page on 2026-10-22, checked in the code where marked.
+The owner put it after the rest of the work.
+
+- [ ] `refactor(review)`: a message taken back in the panel is told to no
+      other page (`Review.take_back`, `services/review/review.py`, pushes
+      nothing; checked), and the page marks it by its own clock
+      (`conversation.svelte.ts` `cancel`): a second tab shows the agent at
+      work on it. A push with the server's moment. Small.
+- [ ] `refactor(review)`: the page stamps the moment of what the agent says
+      in the panel, of a thread it raises and of its answer in a thread with
+      its own clock (`Date.now()` in `conversation.svelte.ts` and
+      `threads.svelte.ts`; checked); `ChatPush`, `PointPush` and `ReplyPush`
+      carry no `at`, though the server has one from its `Clock`. Small.
+- [ ] `refactor(review)`: how many threads followed their lines after a
+      retake, and how many lost them, is counted on the page
+      (`review/following.ts`, by `sameSpot`); the server holds both anchors
+      and answers only the new ones (`POST /api/anchors/follow`). A mark per
+      anchor in `FollowResponse`; `sameSpot` leaves `AnchorView`. Medium.
+- [ ] `refactor(story)`: how the wait for a story stands is put together on
+      the page from the server's facts (`review/story-wait.ts`,
+      `review-story.svelte.ts` `isCurrent`, `storyViewOpens` in
+      `review.svelte.ts`). The server says it in `StoryAsking` and again
+      when the agent comes or goes. Medium; with the story's chapter 7.
+- [ ] The owner's call: which questions in a thread wait for an answer, which
+      question an answer answers, and which were taken back live only in the
+      page (`review/thread-reading.svelte.ts`); another tab offers to ask
+      again. A change of the domain's model. Large.
+- [ ] The owner's call, the audit's advice to keep: where a thread hangs as
+      it is drawn (`anchors/placement.ts`, `reading-view.ts`,
+      `story-reading.ts`); on the server, a new comment would hang only once
+      the server answered.
+- [ ] The owner's call, low value: which side of a narrowed diff takes
+      comments (`anchors/numbering.ts`), though `ShownBase.narrowed` and each
+      file's `commentable` are the server's.
+
 ## Testing
 
+- [ ] 30 tests and helpers under `frontend/tests/` guard a value with
+      `if (!x) throw new Error(…)` (`comment-box.test.ts` `editOf`,
+      `finish-review.test.ts`, …), a branch `tests.md` refuses; reached
+      directly, as `const [field] = review.threads.writing.fields` does, a
+      missing value fails the test all the same.
 - [ ] `test_whatever_a_route_is_sent_it_answers_as_its_schema_says`
       (`tests/integration/test_api_schema.py`) failed once for `POST
       /api/anchors/follow`, in a run of every test at `3090d46`, and passed
