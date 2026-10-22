@@ -343,12 +343,17 @@ class ThreadAsHanded(Schema):
 
     The page takes these words in place of its own: the agent may have been
     handed a copy older than the page's, and what it has the reader rewrites
-    no more.
+    no more. What the page holds and the agent does not goes with the next
+    round: a word said since, or the thread settled or opened again since.
     """
 
     severity: CommentSeverity
     opening: SaidAsHanded
     turns: list[TurnDraft]
+    # The round the agent first had the thread in, which the page says it went in
+    round: int = Field(ge=FIRST_ROUND)
+    # Whether the thread was settled when the agent was last handed it
+    resolved: StrictBool
 
     @classmethod
     def from_domain(cls, has: models.ThreadAsHanded) -> Self:
@@ -356,6 +361,8 @@ class ThreadAsHanded(Schema):
             severity=has.severity,
             opening=SaidAsHanded.from_domain(has.opening),
             turns=[TurnDraft.from_domain(turn) for turn in has.turns],
+            round=has.round,
+            resolved=has.resolved,
         )
 
 

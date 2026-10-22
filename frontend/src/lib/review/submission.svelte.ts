@@ -150,7 +150,6 @@ export class Submission {
 		const written = this.#body;
 		const summary = written.trim();
 		const unsent = this.#threads.unsent;
-		const carried = this.#threads.carry(unsent);
 
 		const result = await submitReview({
 			threads: unsent.map(threadOnTheWire),
@@ -165,8 +164,8 @@ export class Submission {
 
 		// A round is a line under what was said, not the end of it: the threads
 		// stay, and only what happens next is new — what was written while the
-		// round was on its way included
-		this.#threads.markSent(carried, result.round);
+		// round was on its way included. What the round handed the agent the
+		// review says to every page, this one too
 		this.#takeSent(written);
 		this.#rounds.reach(result.round + 1);
 		return result;

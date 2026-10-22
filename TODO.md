@@ -98,6 +98,30 @@ tests. Remove items when done — don't check them off.
       while that section comes first of those counted. Read in the code,
       not seen in a browser.
 
+- [ ] `fix(ui)`: ending a review no agent is attached to, Send says every
+      thread goes ("Finish review (2 comments go with it)", `going` in
+      `FinishReview.svelte`) while the end sends only what the agent does not
+      have (`Submission.submit` sends `threads.unsent`): a thread that went
+      with a round, or by Ask agent now, before the agent left is counted and
+      not sent. One fact should give both; what the end carries is the
+      owner's to say.
+- [ ] `fix(ui)`: a thread deleted while a round is on its way is not brought
+      back by the review's word of what the agent has (`Threads.agentHas`
+      maps only the threads held), while a reply deleted then is
+      (`asTheAgentHasIt`, `api/thread-wire.ts`); the agent's answer in that
+      thread is then dropped (`receiveReply` finds no thread).
+- [ ] `refactor(api)`: what the agent has of each thread, as the API says
+      it, is made twice — `{thread_id: ThreadAsHanded.from_domain(has)}` in
+      `presentation/event_pushes.py` and in `routers/page.py` (`held_threads`).
+- [ ] `fix(ui)`: the round's pane says "round N" on a thread the agent
+      raised (`FinishReview.svelte`), which its bar never says
+      (`ThreadBar.svelte`: it went out with nobody's round).
+- [ ] `fix(ui)`: with two pages open, each gives an answer of the agent's an
+      id of its own (`Threads.receiveReply`, `#turnIds.next()`), and what the
+      agent has is matched to the page's turns by id (`turnsTheAgentHas`), so
+      one page may take another's turn for its own. Read in the code, not
+      reproduced.
+
 ## The story, from the reviews of its server side
 
 - [ ] `fix(cli)`: `story` says "0 lines not in the story (docs/logo.png)" of
@@ -348,7 +372,10 @@ of it is built yet.
       /api/anchors/follow`, in a run of every test at `3090d46`, and passed
       in the six runs of it that followed, one of them of every test again.
       Schemathesis draws its requests anew each run, and the request that
-      failed was not kept.
+      failed was not kept. At `8acf722` it failed in one of five runs for
+      `POST /api/ask`, and this time the failure was kept: no answer of the
+      server's, but Hypothesis's health check, `FailedHealthCheck` (9 inputs
+      drawn, 50 filtered out), drawing the ask's request body.
 - [ ] `page_reading_the_story` (`tests/integration/test_story.py`) puts a
       `Review` together by hand, not through `host_review`, against
       server.md's one place for it: the pages it stands for read the story

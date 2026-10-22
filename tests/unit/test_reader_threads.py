@@ -80,12 +80,32 @@ def test_an_id_this_review_never_hands_out_does_not_move_its_numbering(held_id: 
 def test_what_the_agent_has_of_a_thread_only_grows_each_turn_as_first_handed() -> None:
     """A copy read later — older than the page's, or rewritten by a page at fault — takes nothing from it."""
     threads = ReaderThreads()
-    threads.handed(_thread())
-    threads.handed(_thread(turns=(REPLY_REWORDED, LATER)))
+    threads.handed(_thread(), round_number=FIRST_ROUND)
+    threads.handed(_thread(turns=(REPLY_REWORDED, LATER)), round_number=FIRST_ROUND)
 
-    had = threads.handed(_thread(turns=()))
+    had = threads.handed(_thread(turns=()), round_number=FIRST_ROUND)
 
     assert [(turn.turn_id, turn.body) for turn in had.turns] == [(REPLY_ID, REPLY.body), (LATER.turn_id, LATER.body)]
+
+
+def test_what_the_agent_has_of_a_thread_keeps_the_round_it_first_had_it_in() -> None:
+    """Handed again in a later round, with what was said since, it still went to the agent in the first."""
+    threads = ReaderThreads()
+    threads.handed(_thread(), round_number=FIRST_ROUND)
+
+    had = threads.handed(_thread(turns=(REPLY, LATER)), round_number=FIRST_ROUND + 1)
+
+    assert had.round == FIRST_ROUND
+
+
+def test_what_the_agent_has_of_a_thread_says_whether_it_was_last_handed_settled() -> None:
+    """Settled, then opened again: the agent knows only what it was handed last, so a change since goes to it again."""
+    threads = ReaderThreads()
+
+    settled = threads.handed(_thread(resolved=True), round_number=FIRST_ROUND)
+    opened_again = threads.handed(_thread(), round_number=FIRST_ROUND)
+
+    assert (settled.resolved, opened_again.resolved) == (True, False)
 
 
 @pytest.mark.parametrize(
@@ -112,7 +132,7 @@ def test_what_the_agent_has_of_a_thread_only_grows_each_turn_as_first_handed() -
 def test_a_thread_coming_back_changed_in_what_the_agent_has_of_it_is_refused(changed: ThreadDraft) -> None:
     """The agent reads once: words it has would change under its answer, and it would never read them again."""
     threads = ReaderThreads()
-    threads.handed(_thread())
+    threads.handed(_thread(), round_number=FIRST_ROUND)
 
     with pytest.raises(HandedWordsChangedError):
         threads.check_handed([changed])
@@ -125,7 +145,7 @@ def test_a_thread_coming_back_changed_in_what_the_agent_has_of_it_is_refused(cha
 )
 def test_a_thread_coming_back_with_what_the_agent_never_had_is_taken(changed: ThreadDraft) -> None:
     threads = ReaderThreads()
-    threads.handed(_thread())
+    threads.handed(_thread(), round_number=FIRST_ROUND)
 
     threads.check_handed([changed])
 
@@ -133,7 +153,7 @@ def test_a_thread_coming_back_with_what_the_agent_never_had_is_taken(changed: Th
 def test_the_agents_own_thread_coming_back_with_another_opening_is_refused() -> None:
     """The agent has what it raised a thread with from the moment it raised it."""
     threads = ReaderThreads()
-    threads.raised(_thread(raised_by=TurnAuthor.AUTHOR, turns=()))
+    threads.raised(_thread(raised_by=TurnAuthor.AUTHOR, turns=()), round_number=FIRST_ROUND)
 
     with pytest.raises(HandedWordsChangedError):
         threads.check_handed([_thread(body="Rename it after all.", raised_by=TurnAuthor.AUTHOR, turns=())])

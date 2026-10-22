@@ -641,7 +641,7 @@ describe('the bar of a thread', () => {
 	it('says what the thread asks for, that it is outdated, and the round it went out in', () => {
 		const { anchor } = onTheAddedLine('');
 		review.threads.add({ ...onTheAddedLine('Why 3?'), severity: 'question', anchor: { ...anchor, outdated: true } });
-		review.threads.markSent(review.threads.carry(review.threads.all), 1);
+		handOverNext(review, handedPush(review.threads.all));
 
 		const bar = within(firstThread().getByTestId('thread-bar'));
 
@@ -650,9 +650,20 @@ describe('the bar of a thread', () => {
 		expect(said(bar.getByTestId('comment-sent'))).toBe('sent in round 1');
 	});
 
+	it('keeps the round it went out in once the reader replies in it, the reply not sent yet', () => {
+		const id = review.threads.add(onTheAddedLine('Why 3?'));
+		handOverNext(review, handedPush(review.threads.all));
+		review.threads.addTurn(id, { author: 'reader', body: 'And 4?', images: [] });
+
+		const bar = within(firstThread().getByTestId('thread-bar'));
+
+		expect(said(bar.getByTestId('comment-sent'))).toBe('sent in round 1');
+		expect(review.threads.unsent.map((thread) => thread.id)).toEqual([id]);
+	});
+
 	it('says, folded, that the agent is answering and that a reply is new, and no longer the round it went out in', () => {
 		const id = review.threads.add(onTheAddedLine('Why 3?'));
-		review.threads.markSent(review.threads.carry(review.threads.all), 1);
+		handOverNext(review, handedPush(review.threads.all));
 		review.threads.receiveReply(id, 'It moved into the config default', null);
 		review.threads.reading.asked(id, 'turn-asked');
 		review.threads.reading.setFolded(id, true);

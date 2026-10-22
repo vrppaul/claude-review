@@ -582,13 +582,18 @@ export interface components {
          *
          *     The page takes these words in place of its own: the agent may have been
          *     handed a copy older than the page's, and what it has the reader rewrites
-         *     no more.
+         *     no more. What the page holds and the agent does not goes with the next
+         *     round: a word said since, or the thread settled or opened again since.
          */
         ThreadAsHanded: {
             severity: components["schemas"]["CommentSeverity"];
             opening: components["schemas"]["SaidAsHanded"];
             /** Turns */
             turns: components["schemas"]["TurnDraft"][];
+            /** Round */
+            round: number;
+            /** Resolved */
+            resolved: boolean;
         };
         /**
          * ThreadDraft

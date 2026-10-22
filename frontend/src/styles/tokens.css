@@ -333,6 +333,13 @@
 	--cr-avatar-reader: color-mix(in srgb, var(--cr-mark) var(--cr-strength-tint), var(--cr-ground-card));
 	--cr-avatar-agent: color-mix(in srgb, var(--cr-agent) var(--cr-strength-tint), var(--cr-ground-card));
 	/*
+	 * The ground of what goes with the next round, in the round's pane
+	 * (ItemCard): the reader's wash mixed into a card's own ground, as the
+	 * board draws it; laid over what is under the card, it would wash the
+	 * pane's ground instead
+	 */
+	--cr-unsent-ground: color-mix(in srgb, var(--cr-mark) var(--cr-strength-wash), var(--color-base-100));
+	/*
 	 * Words written in Markdown (Prose): a step quieter than the page's own;
 	 * the marks of a list and the rule under a table's head quieter again; and
 	 * the rules across — between a table's rows, beside a quotation, between

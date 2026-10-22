@@ -16,7 +16,9 @@ What the agent has of a thread — what it raised it with, what it was
 handed — stays as it first had it, and only grows: a thread handed over
 again adds what was said since, and a copy older than one handed before
 takes nothing away. A thread that comes back changed in it is refused.
-The reader says more after it; they never rewrite it.
+The reader says more after it; they never rewrite it. It keeps the round
+the agent first had the thread in, and whether the thread was settled when
+the agent was last handed it, so a page can tell what still goes to it.
 """
 
 import re
@@ -80,14 +82,15 @@ class ReaderThreads:
         if thread_id not in held_ids | set(self._unreadable_ids) | self._handed.keys():
             raise _unknown(thread_id)
 
-    def handed(self, thread: ThreadDraft) -> ThreadAsHanded:
-        """Note a thread the agent was handed, which it may answer in from now on; say what it now has of it.
+    def handed(self, thread: ThreadDraft, *, round_number: int) -> ThreadAsHanded:
+        """Note a thread the agent was handed in this round, which it may answer in from now on; say what it now has
+        of it.
 
         Added to what it had: a turn it has keeps the words it first had, and
         one a copy no longer holds stays.
         """
         had = self._handed.get(thread.thread_id)
-        has = _as_handed(thread) if had is None else had.grown_by(thread)
+        has = _as_handed(thread, round_number) if had is None else had.grown_by(thread)
         self._handed[thread.thread_id] = has
         return has
 
@@ -120,10 +123,11 @@ class ReaderThreads:
         self._raised += 1
         return f"{RAISED_PREFIX}{self._raised}"
 
-    def raised(self, thread: ThreadDraft) -> ThreadAsHanded:
-        """Hold a thread the agent raised, until a page says what became of it; say what the agent has of it."""
+    def raised(self, thread: ThreadDraft, *, round_number: int) -> ThreadAsHanded:
+        """Hold a thread the agent raised in this round, until a page says what became of it; say what the agent has
+        of it."""
         self._held = [*self._held, thread]
-        has = _as_handed(thread)
+        has = _as_handed(thread, round_number)
         self._handed[thread.thread_id] = has
         return has
 
@@ -140,12 +144,14 @@ class ReaderThreads:
                 raise HandedWordsChangedError(msg)
 
 
-def _as_handed(thread: ThreadDraft) -> ThreadAsHanded:
-    """What the agent has of a thread the first time it is handed it, or raises it: all of it."""
+def _as_handed(thread: ThreadDraft, round_number: int) -> ThreadAsHanded:
+    """What the agent has of a thread the first time it is handed it, or raises it, in a round: all of it."""
     return ThreadAsHanded(
         severity=thread.severity,
         opening=SaidAsHanded(author=thread.raised_by, body=thread.body, images=thread.images),
         turns=thread.turns,
+        round=round_number,
+        resolved=thread.resolved,
     )
 
 

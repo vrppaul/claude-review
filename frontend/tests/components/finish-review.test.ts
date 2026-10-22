@@ -6,6 +6,7 @@ import { said } from '../elements';
 import { fakeServer } from '../fake-server';
 import { newComment } from '../new-comment';
 import { SEND_LIMITS } from '../pasted-images';
+import { handedPush, handOverNext } from '../pushes';
 import type { Review } from '$lib/review/review.svelte';
 import { inReview, openReview } from '../review';
 
@@ -63,10 +64,22 @@ describe('finishing a review', () => {
 		expect(getByTestId('end-review')).toBeTruthy();
 	});
 
+	it('says the round a thread went in only of one the agent has whole', () => {
+		review.answerer.setAttached(true);
+		review.threads.add(newComment({ file: 'file.ts', startLine: 1, body: 'kept as it went' }));
+		const saidMore = review.threads.add(newComment({ file: 'file.ts', startLine: 2, body: 'said more since' }));
+		handOverNext(review, handedPush(review.threads.all));
+		review.threads.addTurn(saidMore, { author: 'reader', body: 'and this', images: [] });
+
+		const { getAllByTestId } = render(FinishReview, inReview(review));
+
+		expect(getAllByTestId('finish-comment').map((card) => said(card).includes('round 1'))).toEqual([true, false]);
+	});
+
 	it('sends a round only with something new in it', async () => {
 		review.answerer.setAttached(true);
 		review.threads.add(newComment({ file: 'file.ts', startLine: 1, body: 'fix' }));
-		review.threads.markSent(review.threads.carry(review.threads.all), 1);
+		handOverNext(review, handedPush(review.threads.all));
 
 		const { getByTestId } = render(FinishReview, inReview(review));
 		const send = getByTestId('modal-submit') as HTMLButtonElement;
@@ -273,7 +286,7 @@ describe('a comment still open in its field as the review is finished', () => {
 		const id = review.threads.add(newComment({ body: 'as it was' }));
 		const [thread] = review.threads.all;
 		if (!thread) throw new Error('No thread');
-		review.threads.markSent(review.threads.carry([thread]), 1);
+		handOverNext(review, handedPush([thread]));
 		review.answerer.setAttached(true);
 		review.threads.writing.openEdit(thread, thread.id);
 
@@ -281,6 +294,6 @@ describe('a comment still open in its field as the review is finished', () => {
 
 		expect(queryByTestId('open-fields')).toBeNull();
 		expect(review.submission.canSend).toBe(false);
-		expect(review.threads.sentInRound(id)).toBe(1);
+		expect(review.threads.unsent.map((unsent) => unsent.id)).not.toContain(id);
 	});
 });

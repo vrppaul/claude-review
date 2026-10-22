@@ -39,9 +39,9 @@
 	const replying = $derived(writing.reply(thread.id));
 	// The field to reply in is edged in the colour of whose thread it is
 	const voice = $derived(threadVoice(thread));
-	// What has gone out with a round reads as read by the other side; what is
-	// still unsent keeps the mark colour
-	const sent = $derived(review.threads.sentInRound(thread.id) !== undefined);
+	// A thread the agent has had reads as read by the other side, whatever the
+	// reader said in it since; one it never had keeps the mark colour
+	const sent = $derived(review.threads.handing.roundOf(thread.id) !== undefined);
 	// Its card's edge and bar say where it stands: settled in the colour of what is done, the agent's colour when the
 	// agent raised it, quieter once it went out with a round, faint once what it was written on is gone, and the
 	// reader's mark while in their hands

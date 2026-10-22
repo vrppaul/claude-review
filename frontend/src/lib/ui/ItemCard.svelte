@@ -2,14 +2,15 @@
 	import type { Snippet } from 'svelte';
 
 	/**
-	 * What pressing it does: takes the reader to what it lists, which steps back once it went out with a round; or
-	 * nothing yet, for a comment still being written, which is drawn as the card it becomes, on a dashed edge.
+	 * What pressing it does: takes the reader to what it lists, which waits for the next round on a dashed edge, on the
+	 * reader's wash, and steps back once the agent has it whole; or nothing yet, for a comment still being written,
+	 * which is drawn as the card it becomes, on a dashed edge and no ground.
 	 */
 	type Standing =
 		| {
 				onclick: () => void;
-				/** Whether what it lists went out already. */
-				viewed: boolean;
+				/** Whether what it lists waits for the next round, or the agent has it whole. */
+				waits: boolean;
 		  }
 		| { beingWritten: true };
 
@@ -43,7 +44,7 @@
 	<button
 		type="button"
 		data-testid={testId}
-		class={['cr-ui-item-card cr-pressable', standing.viewed && 'cr-ui-item-card-viewed']}
+		class={['cr-ui-item-card cr-pressable', standing.waits ? 'cr-ui-item-card-waiting' : 'cr-ui-item-card-sent']}
 		onclick={standing.onclick}
 	>
 		{@render held()}

@@ -276,14 +276,26 @@
   comment deletes the thread and names its replies, "Delete this comment
   and its 2 replies?"; deleting a reply asks "Delete this reply?" and leaves
   the rest. Words the agent is handed while they are being rewritten can no
-  longer be saved, and the field says "The agent has read these words now:
-  say it in a reply". The review keeps what the agent has of each thread,
+  longer be saved, and the field says "The agent has read what this said:
+  say more in a reply". The review keeps what the agent has of each thread,
   words and all, and only adds to it; it says so to every page as it opens,
   catches up, and whenever it hands threads over, once for all a round
   carries, and the page holds those words in place of its own, a reply it
   had deleted brought back where it stood. It refuses a thread that comes
   back changed in it, the agent's own opening among them, with a conflict
   (409) where that one was refused as unacceptable (422).
+- **A round carries only what the agent does not have.** The review says,
+  of each thread the agent has, the round it first had it in and whether it
+  was settled when last handed over; the page counts as unsent, and a round
+  carries, only a thread holding a word of the reader's the agent was never
+  handed, or a settling or reopening it was not told of. A thread asked
+  about with Ask agent now goes with no later round unless more is said in
+  it. A thread the reader replies in stays grey and keeps "sent in round 1",
+  as the boards draw it; the reply alone goes with the next round. In the
+  round's pane, a thread that goes with it stands on a dashed edge on the
+  reader's wash, as a comment still being written stands on a dashed edge;
+  one the agent has whole stands solid, its words faint, the round it went
+  in at its end. A draft no longer keeps which threads went out (shape 23).
 - **Ask agent now stands at what the reader said last.** In a thread it is
   a small button at the head of the reader's last turn, no longer a row
   under the conversation, and it is called Ask agent now there, in the

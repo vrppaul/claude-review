@@ -420,7 +420,6 @@ export class Review {
 			read: this.threads.reading.kept,
 			writing: this.threads.writing.kept,
 			reviewBody: this.submission.body,
-			sent: this.threads.sentRounds,
 			panel: this.conversation.turns,
 			composer: this.conversation.composer.kept,
 			issued: this.threads.issued,

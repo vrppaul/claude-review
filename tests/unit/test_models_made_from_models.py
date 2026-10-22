@@ -83,11 +83,14 @@ SAID = SaidInPanel(
 )
 # When the message above is taken back, forty seconds after it was said
 TAKEN_BACK_AT = 1_760_000_040_000
-# What the agent has of a thread nothing was said in after its opening, and the thread handed it again with a reply
+# What the agent has of a thread nothing was said in after its opening, and the thread handed it again with a reply,
+# settled
 HANDED = ThreadAsHanded(
     severity=CommentSeverity.QUESTION,
     opening=SaidAsHanded(author=TurnAuthor.READER, body="Is the store closed?", images=["image-1"]),
     turns=[],
+    round=1,
+    resolved=False,
 )
 HANDED_AGAIN = ThreadDraft(
     thread_id="thread-1",
@@ -97,7 +100,7 @@ HANDED_AGAIN = ThreadDraft(
     images=["image-1"],
     turns=[TurnDraft(turn_id="turn-1", author=TurnAuthor.READER, body="On every path?", images=[], round=1)],
     raised_by=TurnAuthor.READER,
-    resolved=False,
+    resolved=True,
 )
 STEP = Step(file="src/moved.py", lines=LineSpan(first=11, last=12), reason="The store closes before the reply is sent.")
 CHAPTER = Chapter[Step](
@@ -169,7 +172,7 @@ MADE = [
         what="what the agent has of a thread, handed it again",
         source=HANDED,
         made=HANDED.grown_by(HANDED_AGAIN),
-        replaced={"turns"},
+        replaced={"turns", "resolved"},
     ),
     MadeFrom(
         what="a refused field named as it was sent", source=FIELD, made=FIELD.without_request_part(), replaced={"loc"}

@@ -18,7 +18,6 @@ import type { Rounds } from '$lib/review/rounds.svelte';
 import { ThreadHanding } from '$lib/review/thread-handing.svelte';
 import { ThreadReading } from '$lib/review/thread-reading.svelte';
 import { anchorWrittenOn, type ThreadOnBlock, withItsBlock, withItsLines } from '$lib/review/thread-places';
-import { type CarriedThread, ThreadSending } from '$lib/review/thread-sending.svelte';
 import { ThreadWriting } from '$lib/review/thread-writing.svelte';
 import type {
 	Anchor,
@@ -47,11 +46,6 @@ export interface OpenField {
 	anchor: Anchor;
 }
 
-/** Whether a thread the review holds is as the agent raised it: nothing settled, and nothing said in it by the reader. */
-function isAsRaised(held: HeldThread): boolean {
-	return held.raised_by === AGENT && !held.resolved && held.turns.every((turn) => turn.author !== READER);
-}
-
 /** Words put into the review and asked about straight away: the thread they went into, and the asking. */
 export interface SaidAndAsked {
 	thread: string;
@@ -64,12 +58,10 @@ export class Threads {
 	readonly reading: ThreadReading;
 	/** What is being written in them, and on lines that have none yet. */
 	readonly writing: ThreadWriting;
-	/** What the agent has of each, which the reader rewrites and deletes no more. */
+	/** What the agent has of each: what the reader rewrites and deletes no more, and what goes with the next round. */
 	readonly handing: ThreadHanding;
 	readonly #rounds: Rounds;
 	#all = $state.raw<Thread[]>([]);
-	// Which have gone out, in which round, and which the reader has changed since
-	readonly #sending: ThreadSending;
 	readonly #commentIds = new IdSequence(COMMENT_ID_PREFIX);
 	readonly #turnIds = new IdSequence(TURN_ID_PREFIX);
 	readonly #onLines = $derived(this.#all.flatMap(withItsLines));
@@ -79,7 +71,7 @@ export class Threads {
 	// Those on the story's words, by the block they hang on, so a block asks for its own without a scan
 	readonly #byBlock = $derived(Map.groupBy(this.#onTheStory, ({ block }) => block));
 	readonly #unread = $derived(this.#all.filter((thread) => this.reading.isUnread(thread.id)));
-	readonly #unsent = $derived(this.#all.filter((thread) => this.#sending.roundOf(thread.id) === undefined));
+	readonly #unsent = $derived(this.#all.filter((thread) => this.handing.lacks(thread)));
 	readonly #onTheWire = $derived(this.#all.map(threadOnTheWire));
 	readonly #answered = $derived(
 		this.#all
@@ -96,7 +88,6 @@ export class Threads {
 		this.#rounds = rounds;
 		this.reading = new ThreadReading(kept.read);
 		this.writing = new ThreadWriting(kept.writing, fieldEvents, kept.threads);
-		this.#sending = new ThreadSending(kept.sent);
 		this.handing = new ThreadHanding();
 		this.#pickUp(kept);
 	}
@@ -114,7 +105,7 @@ export class Threads {
 		return this.#unread;
 	}
 
-	/** Threads the answering side has not been told about yet. */
+	/** Threads holding what the agent does not have yet, which the next round carries. */
 	get unsent(): Thread[] {
 		return this.#unsent;
 	}
@@ -149,19 +140,9 @@ export class Threads {
 		return (this.#byBlock.get(blockKey(block)) ?? []).map(({ thread }) => thread);
 	}
 
-	/** The round every thread sent so far went out in, by thread, as the draft keeps them. */
-	get sentRounds(): Record<string, number> {
-		return this.#sending.rounds;
-	}
-
 	/** How many thread and turn ids have been handed out, deleted ones included. */
 	get issued(): IssuedIds {
 		return { comments: this.#commentIds.issued, turns: this.#turnIds.issued };
-	}
-
-	/** Which round a thread went out in, or nothing if it has not yet. */
-	sentInRound(id: string): number | undefined {
-		return this.#sending.roundOf(id);
 	}
 
 	add({ anchor, body, severity, images }: NewComment): string {
@@ -186,10 +167,9 @@ export class Threads {
 	 * new. One the page holds already — taken in with the review's threads
 	 * as it opened — is not raised twice.
 	 *
-	 * It arrives already sent: the reader has not written it, so it must not
-	 * swell "unsent" or travel back to the side that wrote it. The moment
-	 * they answer or edit it, it stops being sent — as any thread does — and
-	 * goes with the next round, so the reply arrives with what it replies to.
+	 * The agent has it from the start, as the review says next: nothing in it
+	 * is the reader's, so it never swells "unsent". What the reader says in
+	 * it goes with the next round, with the whole thread it replies in.
 	 */
 	raise(id: string, anchor: Anchor, body: string, severity: CommentSeverity): boolean {
 		if (this.#all.some((held) => held.id === id)) return false;
@@ -207,23 +187,17 @@ export class Threads {
 		};
 		this.#all = [...this.#all, thread];
 		this.reading.markUnread(id);
-		this.#sending.arrivedSent(id, this.#rounds.current);
 		return true;
 	}
 
 	/**
 	 * Take as this page's own the threads the review holds, for a page that
 	 * opened with no draft of the review: another browser, a private window.
-	 *
-	 * Which of them went out with a round only the page that sent them
-	 * knew, so each is taken as not sent yet — sent twice costs the agent a
-	 * second look, never sent costs the reader the comment — but for one
-	 * still as the agent raised it, taken as a raised thread arrives. Ids go
-	 * on past theirs, so nothing written here takes one of them.
+	 * What the agent has of each the review says beside them. Ids go on past
+	 * theirs, so nothing written here takes one of them.
 	 */
 	adopt(held: HeldThread[]): void {
 		this.#all = [...this.#all, ...held.map((thread) => threadOfHeld(thread, this.#rounds.current))];
-		for (const thread of held.filter(isAsRaised)) this.#sending.arrivedSent(thread.thread_id, this.#rounds.current);
 		this.#commentIds.continuePast(held.map((thread) => thread.thread_id));
 		this.#turnIds.continuePast(held.flatMap((thread) => thread.turns.map((turn) => turn.turn_id)));
 	}
@@ -231,8 +205,8 @@ export class Threads {
 	/**
 	 * The review says what the agent has of these threads, by thread: the
 	 * words it has stand in each as it has them — it may have been handed a
-	 * copy older than this page's — and are the reader's to rewrite no more.
-	 * Not a change of the reader's: nothing goes again with a round for it.
+	 * copy older than this page's — and are the reader's to rewrite no more,
+	 * nor carried by a round again.
 	 */
 	agentHas(handed: Record<string, ThreadAsHanded>): void {
 		this.handing.handedOver(handed);
@@ -240,13 +214,11 @@ export class Threads {
 	}
 
 	update(id: string, body: string, severity: CommentSeverity, images: string[]): void {
-		this.#sending.changedByReader(id);
 		this.#replace(id, (thread) => ({ ...thread, body, severity, images }));
 	}
 
 	/** Rewrite a reply of the reader's in a thread; nothing else of the thread changes. */
 	updateTurn(id: string, turnId: string, body: string, images: string[]): void {
-		this.#sending.changedByReader(id);
 		this.#replace(id, (thread) => ({
 			...thread,
 			turns: thread.turns.map((turn) => (turn.id === turnId ? { ...turn, body, images } : turn))
@@ -254,7 +226,6 @@ export class Threads {
 	}
 
 	remove(id: string): void {
-		this.#sending.changedByReader(id);
 		this.reading.forget(id);
 		this.writing.forget(id);
 		this.#all = this.#all.filter((thread) => thread.id !== id);
@@ -262,7 +233,6 @@ export class Threads {
 
 	/** Delete a reply of the reader's from a thread; the rest of the thread stays. */
 	removeTurn(id: string, turnId: string): void {
-		this.#sending.changedByReader(id);
 		this.#replace(id, (thread) => ({ ...thread, turns: thread.turns.filter((turn) => turn.id !== turnId) }));
 	}
 
@@ -317,7 +287,6 @@ export class Threads {
 			at: Date.now(),
 			images
 		};
-		this.#sending.changedByReader(id);
 		this.#replace(id, (thread) => ({
 			...thread,
 			turns: [...thread.turns, turn]
@@ -378,8 +347,6 @@ export class Threads {
 			images: [],
 			...(answers === undefined ? {} : { answers })
 		};
-		// Not marked unsent: the answer came from the side that reads the
-		// rounds, so sending it back would only repeat what they wrote
 		this.#replace(id, (answered) => ({
 			...answered,
 			turns: [...answered.turns, turn]
@@ -390,24 +357,8 @@ export class Threads {
 
 	/** Settle a thread, which folds it away, or open it again. */
 	setResolved(id: string, resolved: boolean): void {
-		this.#sending.changedByReader(id);
 		this.#replace(id, (thread) => ({ ...thread, resolved }));
 		if (resolved) this.reading.setFolded(id, true);
-	}
-
-	/** The threads a round about to go carries, as `markSent` is handed them back once it has gone. */
-	carry(threads: readonly Thread[]): CarriedThread[] {
-		return this.#sending.carry(threads);
-	}
-
-	/**
-	 * Note that the threads a round carried went out in it. One the reader
-	 * changed since, while the round was on its way, is a thread the round did
-	 * not carry as it is now, and goes with the next; one the agent answered
-	 * meanwhile, or the diff moved, still went as the reader wrote it.
-	 */
-	markSent(carried: readonly CarriedThread[], round: number): void {
-		this.#sending.markSent(carried, round);
 	}
 
 	/**

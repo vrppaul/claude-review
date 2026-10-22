@@ -19,10 +19,10 @@ export function handOverNext(review: Review, push: ServerPush): void {
 	takePush(review, push, { ...heard, sequence: heard.sequence + 1 });
 }
 
-/** What the agent has of a thread, as the review says it: all of it, as the page holds it now. */
+/** What the agent has of a thread, as the review says it: all of it, as the page holds it now, from the round it was written in. */
 export function asHanded(thread: Thread): ThreadAsHanded {
-	const { severity, raised_by, body, images, turns } = threadOnTheWire(thread);
-	return { severity, opening: { author: raised_by, body, images }, turns };
+	const { severity, raised_by, body, images, turns, resolved } = threadOnTheWire(thread);
+	return { severity, opening: { author: raised_by, body, images }, turns, round: thread.round, resolved };
 }
 
 /** What the agent has of these threads once handed them, by thread, each as the page holds it now. */

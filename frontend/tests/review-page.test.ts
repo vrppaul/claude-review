@@ -477,7 +477,9 @@ describe('opening the page', () => {
 		const handed = {
 			severity: held.severity,
 			opening: { author: held.raised_by, body: held.body, images: [] },
-			turns: []
+			turns: [],
+			round: 1,
+			resolved: false
 		};
 		serving().answer('GET /api/threads', { threads: [held], handed: { 'comment-1': handed } });
 		const first = newPage();

@@ -575,7 +575,9 @@ class ThreadAsHanded(BaseModel):
     """What the agent has of a thread: how it was meant, what opened it, and each turn it was handed, in order.
 
     The agent reads a thread as it is handed it, and what it has stays so:
-    the reader says more after it, and rewrites none of it.
+    the reader says more after it, and rewrites none of it. Whether the
+    thread is settled is what the agent was told last: the reader may settle
+    it, or open it again, after the agent had it, and that goes to it too.
     """
 
     model_config = ConfigDict(frozen=True)
@@ -583,6 +585,10 @@ class ThreadAsHanded(BaseModel):
     severity: CommentSeverity
     opening: SaidAsHanded
     turns: list[TurnDraft]
+    # The round the agent first had the thread in, handed or raising it; it never moves
+    round: int = Field(ge=FIRST_ROUND)
+    # Whether the thread was settled when the agent was last handed it
+    resolved: bool
 
     def kept_in(self, thread: ThreadDraft) -> bool:
         """Whether a thread the page holds still says everything the agent has of it, as the agent has it."""
@@ -595,12 +601,15 @@ class ThreadAsHanded(BaseModel):
         )
 
     def grown_by(self, thread: ThreadDraft) -> ThreadAsHanded:
-        """What the agent has once handed the thread again: what it had, as it had it, and each turn said since."""
+        """What the agent has once handed the thread again: what it had, as it had it, each turn said since, and
+        whether it is settled now."""
         had = {turn.turn_id for turn in self.turns}
         return ThreadAsHanded(
             severity=self.severity,
             opening=self.opening,
             turns=[*self.turns, *(turn for turn in thread.turns if turn.turn_id not in had)],
+            round=self.round,
+            resolved=thread.resolved,
         )
 
 

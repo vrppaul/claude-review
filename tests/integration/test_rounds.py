@@ -14,6 +14,7 @@ import pytest
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
 
+from claude_review.domain.models import FIRST_ROUND
 from claude_review.presentation.schemas.pushes import AnswererPush, DiffPush, HandedPush
 from claude_review.services.review_opening import ReviewOpening
 from tests.helpers import (
@@ -84,7 +85,8 @@ async def test_the_answerer_is_handed_the_round(client: AsyncClient) -> None:
 
 def test_every_page_hears_in_one_push_what_a_round_handed_the_agent(review_page: TestClient) -> None:
     """The comments went with the round: each is the agent's to read as it was sent, and the reader's no longer.
-    One push for the round, however many it carries, so a page is never left behind by a long one."""
+    One push for the round, however many it carries, so a page is never left behind by a long one; each says the
+    round it went in, which the page says of it from then on."""
     another = {**A_THREAD, "thread_id": "comment-2"}
 
     with open_session(review_page) as socket:
@@ -92,7 +94,10 @@ def test_every_page_hears_in_one_push_what_a_round_handed_the_agent(review_page:
 
         handed = next_push(socket, HandedPush).handed
 
-    assert list(handed) == [FIRST_THREAD_ID, "comment-2"]
+    assert [(thread_id, has.round) for thread_id, has in handed.items()] == [
+        (FIRST_THREAD_ID, FIRST_ROUND),
+        ("comment-2", FIRST_ROUND),
+    ]
 
 
 async def test_a_later_round_says_which_round_it_is(client: AsyncClient) -> None:

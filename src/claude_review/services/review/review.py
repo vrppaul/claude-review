@@ -383,7 +383,8 @@ class Review:
                 turns=[],
                 raised_by=TurnAuthor.AUTHOR,
                 resolved=False,
-            )
+            ),
+            round_number=self._rounds.current,
         )
         self._page.tell(ThreadRaised(thread_id=thread_id, anchor=quoted, body=body, severity=severity))
         # What the agent has of it is told as of every thread it has, so every page holds it alike
@@ -607,7 +608,9 @@ class Review:
         of its own where the agent was handed an older copy. A round of no
         threads hands nothing over, and tells nothing.
         """
-        handed = {thread.thread_id: self._threads.handed(thread) for thread in threads}
+        handed = {
+            thread.thread_id: self._threads.handed(thread, round_number=self._rounds.current) for thread in threads
+        }
         if handed:
             self._page.tell(ThreadsHandedOver(handed=handed))
         return [self._handover.thread(thread) for thread in threads]

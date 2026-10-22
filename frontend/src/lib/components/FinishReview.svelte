@@ -36,6 +36,8 @@
 	// What the pane is called, and headed with: the round it sends, or the end
 	const title = $derived(finishingTitle(inRounds, review.rounds.current));
 	const unsent = $derived(review.threads.unsent.length);
+	// The threads the next round carries, which wait for it in the list
+	const waiting = $derived(new Set(review.threads.unsent));
 	// What goes with what the button sends: what is unsent, with a round; everything, with the end
 	const going = $derived(inRounds ? unsent : review.threads.count);
 	const goingSaid = $derived(counted(going, GOING_WITH_IT));
@@ -221,12 +223,14 @@
 				{/if}
 			{:else}
 				<!-- Each comment a card, one press to its thread, read whole there: where it hangs and what is said of it
-				on one line, its words under that; one sent with a round steps back -->
+				on one line, its words under that; one holding what the agent does not have waits for this round, one
+				the agent has whole steps back, saying the round it went in -->
 				<ul class="flex flex-col gap-1.5">
 					{#each review.threads.all as thread (thread.id)}
-						{@const sent = review.threads.sentInRound(thread.id)}
+						{@const waits = waiting.has(thread)}
+						{@const wentIn = review.threads.handing.roundOf(thread.id)}
 						<li>
-							<ItemCard testId="finish-comment" viewed={sent !== undefined} onclick={() => jump(thread)}>
+							<ItemCard testId="finish-comment" {waits} onclick={() => jump(thread)}>
 								{#snippet place()}
 									{@render placed(thread.anchor, 'modal-comment-ref')}
 								{/snippet}
@@ -240,8 +244,8 @@
 									{#if thread.resolved}
 										<Tag tone="quiet" testId="finish-resolved">resolved</Tag>
 									{/if}
-									{#if sent !== undefined}
-										<span class="cr-faint">round {sent}</span>
+									{#if !waits && wentIn !== undefined}
+										<span class="cr-faint">round {wentIn}</span>
 									{/if}
 								{/snippet}
 								{#snippet below()}

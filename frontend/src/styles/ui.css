@@ -1671,8 +1671,14 @@
 	border-style: dashed;
 	background-color: transparent;
 }
-/* What went out with a round already steps back, in faint words */
-.cr-ui-item-card-viewed {
+/* What the agent does not have whole goes with the next round: on a dashed edge, as what is not there yet, on the
+   reader's wash */
+.cr-ui-item-card-waiting {
+	border-style: dashed;
+	background-color: var(--cr-unsent-ground);
+}
+/* What the agent has whole steps back, in faint words */
+.cr-ui-item-card-sent {
 	color: var(--cr-faint);
 }
 .cr-ui-item-card-line,

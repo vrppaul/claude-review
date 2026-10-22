@@ -207,7 +207,6 @@ const UP_TO_DATE_1_5_0: Draft = {
 	},
 	writing: [],
 	reviewBody: 'Overall fine',
-	sent: { 'comment-2': 1, 'raised-1': 2 },
 	// The message it kept as taken back, taken back when it was said: v1.5.0 never kept when it was taken back
 	panel: [
 		WRITTEN_BY_1_5_0.panel[0],
@@ -246,7 +245,6 @@ describe('the draft the last release kept, as it wrote it', () => {
 
 		expect(review.threads.all.map((thread) => thread.id)).toEqual(['comment-2', 'raised-1']);
 		expect(review.threads.reading.isFolded('comment-2')).toBe(true);
-		expect(review.threads.unsent).toEqual([]);
 		expect(review.rounds.current).toBe(2);
 		expect(review.conversation.composer.text).toBe('half a thought');
 		expect(review.conversation.turns.map((turn) => turn.body)).toEqual(['Run the tests', 'They pass', 'Never mind']);
@@ -304,7 +302,6 @@ describe('a draft this release kept', () => {
 				}
 			],
 			reviewBody: 'Overall fine',
-			sent: { 'comment-1': 2 },
 			panel: [{ id: 'message-1', author: 'reader', body: 'Run the tests', at: 60, images: [] }],
 			composer: { text: 'half a thought', images: ['pasted.png', 'handed.png'], uploaded: ['pasted.png'] },
 			issued: { comments: 3, turns: 5 },
@@ -422,7 +419,6 @@ describe('a draft written by an older release', () => {
 		expect(draft?.threads[0].body).toBe('written before threads existed');
 		expect(draft?.threads[0].turns).toEqual([]);
 		expect(draft?.read).toEqual({ folded: [], unread: [], awaiting: {}, takenBack: {} });
-		expect(draft?.sent).toEqual({});
 	});
 
 	it('keeps how each thread was being read, apart from what it says', () => {
@@ -481,10 +477,10 @@ describe('a draft written by an older release', () => {
 		expect(readKept()?.round).toBe(3);
 	});
 
-	it('counts a thread sent before rounds were numbered as sent in the first', () => {
+	it('counts a thread sent before rounds were numbered as sent in the first, the review then in the second', () => {
 		keptByAnOlderRelease({ comments: [flatThread()], sent: ['comment-1'] });
 
-		expect(readKept()?.sent).toEqual({ 'comment-1': 1 });
+		expect(readKept()?.round).toBe(2);
 	});
 
 	it('gives a turn written before images could be pasted no images', () => {

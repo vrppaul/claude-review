@@ -13,7 +13,8 @@
  * each field uploaded itself, which files were read and folded away, and
  * the round the review had reached, rather than read back from the marks
  * its threads carry; a message taken back in the panel says when; an edit
- * says which of the reader's words in its thread it rewrites; and it is
+ * says which of the reader's words in its thread it rewrites; which threads
+ * went out it keeps no more, the review saying what the agent has; and it is
  * kept under the name the review gives itself rather than under its title,
  * which another review on the same port may share. A
  * draft a release kept is brought up to date — never thrown away: it is an
@@ -37,7 +38,7 @@ import { COMMENT_ID_PREFIX, IdSequence, TURN_ID_PREFIX } from '$lib/utils/ids';
 import { AGENT, READER } from '$lib/utils/speakers';
 
 /** The shape drafts are kept in now. */
-export const DRAFT_SHAPE = 22;
+export const DRAFT_SHAPE = 23;
 // The round every review begins in
 const FIRST_ROUND = 1;
 
@@ -67,14 +68,12 @@ export interface KeptField {
 	uploaded: string[];
 }
 
-/** The threads as a draft keeps them: what they say, how they were read, which went out, and what was being written. */
+/** The threads as a draft keeps them: what they say, how they were read, and what was being written. */
 export interface KeptThreads {
 	threads: Thread[];
 	read: ThreadsRead;
 	/** Comments, replies and edits being written, not said yet. */
 	writing: KeptField[];
-	/** The round each thread already sent went out in, by thread. */
-	sent: Record<string, number>;
 	/** How many thread and turn ids have been handed out, deleted ones included. */
 	issued: IssuedIds;
 }
@@ -206,7 +205,6 @@ export function emptyDraft(round: number): Draft {
 		read: { folded: [], unread: [], awaiting: {}, takenBack: {} },
 		writing: [],
 		reviewBody: '',
-		sent: {},
 		panel: [],
 		composer: emptyComposer(),
 		issued: { comments: 0, turns: 0 },
@@ -227,6 +225,7 @@ export function upToDate(kept: ReleasedDraft): Draft {
 	const turnIds = new IdSequence(TURN_ID_PREFIX);
 	turnIds.continuePast(kept.comments.flatMap((comment) => comment.turns ?? []).map((turn) => turn.id));
 	const comments = kept.comments.map((comment) => upToDateComment(comment, turnIds));
+	// Which threads it had sent says only how far its rounds got: what the agent has is the review's to say
 	const sent = Object.fromEntries(
 		(kept.sent ?? []).map((entry) => (typeof entry === 'string' ? [entry, FIRST_ROUND] : entry))
 	);
@@ -250,7 +249,6 @@ export function upToDate(kept: ReleasedDraft): Draft {
 		// Nothing being written was kept until the fields were held by the review
 		writing: [],
 		reviewBody: kept.reviewBody ?? '',
-		sent,
 		// The panel came after threads did; an older draft simply has nothing said
 		panel: (kept.panel ?? []).map(upToDatePanelTurn),
 		// The panel kept nothing half-written until it could hold images

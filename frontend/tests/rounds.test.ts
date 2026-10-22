@@ -4,6 +4,7 @@ import type { SubmitResponse } from '$lib/types';
 import { fakeServer, type FakeServer } from './fake-server';
 import { newComment } from './new-comment';
 import type { Review } from '$lib/review/review.svelte';
+import { handedPush, handOverNext } from './pushes';
 import { openReview } from './review';
 
 let review: Review;
@@ -22,6 +23,13 @@ function takingRounds(round = 1): FakeServer {
 	const server = fakeServer();
 	server.answer('POST /api/submit', roundTaken(round));
 	return server;
+}
+
+/** Send a round, and hear the review say what it then handed the agent: each thread the round carried, as it went. */
+async function sendARound(): Promise<void> {
+	const carried = review.threads.unsent;
+	await review.submission.submit(false);
+	handOverNext(review, handedPush(carried));
 }
 
 /** The page reloaded against a server that restarted, and knows only round one. */
@@ -43,7 +51,7 @@ describe('sending a round rather than ending the review', () => {
 	it('carries what is new since the last round, not the review again', async () => {
 		const server = takingRounds();
 		review.threads.add(newComment({ file: 'a.py', body: 'tighten this' }));
-		await review.submission.submit(false);
+		await sendARound();
 
 		review.threads.add(newComment({ file: 'b.py', startLine: 2, body: 'and this' }));
 		await review.submission.submit(false);
@@ -53,10 +61,51 @@ describe('sending a round rather than ending the review', () => {
 		});
 	});
 
+	it('does not carry a thread the agent was handed by asking, until something new is said in it', async () => {
+		const server = takingRounds();
+		const asked = review.threads.add(newComment({ file: 'a.py', body: 'why this?' }));
+		handOverNext(review, handedPush(review.threads.all));
+		review.threads.add(newComment({ file: 'b.py', startLine: 2, body: 'and this' }));
+		await sendARound();
+
+		review.threads.addTurn(asked, { author: 'reader', body: 'and why here?', images: [] });
+		await review.submission.submit(false);
+
+		expect(server.bodiesSentTo('POST /api/submit')).toMatchObject([
+			{ threads: [{ anchor: { file: 'b.py' } }] },
+			{ threads: [{ anchor: { file: 'a.py' } }] }
+		]);
+	});
+
+	it('sends again a thread the reader settled once the agent had it, and not one settled and opened again', async () => {
+		takingRounds();
+		const settled = review.threads.add(newComment({ file: 'a.py', body: 'tighten this' }));
+		const reopened = review.threads.add(newComment({ file: 'b.py', startLine: 2, body: 'and this' }));
+		await sendARound();
+
+		review.threads.setResolved(settled, true);
+		review.threads.setResolved(reopened, true);
+		review.threads.setResolved(reopened, false);
+
+		expect(review.threads.unsent.map((thread) => thread.id)).toEqual([settled]);
+	});
+
+	it('does not send again a thread the diff moved: the reader wrote nothing new', async () => {
+		const server = takingRounds();
+		review.threads.add(newComment({ file: 'a.py', body: 'tighten this' }));
+		await sendARound();
+		server.answer('POST /api/anchors/follow', { anchors: [lineAnchor('a.py', 'new', 3, 3, [])] });
+
+		await review.threads.follow();
+
+		expect(review.threads.all[0].anchor).toMatchObject({ start_line: 3 });
+		expect(review.threads.unsent).toEqual([]);
+	});
+
 	it('sends a thread again once something has been said in it', async () => {
 		const server = takingRounds();
 		const id = review.threads.add(newComment({ file: 'a.py', body: 'tighten this' }));
-		await review.submission.submit(false);
+		await sendARound();
 
 		review.threads.receiveReply(id, 'Tightened', null);
 		review.threads.addTurn(id, { author: 'reader', body: 'Still reads oddly', images: [] });
@@ -75,7 +124,7 @@ describe('sending a round rather than ending the review', () => {
 	it('does not resend a thread just because it was answered', async () => {
 		const server = takingRounds();
 		const id = review.threads.add(newComment({ file: 'a.py', body: 'tighten this' }));
-		await review.submission.submit(false);
+		await sendARound();
 
 		review.threads.receiveReply(id, 'Tightened', null);
 		review.threads.add(newComment({ file: 'b.py', startLine: 2, body: 'and this' }));
@@ -259,7 +308,7 @@ describe('ending a review worked through in rounds', () => {
 		review = openReview({ facts: { answerer_attached: true } });
 		const server = takingRounds();
 		review.threads.add(newComment({ file: 'a.py', body: 'sent in round one' }));
-		await review.submission.submit(false);
+		await sendARound();
 		server.answer('POST /api/submit', ENDED);
 		server.answer('POST /api/end', null);
 		return server;
@@ -293,89 +342,6 @@ describe('ending a review worked through in rounds', () => {
 });
 
 describe('writing while a round is on its way', () => {
-	it('sends again with the next round a thread that changed after this one took it', async () => {
-		const rounds = fakeServer().hold('POST /api/submit');
-		const id = review.threads.add(newComment({ file: 'a.py', body: 'tighten this' }));
-
-		const sending = review.submission.submit(false);
-		review.threads.addTurn(id, { author: 'reader', body: 'and this too', images: [] });
-		rounds.answer(0, roundTaken(1));
-		await sending;
-
-		expect(review.threads.unsent.map((thread) => thread.id)).toEqual([id]);
-	});
-
-	it.each([
-		{ change: 'edited', make: (id: string) => review.threads.update(id, 'tighten this more', 'note', []) },
-		{ change: 'resolved', make: (id: string) => review.threads.setResolved(id, true) },
-		{
-			change: 'replied to',
-			make: (id: string) => review.threads.addTurn(id, { author: 'reader', body: 'and', images: [] })
-		}
-	])('sends again a thread the reader $change while the round was on its way', async ({ make }) => {
-		const rounds = fakeServer().hold('POST /api/submit');
-		const id = review.threads.add(newComment({ file: 'a.py', body: 'tighten this' }));
-
-		const sending = review.submission.submit(false);
-		make(id);
-		rounds.answer(0, roundTaken(1));
-		await sending;
-
-		expect(review.threads.unsent.map((thread) => thread.id)).toEqual([id]);
-		expect(review.threads.sentInRound(id)).toBeUndefined();
-	});
-
-	it('marks nothing sent for a thread deleted while the round was on its way', async () => {
-		const rounds = fakeServer().hold('POST /api/submit');
-		const id = review.threads.add(newComment({ file: 'a.py', body: 'tighten this' }));
-
-		const sending = review.submission.submit(false);
-		review.threads.remove(id);
-		rounds.answer(0, roundTaken(1));
-		await sending;
-
-		expect(review.threads.sentRounds).toEqual({});
-	});
-
-	it("marks sent a thread the agent answered while the round was on its way: the answer is the agent's own", async () => {
-		const rounds = fakeServer().hold('POST /api/submit');
-		const id = review.threads.add(newComment({ file: 'a.py', body: 'tighten this' }));
-
-		const sending = review.submission.submit(false);
-		review.threads.receiveReply(id, 'done, tightened', null);
-		rounds.answer(0, roundTaken(1));
-		await sending;
-
-		expect(review.threads.unsent).toEqual([]);
-		expect(review.threads.sentInRound(id)).toBe(1);
-	});
-
-	it('marks sent a thread the diff moved while the round was on its way: the reader wrote nothing new', async () => {
-		const server = fakeServer();
-		const rounds = server.hold('POST /api/submit');
-		const id = review.threads.add(newComment({ file: 'a.py', body: 'tighten this' }));
-		server.answer('POST /api/anchors/follow', { anchors: [lineAnchor('a.py', 'new', 3, 3, [])] });
-
-		const sending = review.submission.submit(false);
-		await review.threads.follow();
-		rounds.answer(0, roundTaken(1));
-		await sending;
-
-		expect(review.threads.all[0].anchor).toMatchObject({ start_line: 3 });
-		expect(review.threads.sentInRound(id)).toBe(1);
-	});
-
-	it('marks sent a thread that did not change while the round was on its way', async () => {
-		const rounds = fakeServer().hold('POST /api/submit');
-		const id = review.threads.add(newComment({ file: 'a.py', body: 'tighten this' }));
-
-		const sending = review.submission.submit(false);
-		rounds.answer(0, roundTaken(1));
-		await sending;
-
-		expect(review.threads.sentInRound(id)).toBe(1);
-	});
-
 	it('keeps what was added to the summary while the round was on its way, and only that', async () => {
 		const rounds = fakeServer().hold('POST /api/submit');
 		review.submission.setBody('Mostly fine.');

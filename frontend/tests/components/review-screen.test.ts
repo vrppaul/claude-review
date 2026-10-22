@@ -6,6 +6,7 @@ import ReviewScreen from '$lib/components/ReviewScreen.svelte';
 import { REVIEW_TITLE, contextLine, diffFile, diffResponse, hunk } from '../diff';
 import { fakeServer } from '../fake-server';
 import { newComment } from '../new-comment';
+import { handedOf } from '../pushes';
 import { openReview } from '../review';
 import { DRAFT_SHAPE } from '$lib/drafts/draft-shapes';
 import { DRAFT_KEY, storeDraft, storeReleasedDraft } from '../stored-draft';
@@ -78,8 +79,8 @@ describe('comments picked up from a review sent in rounds', () => {
 		const before = openReview({ files });
 		before.threads.add(newComment({ file: 'a.py', body: 'went out' }));
 		before.threads.add(newComment({ file: 'a.py', body: 'kept' }));
-		before.threads.markSent(before.threads.carry([before.threads.all[0]]), 1);
-		const review = openReview({ files });
+		// The review says, to the page opening again, what the agent has: the thread that went out
+		const review = openReview({ files, handed: handedOf([before.threads.all[0]]) });
 
 		const { getByTestId } = render(ReviewScreen, { props: { review } });
 		const notice = getByTestId('restored-notice');

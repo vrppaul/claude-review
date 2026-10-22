@@ -33,7 +33,7 @@
 	const review = useReview();
 
 	const AnchorHeading = $derived(headingOf(thread.anchor));
-	const sentIn = $derived(review.threads.sentInRound(thread.id));
+	const sentIn = $derived(review.threads.handing.roundOf(thread.id));
 	const answering = $derived(review.threads.reading.awaiting(thread.id).length > 0);
 	const unread = $derived(review.threads.reading.isUnread(thread.id));
 	// A thread the agent raised went out with nobody's round: the agent has it from the start

@@ -11,6 +11,7 @@ import { contextLine, diffFile, hunk, OF_A_CONVERSATION, OF_FILES } from '../dif
 import { fakeServer, SERVER_ERROR } from '../fake-server';
 import { newComment } from '../new-comment';
 import { NOTE_STANDS_FOR } from '../passing-note';
+import { handedPush, handOverNext } from '../pushes';
 import { inReview, openReview } from '../review';
 
 const file = diffFile({ path: 'test.py', hunks: [hunk([contextLine(1, 1, 'hello')])] });
@@ -80,7 +81,7 @@ describe('sending the review', () => {
 			Array.from({ length: raised }, (_, index) =>
 				sending.threads.raise(`raised-${index + 1}`, RAISED_ON, 'Kept on purpose', 'note')
 			);
-			sending.threads.markSent(sending.threads.carry(sending.threads.all.slice(0, sentBefore)), 1);
+			handOverNext(sending, handedPush(sending.threads.all.slice(0, sentBefore)));
 			const header = within(render(ReviewHeader, inReview(sending)).container);
 			return header.queryByRole('button', { name: named }) === header.getByTestId('quick-submit');
 		});

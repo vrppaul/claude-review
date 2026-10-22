@@ -14,7 +14,8 @@ import type {
 	ReviewResponse,
 	SaidInPanel,
 	StoryAsking,
-	StoryHeld
+	StoryHeld,
+	ThreadAsHanded
 } from '$lib/types';
 import { openKeptReview, type KeptReview } from '$lib/page/kept-review';
 import { diffResponse, reviewResponse } from './diff';
@@ -31,6 +32,8 @@ export interface Opened {
 	settings?: Settings;
 	/** The threads the review holds, which a review opening with no draft takes in. */
 	held?: HeldThread[];
+	/** What the agent has of each thread, by thread, as the review says it to every page that opens. */
+	handed?: Record<string, ThreadAsHanded>;
 	/** What the review holds of the panel, which a review opens on whatever its draft holds. */
 	said?: SaidInPanel[];
 	/** The story the review holds, if the agent told one. */
@@ -68,6 +71,7 @@ export function openReview({
 	diff,
 	settings = new Settings(),
 	held = [],
+	handed = {},
 	said = [],
 	story = null,
 	asking = null
@@ -77,8 +81,7 @@ export function openReview({
 		{
 			facts: reviewResponse({ story_asking: asking, ...facts }),
 			firstDiff: diffResponse({ files, ...diff }),
-			// Nothing of them handed to the agent yet
-			held: { threads: held, handed: {} },
+			held: { threads: held, handed },
 			said,
 			story
 		},
