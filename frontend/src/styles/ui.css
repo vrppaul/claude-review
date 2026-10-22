@@ -2009,8 +2009,20 @@
 .cr-ui-turn-agent .cr-ui-turn-name {
 	color: var(--cr-agent);
 }
-/* An answer lands in the agent's colour, a tint that fades, and leaves the words "new reply" behind */
+/*
+ * An answer lands in the agent's colour, a tint that fades, and leaves the words "new reply" behind. The tint is
+ * rounded and reaches past the turn, as a row's light reaches past its words; drawn behind the turn, it moves
+ * nothing as it goes
+ */
 .cr-ui-turn-landing {
+	isolation: isolate;
+}
+.cr-ui-turn-landing::after {
+	content: '';
+	position: absolute;
+	z-index: var(--cr-layer-behind);
+	inset: calc(--spacing(1.5) * -1) calc(--spacing(2) * -1);
+	border-radius: var(--radius-box);
 	animation: cr-land var(--cr-arrival) ease-out 1;
 }
 @keyframes cr-land {

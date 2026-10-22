@@ -203,8 +203,9 @@ async def raise_a_thread(request: PointRequest, review: ReviewDep) -> PointRespo
 
     "Here I did it differently from what you asked" belongs on the line it
     is about, not in a paragraph somewhere else. What arrives is an ordinary
-    thread: the reader answers it, settles it or removes it. It is drawn as
-    the author's, though, and it is never counted as the reader's own work.
+    thread: the reader answers it and settles it. It is drawn as the
+    author's, though, its words never the reader's to rewrite or delete, and
+    it is never counted as the reader's own work.
     """
     raised = review.raise_thread(request.lines.to_domain(), body=request.body, severity=request.severity)
     return PointResponse(thread_id=raised)

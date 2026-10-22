@@ -171,7 +171,7 @@
 		<AgentOnItsWay
 			testId="awaiting-answer"
 			tour="awaited-answer"
-			waited={`asked ${howLongAgo(waitedOn)} — keep reading, the answer lands here`}
+			waited={`asked ${howLongAgo(waitedOn)}`}
 			takeBack={() => takeBackAndStay(exchange.id)}
 		/>
 	{/if}

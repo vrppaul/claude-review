@@ -102,7 +102,7 @@ describe('a thread is a conversation', () => {
 
 		const row = getByTestId('awaiting-answer').textContent;
 		expect(row).toContain(AGENT_STOPPED_LISTENING);
-		expect(row).not.toContain('the answer lands here');
+		expect(row).not.toContain('asked');
 	});
 
 	it('takes back a question still waited on, as a panel message is taken back', async () => {

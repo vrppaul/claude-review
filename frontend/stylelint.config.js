@@ -69,7 +69,7 @@ const WHAT_MOVES = [
 	'\\.cr-ui-pane-fading',
 	'\\.cr-ui-note-time-left',
 	'\\.cr-ui-dot-breathing(:nth-of-type\\(\\d\\))?',
-	'\\.cr-ui-turn-landing',
+	'\\.cr-ui-turn-landing::after',
 	'\\.cr-sketch-writing',
 	'\\.cr-marked',
 	'\\.cr-guide-spot-gliding'

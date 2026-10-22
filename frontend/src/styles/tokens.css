@@ -226,13 +226,15 @@
 	--cr-notice-room-inline: --spacing(4);
 
 	/*
-	 * What lies over what, lowest first: a file's sticky header and a
+	 * What lies over what, lowest first: a light behind what it lights,
+	 * within it (an answer landing), a file's sticky header and a
 	 * column's grip over what scrolls under them, a chapter's bar over the
 	 * headers that slide away under it, the side column or the panel lying
 	 * over the diff on a narrow screen, the tour's light over the review,
 	 * what the reader opens over the light (so it is never dimmed), and the
 	 * guide's card over everything it talks about.
 	 */
+	--cr-layer-behind: -1;
 	--cr-layer-over-content: 10;
 	--cr-layer-over-headers: 15;
 	--cr-layer-column: 20;

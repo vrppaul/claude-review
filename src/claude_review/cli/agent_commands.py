@@ -286,9 +286,10 @@ def point_command(
 
     For what belongs on the code rather than in the panel: where you did
     something other than what was asked, and why. The reader reads it as an
-    ordinary thread — answers it, settles it, removes it — but it is drawn
-    as yours, and it is not counted as their unsent work. Prints the id the
-    thread was given. BODY given as - is read from stdin.
+    ordinary thread — answers it, settles it — but it is drawn as yours, its
+    words are never theirs to rewrite or delete, and it is not counted as
+    their unsent work. Prints the id the thread was given. BODY given as -
+    is read from stdin.
     """
     pointed = PointedLines(file=path, side=side, start_line=lines.first, end_line=lines.last)
     raised = client.point(PointRequest(lines=pointed, body=body, severity=severity))
