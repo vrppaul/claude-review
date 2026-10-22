@@ -414,10 +414,13 @@ The owner put it after the rest of the work.
       /api/anchors/follow`, in a run of every test at `3090d46`, and passed
       in the six runs of it that followed, one of them of every test again.
       Schemathesis draws its requests anew each run, and the request that
-      failed was not kept. At `8acf722` it failed in one of five runs for
-      `POST /api/ask`, and this time the failure was kept: no answer of the
-      server's, but Hypothesis's health check, `FailedHealthCheck` (9 inputs
-      drawn, 50 filtered out), drawing the ask's request body.
+      failed was not kept. On 2026-10-22, with the server work of `af03a57`
+      on top of `8acf722` (which changed no request's schema), it failed in
+      three of seven runs: twice for `POST /api/ask` with the failure kept —
+      no answer of the server's, but Hypothesis's health check,
+      `FailedHealthCheck` (9 inputs drawn, 50 filtered out), drawing the
+      ask's request body — and once for `POST /api/message`, its cause not
+      kept.
 - [ ] `page_reading_the_story` (`tests/integration/test_story.py`) puts a
       `Review` together by hand, not through `host_review`, against
       server.md's one place for it: the pages it stands for read the story
