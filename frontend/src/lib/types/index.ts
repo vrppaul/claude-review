@@ -231,8 +231,14 @@ export type TurnDraft = Schemas['TurnDraft'];
  * what a page that opens with no draft of the review takes in.
  */
 export type HeldThread = Schemas['ThreadDraft-Output'];
-/** The threads the review holds. */
+/** The threads the review holds, and what the agent has of each. */
 export type ThreadsResponse = Schemas['ThreadsResponse'];
+/**
+ * What the agent has of a thread, as the review says it: how it was meant,
+ * what opened it and each turn it was handed, words and all — which the page
+ * holds in place of its own, and the reader rewrites no more.
+ */
+export type ThreadAsHanded = Schemas['ThreadAsHanded'];
 /**
  * Something said in the panel, as the review holds it: the reader's message
  * or the agent's words, under the id every page knows it by — what a page

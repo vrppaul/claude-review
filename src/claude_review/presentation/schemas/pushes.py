@@ -9,7 +9,7 @@ from claude_review.domain.models import CommentSeverity, FilePath
 from claude_review.presentation.schemas.agent import AgentStatus, AgentWork
 from claude_review.presentation.schemas.base import Schema
 from claude_review.presentation.schemas.content import ChangesSince, StoryAsking
-from claude_review.presentation.schemas.threads import Anchor
+from claude_review.presentation.schemas.threads import Anchor, ThreadAsHanded
 
 
 class PushKind(StrEnum):
@@ -63,12 +63,10 @@ class ReplyPush(Push):
 
 
 class HandedPush(Push):
-    """A thread was handed to the agent: what of it the agent now has, which the reader rewrites no longer."""
+    """Threads were handed to the agent, or raised by it: what it now has of each, by thread, words and all."""
 
     type: Literal[PushKind.HANDED] = PushKind.HANDED
-    thread_id: str
-    # Everything said in it, by id: its opening by the thread's own id, and each turn by its own
-    said: list[str]
+    handed: dict[str, ThreadAsHanded]
 
 
 class AnswererPush(Push):

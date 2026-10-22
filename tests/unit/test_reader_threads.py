@@ -77,9 +77,15 @@ def test_an_id_this_review_never_hands_out_does_not_move_its_numbering(held_id: 
     assert threads.raise_id() == "raised-1"
 
 
-def test_what_the_agent_is_handed_of_a_thread_is_said_by_id() -> None:
-    """Its opening by the thread's own id, as a question names it, and each turn by its own."""
-    assert ReaderThreads().handed(_thread()) == [FIRST_THREAD_ID, REPLY_ID]
+def test_what_the_agent_has_of_a_thread_only_grows_each_turn_as_first_handed() -> None:
+    """A copy read later — older than the page's, or rewritten by a page at fault — takes nothing from it."""
+    threads = ReaderThreads()
+    threads.handed(_thread())
+    threads.handed(_thread(turns=(REPLY_REWORDED, LATER)))
+
+    had = threads.handed(_thread(turns=()))
+
+    assert [(turn.turn_id, turn.body) for turn in had.turns] == [(REPLY_ID, REPLY.body), (LATER.turn_id, LATER.body)]
 
 
 @pytest.mark.parametrize(

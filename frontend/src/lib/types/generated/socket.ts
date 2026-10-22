@@ -186,7 +186,7 @@ export interface components {
         };
         /**
          * HandedPush
-         * @description A thread was handed to the agent: what of it the agent now has, which the reader rewrites no longer.
+         * @description Threads were handed to the agent, or raised by it: what it now has of each, by thread, words and all.
          */
         HandedPush: {
             /**
@@ -194,10 +194,10 @@ export interface components {
              * @enum {string}
              */
             type: "handed";
-            /** Thread Id */
-            thread_id: string;
-            /** Said */
-            said: string[];
+            /** Handed */
+            handed: {
+                [key: string]: components["schemas"]["ThreadAsHanded"];
+            };
         };
         /**
          * ItemBlock
@@ -442,6 +442,17 @@ export interface components {
             /** Number */
             number: number;
         };
+        /**
+         * SaidAsHanded
+         * @description What opened a thread, as the agent has it: who said it, its words, and its screenshots by their ids.
+         */
+        SaidAsHanded: {
+            author: components["schemas"]["TurnAuthor"];
+            /** Body */
+            body: string;
+            /** Images */
+            images: string[];
+        };
         ServerPush: components["schemas"]["ReplyPush"] | components["schemas"]["HandedPush"] | components["schemas"]["AnswererPush"] | components["schemas"]["ChatPush"] | components["schemas"]["ProgressPush"] | components["schemas"]["ShowPush"] | components["schemas"]["StatusPush"] | components["schemas"]["PointPush"] | components["schemas"]["ChangedPush"] | components["schemas"]["RoundPush"] | components["schemas"]["DiffPush"] | components["schemas"]["StoryPush"] | components["schemas"]["StoryAskingPush"] | components["schemas"]["EndedPush"];
         /**
          * SessionHello
@@ -564,6 +575,20 @@ export interface components {
              * @enum {string}
              */
             type: "story";
+        };
+        /**
+         * ThreadAsHanded
+         * @description What the agent has of a thread: how it was meant, what opened it, and each turn it was handed, in order.
+         *
+         *     The page takes these words in place of its own: the agent may have been
+         *     handed a copy older than the page's, and what it has the reader rewrites
+         *     no more.
+         */
+        ThreadAsHanded: {
+            severity: components["schemas"]["CommentSeverity"];
+            opening: components["schemas"]["SaidAsHanded"];
+            /** Turns */
+            turns: components["schemas"]["TurnDraft"][];
         };
         /**
          * ThreadDraft

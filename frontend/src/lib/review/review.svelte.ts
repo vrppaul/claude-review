@@ -171,7 +171,9 @@ export class Review {
 		this.threads = new Threads(this.rounds, kept, this.commentFields);
 		// A page with no draft — another browser, a private window — would
 		// otherwise say it holds no threads, and the review would forget them
-		if (draft === null) this.threads.adopt(held);
+		if (draft === null) this.threads.adopt(held.threads);
+		// What the agent has of each is the review's word, whatever the draft held
+		this.threads.agentHas(held.handed);
 		this.submission = new Submission(this.threads, this.rounds, this.answerer, this.link, kept.reviewBody);
 		this.conversation = new Conversation(kept.panel, said, kept.composer, () => this.threads.all);
 		this.story = new ReviewStory({
@@ -419,7 +421,6 @@ export class Review {
 			writing: this.threads.writing.kept,
 			reviewBody: this.submission.body,
 			sent: this.threads.sentRounds,
-			handed: this.threads.handing.kept,
 			panel: this.conversation.turns,
 			composer: this.conversation.composer.kept,
 			issued: this.threads.issued,

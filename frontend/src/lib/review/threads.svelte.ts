@@ -29,29 +29,14 @@ import type {
 	NewTurn,
 	StoryBlock,
 	Thread,
+	ThreadAsHanded,
 	ThreadDraft,
-	ThreadsResponse,
 	Turn
 } from '$lib/types';
 import { COMMENT_ID_PREFIX, IdSequence, TURN_ID_PREFIX } from '$lib/utils/ids';
-import { threadOfHeld, threadOnTheWire } from '$lib/api/thread-wire';
+import { asTheAgentHasIt, threadOfHeld, threadOnTheWire } from '$lib/api/thread-wire';
+import { lastAnsweredAt, questionIdOf } from '$lib/utils/thread-exchanges';
 import { AGENT, READER } from '$lib/utils/speakers';
-
-/** When the agent last answered in a thread; 0 for a thread it never answered. */
-function lastAnsweredAt(thread: Thread): number {
-	return thread.turns.findLast((turn) => turn.author === AGENT)?.at ?? 0;
-}
-
-/**
- * Which question asking in a thread puts: the reader's reply when theirs is
- * the last word, and otherwise the thread itself, by its opening comment.
- * Decided here alone: the server finds what the id names, and asks nothing
- * else of it.
- */
-function questionIdOf(thread: Thread): string {
-	const last = thread.turns.at(-1);
-	return last?.author === READER ? last.id : thread.id;
-}
 
 /** What a file with no threads on its lines holds. */
 const NO_THREADS: readonly ThreadOnLines[] = [];
@@ -112,7 +97,7 @@ export class Threads {
 		this.reading = new ThreadReading(kept.read);
 		this.writing = new ThreadWriting(kept.writing, fieldEvents, kept.threads);
 		this.#sending = new ThreadSending(kept.sent);
-		this.handing = new ThreadHanding(kept.handed);
+		this.handing = new ThreadHanding();
 		this.#pickUp(kept);
 	}
 
@@ -233,17 +218,25 @@ export class Threads {
 	 * Which of them went out with a round only the page that sent them
 	 * knew, so each is taken as not sent yet — sent twice costs the agent a
 	 * second look, never sent costs the reader the comment — but for one
-	 * still as the agent raised it, taken as a raised thread arrives. What
-	 * the agent has of each the review says, as it does whenever it hands
-	 * one over. Ids go on past theirs, so nothing written here takes one of
-	 * them.
+	 * still as the agent raised it, taken as a raised thread arrives. Ids go
+	 * on past theirs, so nothing written here takes one of them.
 	 */
-	adopt({ threads: held, handed }: ThreadsResponse): void {
+	adopt(held: HeldThread[]): void {
 		this.#all = [...this.#all, ...held.map((thread) => threadOfHeld(thread, this.#rounds.current))];
 		for (const thread of held.filter(isAsRaised)) this.#sending.arrivedSent(thread.thread_id, this.#rounds.current);
-		this.handing.handedOver(handed);
 		this.#commentIds.continuePast(held.map((thread) => thread.thread_id));
 		this.#turnIds.continuePast(held.flatMap((thread) => thread.turns.map((turn) => turn.turn_id)));
+	}
+
+	/**
+	 * The review says what the agent has of these threads, by thread: the
+	 * words it has stand in each as it has them — it may have been handed a
+	 * copy older than this page's — and are the reader's to rewrite no more.
+	 * Not a change of the reader's: nothing goes again with a round for it.
+	 */
+	agentHas(handed: Record<string, ThreadAsHanded>): void {
+		this.handing.handedOver(handed);
+		this.#all = this.#all.map((thread) => asTheAgentHasIt(thread, handed));
 	}
 
 	update(id: string, body: string, severity: CommentSeverity, images: string[]): void {

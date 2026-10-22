@@ -82,12 +82,17 @@ async def test_the_answerer_is_handed_the_round(client: AsyncClient) -> None:
     assert "Still reads oddly." in event["round"]["markdown"]
 
 
-def test_every_page_hears_what_a_round_handed_the_agent(review_page: TestClient) -> None:
-    """The comment went with the round: it is the agent's to read as it was sent, and the reader's no longer."""
-    with open_session(review_page) as socket:
-        review_page.post("/api/submit", json={"threads": [A_THREAD], "end": False})
+def test_every_page_hears_in_one_push_what_a_round_handed_the_agent(review_page: TestClient) -> None:
+    """The comments went with the round: each is the agent's to read as it was sent, and the reader's no longer.
+    One push for the round, however many it carries, so a page is never left behind by a long one."""
+    another = {**A_THREAD, "thread_id": "comment-2"}
 
-        assert next_push(socket, HandedPush) == HandedPush(thread_id=FIRST_THREAD_ID, said=[FIRST_THREAD_ID])
+    with open_session(review_page) as socket:
+        review_page.post("/api/submit", json={"threads": [A_THREAD, another], "end": False})
+
+        handed = next_push(socket, HandedPush).handed
+
+    assert list(handed) == [FIRST_THREAD_ID, "comment-2"]
 
 
 async def test_a_later_round_says_which_round_it_is(client: AsyncClient) -> None:

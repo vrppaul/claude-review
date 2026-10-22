@@ -13,6 +13,7 @@ from pydantic import BaseModel, ConfigDict
 from claude_review.domain.models import (
     ChapterBlock,
     ChapterText,
+    CommentSeverity,
     DiffFile,
     DiffLayout,
     FileStatus,
@@ -22,9 +23,13 @@ from claude_review.domain.models import (
     OverviewBlock,
     OverviewText,
     ReaderSettings,
+    SaidAsHanded,
     SaidInPanel,
     Theme,
+    ThreadAsHanded,
+    ThreadDraft,
     TurnAuthor,
+    TurnDraft,
     Unshown,
 )
 from claude_review.domain.story import Chapter, LeftOut, Step, StepNow, StoryAsking
@@ -78,6 +83,22 @@ SAID = SaidInPanel(
 )
 # When the message above is taken back, forty seconds after it was said
 TAKEN_BACK_AT = 1_760_000_040_000
+# What the agent has of a thread nothing was said in after its opening, and the thread handed it again with a reply
+HANDED = ThreadAsHanded(
+    severity=CommentSeverity.QUESTION,
+    opening=SaidAsHanded(author=TurnAuthor.READER, body="Is the store closed?", images=["image-1"]),
+    turns=[],
+)
+HANDED_AGAIN = ThreadDraft(
+    thread_id="thread-1",
+    anchor=ANCHOR,
+    severity=CommentSeverity.QUESTION,
+    body="Is the store closed?",
+    images=["image-1"],
+    turns=[TurnDraft(turn_id="turn-1", author=TurnAuthor.READER, body="On every path?", images=[], round=1)],
+    raised_by=TurnAuthor.READER,
+    resolved=False,
+)
 STEP = Step(file="src/moved.py", lines=LineSpan(first=11, last=12), reason="The store closes before the reply is sent.")
 CHAPTER = Chapter[Step](
     id="ch-1",
@@ -144,6 +165,12 @@ MADE = [
         what="an anchor on the story's words lost", source=STORY_ANCHOR, made=STORY_ANCHOR.lost(), replaced={"outdated"}
     ),
     MadeFrom(what="a message taken back", source=SAID, made=SAID.withdrawn(TAKEN_BACK_AT), replaced={"taken_back_at"}),
+    MadeFrom(
+        what="what the agent has of a thread, handed it again",
+        source=HANDED,
+        made=HANDED.grown_by(HANDED_AGAIN),
+        replaced={"turns"},
+    ),
     MadeFrom(
         what="a refused field named as it was sent", source=FIELD, made=FIELD.without_request_part(), replaced={"loc"}
     ),

@@ -21,7 +21,7 @@ import { fakeServer, SERVER_ERROR, takingStoryAskings, type FakeServer } from '.
 import { THIS_RUN } from './fake-socket';
 import { newComment, storyComment } from './new-comment';
 import { inReview, openReview, settingsWithStoriesOn } from './review';
-import { chatPush, handOverNext, pushedAt } from './pushes';
+import { chatPush, handedOf, handedPush, handOverNext, pushedAt } from './pushes';
 import { settled } from './settled';
 import { ASKED, codeMovedOn, readTheStoryAgain, STOPPED, storyHeld, storyResponse, TAKEN } from './story';
 
@@ -56,13 +56,26 @@ describe('what the server pushes, taken in', () => {
 		expect(review.threads.unread.map((thread) => thread.id)).toEqual([id]);
 	});
 
-	it('holds what the agent was handed of a thread, and nothing said in it since', () => {
+	it('holds the words the agent was handed in place of its own: it may have read an older copy', () => {
 		const id = review.threads.add(newComment({ file: 'a.py', body: 'Why?' }));
-		handOverNext(review, { type: 'handed', thread_id: id, said: [id] });
-		review.threads.addTurn(id, { author: 'reader', body: 'And this?', images: [] });
+		const read = handedPush([{ ...review.threads.all[0], body: 'Why not?' }]);
+		review.threads.update(id, 'Why, then?', 'note', []);
 
-		const [reply] = review.threads.all[0].turns;
-		expect([review.threads.handing.has(id, id), review.threads.handing.has(id, reply.id)]).toEqual([true, false]);
+		handOverNext(review, read);
+
+		expect(review.threads.all[0].body).toBe('Why not?');
+	});
+
+	it('brings back a reply the agent has where it stood, though this page had deleted it', () => {
+		const id = review.threads.add(newComment({ file: 'a.py', body: 'Why?' }));
+		review.threads.addTurn(id, { author: 'reader', body: 'And this?', images: [] });
+		review.threads.addTurn(id, { author: 'reader', body: 'And that?', images: [] });
+		const read = handedPush(review.threads.all);
+		review.threads.removeTurn(id, review.threads.all[0].turns[0].id);
+
+		handOverNext(review, read);
+
+		expect(review.threads.all[0].turns.map((turn) => turn.body)).toEqual(['And this?', 'And that?']);
 	});
 
 	it('offers the panel when an agent turns up, and stops offering rounds when it goes', () => {
@@ -423,10 +436,20 @@ function caughtUpFrom(): FakeServer {
 	server.answer('POST /api/anchors/follow', { anchors: [] });
 	server.answer('GET /api/diff', diffResponse({ files: [untouched('a.py'), untouched('b.py')] }));
 	server.answer('GET /api/story', storyResponse());
+	server.answer('GET /api/threads', { threads: [], handed: {} });
 	return server;
 }
 
 describe('catching up on what the server could not hand over again', () => {
+	it('learns again what the agent has of each thread: what was handed in the gap is the reader’s no more', async () => {
+		const id = review.threads.add(newComment({ file: 'a.py', body: 'Why?' }));
+		caughtUpFrom().answer('GET /api/threads', { threads: [], handed: handedOf(review.threads.all) });
+
+		await catchUp(review, GOES_ON_FROM);
+
+		expect(review.threads.handing.has(id, id)).toBe(true);
+	});
+
 	it('learns again where the review stands: the round, whoever answers, and its work', async () => {
 		const status = { model: 'opus-5', context: '53% of 1M', at: Date.now() };
 		const underWay = work();

@@ -277,8 +277,11 @@
   and its 2 replies?"; deleting a reply asks "Delete this reply?" and leaves
   the rest. Words the agent is handed while they are being rewritten can no
   longer be saved, and the field says "The agent has read these words now:
-  say it in a reply". The review says what the agent has of each thread to
-  every page, and keeps it with the draft; it refuses a thread that comes
+  say it in a reply". The review keeps what the agent has of each thread,
+  words and all, and only adds to it; it says so to every page as it opens,
+  catches up, and whenever it hands threads over, once for all a round
+  carries, and the page holds those words in place of its own, a reply it
+  had deleted brought back where it stood. It refuses a thread that comes
   back changed in it, the agent's own opening among them, with a conflict
   (409) where that one was refused as unacceptable (422).
 - **Ask agent now stands at what the reader said last.** In a thread it is

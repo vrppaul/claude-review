@@ -1682,6 +1682,17 @@ export interface components {
             comment_count: number;
         };
         /**
+         * SaidAsHanded
+         * @description What opened a thread, as the agent has it: who said it, its words, and its screenshots by their ids.
+         */
+        SaidAsHanded: {
+            author: components["schemas"]["TurnAuthor"];
+            /** Body */
+            body: string;
+            /** Images */
+            images: string[];
+        };
+        /**
          * SaidInPanel
          * @description One thing said in the panel, as a page draws it: the reader's message, or the agent's words.
          */
@@ -2062,6 +2073,20 @@ export interface components {
             readonly where: string;
         };
         /**
+         * ThreadAsHanded
+         * @description What the agent has of a thread: how it was meant, what opened it, and each turn it was handed, in order.
+         *
+         *     The page takes these words in place of its own: the agent may have been
+         *     handed a copy older than the page's, and what it has the reader rewrites
+         *     no more.
+         */
+        ThreadAsHanded: {
+            severity: components["schemas"]["CommentSeverity"];
+            opening: components["schemas"]["SaidAsHanded"];
+            /** Turns */
+            turns: components["schemas"]["TurnDraft"][];
+        };
+        /**
          * ThreadDraft
          * @description A thread as the page holds it, turns and all: the same both ways.
          *
@@ -2163,7 +2188,7 @@ export interface components {
             threads: components["schemas"]["ThreadDraft-Output"][];
             /** Handed */
             handed: {
-                [key: string]: string[];
+                [key: string]: components["schemas"]["ThreadAsHanded"];
             };
         };
         /** TimeoutEvent */

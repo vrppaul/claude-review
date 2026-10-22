@@ -12,8 +12,7 @@
  * was being written in the threads and not said yet, which pasted images
  * each field uploaded itself, which files were read and folded away, and
  * the round the review had reached, rather than read back from the marks
- * its threads carry; a message taken back in the panel says when; it keeps
- * what the agent has of each thread, as the review said it, and an edit
+ * its threads carry; a message taken back in the panel says when; an edit
  * says which of the reader's words in its thread it rewrites; and it is
  * kept under the name the review gives itself rather than under its title,
  * which another review on the same port may share. A
@@ -38,11 +37,9 @@ import { COMMENT_ID_PREFIX, IdSequence, TURN_ID_PREFIX } from '$lib/utils/ids';
 import { AGENT, READER } from '$lib/utils/speakers';
 
 /** The shape drafts are kept in now. */
-export const DRAFT_SHAPE = 21;
+export const DRAFT_SHAPE = 22;
 // The round every review begins in
 const FIRST_ROUND = 1;
-// Where in a thread the agent heard it last, when it never did: before its opening
-const NEVER_HEARD = -1;
 
 /** How many ids of each kind the review has handed out. */
 export interface IssuedIds {
@@ -78,8 +75,6 @@ export interface KeptThreads {
 	writing: KeptField[];
 	/** The round each thread already sent went out in, by thread. */
 	sent: Record<string, number>;
-	/** What the agent has of each thread, by thread: its opening by the thread's own id, each turn by its own. */
-	handed: Record<string, string[]>;
 	/** How many thread and turn ids have been handed out, deleted ones included. */
 	issued: IssuedIds;
 }
@@ -212,7 +207,6 @@ export function emptyDraft(round: number): Draft {
 		writing: [],
 		reviewBody: '',
 		sent: {},
-		handed: {},
 		panel: [],
 		composer: emptyComposer(),
 		issued: { comments: 0, turns: 0 },
@@ -257,7 +251,6 @@ export function upToDate(kept: ReleasedDraft): Draft {
 		writing: [],
 		reviewBody: kept.reviewBody ?? '',
 		sent,
-		handed: handedIn(comments, sent),
 		// The panel came after threads did; an older draft simply has nothing said
 		panel: (kept.panel ?? []).map(upToDatePanelTurn),
 		// The panel kept nothing half-written until it could hold images
@@ -293,32 +286,6 @@ function roundReached(comments: ReadComment[], sent: Record<string, number>): nu
 		.map((comment) => sent[comment.id])
 		.filter((round) => round !== undefined);
 	return Math.max(FIRST_ROUND, ...written, ...sentIn.map((round) => round + 1));
-}
-
-/**
- * What the agent had of each thread a release kept, which no release said:
- * all of one a round carried, and of any other what was said up to the
- * agent's last answer in it or the last question still waited on there.
- */
-function handedIn(comments: ReadComment[], sent: Record<string, number>): Record<string, string[]> {
-	const handed: Record<string, string[]> = {};
-	for (const comment of comments) {
-		const said = [comment.id, ...comment.turns.map(idOf)];
-		const heard = comment.id in sent ? said : said.slice(0, heardUpTo(comment, said) + 1);
-		if (heard.length > 0) handed[comment.id] = heard;
-	}
-	return handed;
-}
-
-/**
- * Where in what was said in a thread the agent last heard it — the place of
- * its last answer, or of the last question waited on — or -1 where it never
- * did: everything said up to there was handed to it.
- */
-function heardUpTo(comment: ReadComment, said: readonly string[]): number {
-	const answers = comment.turns.filter((turn) => turn.author === AGENT).map(idOf);
-	const asked = comment.awaiting.map(idOf);
-	return Math.max(NEVER_HEARD, ...[...answers, ...asked].map((id) => said.indexOf(id)));
 }
 
 /**

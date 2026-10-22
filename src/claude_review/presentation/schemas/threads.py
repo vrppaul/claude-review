@@ -326,6 +326,39 @@ class TurnDraft(SaysSomething):
         )
 
 
+class SaidAsHanded(Schema):
+    """What opened a thread, as the agent has it: who said it, its words, and its screenshots by their ids."""
+
+    author: TurnAuthor
+    body: str
+    images: list[str]
+
+    @classmethod
+    def from_domain(cls, said: models.SaidAsHanded) -> Self:
+        return cls(author=said.author, body=said.body, images=said.images)
+
+
+class ThreadAsHanded(Schema):
+    """What the agent has of a thread: how it was meant, what opened it, and each turn it was handed, in order.
+
+    The page takes these words in place of its own: the agent may have been
+    handed a copy older than the page's, and what it has the reader rewrites
+    no more.
+    """
+
+    severity: CommentSeverity
+    opening: SaidAsHanded
+    turns: list[TurnDraft]
+
+    @classmethod
+    def from_domain(cls, has: models.ThreadAsHanded) -> Self:
+        return cls(
+            severity=has.severity,
+            opening=SaidAsHanded.from_domain(has.opening),
+            turns=[TurnDraft.from_domain(turn) for turn in has.turns],
+        )
+
+
 class ThreadDraft(SaysSomething):
     """A thread as the page holds it, turns and all: the same both ways.
 
@@ -469,8 +502,8 @@ class ThreadsResponse(Schema):
     """
 
     threads: list[ThreadDraft]
-    # What the agent has of each thread it raised or was handed, by thread: everything said in it, by id
-    handed: dict[str, list[str]]
+    # What the agent has of each thread it raised or was handed, by thread
+    handed: dict[str, ThreadAsHanded]
 
 
 class ThreadSummary(Schema):

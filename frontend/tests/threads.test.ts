@@ -11,7 +11,7 @@ import { fakeServer, SERVER_ERROR, type FakeServer } from './fake-server';
 import { newComment } from './new-comment';
 import type { Review } from '$lib/review/review.svelte';
 import type { Turn } from '$lib/types';
-import { handOverNext } from './pushes';
+import { handedPush, handOverNext } from './pushes';
 import { inReview, openReview } from './review';
 
 let review: Review;
@@ -299,7 +299,7 @@ describe('a thread is a conversation', () => {
 
 	it('offers to rewrite or delete each of the reader’s own words the agent has not been handed, and nothing it has', () => {
 		const id = review.threads.add(onTheAddedLine('Why 3?'));
-		handOverNext(review, { type: 'handed', thread_id: id, said: [id] });
+		handOverNext(review, handedPush(review.threads.all));
 		review.threads.addTurn(id, { author: 'reader', body: 'And 4?', images: [] });
 		review.threads.addTurn(id, { author: 'reader', body: 'And 5?', images: [] });
 
@@ -447,7 +447,7 @@ describe('a thread is a conversation', () => {
 		await user.click(getByTestId('edit-turn'));
 		await user.type(getByTestId('comment-input'), ' And 4?');
 
-		handOverNext(review, { type: 'handed', thread_id: id, said: [id] });
+		handOverNext(review, handedPush(review.threads.all));
 		flushSync();
 		await user.type(getByTestId('comment-input'), '{Control>}{Enter}{/Control}');
 

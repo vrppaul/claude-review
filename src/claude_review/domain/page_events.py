@@ -15,6 +15,7 @@ from claude_review.domain.models import (
     ChangedSinceRound,
     CommentSeverity,
     FilePath,
+    ThreadAsHanded,
 )
 from claude_review.domain.story import StoryAsking
 
@@ -33,12 +34,15 @@ class ThreadAnswered(PageEventBase):
     body: str
 
 
-class ThreadHandedOver(PageEventBase):
-    """A thread was handed to the agent: what of it the agent now has, which stays as the agent has it."""
+class ThreadsHandedOver(PageEventBase):
+    """Threads were handed to the agent, or raised by it: what it now has of each, by thread, words and all.
 
-    thread_id: str
-    # Everything said in it, by id: its opening by the thread's own id, as a question names it, and each turn by its own
-    said: list[str]
+    Told once for each handing over, however many threads it carries. The
+    words are the review's, which the page takes as they are: the agent may
+    have been handed a copy older than the page's.
+    """
+
+    handed: dict[str, ThreadAsHanded]
 
 
 class AnswererChanged(PageEventBase):
@@ -139,7 +143,7 @@ class ReviewEnded(PageEventBase):
 # Everything the review tells its pages
 type PageEvent = (
     ThreadAnswered
-    | ThreadHandedOver
+    | ThreadsHandedOver
     | AnswererChanged
     | AgentSaid
     | WorkReported

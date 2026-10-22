@@ -561,6 +561,49 @@ class ThreadDraft(SaidInDraft):
         raise QuestionNotInThreadError(msg)
 
 
+class SaidAsHanded(BaseModel):
+    """What opened a thread, as the agent has it: who said it, its words, and its screenshots by their ids."""
+
+    model_config = ConfigDict(frozen=True)
+
+    author: TurnAuthor
+    body: str
+    images: list[str]
+
+
+class ThreadAsHanded(BaseModel):
+    """What the agent has of a thread: how it was meant, what opened it, and each turn it was handed, in order.
+
+    The agent reads a thread as it is handed it, and what it has stays so:
+    the reader says more after it, and rewrites none of it.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    severity: CommentSeverity
+    opening: SaidAsHanded
+    turns: list[TurnDraft]
+
+    def kept_in(self, thread: ThreadDraft) -> bool:
+        """Whether a thread the page holds still says everything the agent has of it, as the agent has it."""
+        now = {turn.turn_id: turn for turn in thread.turns}
+        opening = SaidAsHanded(author=thread.raised_by, body=thread.body, images=thread.images)
+        return (
+            thread.severity == self.severity
+            and opening == self.opening
+            and all(now.get(turn.turn_id) == turn for turn in self.turns)
+        )
+
+    def grown_by(self, thread: ThreadDraft) -> ThreadAsHanded:
+        """What the agent has once handed the thread again: what it had, as it had it, and each turn said since."""
+        had = {turn.turn_id for turn in self.turns}
+        return ThreadAsHanded(
+            severity=self.severity,
+            opening=self.opening,
+            turns=[*self.turns, *(turn for turn in thread.turns if turn.turn_id not in had)],
+        )
+
+
 class ReviewResult(BaseModel):
     """Formatted review output."""
 

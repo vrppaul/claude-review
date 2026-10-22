@@ -472,13 +472,27 @@ describe('opening the page', () => {
 		expect(latestSocket().said).toMatchObject([{ threads: [{ thread_id: 'comment-1' }, { thread_id: 'raised-1' }] }]);
 	});
 
-	it('knows what the agent has of each thread it takes in, when this browser kept no draft of it', async () => {
-		serving().answer('GET /api/threads', { threads: [A_HELD_THREAD], handed: { 'comment-1': ['comment-1'] } });
-		const page = newPage();
+	it('learns from the review what the agent has, on every opening: a draft keeps none of it', async () => {
+		const held = { ...A_HELD_THREAD, body: 'As the agent read it' };
+		const handed = {
+			severity: held.severity,
+			opening: { author: held.raised_by, body: held.body, images: [] },
+			turns: []
+		};
+		serving().answer('GET /api/threads', { threads: [held], handed: { 'comment-1': handed } });
+		const first = newPage();
+		await first.open();
+		openedReview(first).threads.update('comment-1', 'Rewritten here', 'note', []);
+		first.close();
+		const again = newPage();
 
-		await page.open();
+		await again.open();
 
-		expect(openedReview(page).threads.handing.has('comment-1', 'comment-1')).toBe(true);
+		const [thread] = openedReview(again).threads.all;
+		expect([thread.body, openedReview(again).threads.handing.has('comment-1', 'comment-1')]).toEqual([
+			'As the agent read it',
+			true
+		]);
 	});
 
 	it('writes its next comment under an id none of the threads it took in has', async () => {

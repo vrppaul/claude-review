@@ -315,12 +315,15 @@ async def test_a_round_carrying_a_thread_reworded_since_the_agent_had_it_is_refu
 
 
 def test_every_page_hears_what_the_agent_was_handed_of_a_thread_asked_about(review_page: TestClient) -> None:
-    """Its opening by the thread's own id and each turn by its own: none is the reader's to rewrite from now on."""
+    """Its opening and each turn, words and all: none is the reader's to rewrite from now on."""
     asked = {**A_THREAD, "turns": [ANSWER, FOLLOW_UP]}
 
     with open_session(review_page) as socket:
         review_page.post(ASK_ROUTE, json=_asking(asked, question_id=FOLLOW_UP_ID))
 
-        assert next_push(socket, HandedPush) == HandedPush(
-            thread_id=FIRST_THREAD_ID, said=[FIRST_THREAD_ID, ANSWER_ID, FOLLOW_UP_ID]
-        )
+        handed = next_push(socket, HandedPush).handed[FIRST_THREAD_ID]
+
+    assert (handed.opening.body, [turn.body for turn in handed.turns]) == (
+        OPENING,
+        ["It moved to the caller.", "Which caller?"],
+    )

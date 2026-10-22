@@ -47,6 +47,7 @@ from claude_review.domain.models import (
     StoryCancelled,
     StoryRequested,
     Thread,
+    ThreadAsHanded,
     ThreadDraft,
     ThreadQuestion,
     TurnAuthor,
@@ -61,8 +62,8 @@ from claude_review.domain.page_events import (
     StoryAskingChanged,
     StoryTold,
     ThreadAnswered,
-    ThreadHandedOver,
     ThreadRaised,
+    ThreadsHandedOver,
     TreeMoved,
 )
 from claude_review.domain.story import Step, Story, StoryAsking, StoryHeld
@@ -184,8 +185,8 @@ class Review:
         """The threads the review holds: as a page last said them, and the agent's own however a page left them."""
         return self._threads.held
 
-    def threads_handed(self) -> dict[str, list[str]]:
-        """What the agent has of each thread it raised or was handed, by thread: everything said in it, by id."""
+    def threads_handed(self) -> dict[str, ThreadAsHanded]:
+        """What the agent has of each thread it raised or was handed, by thread."""
         return self._threads.handed_over()
 
     def agent_called(self) -> None:
@@ -280,7 +281,7 @@ class Review:
         """
         asked = thread.part_asked(question_id)
         self._check_threads([thread])
-        handed = self._hand_over(thread)
+        [handed] = self._hand_over([thread])
         # Handed over with the thread already; named again, they are the same
         # files. Like every image in the thread, one this review no longer keeps
         # is left out: after a restart a screenshot is gone however recently it
@@ -308,7 +309,7 @@ class Review:
             PanelMessage(
                 message_id=message_id,
                 body=body,
-                threads=[self._hand_over(thread) for thread in threads],
+                threads=self._hand_over(threads),
                 images=handed,
             )
         )
@@ -372,7 +373,7 @@ class Review:
         """
         quoted = self._anchors.quote(anchor)
         thread_id = self._threads.raise_id()
-        self._threads.raised(
+        has = self._threads.raised(
             ThreadDraft(
                 thread_id=thread_id,
                 anchor=quoted,
@@ -385,6 +386,8 @@ class Review:
             )
         )
         self._page.tell(ThreadRaised(thread_id=thread_id, anchor=quoted, body=body, severity=severity))
+        # What the agent has of it is told as of every thread it has, so every page holds it alike
+        self._page.tell(ThreadsHandedOver(handed={thread_id: has}))
         log.info("thread_raised", thread_id=thread_id, where=place_in_words(quoted))
         return thread_id
 
@@ -394,7 +397,8 @@ class Review:
         Raises:
             UnknownThreadError: if the page holds no such thread.
         """
-        return self._hand_over(self._threads.find(thread_id))
+        [read] = self._hand_over([self._threads.find(thread_id)])
+        return read
 
     def submit(self, *, threads: list[ThreadDraft], body: str | None, ends: bool) -> RoundSubmission:
         """Send what has been written as a round, and either end the review or carry on to the next round.
@@ -411,7 +415,7 @@ class Review:
 
         number = self._rounds.current
         result = self._formatter.format(
-            [self._hand_over(thread) for thread in threads],
+            self._hand_over(threads),
             body,
             round_number=number,
             anchors=self._anchors,
@@ -595,15 +599,18 @@ class Review:
             lines=self._source.content.line_anchors, story=StoryAnchorHandler(None if held is None else held.story)
         )
 
-    def _hand_over(self, thread: ThreadDraft) -> Thread:
-        """A thread as the agent is handed it, which the agent may answer in from now on.
+    def _hand_over(self, threads: list[ThreadDraft]) -> list[Thread]:
+        """Threads as the agent is handed them, each one it may answer in from now on.
 
-        The pages are told what of it the agent now has: the reader's to
-        rewrite no longer, as the agent reads it once.
+        The pages are told at once what the agent now has of each, words and
+        all: the reader's to rewrite no longer, and what a page takes in place
+        of its own where the agent was handed an older copy. A round of no
+        threads hands nothing over, and tells nothing.
         """
-        said = self._threads.handed(thread)
-        self._page.tell(ThreadHandedOver(thread_id=thread.thread_id, said=said))
-        return self._handover.thread(thread)
+        handed = {thread.thread_id: self._threads.handed(thread) for thread in threads}
+        if handed:
+            self._page.tell(ThreadsHandedOver(handed=handed))
+        return [self._handover.thread(thread) for thread in threads]
 
     def _as_an_agent_reads(self, said: SaidInPanel) -> PanelEntry:
         """Something said in the panel, its screenshots as the files the agent was handed them as when it was sent."""

@@ -55,6 +55,7 @@ from claude_review.presentation.schemas.threads import (
     FollowResponse,
     SubmitRequest,
     SubmitResponse,
+    ThreadAsHanded,
     ThreadDraft,
     ThreadsResponse,
     anchor_from_domain,
@@ -105,7 +106,8 @@ async def held_threads(review: ReviewDep) -> ThreadsResponse:
     holds once it is open.
     """
     return ThreadsResponse(
-        threads=[ThreadDraft.from_domain(held) for held in review.threads_held()], handed=review.threads_handed()
+        threads=[ThreadDraft.from_domain(held) for held in review.threads_held()],
+        handed={thread_id: ThreadAsHanded.from_domain(has) for thread_id, has in review.threads_handed().items()},
     )
 
 

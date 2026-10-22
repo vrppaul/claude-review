@@ -12,19 +12,19 @@ page with no draft of the review — another browser, a private window —
 holds none, and the agent's threads must outlive it. A page opening with
 no draft reads them all from here.
 
-The agent reads a thread once, as it is handed it, and never again: what it
-has of a thread — what it raised it with, what it was handed — stays as it
-has it, and a thread that comes back changed in it is refused. The reader
-says more after it; they never rewrite it.
+What the agent has of a thread — what it raised it with, what it was
+handed — stays as it first had it, and only grows: a thread handed over
+again adds what was said since, and a copy older than one handed before
+takes nothing away. A thread that comes back changed in it is refused.
+The reader says more after it; they never rewrite it.
 """
 
 import re
 
 import structlog
-from pydantic import BaseModel, ConfigDict
 
 from claude_review.domain.exceptions import HandedWordsChangedError, UnknownThreadError
-from claude_review.domain.models import CommentSeverity, ThreadDraft, TurnAuthor
+from claude_review.domain.models import SaidAsHanded, ThreadAsHanded, ThreadDraft, TurnAuthor
 
 log = structlog.get_logger()
 
@@ -32,31 +32,6 @@ log = structlog.get_logger()
 # prefix, then their number in plain digits
 RAISED_PREFIX = "raised-"
 RAISED_NUMBER = re.compile(r"[0-9]+")
-
-
-class SaidAsHanded(BaseModel):
-    """One thing said in a thread as the agent has it: who said it, its words, and its screenshots by their ids."""
-
-    model_config = ConfigDict(frozen=True)
-
-    author: TurnAuthor
-    body: str
-    images: list[str]
-
-
-class ThreadAsHanded(BaseModel):
-    """What the agent has of a thread: how it was meant, and everything said in it, by id."""
-
-    model_config = ConfigDict(frozen=True)
-
-    severity: CommentSeverity
-    # Its opening by the thread's own id, as a question names it, and each turn by its own
-    said: dict[str, SaidAsHanded]
-
-    def kept_in(self, thread: ThreadDraft) -> bool:
-        """Whether a thread the page holds still says everything the agent has of it, as the agent has it."""
-        now = _said_in(thread)
-        return thread.severity == self.severity and all(now.get(said_id) == said for said_id, said in self.said.items())
 
 
 class ReaderThreads:
@@ -105,15 +80,20 @@ class ReaderThreads:
         if thread_id not in held_ids | set(self._unreadable_ids) | self._handed.keys():
             raise _unknown(thread_id)
 
-    def handed(self, thread: ThreadDraft) -> list[str]:
-        """Note a thread the agent was handed, which it may answer in from now on; say what it has of it, by id."""
-        as_handed = _as_handed(thread)
-        self._handed[thread.thread_id] = as_handed
-        return list(as_handed.said)
+    def handed(self, thread: ThreadDraft) -> ThreadAsHanded:
+        """Note a thread the agent was handed, which it may answer in from now on; say what it now has of it.
 
-    def handed_over(self) -> dict[str, list[str]]:
-        """What the agent has of each thread it raised or was handed, by thread: everything said in it, by id."""
-        return {thread_id: list(as_handed.said) for thread_id, as_handed in self._handed.items()}
+        Added to what it had: a turn it has keeps the words it first had, and
+        one a copy no longer holds stays.
+        """
+        had = self._handed.get(thread.thread_id)
+        has = _as_handed(thread) if had is None else had.grown_by(thread)
+        self._handed[thread.thread_id] = has
+        return has
+
+    def handed_over(self) -> dict[str, ThreadAsHanded]:
+        """What the agent has of each thread it raised or was handed, by thread."""
+        return dict(self._handed)
 
     def hold(self, readable: list[ThreadDraft], unreadable_ids: list[str], *, unnamed_count: int) -> None:
         """Take the threads the page holds, keep the agent's own it leaves out, and never hand out an id one has.
@@ -140,10 +120,12 @@ class ReaderThreads:
         self._raised += 1
         return f"{RAISED_PREFIX}{self._raised}"
 
-    def raised(self, thread: ThreadDraft) -> None:
-        """Hold a thread the agent raised, until a page says what became of it; the agent has what it opens with."""
+    def raised(self, thread: ThreadDraft) -> ThreadAsHanded:
+        """Hold a thread the agent raised, until a page says what became of it; say what the agent has of it."""
         self._held = [*self._held, thread]
-        self._handed[thread.thread_id] = _as_handed(thread)
+        has = _as_handed(thread)
+        self._handed[thread.thread_id] = has
+        return has
 
     def check_handed(self, threads: list[ThreadDraft]) -> None:
         """Refuse a thread changed in what the agent has of it.
@@ -154,22 +136,17 @@ class ReaderThreads:
         for thread in threads:
             as_handed = self._handed.get(thread.thread_id)
             if as_handed is not None and not as_handed.kept_in(thread):
-                msg = f"{thread.thread_id} changes what the agent has of it, which stays as the agent read it"
+                msg = f"{thread.thread_id} changes what the agent has of it, which stays as the agent has it"
                 raise HandedWordsChangedError(msg)
 
 
 def _as_handed(thread: ThreadDraft) -> ThreadAsHanded:
-    """What the agent has of a thread once it is handed it, or raises it."""
-    return ThreadAsHanded(severity=thread.severity, said=_said_in(thread))
-
-
-def _said_in(thread: ThreadDraft) -> dict[str, SaidAsHanded]:
-    """Everything said in a thread, by id: its opening by the thread's own id, and each turn by its own."""
-    opening = SaidAsHanded(author=thread.raised_by, body=thread.body, images=thread.images)
-    turns = {
-        turn.turn_id: SaidAsHanded(author=turn.author, body=turn.body, images=turn.images) for turn in thread.turns
-    }
-    return {thread.thread_id: opening, **turns}
+    """What the agent has of a thread the first time it is handed it, or raises it: all of it."""
+    return ThreadAsHanded(
+        severity=thread.severity,
+        opening=SaidAsHanded(author=thread.raised_by, body=thread.body, images=thread.images),
+        turns=thread.turns,
+    )
 
 
 def _unknown(thread_id: str) -> UnknownThreadError:

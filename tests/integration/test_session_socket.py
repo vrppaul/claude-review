@@ -219,14 +219,16 @@ def test_an_agent_reading_the_threads_is_handed_their_images(review_page: TestCl
     assert review_page.delete(f"/api/images/{image_id}").status_code == HTTPStatus.CONFLICT
 
 
-def test_every_page_hears_what_an_agent_reading_a_thread_was_handed(review_page: TestClient) -> None:
-    """An agent arriving late read it whole: what it read is the agent's, and the reader's no longer to rewrite."""
+def test_every_page_hears_the_words_an_agent_reading_a_thread_was_handed(review_page: TestClient) -> None:
+    """Read from what the page last said, which may be older than the page: the page takes the words the agent has."""
     with open_session(review_page) as socket:
         socket.send_json({"threads": [A_THREAD]})
         until_the_review_holds_threads(review_page, 1)
         review_page.post(thread_route(FIRST_THREAD_ID))
 
-        assert next_push(socket, HandedPush) == HandedPush(thread_id=FIRST_THREAD_ID, said=[FIRST_THREAD_ID])
+        handed = next_push(socket, HandedPush).handed[FIRST_THREAD_ID]
+
+    assert (handed.opening.body, handed.turns) == ("Why one?", [])
 
 
 def test_a_page_that_opens_with_no_draft_learns_what_the_agent_has_of_each_thread(review_page: TestClient) -> None:
@@ -237,9 +239,9 @@ def test_a_page_that_opens_with_no_draft_learns_what_the_agent_has_of_each_threa
         until_the_review_holds_threads(review_page, 2)
     review_page.post(thread_route(FIRST_THREAD_ID))
 
-    held = review_page.get(THREADS_ROUTE).json()
+    handed = review_page.get(THREADS_ROUTE).json()["handed"]
 
-    assert held["handed"] == {FIRST_THREAD_ID: [FIRST_THREAD_ID]}
+    assert (list(handed), handed[FIRST_THREAD_ID]["opening"]["body"]) == ([FIRST_THREAD_ID], "Why one?")
 
 
 def test_an_agent_reading_the_index_is_handed_nothing(review_page: TestClient) -> None:

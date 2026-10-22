@@ -1,7 +1,8 @@
 /** Pushes from the server, taken in by a review as its socket would hand them over. */
 import { takePush } from '$lib/page/push-handling';
 import type { Review } from '$lib/review/review.svelte';
-import type { ChatPush, ServerPush, TellingPosition } from '$lib/types';
+import { threadOnTheWire } from '$lib/api/thread-wire';
+import type { ChatPush, ServerPush, TellingPosition, Thread, ThreadAsHanded } from '$lib/types';
 import { THIS_RUN } from './fake-socket';
 
 /** A push that changes nothing a test reads. */
@@ -16,6 +17,22 @@ export function pushedAt(sequence: number): TellingPosition {
 export function handOverNext(review: Review, push: ServerPush): void {
 	const { heard } = review.telling;
 	takePush(review, push, { ...heard, sequence: heard.sequence + 1 });
+}
+
+/** What the agent has of a thread, as the review says it: all of it, as the page holds it now. */
+export function asHanded(thread: Thread): ThreadAsHanded {
+	const { severity, raised_by, body, images, turns } = threadOnTheWire(thread);
+	return { severity, opening: { author: raised_by, body, images }, turns };
+}
+
+/** What the agent has of these threads once handed them, by thread, each as the page holds it now. */
+export function handedOf(threads: readonly Thread[]): Record<string, ThreadAsHanded> {
+	return Object.fromEntries(threads.map((thread) => [thread.id, asHanded(thread)]));
+}
+
+/** What the review pushes once it hands these threads to the agent, each as the page holds it now. */
+export function handedPush(threads: readonly Thread[]): ServerPush {
+	return { type: 'handed', handed: handedOf(threads) };
 }
 
 /** What the agent says in the panel, as the review pushes it: under an id of its own, answering nothing unless told. */

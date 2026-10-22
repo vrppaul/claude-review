@@ -8,7 +8,7 @@
  */
 
 import type { Thread, Turn, TurnAuthor } from '$lib/types';
-import { READER } from '$lib/utils/speakers';
+import { AGENT, READER } from '$lib/utils/speakers';
 
 /** One question — the comment that opened the thread, or a reply of the reader's — and the answers to it. */
 export interface Exchange {
@@ -50,6 +50,22 @@ export function exchangesOf(thread: Thread): Exchange[] {
 		}
 	}
 	return exchanges;
+}
+
+/**
+ * Which question asking in a thread puts: the reader's reply when theirs is
+ * the last word, and otherwise the thread itself, by its opening comment.
+ * Decided here alone: the server finds what the id names, and asks nothing
+ * else of it.
+ */
+export function questionIdOf(thread: Thread): string {
+	const last = thread.turns.at(-1);
+	return last?.author === READER ? last.id : thread.id;
+}
+
+/** When the agent last answered in a thread; 0 for a thread it never answered. */
+export function lastAnsweredAt(thread: Thread): number {
+	return thread.turns.findLast((turn) => turn.author === AGENT)?.at ?? 0;
 }
 
 /** The question a reply of the reader's asks, after the question before it. */

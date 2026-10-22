@@ -7,7 +7,7 @@
  * what it means. The compiler refuses a kind left out of the switch.
  */
 
-import { readReview } from '$lib/api/review-api';
+import { readHeldThreads, readReview } from '$lib/api/review-api';
 import {
 	caughtUpNote,
 	diffNotTakenNote,
@@ -42,7 +42,7 @@ function handlePush(review: Review, push: ServerPush, heard: HeardPush): void {
 			if (review.threads.receiveReply(push.thread_id, push.body, push.question_id)) review.sound.announce();
 			return;
 		case 'handed':
-			review.threads.handing.handedOver({ [push.thread_id]: push.said });
+			review.threads.agentHas(push.handed);
 			return;
 		case 'chat':
 			// Read from the review as the page opened, the words are in the panel already
@@ -182,7 +182,8 @@ export function takePush(review: Review, push: ServerPush, at: TellingPosition):
  * Catch up after the connection came back to a review that could not hand
  * over everything it missed; the telling goes on from `from`.
  *
- * What the pushes kept up to date is read again. What they alone carried —
+ * What the pushes kept up to date is read again, what the agent has of
+ * each thread among it, as the page reads it on opening. What they alone carried —
  * an answer in a thread, a thread raised, a word in the panel — is gone, and
  * the panel says so. A retake among them would have left the threads on old
  * lines: following them again moves only those whose lines moved, so it is
@@ -200,6 +201,7 @@ export async function catchUp(review: Review, from: TellingPosition): Promise<vo
 		const facts = await readReview();
 		review.learn(facts);
 		review.telling.factsReadAt({ instance: facts.instance, sequence: facts.sequence });
+		review.threads.agentHas((await readHeldThreads()).handed);
 		const moved = await review.takeRetakenDiff();
 		review.conversation.note(caughtUpNote(moved));
 	} catch (error) {

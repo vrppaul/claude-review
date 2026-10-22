@@ -107,7 +107,9 @@ def test_every_page_hears_what_the_agent_was_handed_of_a_thread_a_message_points
     with open_session(review_page) as socket:
         review_page.post("/api/message", json={**MESSAGE, "threads": [THREAD]})
 
-        assert next_push(socket, HandedPush) == HandedPush(thread_id=FIRST_THREAD_ID, said=[FIRST_THREAD_ID, "turn-1"])
+        handed = next_push(socket, HandedPush).handed[FIRST_THREAD_ID]
+
+    assert [turn.turn_id for turn in handed.turns] == ["turn-1"]
 
 
 async def test_a_message_pointing_at_a_thread_quoting_fewer_lines_than_it_names_is_refused(
@@ -246,6 +248,16 @@ def test_the_author_can_raise_a_thread_on_a_line(review_page: TestClient) -> Non
     # Quoted from the diff, so the thread can follow its line when it moves
     assert pushed.anchor.quote == [REVIEWED_LINE]
     assert pushed.severity == CommentSeverity.QUESTION
+
+
+def test_every_page_hears_that_the_agent_has_the_thread_it_raised(review_page: TestClient) -> None:
+    """Its opening is the agent's own words from the moment it is raised, as a page with no draft is told too."""
+    with open_session(review_page) as socket:
+        review_page.post(POINT_ROUTE, json=_pointing(pointed_json(REVIEWED_FILE, 1), "Kept on purpose"))
+
+        handed = next_push(socket, HandedPush).handed["raised-1"]
+
+    assert (handed.opening.author, handed.opening.body) == (TurnAuthor.AUTHOR, "Kept on purpose")
 
 
 async def test_a_thread_the_agent_raised_can_be_answered_in(client: AsyncClient) -> None:

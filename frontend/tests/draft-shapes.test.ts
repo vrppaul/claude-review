@@ -67,11 +67,6 @@ function flatThread(kept: object = {}) {
 	};
 }
 
-/** A turn as an older release kept it, its words its id. */
-function keptTurn(id: string, author: string) {
-	return { id, author, body: id, round: 1, images: [] };
-}
-
 /** A thread as shape 9 kept it, with how it was read inside it. */
 interface KeptComment extends Thread {
 	awaiting: AwaitedQuestion[];
@@ -213,8 +208,6 @@ const UP_TO_DATE_1_5_0: Draft = {
 	writing: [],
 	reviewBody: 'Overall fine',
 	sent: { 'comment-2': 1, 'raised-1': 2 },
-	// Both went out with a round, so the agent has all of each
-	handed: { 'comment-2': ['comment-2', 'turn-1', 'turn-2', 'turn-3'], 'raised-1': ['raised-1'] },
 	// The message it kept as taken back, taken back when it was said: v1.5.0 never kept when it was taken back
 	panel: [
 		WRITTEN_BY_1_5_0.panel[0],
@@ -486,27 +479,6 @@ describe('a draft written by an older release', () => {
 		});
 
 		expect(readKept()?.round).toBe(3);
-	});
-
-	it('holds the agent to have all a round carried, and of the rest what it answered or still is asked', () => {
-		keptByAnOlderRelease({
-			comments: [
-				flatThread({ id: 'comment-1' }),
-				flatThread({
-					id: 'comment-2',
-					turns: [keptTurn('turn-1', 'reader'), keptTurn('turn-2', 'author'), keptTurn('turn-3', 'reader')]
-				}),
-				flatThread({ id: 'comment-3', turns: [keptTurn('turn-4', 'reader')], awaiting: [{ id: 'turn-4', at: 1 }] }),
-				flatThread({ id: 'comment-4' })
-			],
-			sent: [['comment-1', 1]]
-		});
-
-		expect(readKept()?.handed).toEqual({
-			'comment-1': ['comment-1'],
-			'comment-2': ['comment-2', 'turn-1', 'turn-2'],
-			'comment-3': ['comment-3', 'turn-4']
-		});
 	});
 
 	it('counts a thread sent before rounds were numbered as sent in the first', () => {
