@@ -140,6 +140,11 @@ export class Threads {
 		return (this.#byBlock.get(blockKey(block)) ?? []).map(({ thread }) => thread);
 	}
 
+	/** Whether anything of the reader's hangs under a block of the story's words: a thread, or a comment being written. */
+	hangsUnder(block: StoryBlock): boolean {
+		return this.onBlock(block).length > 0 || this.writing.aboutBlock(block) !== undefined;
+	}
+
 	/** How many thread and turn ids have been handed out, deleted ones included. */
 	get issued(): IssuedIds {
 		return { comments: this.#commentIds.issued, turns: this.#turnIds.issued };

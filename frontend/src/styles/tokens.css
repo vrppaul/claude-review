@@ -123,12 +123,27 @@
 	 * the room its frame keeps there, so a band fills its frame
 	 */
 	--cr-band-reach: var(--cr-edge-block-room);
+	/*
+	 * A card of lists (lib/ui ListsCard), a row to each: how far apart its
+	 * columns stand — a list's name, its words and what an item offers, its
+	 * fold; and how far the light round the words of an item it lists (lib/ui
+	 * Band) reaches past them, above and below and to either side. The light
+	 * stands at least that far from anything else, so items stand twice that
+	 * apart.
+	 */
+	--cr-lists-card-gap: --spacing(4);
+	--cr-listed-reach-block: --spacing(1.5);
+	--cr-listed-reach-inline: --spacing(2);
 
 	/*
 	 * Where a thread hangs under a line, or under a block of a story's words:
-	 * how far in from each side of it the thread's card stands
+	 * how far in from each side of it the thread's card stands; and the room
+	 * kept above it, for the tail of its card to reach up to what it is about,
+	 * and below it
 	 */
 	--cr-thread-inset: --spacing(3);
+	--cr-thread-hang-above: --spacing(2);
+	--cr-thread-hang-below: --spacing(3);
 	/*
 	 * A conversation's turns, a thread's or the panel's, a row each (lib/ui
 	 * Turn): the room between rows, the avatar each speaker stands by and the
@@ -531,6 +546,17 @@
 	--breakpoint-cr-header-narrow: 75.0625rem;
 	--breakpoint-cr-header-narrower: 60.0625rem;
 	--breakpoint-cr-header-narrowest: 47.5625rem;
+}
+
+/*
+ * Where a card of lists (lib/ui ListsCard) stands each list's name over its
+ * words, by its own width: narrower, its columns of names, an item's offer
+ * and the fold would leave the words some thirty characters. A container
+ * query cannot read a custom property either, so it is written as
+ * Tailwind's container sizes are
+ */
+@theme {
+	--container-cr-lists-card-narrow: 40rem;
 }
 
 [data-theme='dark'] {

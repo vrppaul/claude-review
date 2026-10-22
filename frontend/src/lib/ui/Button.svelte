@@ -15,11 +15,26 @@
 		listed?: boolean;
 		/** The button itself, for whoever hands the keyboard to it. */
 		element?: HTMLButtonElement | undefined;
-		/** What it says: its words, an icon before them. */
+		/** What it says: its words, an icon before them; or its icon alone, where its words may give way to it. */
 		children: Snippet;
+		/**
+		 * Its words, after its icon, where the room it stands in may grow too narrow for them: on a narrow card of
+		 * lists (ListsCard) they give way, kept for a screen reader, and the icon stands alone, square as an icon
+		 * button's. None where its words are among its children.
+		 */
+		wordsGivingWay?: string | undefined;
 	}
 
-	let { tone, size, testId, listed = false, element = $bindable(), children, ...attributes }: Props = $props();
+	let {
+		tone,
+		size,
+		testId,
+		listed = false,
+		element = $bindable(),
+		children,
+		wordsGivingWay,
+		...attributes
+	}: Props = $props();
 </script>
 
 <!-- A button of the page, drawn as its tone and size say: what it is handed besides lands on the element, and
@@ -31,5 +46,7 @@
 	data-testid={testId}
 	class={['cr-ui-button cr-pressable', BUTTON_TONES[tone], BUTTON_SIZES[size], listed && 'cr-ui-button-listed']}
 >
-	{@render children()}
+	{@render children()}{#if wordsGivingWay}<span
+			class="cr-ui-button-words-giving-way @max-cr-lists-card-narrow/lists-card:sr-only">{wordsGivingWay}</span
+		>{/if}
 </button>

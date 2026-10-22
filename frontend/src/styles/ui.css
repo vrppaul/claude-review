@@ -1004,23 +1004,10 @@
  */
 .cr-ui-band {
 	position: relative;
-	margin-block: calc(-1 * var(--cr-band-reach));
+	margin: calc(-1 * var(--cr-band-reach)) calc(-1 * var(--cr-edge-end-room)) calc(-1 * var(--cr-band-reach))
+		calc(-1 * var(--cr-edge-inset));
 	padding: var(--cr-band-reach) var(--cr-edge-end-room) var(--cr-band-reach) var(--cr-edge-inset);
 	border-radius: 0 var(--radius-field) var(--radius-field) 0;
-}
-/*
- * What hangs under a block (Band) hangs under its band, as what hangs under
- * a line hangs under its row: at the foot of the block's own frame where it
- * has one, which the band ends at; where it shares the frame round it, past
- * the band's reach below its words, and as wide as the band
- */
-.cr-ui-band + .cr-ui-band-under {
-	margin-top: var(--cr-band-reach);
-}
-/* A band, and what hangs under one that shares the frame round it, reach into the frame's room either side */
-.cr-ui-band,
-.cr-ui-band + .cr-ui-band-under {
-	margin-inline: calc(-1 * var(--cr-edge-inset)) calc(-1 * var(--cr-edge-end-room));
 }
 /*
  * Blocks one under another (Bands): as far apart as the offer over a band
@@ -1074,6 +1061,168 @@
 	top: --spacing(3);
 	right: --spacing(3);
 	bottom: auto;
+}
+/*
+ * A band of an item listed on a card of lists (ListsCardRow): its words and
+ * its offer side by side, the offer in a column of its own whose room is
+ * kept while it is unseen, so no word moves as it shows. Its light a pill
+ * round them, reaching past them into the room the list keeps round every
+ * item and taking none of it: its words stand where they would without it
+ */
+.cr-ui-band-listed {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	column-gap: var(--cr-lists-card-gap);
+	align-items: start;
+	margin: calc(-1 * var(--cr-listed-reach-block)) calc(-1 * var(--cr-listed-reach-inline));
+	padding: var(--cr-listed-reach-block) var(--cr-listed-reach-inline);
+	border-radius: var(--radius-box);
+}
+/* Its offer on its first line, as tall as the line: a small button stands taller than a line of the words */
+.cr-ui-band-listed > .cr-ui-band-offer {
+	position: static;
+	display: flex;
+	align-items: center;
+	height: var(--cr-one-line);
+}
+/*
+ * What hangs under it, as wide as its light and a pane's gap below it, as
+ * the board draws a question under an item: the room every thread keeps
+ * round it where it hangs reached past by as much, and the next item an
+ * item's distance under it
+ */
+.cr-ui-band-listed + .cr-ui-band-under {
+	margin: calc(var(--cr-listed-reach-block) + var(--cr-pane-gap) - var(--cr-thread-hang-above))
+		calc(-1 * (var(--cr-listed-reach-inline) + var(--cr-thread-inset))) calc(-1 * var(--cr-thread-hang-below));
+}
+
+/*
+ * A card of lists (ListsCard), a row to each (ListsCardRow), a hairline
+ * between them, on three columns the rows share, so each part of a row
+ * stands on one edge with the same part of every other: the list's mark,
+ * name and count; its words, where an item keeps its offer beside them; its
+ * fold. A row keeps the card's room either side, and above and below it the
+ * room an item's light reaches into and as much again. Edged and grounded as
+ * a card, its corners cut, not scrolled
+ */
+.cr-ui-lists-card {
+	container: lists-card / inline-size;
+	display: grid;
+	grid-template-columns: max-content minmax(0, 1fr) auto;
+	column-gap: var(--cr-lists-card-gap);
+	overflow: clip;
+	border: var(--cr-line) solid var(--cr-pane-edge);
+	border-radius: var(--radius-box);
+	background-color: var(--cr-ground-card);
+}
+.cr-ui-lists-row {
+	position: relative;
+	display: grid;
+	grid-template-columns: subgrid;
+	grid-column: 1 / -1;
+	align-items: start;
+	padding: calc(2 * var(--cr-listed-reach-block)) var(--cr-card-room);
+	font-size: var(--text-sm);
+	line-height: var(--text-sm--line-height);
+}
+.cr-ui-lists-row + .cr-ui-lists-row {
+	border-top: var(--cr-line) solid var(--cr-pane-edge);
+}
+/* Its name on its first line, never wrapped: its mark in the agent's colour, the name, how many it holds */
+.cr-ui-lists-row-name {
+	display: flex;
+	grid-row: 1;
+	grid-column: 1;
+	align-items: center;
+	gap: var(--cr-list-row-gap);
+	height: var(--cr-one-line);
+	white-space: nowrap;
+}
+/*
+ * Folded, the first of its items' words on one line, cut where the line
+ * ends; and the same line, unseen, that a list of one measures its item's
+ * words against, the words on one line however long
+ */
+.cr-ui-lists-row-line {
+	grid-row: 1;
+	grid-column: 2;
+	min-width: 0;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+.cr-ui-lists-row-measure {
+	height: 0;
+	visibility: hidden;
+}
+.cr-ui-lists-row-measure > span {
+	display: inline-block;
+}
+/* Open, or one item that fits its line: its items one under another, their lights apart */
+.cr-ui-lists-row-items {
+	display: flex;
+	flex-direction: column;
+	row-gap: calc(2 * var(--cr-listed-reach-block));
+	grid-row: 1;
+	grid-column: 2;
+	min-width: 0;
+}
+/* Its fold, the chevron on its first line at the row's end; off, while something hangs in the list, in faint words */
+.cr-ui-lists-row-fold {
+	display: inline-flex;
+	grid-row: 1;
+	grid-column: 3;
+	align-items: center;
+	height: var(--cr-one-line);
+	color: var(--cr-muted);
+}
+.cr-ui-lists-row-fold[aria-disabled='true'] {
+	color: var(--cr-faint);
+}
+/*
+ * Folded, the whole row is its fold: a press anywhere on the row opens it,
+ * the pointer lights the row whole, and the keyboard's ring goes round the
+ * row, inside the card that holds it
+ */
+.cr-ui-lists-row-fold-whole-row::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+}
+.cr-ui-lists-row:has(> .cr-ui-lists-row-fold-whole-row:hover) {
+	background-image: linear-gradient(var(--cr-hover), var(--cr-hover));
+}
+.cr-ui-lists-row-fold-whole-row:focus-visible {
+	outline: none;
+}
+.cr-ui-lists-row:has(> .cr-ui-lists-row-fold-whole-row:focus-visible) {
+	outline: var(--cr-focus-ring-width) solid var(--cr-focus-ring);
+	outline-offset: calc(-1 * var(--cr-focus-ring-width));
+}
+/*
+ * A narrow card: each list's name over its words, as the change in short's
+ * terms stand over theirs, as far above them as an item's light needs; the
+ * fold keeps its column; and a button whose words give way to its icon
+ * (Button's wordsGivingWay), an item's offer, stands as its icon alone,
+ * square as an icon button's
+ */
+@container lists-card (width < theme(--container-cr-lists-card-narrow)) {
+	.cr-ui-lists-row {
+		grid-template-columns: minmax(0, 1fr) auto;
+		gap: calc(2 * var(--cr-listed-reach-block)) var(--cr-lists-card-gap);
+	}
+	.cr-ui-lists-row-fold {
+		grid-column: 2;
+	}
+	.cr-ui-lists-row-line,
+	.cr-ui-lists-row-items {
+		grid-row: 2;
+		grid-column: 1;
+	}
+	.cr-ui-button:has(> .cr-ui-button-words-giving-way) {
+		aspect-ratio: 1;
+		padding-inline: 0;
+	}
 }
 .cr-ui-frame-agent {
 	border-left-color: var(--cr-agent);

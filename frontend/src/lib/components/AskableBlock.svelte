@@ -21,12 +21,11 @@
 		/** The block itself, as its part of the story draws it: what the story heads it with, and its words. */
 		children: Snippet;
 		/**
-		 * The frame its words stand in where they have one of their own, as its
-		 * part of the story draws it, which its band fills and what hangs under
-		 * the block hangs below. None for a block that shares the frame of the
-		 * blocks around it.
+		 * Where its words stand, as its part of the story draws them: in a frame
+		 * of their own, which its band fills and what hangs under the block
+		 * hangs below; or as an item of a list on a card of lists.
 		 */
-		frame?: FrameLook | undefined;
+		frame: FrameLook;
 	}
 
 	let { block, words, testId, children, frame }: Props = $props();
@@ -51,7 +50,7 @@
 		threads.some((thread) => !review.threads.reading.isFolded(thread.id)) || field !== undefined
 	);
 	// Whether anything hangs under it, open or folded away
-	const hangsSomething = $derived(threads.length > 0 || field !== undefined);
+	const hangsSomething = $derived(review.threads.hangsUnder(block));
 
 	// Announced to the review, which gives it the keyboard back once what hung under it goes
 	$effect(() => (asking ? review.sections.registerBlock(blockKey(block), asking) : undefined));
@@ -70,10 +69,11 @@
 		size="xs"
 		testId="ask-about-this"
 		aria-label={name}
+		title={ASK_ABOUT_THIS}
+		wordsGivingWay={ASK_ABOUT_THIS}
 		onclick={() => review.threads.writing.askAbout(block, words)}
 	>
 		<Icon name="conversation" size="xs" />
-		{ASK_ABOUT_THIS}
 	</Button>
 {/snippet}
 

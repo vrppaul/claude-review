@@ -62,6 +62,51 @@ function pieces(): HTMLElement[] {
 	return screen.getAllByTestId('story-piece');
 }
 
+// The same story, whose overview decided one thing, which leads to its second chapter
+const TOLD_A_DECISION = storyHeld({
+	...TOLD.story,
+	overview: { ...TOLD.story.overview, decisions: [{ text: 'The last line closes the file.', chapter: 'ch-2' }] }
+});
+
+/** The way to another chapter that tells its file, on the head of the first piece. */
+async function alsoInTheFirstPiece(): Promise<HTMLElement> {
+	const [first] = pieces();
+	return within(first).getByTestId('also-in');
+}
+
+/** The way to the chapter the one thing the overview decided leads to, once the reader opens what it decided. */
+async function chapterOfTheDecision(user: ReturnType<typeof userEvent.setup>): Promise<HTMLElement> {
+	await user.click(screen.getByTestId('overview-list-toggle'));
+	return screen.getByTestId('item-chapter');
+}
+
+// The same story, whose overview decided two things, the first leading to its second chapter, and left two for later
+const TOLD_TWO_LISTS = storyHeld({
+	...TOLD.story,
+	overview: {
+		...TOLD.story.overview,
+		decisions: [
+			{ text: 'The last line closes the file.', chapter: 'ch-2' },
+			{ text: 'The first line comes first.', chapter: null }
+		],
+		later: [
+			{ text: 'A line for c.py.', chapter: null },
+			{ text: 'A line for d.py.', chapter: null }
+		]
+	}
+});
+
+/** Whether each list of the overview stands open, as its fold says to whoever cannot see its chevron. */
+function listsOpen(): (string | null)[] {
+	return screen.getAllByTestId('overview-list-toggle').map((toggle) => toggle.getAttribute('aria-expanded'));
+}
+
+// Each way the story draws to its second chapter, the story it is drawn in, and how the reader reaches it
+const WAYS_TO_THE_SECOND_CHAPTER = [
+	{ from: 'the head of a piece whose file it tells too', story: TOLD, reach: alsoInTheFirstPiece },
+	{ from: 'a thing the overview decided that leads there', story: TOLD_A_DECISION, reach: chapterOfTheDecision }
+];
+
 describe('a review a story can be told of', () => {
 	beforeEach(() => {
 		review = openReview({ files, story: TOLD });
@@ -204,17 +249,22 @@ describe('a review read as its story', () => {
 		expect(within(inTheSecond).getAllByTestId('also-in').map(said)).toEqual(['also in chapter 1', 'also in chapter 3']);
 	});
 
-	it('takes the reader and the keyboard to the other chapter that tells the file of a piece when its way is pressed', async () => {
-		render(ReviewScreen, { props: { review } });
-		const [ofAInTheFirst] = pieces();
-		const [, theSecond] = screen.getAllByTestId('story-chapter');
-		const toTheSecond = broughtIntoView(theSecond);
+	it.each(WAYS_TO_THE_SECOND_CHAPTER)(
+		'takes the reader and the keyboard to the second chapter from $from when its way is pressed',
+		async ({ story, reach }) => {
+			const user = userEvent.setup();
+			review = openReview({ files, story });
+			review.views.choose('story');
+			render(ReviewScreen, { props: { review } });
+			const [, theSecond] = screen.getAllByTestId('story-chapter');
+			const toTheSecond = broughtIntoView(theSecond);
 
-		await userEvent.setup().click(within(ofAInTheFirst).getByTestId('also-in'));
+			await user.click(await reach(user));
 
-		expect(toTheSecond).toHaveBeenCalled();
-		expect(document.activeElement).toBe(within(theSecond).getByTestId('part-head'));
-	});
+			expect(toTheSecond).toHaveBeenCalled();
+			expect(document.activeElement).toBe(within(theSecond).getByTestId('part-head'));
+		}
+	);
 
 	it('says where to doubt a chapter, where the agent said', () => {
 		render(ReviewScreen, { props: { review } });
@@ -608,50 +658,42 @@ describe('a review read as its story', () => {
 		expect(document.activeElement).toBe(inChapterTwo);
 	});
 
-	it('keeps what was decided, turned down and left for later one fold away, each saying the chapter it leads to', async () => {
+	it('folds each list of the overview to its head and the first words it holds, and opens only the one pressed', async () => {
 		const user = userEvent.setup();
-		const overview = {
-			...TOLD.story.overview,
-			decisions: [{ text: 'The last line closes the file.', chapter: 'ch-2' }],
-			later: [{ text: 'A line for c.py.', chapter: null }]
-		};
-		review = openReview({ files, story: storyHeld({ ...TOLD.story, overview }) });
+		review = openReview({ files, story: TOLD_TWO_LISTS });
 		review.views.choose('story');
 		render(ReviewScreen, { props: { review } });
-		const toggle = screen.getByTestId('story-more-toggle');
-		expect([toggle.getAttribute('aria-expanded'), screen.queryByText('Decided, and why')]).toEqual(['false', null]);
+		const [decided, later] = screen.getAllByTestId('overview-list');
+		expect(listsOpen()).toEqual(['false', 'false']);
+		expect([said(decided), said(later)]).toEqual([
+			'Decided, and why 2 The last line closes the file.',
+			'Left for later 2 A line for c.py.'
+		]);
 
-		await user.click(toggle);
+		await user.click(within(decided).getByTestId('overview-list-toggle'));
 
-		const more = screen.getByTestId('story-more');
-		expect(toggle.getAttribute('aria-expanded')).toBe('true');
-
-		expect(more.textContent).toContain('Decided, and why');
-		expect(more.textContent).toContain('The last line closes the file. — chapter 2');
-		expect(more.textContent).toContain('Left for later');
-		expect(more.textContent).not.toContain('Turned down');
+		expect(listsOpen()).toEqual(['true', 'false']);
+		expect(within(decided).getAllByTestId('block-words').map(said)).toEqual([
+			'The last line closes the file. The end',
+			'The first line comes first.'
+		]);
+		expect(within(later).queryAllByTestId('block-words')).toEqual([]);
 	});
 
-	it('heads each of those lists a level under the change in short, never beside the chapters', async () => {
-		const overview = {
-			...TOLD.story.overview,
-			decisions: [{ text: 'The last line closes the file.', chapter: 'ch-2' }],
-			later: [{ text: 'A line for c.py.', chapter: null }]
-		};
-		review = openReview({ files, story: storyHeld({ ...TOLD.story, overview }) });
+	it('heads each of those lists a level under the change in short, never beside the chapters', () => {
+		review = openReview({ files, story: TOLD_TWO_LISTS });
 		review.views.choose('story');
 		render(ReviewScreen, { props: { review } });
-		await userEvent.setup().click(screen.getByTestId('story-more-toggle'));
 
-		const headings = within(screen.getByTestId('story-more')).getAllByRole('heading', { level: 3 });
+		const headings = within(screen.getByTestId('overview-lists')).getAllByRole('heading', { level: 3 });
 
 		expect(headings.map((heading) => heading.textContent)).toEqual(['Decided, and why', 'Left for later']);
 	});
 
-	it('offers no more about a change the overview lists nothing of', () => {
+	it('draws no lists of a change the overview lists nothing of', () => {
 		render(ReviewScreen, { props: { review } });
 
-		expect(screen.queryByTestId('story-more')).toBeNull();
+		expect(screen.queryByTestId('overview-lists')).toBeNull();
 	});
 
 	it('shows no base in the header: a story is of the whole change, whatever the files are read against', () => {

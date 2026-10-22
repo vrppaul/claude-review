@@ -18,6 +18,13 @@
  * card, lit to the card's edge, and offers its act inside the card's top
  * right corner; cards one under another stand as close as cards in a stack.
  *
+ * Or it may be an item of a list on a card of lists (ListsCardRow), on no
+ * frame of its own: its light a pill round its words, reaching a step and a
+ * half past them above and below and two to either side and taking none of
+ * that room; its offer in a column of its own beside the words, kept while
+ * unseen, so no word moves as it shows. What hangs under it is as wide as
+ * that light.
+ *
  * The frame, the card, the band and their stack are drawn together here and
  * in the library's stylesheet, so nothing outside the library lays out round
  * them.
@@ -49,8 +56,13 @@ interface CardLook {
 	tone: WashedTone;
 }
 
+/** An item of a list on a card of lists, which stands its words in no frame of its own. */
+interface ListedLook {
+	shape: 'listed';
+}
+
 /** How a frame is drawn: for whoever hands one on, as a block of a story hands on the frame its words stand in. */
-export type FrameLook = EdgeLook | CardLook;
+export type FrameLook = EdgeLook | CardLook | ListedLook;
 
 // The class of each tone, and of a ground, in the library's stylesheet
 export const FRAME_TONES: Record<FrameTone, string> = {
@@ -59,3 +71,11 @@ export const FRAME_TONES: Record<FrameTone, string> = {
 };
 
 export const FRAME_GROUNDS: Record<FrameGround, string | null> = { tint: 'cr-ui-frame-tinted', none: null };
+
+// The class of a band (Band) by where its words stand, in the library's stylesheet: one inside an edge frame is
+// drawn as a band is
+export const BANDS_BY_FRAME: Record<FrameLook['shape'], string | null> = {
+	edge: null,
+	card: 'cr-ui-band-on-a-card',
+	listed: 'cr-ui-band-listed'
+};

@@ -3,26 +3,25 @@
 		blockLabel,
 		OVERVIEW_LISTS_IN_ORDER,
 		overviewItem,
-		overviewItems,
 		overviewLine,
 		type OverviewBlock
 	} from '$lib/anchors/story';
 	import { useReview } from '$lib/review/context';
-	import { OVERVIEW_PART } from '$lib/review/story-keys';
+	import type { ChapterListed } from '$lib/review/story-contents';
+	import { chapterPartKey, OVERVIEW_PART } from '$lib/review/story-keys';
 	import type { OverviewList, OverviewText, StoryHeld } from '$lib/types';
 	import Bands from '$lib/ui/Bands.svelte';
 	import type { WashedTone } from '$lib/ui/card';
-	import EdgeFrame from '$lib/ui/EdgeFrame.svelte';
+	import Chip from '$lib/ui/Chip.svelte';
 	import Heading from '$lib/ui/Heading.svelte';
 	import type { HeadingTone } from '$lib/ui/heading';
 	import type { IconName } from '$lib/ui/icons';
-	import Row from '$lib/ui/Row.svelte';
+	import ListsCard from '$lib/ui/ListsCard.svelte';
+	import ListsCardRow from '$lib/ui/ListsCardRow.svelte';
 	import Tile from '$lib/ui/Tile.svelte';
 	import type { TileTone } from '$lib/ui/tile';
 	import AskableBlock from './AskableBlock.svelte';
 	import StoryDiagram from './StoryDiagram.svelte';
-	import { AGENTS_VOICE } from './story-frames';
-	import { chapterNamed } from './story-words';
 	import StoryHead from './StoryHead.svelte';
 	import StoryPart from './StoryPart.svelte';
 
@@ -47,31 +46,37 @@
 		doubt: { tone: 'warning', mark: 'warning' }
 	};
 
-	// What each list of the overview is headed by
-	const LIST_HEADINGS: Record<OverviewList, string> = {
-		decisions: 'Decided, and why',
-		turned_down: 'Turned down',
-		later: 'Left for later'
+	/** How one of the overview's lists is drawn on the card of them: what it is called, and its mark. */
+	interface ListLook {
+		name: string;
+		mark: IconName;
+	}
+
+	const LIST_LOOKS: Record<OverviewList, ListLook> = {
+		decisions: { name: 'Decided, and why', mark: 'decided' },
+		turned_down: { name: 'Turned down', mark: 'turned-down' },
+		later: { name: 'Left for later', mark: 'left-for-later' }
 	};
+
+	// Why a list stays open while something of the reader's hangs in it, said on its fold
+	const STAYS_OPEN = 'Stays open while a thread hangs in it';
 
 	const review = useReview();
 	const overview = $derived(held.story.overview);
 	const listsSomething = $derived(OVERVIEW_LISTS_IN_ORDER.some((list) => overview[list].length > 0));
-	// Whether a thread, or a comment being written, hangs under anything the lists hold: they are drawn open
-	// while one does, so that nothing hung there is out of sight
-	const writtenUnderLists = $derived(
-		overviewItems(overview).some(
-			(item) => review.threads.onBlock(item).length > 0 || review.threads.writing.aboutBlock(item) !== undefined
-		)
-	);
-	// Whether the reader left the lists open: what goes from under them closes nothing, and the keyboard it
-	// gives back to what offered it stays in sight
-	let leftOpen = $state(false);
-	const listsOpen = $derived(writtenUnderLists || leftOpen);
 
-	/** A press on the lists' row opens or folds them, but folds nothing while something hangs under them. */
-	function toggleUnlessWrittenUnder() {
-		if (!writtenUnderLists) leftOpen = !leftOpen;
+	/**
+	 * Why a list of the overview stays open: a thread, or a comment being written, hangs under one of its items,
+	 * and nothing hung there goes out of sight. None while nothing does.
+	 */
+	function heldOpenBecause(list: OverviewList): string | undefined {
+		const hangsInIt = overview[list].some((_, item) => review.threads.hangsUnder(overviewItem(list, item)));
+		return hangsInIt ? STAYS_OPEN : undefined;
+	}
+
+	/** The chapter a thing the overview lists leads to, as the story lists it; none for a thing that leads to none. */
+	function chapterLedTo(chapterId: string | null): ChapterListed | null {
+		return chapterId === null ? null : review.story.contents.chapterAt(chapterPartKey(chapterId));
 	}
 </script>
 
@@ -114,41 +119,48 @@
 	{/if}
 
 	{#if listsSomething}
-		<!-- What more the overview lists, folded under a row whose chevron stands at its far end -->
-		<div data-testid="story-more" class="flex flex-col gap-3">
-			<Row names="title" testId="story-more-toggle" folded={!listsOpen} onclick={toggleUnlessWrittenUnder}>
-				{#snippet label()}
-					More about this change
-				{/snippet}
-			</Row>
-			{#if listsOpen}
-				<EdgeFrame look={AGENTS_VOICE} testId="overview-lists">
-					<div class="flex flex-col gap-4">
-						{#each OVERVIEW_LISTS_IN_ORDER as list (list)}
-							{#if overview[list].length > 0}
-								<section class="flex flex-col gap-2">
-									<Heading tag="h3" heads="list" tone="quiet">{LIST_HEADINGS[list]}</Heading>
-									<!-- Each thing listed may be asked about, as the overview's lines may -->
-									<Bands listed testId="overview-list">
-										{#each overview[list] as item, itemPlace (itemPlace)}
-											<li>
-												<AskableBlock block={overviewItem(list, itemPlace)} words={item.text} testId="overview-item">
-													<p data-testid="block-words">
-														{item.text}
-														{#if item.chapter}
-															<span class="cr-muted text-xs">— {chapterNamed(held.story.chapters, item.chapter)}</span>
-														{/if}
-													</p>
-												</AskableBlock>
-											</li>
-										{/each}
-									</Bands>
-								</section>
-							{/if}
+		<!-- What else the overview lists, on one card, a row to each list that holds something: folded to its first
+			words until the reader opens it, each thing in it then asked about as the overview's lines are, and
+			leading to its chapter where it names one -->
+		<ListsCard testId="overview-lists">
+			{#each OVERVIEW_LISTS_IN_ORDER as list (list)}
+				{@const items = overview[list]}
+				{@const [first] = items}
+				{#if first}
+					<ListsCardRow
+						icon={LIST_LOOKS[list].mark}
+						name={LIST_LOOKS[list].name}
+						count={items.length}
+						firstWords={first.text}
+						heldOpenBecause={heldOpenBecause(list)}
+						testId="overview-list"
+					>
+						{#each items as item, itemPlace (itemPlace)}
+							{@const chapter = chapterLedTo(item.chapter)}
+							<li>
+								<AskableBlock
+									block={overviewItem(list, itemPlace)}
+									words={item.text}
+									testId="overview-item"
+									frame={{ shape: 'listed' }}
+								>
+									<p data-testid="block-words" class="max-w-(--cr-prose-measure)">
+										{item.text}
+										{#if chapter}
+											<Chip
+												voice="agent"
+												names="chapter"
+												testId="item-chapter"
+												onclick={() => review.parts.takeTo(chapter.part)}>{chapter.told.title}</Chip
+											>
+										{/if}
+									</p>
+								</AskableBlock>
+							</li>
 						{/each}
-					</div>
-				</EdgeFrame>
-			{/if}
-		</div>
+					</ListsCardRow>
+				{/if}
+			{/each}
+		</ListsCard>
 	{/if}
 </StoryPart>

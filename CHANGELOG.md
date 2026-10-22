@@ -33,9 +33,9 @@
   written under the block, inviting "Ask about this…", with Ask, Save and
   Cancel as on a line of code, and its thread hangs there, the block banded
   stronger meanwhile: below the frame of a chapter's Why, the warning of
-  its Doubt, or a step's reason, never inside it. The overview's
-  lists, under "More about this change", stand open whenever a thread or a
-  comment hangs under anything they hold, and fold away only once none does.
+  its Doubt, or a step's reason, never inside it. A list of the
+  overview stands open whenever a thread or a comment hangs under anything
+  it holds, and folds away only once none does.
   The replies, the finish pane and the panel name it `Story · Doubt`;
   picked there, it brings the story on screen with the keyboard on the
   thread, as a thread on lines does; and `n` and `p` walk
@@ -282,6 +282,18 @@
   end; pressed, it takes the reader to that chapter's head, and the
   keyboard with them, so the next key starts there. It names the chapter in
   the page's own face, a step larger than a file's chip.
+- **What a story decided, turned down and left for later stand on one card,
+  a row to each list.** "More about this change" is gone: each list is a row
+  of its own, its mark, its name and how many it holds, folded to the words
+  of its first item, cut where the line ends; a press anywhere on the row
+  opens that list alone, and the chevron at its end folds it again. A list
+  of one item whose words fit the line is that item, with nothing to open,
+  until the window is too narrow for them. Each item names the chapter it
+  leads to by the chapter's title, a chip that takes the reader there, where
+  it said "— chapter 2"; pointed at, an item lights round its words and
+  offers "Ask about this" beside them, and its thread hangs as wide as that
+  light. On a narrow card each list's name stands over its words, and the
+  offer is its icon alone, its name on the pointer.
 - **The reader rewrites or deletes only what the agent has not read.** Three
   dots at the head of each of the reader's own turns, the comment and each
   reply, offer Edit and Delete until the agent is handed it: with a round,

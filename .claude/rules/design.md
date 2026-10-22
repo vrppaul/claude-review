@@ -37,7 +37,7 @@ A part is held to these once it is moved to them, or once a change touches its l
 - Controls side by side are one height; so is every control in the header.
 - Every head on the row under the header — a side column's bar, a put-away column's rail, a file's bar — is one height.
 - A card's parts — its bar, its body, its foot — keep one room either side, so all three start and end on one edge.
-- A thread hangs the full width of what it is under, with the page's own inset.
+- A thread hangs the full width of what it is under, with the page's own inset; under an item of the story's overview lists, as wide as the item's light.
 - Items of a list stand apart, a hairline or a gap between them, never touching.
 - Things of one group stand closer together than the groups do.
 - In the story's overview lists, a light round words — the pointer's, the reader's place — reaches `--spacing(1.5)` past them above and below and `--spacing(2)` either side, and stands at least that far from anything else.

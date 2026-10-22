@@ -72,6 +72,13 @@ async function writeAbout(block: string, comment: string): Promise<ReturnType<ty
 	return user;
 }
 
+/** Open every list of the overview, each folded to its first words until the reader opens it. */
+async function openEveryList(user: ReturnType<typeof userEvent.setup>): Promise<void> {
+	for (const toggle of screen.getAllByTestId('overview-list-toggle')) {
+		await user.click(toggle);
+	}
+}
+
 describe("the overview's three lines", () => {
 	beforeEach(() => {
 		review = openReview({ files, story: TOLD, facts: AGENT_ATTACHED });
@@ -167,8 +174,8 @@ describe("the story's other blocks", () => {
 		'take a thread on $called, drawn under it and nowhere else',
 		async ({ drawnIn, nth, block }) => {
 			render(ReviewScreen, { props: { review } });
-			// What more the overview lists stands folded away until the reader opens it
-			await userEvent.setup().click(screen.getByTestId('story-more-toggle'));
+			// Each list of the overview stands folded to its first words until the reader opens it
+			await openEveryList(userEvent.setup());
 			const asked = screen.getAllByTestId(drawnIn)[nth] as HTMLElement;
 
 			await userEvent.setup().click(within(asked).getByTestId('ask-about-this'));
@@ -213,19 +220,31 @@ describe("the story's other blocks", () => {
 		]);
 	});
 
-	it('keep the lists of the overview open while a thread hangs in them, though their heading is pressed', async () => {
-		const user = userEvent.setup();
+	it('keep a list of the overview open while a thread hangs in it, though its fold is pressed', async () => {
+		review.threads.add(storyComment({ at: 'item', list: 'decisions', item: 0 }, 'Why on disk?'));
 		render(ReviewScreen, { props: { review } });
-		const toggle = screen.getByTestId('story-more-toggle');
-		await user.click(toggle);
-		await user.click(within(screen.getAllByTestId('overview-item')[0]).getByTestId('ask-about-this'));
-		await user.type(screen.getByTestId('comment-input'), 'Why on disk?');
-		await user.click(screen.getByTestId('save-comment'));
+		const [decided] = screen.getAllByTestId('overview-list');
+		const toggle = within(decided).getByTestId('overview-list-toggle');
 
-		await user.click(toggle);
+		await userEvent.setup().click(toggle);
 
 		expect(toggle.getAttribute('aria-expanded')).toBe('true');
-		expect(screen.getAllByTestId('comment-thread')).toHaveLength(1);
+		expect(within(decided).getAllByTestId('comment-thread')).toHaveLength(1);
+	});
+
+	it('take no press on the fold of a list held open: once what hung in it goes, it stands as the reader left it', async () => {
+		const user = userEvent.setup();
+		render(ReviewScreen, { props: { review } });
+		const [decided] = screen.getAllByTestId('overview-list');
+		const toggle = within(decided).getByTestId('overview-list-toggle');
+		await user.click(toggle);
+		const [first] = within(decided).getAllByTestId('overview-item');
+		await user.click(within(first).getByTestId('ask-about-this'));
+
+		await user.click(toggle);
+
+		await user.click(screen.getByTestId('cancel-comment'));
+		expect(toggle.getAttribute('aria-expanded')).toBe('true');
 	});
 
 	it('offer nothing on the reason of a step of a file no thread can name', () => {

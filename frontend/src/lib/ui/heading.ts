@@ -14,10 +14,9 @@
  * - part: a part of the story, a chapter or what the story leaves out: its
  *   number, where it has one, beside its title, which wraps beside it.
  * - pane: a pane, a column beside what is read, the question a pane asks, a
- *   step of the tour — one size for all of them.
+ *   step of the tour, a list on a card of lists — one size for all of them.
  * - list: a small head over what stands under it inside one of those — a
- *   list of the overview, a line of it, a chapter's warning — at the size
- *   of its words.
+ *   line of the overview, a chapter's warning — at the size of its words.
  * - piece: a piece of code, by its file's name or by a step's number, in the
  *   code's face, a name broken anywhere rather than run past its column.
  */

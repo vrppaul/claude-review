@@ -26,6 +26,8 @@ const TRACED_FINE: HowDrawn = { kind: 'traced', width: 1.4 };
 const TRACED_FIRM: HowDrawn = { kind: 'traced', width: 1.6 };
 // A window with rounded corners, which a side column's toggle draws a column in
 const WINDOW = 'M3.5 3h9a1.5 1.5 0 0 1 1.5 1.5v7a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 11.5v-7A1.5 1.5 0 0 1 3.5 3z';
+// A ring as wide as the drawing leaves room for, which a mark stands in
+const RING = 'M2 8a6 6 0 1 0 12 0a6 6 0 1 0 -12 0';
 
 export const ICONS = {
 	// An arrow coming round to where it began: a round of the review, and the one a story was told in
@@ -133,7 +135,7 @@ export const ICONS = {
 	warning: { viewBox: '0 0 16 16', paths: ['M8 2.5l6 11H2z', 'M8 7v2.8', 'M8 11.6v.1'], drawn: TRACED_FIRM },
 	notice: {
 		viewBox: '0 0 16 16',
-		paths: ['M8 4.5v4', 'M8 11.2v.3', 'M2 8a6 6 0 1 0 12 0a6 6 0 1 0 -12 0'],
+		paths: ['M8 4.5v4', 'M8 11.2v.3', RING],
 		drawn: TRACED
 	},
 	compass: {
@@ -148,6 +150,11 @@ export const ICONS = {
 		paths: ['M2.5 8a5.5 5.5 0 1 0 11 0a5.5 5.5 0 1 0 -11 0', 'M4.2 11.8l7.6-7.6'],
 		drawn: TRACED_FINE
 	},
+	// A ring with a check, a cross or a clock's hands in it: what a story decided, what it turned down and what it
+	// left for later, each list of its overview by its mark
+	decided: { viewBox: '0 0 16 16', paths: [RING, 'M5.5 8.2l1.8 1.8 3.4-3.6'], drawn: TRACED_FINE },
+	'turned-down': { viewBox: '0 0 16 16', paths: [RING, 'M6 6l4 4M10 6l-4 4'], drawn: TRACED_FINE },
+	'left-for-later': { viewBox: '0 0 16 16', paths: [RING, 'M8 5v3.2l2 1.3'], drawn: TRACED_FINE },
 	// A window with a column down one side, shaded while it stands open, or narrowed to a strip with an arrow the
 	// way it comes back in: a side column's toggle, drawing the state the column is in
 	'column-left-open': {

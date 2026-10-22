@@ -1,10 +1,10 @@
 /**
  * How a story's parts are numbered, named and counted on the page, said one
  * way wherever they are said: in a chapter's heading, beside a step, in the
- * head of a piece, in what the overview says a decision leads to.
+ * head of a piece, in the story's contents.
  */
 
-import type { FollowedChapter, FollowedStep } from '$lib/types';
+import type { FollowedStep } from '$lib/types';
 import { counted, type CountedWords, FILES } from '$lib/utils/words';
 
 // What joins the first line of a step to its last, and a chapter's number to a step's
@@ -199,12 +199,4 @@ export function alsoInChapter(place: number): string {
 /** The other chapters that tell a file, by their places, in the contents, a column with no room for the word: "also in 1", "also in 1, 4". */
 export function alsoInShort(places: readonly number[]): string {
 	return `${ALSO_IN} ${numbersOf(places)}`;
-}
-
-/**
- * The chapter something leads to, as the reader knows it: by its number.
- * The review refuses a story that leads to a chapter it does not have.
- */
-export function chapterNamed(chapters: readonly FollowedChapter[], id: string): string {
-	return `${A_CHAPTER} ${chapterNumber(chapters.findIndex((chapter) => chapter.id === id))}`;
 }

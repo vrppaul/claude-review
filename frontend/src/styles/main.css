@@ -352,7 +352,7 @@
  * each side of it.
  */
 .cr-thread-hang {
-	padding: --spacing(2) var(--cr-thread-inset) --spacing(3);
+	padding: var(--cr-thread-hang-above) var(--cr-thread-inset) var(--cr-thread-hang-below);
 }
 
 /*
