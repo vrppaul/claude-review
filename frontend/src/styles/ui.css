@@ -1463,28 +1463,25 @@
 	font-size: var(--text-2xs);
 	line-height: var(--text-2xs--line-height);
 }
-/* A tag is edged in the colour its words are said in */
+/* A tag is its colour's chip under its colour's words, with no edge, in a small label's weight */
 .cr-ui-tag {
-	border-color: currentColor;
+	font-weight: var(--font-weight-medium);
 }
 .cr-ui-tag-quiet {
+	background-color: var(--cr-ink-chip);
 	color: var(--cr-muted);
 }
 .cr-ui-tag-reader {
+	background-color: var(--cr-mark-chip);
 	color: var(--cr-mark-text);
 }
 .cr-ui-tag-agent {
+	background-color: var(--cr-agent-chip);
 	color: var(--cr-agent);
 }
 .cr-ui-tag-warning {
+	background-color: var(--cr-warning-chip);
 	color: var(--color-warning);
-}
-/* What has to be dealt with: on the warning's own fill, its edge the fill's, in bold */
-.cr-ui-tag-blocking {
-	border-color: transparent;
-	background-color: var(--color-warning);
-	color: var(--color-warning-content);
-	font-weight: var(--font-weight-semibold);
 }
 /* How many of the reader's threads: on the control's fill, in bold figures as wide as one another */
 .cr-ui-count {

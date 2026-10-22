@@ -856,7 +856,9 @@
   named in what is said is a chip in the same box, in the colour of who
   named it; the cross that takes one out of a message being written is
   the chip's own. The release the news card is of is a quiet tag beside
-  its heading.
+  its heading. A tag is its colour's chip under its colour's words, with
+  no edge, in a small label's weight: a blocker is yellow like an outdated
+  thread, no longer black on a yellow fill.
 - **Every row of a list is one row, 32 pixels tall at the least**: the
   tree's files and folders, a story's contents, the bases to read against,
   the replies, the @-picker, the comments the finish pane lists, Help's
