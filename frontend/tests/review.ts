@@ -77,7 +77,8 @@ export function openReview({
 		{
 			facts: reviewResponse({ story_asking: asking, ...facts }),
 			firstDiff: diffResponse({ files, ...diff }),
-			held,
+			// Nothing of them handed to the agent yet
+			held: { threads: held, handed: {} },
 			said,
 			story
 		},

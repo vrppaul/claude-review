@@ -56,6 +56,15 @@ describe('what the server pushes, taken in', () => {
 		expect(review.threads.unread.map((thread) => thread.id)).toEqual([id]);
 	});
 
+	it('holds what the agent was handed of a thread, and nothing said in it since', () => {
+		const id = review.threads.add(newComment({ file: 'a.py', body: 'Why?' }));
+		handOverNext(review, { type: 'handed', thread_id: id, said: [id] });
+		review.threads.addTurn(id, { author: 'reader', body: 'And this?', images: [] });
+
+		const [reply] = review.threads.all[0].turns;
+		expect([review.threads.handing.has(id, id), review.threads.handing.has(id, reply.id)]).toEqual([true, false]);
+	});
+
 	it('offers the panel when an agent turns up, and stops offering rounds when it goes', () => {
 		handOverNext(review, { type: 'answerer', attached: true });
 		expect(review.answerer.attached).toBe(true);

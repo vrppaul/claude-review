@@ -61,6 +61,7 @@ from claude_review.domain.page_events import (
     StoryAskingChanged,
     StoryTold,
     ThreadAnswered,
+    ThreadHandedOver,
     ThreadRaised,
     TreeMoved,
 )
@@ -183,6 +184,10 @@ class Review:
         """The threads the review holds: as a page last said them, and the agent's own however a page left them."""
         return self._threads.held
 
+    def threads_handed(self) -> dict[str, list[str]]:
+        """What the agent has of each thread it raised or was handed, by thread: everything said in it, by id."""
+        return self._threads.handed_over()
+
     def agent_called(self) -> None:
         """Note that the agent is still there: every call it makes renews its lease."""
         self._answerer.heard()
@@ -271,7 +276,7 @@ class Review:
         Raises:
             QuestionNotInThreadError: if the question names nothing the reader said in the thread.
             AnchorLinesNotShownError: if the thread names lines it does not quote.
-            AgentWordsChangedError: if it is the agent's own thread, and no longer opens as the agent raised it.
+            HandedWordsChangedError: if the thread changes what the agent has of it.
         """
         asked = thread.part_asked(question_id)
         self._check_threads([thread])
@@ -290,7 +295,7 @@ class Review:
         Raises:
             ImagesNotKeptError: if it names an image this review does not keep.
             AnchorLinesNotShownError: if a thread it points at names lines it does not quote.
-            AgentWordsChangedError: if a thread it points at is the agent's own, and no longer opens as it raised it.
+            HandedWordsChangedError: if a thread it points at changes what the agent has of it.
         """
         self._check_threads(threads)
         # Pasted a moment ago, so an image this review does not keep is a fault
@@ -397,7 +402,7 @@ class Review:
         Raises:
             ReviewEndedError: if the review has already ended.
             AnchorLinesNotShownError: if a thread names lines it does not quote.
-            AgentWordsChangedError: if a thread the agent raised no longer opens as it raised it.
+            HandedWordsChangedError: if a thread changes what the agent has of it.
         """
         if self._lifetime.has_ended:
             msg = "Review already submitted"
@@ -575,12 +580,12 @@ class Review:
 
         Raises:
             AnchorLinesNotShownError: if one names lines it does not quote.
-            AgentWordsChangedError: if one the agent raised no longer opens as the agent raised it.
+            HandedWordsChangedError: if one changes what the agent has of it.
         """
         anchors = self._anchors
         for thread in threads:
             anchors.check_quote(thread.anchor)
-        self._threads.check_openings(threads)
+        self._threads.check_handed(threads)
 
     @property
     def _anchors(self) -> AnchorService:
@@ -591,8 +596,13 @@ class Review:
         )
 
     def _hand_over(self, thread: ThreadDraft) -> Thread:
-        """A thread as the agent is handed it, which the agent may answer in from now on."""
-        self._threads.handed(thread.thread_id)
+        """A thread as the agent is handed it, which the agent may answer in from now on.
+
+        The pages are told what of it the agent now has: the reader's to
+        rewrite no longer, as the agent reads it once.
+        """
+        said = self._threads.handed(thread)
+        self._page.tell(ThreadHandedOver(thread_id=thread.thread_id, said=said))
         return self._handover.thread(thread)
 
     def _as_an_agent_reads(self, said: SaidInPanel) -> PanelEntry:

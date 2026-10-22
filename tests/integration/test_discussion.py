@@ -7,12 +7,11 @@ separate processes, which is why a queue sits between them.
 
 from http import HTTPStatus
 
-import pytest
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
 
 from claude_review.domain.models import CommentSeverity, TurnAuthor
-from claude_review.presentation.schemas.pushes import ReplyPush
+from claude_review.presentation.schemas.pushes import HandedPush, ReplyPush
 from tests.helpers import (
     EVENTS_ROUTE,
     FIRST_THREAD_ID,
@@ -301,24 +300,27 @@ async def test_a_thread_the_agent_raised_is_refused_with_the_readers_words_in_it
 
     response = await client.post(ASK_ROUTE, json=_asking(rewritten, question_id=str(raised["thread_id"])))
 
-    assert response.status_code == HTTPStatus.UNPROCESSABLE_CONTENT
-    assert "only the agent" in response.json()["detail"]
+    assert response.status_code == HTTPStatus.CONFLICT
+    assert "the agent has" in response.json()["detail"]
 
 
-@pytest.mark.parametrize(
-    "changed",
-    [
-        {"severity": CommentSeverity.BLOCKER},
-        {"images": [GONE_IMAGE]},
-        {"raised_by": TurnAuthor.READER},
-    ],
-    ids=["reweighed", "with an image", "claimed by the reader"],
-)
-async def test_a_round_carrying_the_agents_thread_changed_is_refused(
-    client: AsyncClient, changed: dict[str, object]
-) -> None:
-    raised = await _raise_a_thread(client)
+async def test_a_round_carrying_a_thread_reworded_since_the_agent_had_it_is_refused(client: AsyncClient) -> None:
+    """The agent reads once: it would never read the new words, and its answer would stand under words it never had."""
+    await client.post(ASK_ROUTE, json=_asking(A_THREAD))
+    reworded = {**A_THREAD, "body": "Why drop it at all?"}
 
-    response = await client.post("/api/submit", json={"threads": [{**raised, **changed}], "end": False})
+    response = await client.post("/api/submit", json={"threads": [reworded], "end": False})
 
-    assert response.status_code == HTTPStatus.UNPROCESSABLE_CONTENT
+    assert response.status_code == HTTPStatus.CONFLICT
+
+
+def test_every_page_hears_what_the_agent_was_handed_of_a_thread_asked_about(review_page: TestClient) -> None:
+    """Its opening by the thread's own id and each turn by its own: none is the reader's to rewrite from now on."""
+    asked = {**A_THREAD, "turns": [ANSWER, FOLLOW_UP]}
+
+    with open_session(review_page) as socket:
+        review_page.post(ASK_ROUTE, json=_asking(asked, question_id=FOLLOW_UP_ID))
+
+        assert next_push(socket, HandedPush) == HandedPush(
+            thread_id=FIRST_THREAD_ID, said=[FIRST_THREAD_ID, ANSWER_ID, FOLLOW_UP_ID]
+        )

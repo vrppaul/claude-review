@@ -15,6 +15,7 @@ import type { CommentField } from '$lib/review/comment-field.svelte';
 import type { CommentFields } from '$lib/review/comment-fields';
 import { followedThreads } from '$lib/review/following';
 import type { Rounds } from '$lib/review/rounds.svelte';
+import { ThreadHanding } from '$lib/review/thread-handing.svelte';
 import { ThreadReading } from '$lib/review/thread-reading.svelte';
 import { anchorWrittenOn, type ThreadOnBlock, withItsBlock, withItsLines } from '$lib/review/thread-places';
 import { type CarriedThread, ThreadSending } from '$lib/review/thread-sending.svelte';
@@ -29,6 +30,7 @@ import type {
 	StoryBlock,
 	Thread,
 	ThreadDraft,
+	ThreadsResponse,
 	Turn
 } from '$lib/types';
 import { COMMENT_ID_PREFIX, IdSequence, TURN_ID_PREFIX } from '$lib/utils/ids';
@@ -96,6 +98,8 @@ export class Threads {
 	readonly reading: ThreadReading;
 	/** What is being written in them, and on lines that have none yet. */
 	readonly writing: ThreadWriting;
+	/** What the agent has of each, which the reader rewrites and deletes no more. */
+	readonly handing: ThreadHanding;
 	readonly #rounds: Rounds;
 	#all = $state.raw<Thread[]>([]);
 	// Which have gone out, in which round, and which the reader has changed since
@@ -127,6 +131,7 @@ export class Threads {
 		this.reading = new ThreadReading(kept.read);
 		this.writing = new ThreadWriting(kept.writing, fieldEvents, kept.threads);
 		this.#sending = new ThreadSending(kept.sent);
+		this.handing = new ThreadHanding(kept.handed);
 		this.#pickUp(kept);
 	}
 
@@ -247,12 +252,15 @@ export class Threads {
 	 * Which of them went out with a round only the page that sent them
 	 * knew, so each is taken as not sent yet — sent twice costs the agent a
 	 * second look, never sent costs the reader the comment — but for one
-	 * still as the agent raised it, taken as a raised thread arrives. Ids go
-	 * on past theirs, so nothing written here takes one of them.
+	 * still as the agent raised it, taken as a raised thread arrives. What
+	 * the agent has of each the review says, as it does whenever it hands
+	 * one over. Ids go on past theirs, so nothing written here takes one of
+	 * them.
 	 */
-	adopt(held: HeldThread[]): void {
+	adopt({ threads: held, handed }: ThreadsResponse): void {
 		this.#all = [...this.#all, ...held.map((thread) => threadOfHeld(thread, this.#rounds.current))];
 		for (const thread of held.filter(isAsRaised)) this.#sending.arrivedSent(thread.thread_id, this.#rounds.current);
+		this.handing.handedOver(handed);
 		this.#commentIds.continuePast(held.map((thread) => thread.thread_id));
 		this.#turnIds.continuePast(held.flatMap((thread) => thread.turns.map((turn) => turn.turn_id)));
 	}

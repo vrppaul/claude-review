@@ -7,10 +7,10 @@ from fastapi import APIRouter, Query, Request
 from fastapi.responses import FileResponse
 
 from claude_review.domain.exceptions import (
-    AgentWordsChangedError,
     AnchorLinesNotShownError,
     FileNotInReviewError,
     FileUnreadableError,
+    HandedWordsChangedError,
     ImageAlreadySentError,
     ImageRefusedError,
     ImagesNotKeptError,
@@ -100,10 +100,13 @@ async def held_threads(review: ReviewDep) -> ThreadsResponse:
     Another browser, a private window, cleared site data: the page has none
     of the reader's threads, nor the agent's. It takes these as its own
     rather than saying it holds none — which would leave an agent arriving
-    later with nothing to read. Read-only: no page is told what another
+    later with nothing to read — and what the agent has of each, which it
+    offers no more to rewrite. Read-only: no page is told what another
     holds once it is open.
     """
-    return ThreadsResponse(threads=[ThreadDraft.from_domain(held) for held in review.threads_held()])
+    return ThreadsResponse(
+        threads=[ThreadDraft.from_domain(held) for held in review.threads_held()], handed=review.threads_handed()
+    )
 
 
 @router.get("/conversation")
@@ -228,7 +231,7 @@ async def follow_anchors(request: FollowRequest, review: ReviewDep) -> FollowRes
     "/ask",
     status_code=HTTPStatus.NO_CONTENT,
     responses=refusals(
-        QuestionNotInThreadError, AnchorLinesNotShownError, AgentWordsChangedError, takes=Takes.JSON_BODY
+        QuestionNotInThreadError, AnchorLinesNotShownError, HandedWordsChangedError, takes=Takes.JSON_BODY
     ),
 )
 async def ask_about_thread(request: AskRequest, review: ReviewDep) -> None:
@@ -243,7 +246,7 @@ async def ask_about_thread(request: AskRequest, review: ReviewDep) -> None:
 @router.post(
     "/message",
     status_code=HTTPStatus.NO_CONTENT,
-    responses=refusals(ImagesNotKeptError, AnchorLinesNotShownError, AgentWordsChangedError, takes=Takes.JSON_BODY),
+    responses=refusals(ImagesNotKeptError, AnchorLinesNotShownError, HandedWordsChangedError, takes=Takes.JSON_BODY),
 )
 async def take_panel_message(request: MessageRequest, review: ReviewDep) -> None:
     """Take what the reader typed in the panel, for the agent to pick up.
@@ -337,7 +340,7 @@ async def discard_an_image(image_id: SafeId, review: ReviewDep) -> None:
 
 @router.post(
     "/submit",
-    responses=refusals(ReviewEndedError, AnchorLinesNotShownError, AgentWordsChangedError, takes=Takes.JSON_BODY),
+    responses=refusals(ReviewEndedError, AnchorLinesNotShownError, HandedWordsChangedError, takes=Takes.JSON_BODY),
 )
 async def submit_review(request: SubmitRequest, review: ReviewDep) -> SubmitResponse:
     """Send what has been written, and either end the review or carry on.

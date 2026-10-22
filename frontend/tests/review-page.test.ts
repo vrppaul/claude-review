@@ -143,7 +143,7 @@ function serving(): FakeServer {
 	server.answer('GET /api/settings', { record: NEW_READER, stored: true });
 	server.answer('GET /api/review', reviewResponse());
 	server.answer('GET /api/diff', diffResponse());
-	server.answer('GET /api/threads', { threads: [] });
+	server.answer('GET /api/threads', { threads: [], handed: {} });
 	server.answer('GET /api/conversation', { said: [] });
 	server.answer('GET /api/story', storyResponse());
 	server.answer('GET /api/guide', { record: { seen_release: '1.5.0', story_introduced: true }, stored: true });
@@ -458,7 +458,7 @@ describe('opening the page', () => {
 	});
 
 	it('takes the threads the review holds as its own when this browser kept no draft of it', async () => {
-		serving().answer('GET /api/threads', { threads: [A_HELD_THREAD, A_RAISED_THREAD] });
+		serving().answer('GET /api/threads', { threads: [A_HELD_THREAD, A_RAISED_THREAD], handed: {} });
 		const page = newPage();
 
 		await page.open();
@@ -472,8 +472,17 @@ describe('opening the page', () => {
 		expect(latestSocket().said).toMatchObject([{ threads: [{ thread_id: 'comment-1' }, { thread_id: 'raised-1' }] }]);
 	});
 
+	it('knows what the agent has of each thread it takes in, when this browser kept no draft of it', async () => {
+		serving().answer('GET /api/threads', { threads: [A_HELD_THREAD], handed: { 'comment-1': ['comment-1'] } });
+		const page = newPage();
+
+		await page.open();
+
+		expect(openedReview(page).threads.handing.has('comment-1', 'comment-1')).toBe(true);
+	});
+
 	it('writes its next comment under an id none of the threads it took in has', async () => {
-		serving().answer('GET /api/threads', { threads: [A_HELD_THREAD] });
+		serving().answer('GET /api/threads', { threads: [A_HELD_THREAD], handed: {} });
 		const page = newPage();
 		await page.open();
 
@@ -483,7 +492,7 @@ describe('opening the page', () => {
 	});
 
 	it('takes in once a thread the agent raised as the page opened, held and pushed both', async () => {
-		serving().answer('GET /api/threads', { threads: [A_RAISED_THREAD] });
+		serving().answer('GET /api/threads', { threads: [A_RAISED_THREAD], handed: {} });
 		const page = newPage();
 		await page.open();
 		latestSocket().accept();
@@ -497,7 +506,7 @@ describe('opening the page', () => {
 
 	it('keeps to its own draft rather than the threads the review holds', async () => {
 		const server = serving();
-		server.answer('GET /api/threads', { threads: [A_HELD_THREAD] });
+		server.answer('GET /api/threads', { threads: [A_HELD_THREAD], handed: {} });
 		openReview().threads.add(newComment({ body: 'written in this browser' }));
 		leavePage();
 		server.answer('POST /api/anchors/follow', { anchors: [newComment().anchor] });

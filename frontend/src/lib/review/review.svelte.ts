@@ -41,13 +41,13 @@ import type {
 	ChangesSince,
 	DiffResponse,
 	FollowOutcome,
-	HeldThread,
 	ReviewMode,
 	ReviewResponse,
 	SaidInPanel,
 	SendLimits,
 	SessionHello,
 	StoryHeld,
+	ThreadsResponse,
 	WhereTheChangeIs
 } from '$lib/types';
 import { DRAFT_SHAPE, type Draft, emptyDraft } from '$lib/drafts/draft-shapes';
@@ -63,8 +63,8 @@ export interface Opening {
 	draft: Draft | null;
 	/** Whether a draft this browser kept could not be read, and was set aside rather than opened from. */
 	draftSetAside: boolean;
-	/** What the review holds of its threads: taken in only with no draft to open from. */
-	held: HeldThread[];
+	/** What the review holds of its threads, and what the agent has of each: taken in only with no draft to open from. */
+	held: ThreadsResponse;
 	/** What the review holds as said in the panel: drawn whatever the draft holds, which adds what it does not. */
 	said: SaidInPanel[];
 	/** The story the review holds, if the agent told one. */
@@ -419,6 +419,7 @@ export class Review {
 			writing: this.threads.writing.kept,
 			reviewBody: this.submission.body,
 			sent: this.threads.sentRounds,
+			handed: this.threads.handing.kept,
 			panel: this.conversation.turns,
 			composer: this.conversation.composer.kept,
 			issued: this.threads.issued,

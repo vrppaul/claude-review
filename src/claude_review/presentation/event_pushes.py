@@ -20,6 +20,7 @@ from claude_review.domain.page_events import (
     StoryAskingChanged,
     StoryTold,
     ThreadAnswered,
+    ThreadHandedOver,
     ThreadRaised,
     TreeMoved,
     WorkReported,
@@ -33,6 +34,7 @@ from claude_review.presentation.schemas.pushes import (
     ChatPush,
     DiffPush,
     EndedPush,
+    HandedPush,
     PointPush,
     ProgressPush,
     ReplyPush,
@@ -52,6 +54,8 @@ def push_of(event: PageEvent) -> ServerPush:
     match event:
         case ThreadAnswered():
             return ReplyPush(thread_id=event.thread_id, question_id=event.question_id, body=event.body)
+        case ThreadHandedOver():
+            return HandedPush(thread_id=event.thread_id, said=event.said)
         case AnswererChanged():
             return AnswererPush(attached=event.attached)
         case AgentSaid():

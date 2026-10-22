@@ -16,7 +16,7 @@ from fastapi.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
 from claude_review.domain.models import MAX_ID_LENGTH, MAX_QUOTE_LINES, CommentSeverity, TurnAuthor
-from claude_review.presentation.schemas.pushes import EndedPush, ReplyPush, RoundPush, ShowPush
+from claude_review.presentation.schemas.pushes import EndedPush, HandedPush, ReplyPush, RoundPush, ShowPush
 from claude_review.presentation.schemas.session import Welcome
 from tests.helpers import (
     CATCH_UP_ROUTE,
@@ -217,6 +217,29 @@ def test_an_agent_reading_the_threads_is_handed_their_images(review_page: TestCl
 
     assert [Path(path).name for path in read["images"]] == [image_id]
     assert review_page.delete(f"/api/images/{image_id}").status_code == HTTPStatus.CONFLICT
+
+
+def test_every_page_hears_what_an_agent_reading_a_thread_was_handed(review_page: TestClient) -> None:
+    """An agent arriving late read it whole: what it read is the agent's, and the reader's no longer to rewrite."""
+    with open_session(review_page) as socket:
+        socket.send_json({"threads": [A_THREAD]})
+        until_the_review_holds_threads(review_page, 1)
+        review_page.post(thread_route(FIRST_THREAD_ID))
+
+        assert next_push(socket, HandedPush) == HandedPush(thread_id=FIRST_THREAD_ID, said=[FIRST_THREAD_ID])
+
+
+def test_a_page_that_opens_with_no_draft_learns_what_the_agent_has_of_each_thread(review_page: TestClient) -> None:
+    """Another browser holds none of it, and must not offer to rewrite what the agent has read."""
+    unread = thread_json(line_json(REVIEWED_FILE, 1), "Why two?", thread_id="comment-2")
+    with open_session(review_page) as socket:
+        socket.send_json({"threads": [A_THREAD, unread]})
+        until_the_review_holds_threads(review_page, 2)
+    review_page.post(thread_route(FIRST_THREAD_ID))
+
+    held = review_page.get(THREADS_ROUTE).json()
+
+    assert held["handed"] == {FIRST_THREAD_ID: [FIRST_THREAD_ID]}
 
 
 def test_an_agent_reading_the_index_is_handed_nothing(review_page: TestClient) -> None:

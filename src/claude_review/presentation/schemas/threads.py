@@ -462,11 +462,15 @@ class ReceivedHello(HelloBase[HeardThread]):
 class ThreadsResponse(Schema):
     """Response for GET /api/threads — the threads the review holds, for a page that opens with no draft of its own.
 
-    As a page last said them, and the agent's own however a page left them.
-    Read once, as the page opens: from then on the page says what it holds.
+    As a page last said them, and the agent's own however a page left them;
+    and what the agent has of each, which the page offers no more to
+    rewrite. Read once, as the page opens: from then on the page says what it
+    holds, and the pushes what the agent is handed.
     """
 
     threads: list[ThreadDraft]
+    # What the agent has of each thread it raised or was handed, by thread: everything said in it, by id
+    handed: dict[str, list[str]]
 
 
 class ThreadSummary(Schema):

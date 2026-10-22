@@ -9,7 +9,7 @@ import { newComment } from './new-comment';
 import type { Review } from '$lib/review/review.svelte';
 import { leavePage, openReview } from './review';
 import { DRAFT_KEY } from './stored-draft';
-import { chatPush } from './pushes';
+import { chatPush, handOverNext } from './pushes';
 
 let review: Review;
 
@@ -42,6 +42,15 @@ describe('an unsent review', () => {
 		expect(review.threads.reading.isFolded(folded)).toBe(true);
 		expect(review.threads.reading.isUnread(unread)).toBe(true);
 		expect(review.threads.reading.awaiting(asked).map((question) => question.id)).toEqual([asked]);
+	});
+
+	it('comes back knowing what the agent has of each thread', () => {
+		const id = review.threads.add(newComment({ body: 'handed over' }));
+		handOverNext(review, { type: 'handed', thread_id: id, said: [id] });
+
+		reload();
+
+		expect(review.threads.handing.has(id, id)).toBe(true);
 	});
 
 	it('hands out ids past those said before the reload, so an answer or a note has an id of its own', () => {

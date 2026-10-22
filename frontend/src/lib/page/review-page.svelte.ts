@@ -77,7 +77,7 @@ export class ReviewPage {
 		try {
 			await this.#settings.load();
 			const facts = await readReview();
-			const [firstDiff, { threads: held }, { said }, { held: story }] = await Promise.all([
+			const [firstDiff, held, { said }, { held: story }] = await Promise.all([
 				takeDiff({ ignoreWhitespace: this.#settings.current.ignore_whitespace, base: null }),
 				readHeldThreads(),
 				readConversation(),

@@ -14,7 +14,14 @@ from httpx import AsyncClient
 
 from claude_review.domain.models import CommentSeverity, TurnAuthor
 from claude_review.presentation.schemas.agent import ProgressStep
-from claude_review.presentation.schemas.pushes import ChatPush, PointPush, ProgressPush, ShowPush, StatusPush
+from claude_review.presentation.schemas.pushes import (
+    ChatPush,
+    HandedPush,
+    PointPush,
+    ProgressPush,
+    ShowPush,
+    StatusPush,
+)
 from tests.helpers import (
     CATCH_UP_ROUTE,
     CONVERSATION_ROUTE,
@@ -93,6 +100,14 @@ async def test_a_message_carries_the_threads_it_points_at(client: AsyncClient) -
     assert thread["thread_id"] == "comment-1"
     assert thread["anchor"]["quote"] == ["    return now - self.started_at > timeout"]
     assert thread["turns"][0]["body"] == "It moved to the caller."
+
+
+def test_every_page_hears_what_the_agent_was_handed_of_a_thread_a_message_points_at(review_page: TestClient) -> None:
+    """Carried with the message, the thread is the agent's to read as it was: its opening and the answer under it."""
+    with open_session(review_page) as socket:
+        review_page.post("/api/message", json={**MESSAGE, "threads": [THREAD]})
+
+        assert next_push(socket, HandedPush) == HandedPush(thread_id=FIRST_THREAD_ID, said=[FIRST_THREAD_ID, "turn-1"])
 
 
 async def test_a_message_pointing_at_a_thread_quoting_fewer_lines_than_it_names_is_refused(

@@ -78,8 +78,8 @@ class UnknownThreadError(NotFoundError):
     """Raised when a thread is named that the review does not hold."""
 
 
-class AgentWordsChangedError(RefusedError):
-    """Raised when a thread the agent raised comes back no longer opening as the agent raised it."""
+class HandedWordsChangedError(ConflictError):
+    """Raised when a thread comes back changed in what the agent has of it: what it raised, or was handed, stays."""
 
 
 class ReviewEndedError(ConflictError):

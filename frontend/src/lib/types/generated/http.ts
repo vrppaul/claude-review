@@ -38,7 +38,8 @@ export interface paths {
          *     Another browser, a private window, cleared site data: the page has none
          *     of the reader's threads, nor the agent's. It takes these as its own
          *     rather than saying it holds none — which would leave an agent arriving
-         *     later with nothing to read. Read-only: no page is told what another
+         *     later with nothing to read — and what the agent has of each, which it
+         *     offers no more to rewrite. Read-only: no page is told what another
          *     holds once it is open.
          */
         get: operations["held_threads_api_threads_get"];
@@ -2151,12 +2152,18 @@ export interface components {
          * ThreadsResponse
          * @description Response for GET /api/threads — the threads the review holds, for a page that opens with no draft of its own.
          *
-         *     As a page last said them, and the agent's own however a page left them.
-         *     Read once, as the page opens: from then on the page says what it holds.
+         *     As a page last said them, and the agent's own however a page left them;
+         *     and what the agent has of each, which the page offers no more to
+         *     rewrite. Read once, as the page opens: from then on the page says what it
+         *     holds, and the pushes what the agent is handed.
          */
         ThreadsResponse: {
             /** Threads */
             threads: components["schemas"]["ThreadDraft-Output"][];
+            /** Handed */
+            handed: {
+                [key: string]: string[];
+            };
         };
         /** TimeoutEvent */
         TimeoutEvent: {
@@ -2761,6 +2768,15 @@ export interface operations {
                     "application/json": components["schemas"]["Refusal"];
                 };
             };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Refusal"];
+                };
+            };
             /** @description Content Too Large */
             413: {
                 headers: {
@@ -2812,6 +2828,15 @@ export interface operations {
             };
             /** @description Forbidden */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Refusal"];
+                };
+            };
+            /** @description Conflict */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

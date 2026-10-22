@@ -23,14 +23,14 @@ import type { HeardPush } from '$lib/review/telling.svelte';
 import type { DiffPush, PointPush, ServerPush, TellingPosition } from '$lib/types';
 
 /** A push that says something of the review's facts, which the draft does not keep. */
-type FactPush = Exclude<ServerPush, { type: 'reply' | 'chat' | 'point' | 'diff' | 'story' | 'ended' }>;
+type FactPush = Exclude<ServerPush, { type: 'reply' | 'handed' | 'chat' | 'point' | 'diff' | 'story' | 'ended' }>;
 
 /**
  * Take in what the server said while the review is open.
  *
- * What a push does to the draft — an answer, a raised thread or a note
- * added, what was read of a story told again forgotten and the threads
- * moved onto it — is always done.
+ * What a push does to the draft — an answer, what the agent has of a
+ * thread, a raised thread or a note added, what was read of a story told
+ * again forgotten and the threads moved onto it — is always done.
  * What it says of the review's facts — its agent, its round, its diff, its
  * story — is taken in only when the facts the page read do not hold it
  * already: a page opening from a draft is handed what was said since the
@@ -40,6 +40,9 @@ function handlePush(review: Review, push: ServerPush, heard: HeardPush): void {
 	switch (push.type) {
 		case 'reply':
 			if (review.threads.receiveReply(push.thread_id, push.body, push.question_id)) review.sound.announce();
+			return;
+		case 'handed':
+			review.threads.handing.handedOver({ [push.thread_id]: push.said });
 			return;
 		case 'chat':
 			// Read from the review as the page opened, the words are in the panel already

@@ -17,6 +17,7 @@ import type { ServerPush, SessionMessage } from '$lib/types';
  */
 const PUSH_KINDS: Record<ServerPush['type'], true> = {
 	reply: true,
+	handed: true,
 	answerer: true,
 	chat: true,
 	progress: true,

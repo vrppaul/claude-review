@@ -33,6 +33,14 @@ class ThreadAnswered(PageEventBase):
     body: str
 
 
+class ThreadHandedOver(PageEventBase):
+    """A thread was handed to the agent: what of it the agent now has, which stays as the agent has it."""
+
+    thread_id: str
+    # Everything said in it, by id: its opening by the thread's own id, as a question names it, and each turn by its own
+    said: list[str]
+
+
 class AnswererChanged(PageEventBase):
     """Whether anything is there to answer the review."""
 
@@ -131,6 +139,7 @@ class ReviewEnded(PageEventBase):
 # Everything the review tells its pages
 type PageEvent = (
     ThreadAnswered
+    | ThreadHandedOver
     | AnswererChanged
     | AgentSaid
     | WorkReported

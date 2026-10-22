@@ -14,11 +14,12 @@ import pytest
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
 
-from claude_review.presentation.schemas.pushes import AnswererPush, DiffPush
+from claude_review.presentation.schemas.pushes import AnswererPush, DiffPush, HandedPush
 from claude_review.services.review_opening import ReviewOpening
 from tests.helpers import (
     DIFF_ROUTE,
     EVENTS_ROUTE,
+    FIRST_THREAD_ID,
     GLANCE_AT_EVENTS,
     LOCAL_HEADERS,
     REVIEW_ROUTE,
@@ -79,6 +80,14 @@ async def test_the_answerer_is_handed_the_round(client: AsyncClient) -> None:
     assert event["type"] == "round"
     assert event["round"]["number"] == 1
     assert "Still reads oddly." in event["round"]["markdown"]
+
+
+def test_every_page_hears_what_a_round_handed_the_agent(review_page: TestClient) -> None:
+    """The comment went with the round: it is the agent's to read as it was sent, and the reader's no longer."""
+    with open_session(review_page) as socket:
+        review_page.post("/api/submit", json={"threads": [A_THREAD], "end": False})
+
+        assert next_push(socket, HandedPush) == HandedPush(thread_id=FIRST_THREAD_ID, said=[FIRST_THREAD_ID])
 
 
 async def test_a_later_round_says_which_round_it_is(client: AsyncClient) -> None:

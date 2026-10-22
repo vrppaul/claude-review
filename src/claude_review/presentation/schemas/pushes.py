@@ -16,6 +16,7 @@ class PushKind(StrEnum):
     """What the server pushes down the session socket, as the `type` the browser reads.
 
     REPLY — an answer in a thread.
+    HANDED — what the agent now has of a thread, which stays as it has it.
     ANSWERER — whether anything is waiting to answer.
     CHAT — the agent speaking in the panel.
     PROGRESS — what the agent is doing right now.
@@ -31,6 +32,7 @@ class PushKind(StrEnum):
     """
 
     REPLY = auto()
+    HANDED = auto()
     ANSWERER = auto()
     CHAT = auto()
     PROGRESS = auto()
@@ -58,6 +60,15 @@ class ReplyPush(Push):
     thread_id: str
     question_id: str | None
     body: str
+
+
+class HandedPush(Push):
+    """A thread was handed to the agent: what of it the agent now has, which the reader rewrites no longer."""
+
+    type: Literal[PushKind.HANDED] = PushKind.HANDED
+    thread_id: str
+    # Everything said in it, by id: its opening by the thread's own id, and each turn by its own
+    said: list[str]
 
 
 class AnswererPush(Push):
@@ -169,6 +180,7 @@ class EndedPush(Push):
 # What the server pushes down the session socket, told apart by `type`
 type ServerPush = Annotated[
     ReplyPush
+    | HandedPush
     | AnswererPush
     | ChatPush
     | ProgressPush

@@ -185,6 +185,21 @@ export interface components {
             finished: boolean;
         };
         /**
+         * HandedPush
+         * @description A thread was handed to the agent: what of it the agent now has, which the reader rewrites no longer.
+         */
+        HandedPush: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "handed";
+            /** Thread Id */
+            thread_id: string;
+            /** Said */
+            said: string[];
+        };
+        /**
          * ItemBlock
          * @description One thing a list of the overview holds, by where it stands in the list, counted from 0.
          */
@@ -427,7 +442,7 @@ export interface components {
             /** Number */
             number: number;
         };
-        ServerPush: components["schemas"]["ReplyPush"] | components["schemas"]["AnswererPush"] | components["schemas"]["ChatPush"] | components["schemas"]["ProgressPush"] | components["schemas"]["ShowPush"] | components["schemas"]["StatusPush"] | components["schemas"]["PointPush"] | components["schemas"]["ChangedPush"] | components["schemas"]["RoundPush"] | components["schemas"]["DiffPush"] | components["schemas"]["StoryPush"] | components["schemas"]["StoryAskingPush"] | components["schemas"]["EndedPush"];
+        ServerPush: components["schemas"]["ReplyPush"] | components["schemas"]["HandedPush"] | components["schemas"]["AnswererPush"] | components["schemas"]["ChatPush"] | components["schemas"]["ProgressPush"] | components["schemas"]["ShowPush"] | components["schemas"]["StatusPush"] | components["schemas"]["PointPush"] | components["schemas"]["ChangedPush"] | components["schemas"]["RoundPush"] | components["schemas"]["DiffPush"] | components["schemas"]["StoryPush"] | components["schemas"]["StoryAskingPush"] | components["schemas"]["EndedPush"];
         /**
          * SessionHello
          * @description What the browser says on connecting, and whenever its threads change.
