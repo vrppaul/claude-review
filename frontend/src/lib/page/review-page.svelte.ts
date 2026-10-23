@@ -68,8 +68,8 @@ export class ReviewPage {
 	 * review is open, the socket goes on from where its draft or its facts
 	 * left the telling, so whatever was said meanwhile is handed over rather
 	 * than missed, and the threads its draft brought back follow onto the
-	 * diff it opened on. Where the reader turned stories on, the review asked
-	 * for a story itself as it opened, and the facts say so.
+	 * diff it opened on. Where the reader has each review's story written as
+	 * it opens, the review asked for one itself, and the facts say so.
 	 */
 	async open(): Promise<void> {
 		this.#theme.start();

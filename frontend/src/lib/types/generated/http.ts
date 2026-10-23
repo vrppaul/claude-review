@@ -673,7 +673,7 @@ export interface paths {
         get: operations["reader_settings_api_settings_get"];
         /**
          * Change Reader Settings
-         * @description Keep a choice the reader made, for this review and every later one; stories turned on or off ask or stop here.
+         * @description Keep a choice the reader made, for this review and every later one: a review reads it where it decides.
          */
         put: operations["change_reader_settings_api_settings_put"];
         post?: never;
@@ -1532,8 +1532,7 @@ export interface components {
             ignore_whitespace: boolean;
             /** Sound On Replies */
             sound_on_replies: boolean;
-            /** Stories */
-            stories: boolean;
+            story_writing: components["schemas"]["StoryWriting"];
         };
         /**
          * ReasonBlock
@@ -1768,8 +1767,7 @@ export interface components {
             ignore_whitespace?: boolean | null;
             /** Sound On Replies */
             sound_on_replies?: boolean | null;
-            /** Stories */
-            stories?: boolean | null;
+            story_writing?: components["schemas"]["StoryWriting"] | null;
         };
         /**
          * ShowRequest
@@ -2016,6 +2014,15 @@ export interface components {
             /** Left Out */
             left_out: number;
         };
+        /**
+         * StoryWriting
+         * @description When a review's story is written: each story spends the agent's tokens, so it is the reader who says.
+         *
+         *     Asked first each time Story is pressed; at once when it is pressed; or
+         *     as each review opens, so the story is ready by the time it is read.
+         * @enum {string}
+         */
+        StoryWriting: "ask_first" | "without_asking" | "as_the_review_opens";
         /**
          * SubmitRequest
          * @description Request body for POST /api/submit.

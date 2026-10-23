@@ -20,7 +20,10 @@
  * a segment of a track, a fold, a box around a checkbox. Not while it
  * cannot be pressed; and of no weight, so a rule that says otherwise wins.
  */
-:where(button, summary, [role='button'], label:has(input[type='checkbox'])):not(:disabled, [aria-disabled='true']) {
+:where(button, summary, [role='button'], label:has(input[type='checkbox']:not(:disabled))):not(
+	:disabled,
+	[aria-disabled='true']
+) {
 	cursor: pointer;
 }
 
@@ -509,6 +512,8 @@
 	color: var(--cr-faint);
 	font-size: var(--text-xs);
 	line-height: var(--text-xs--line-height);
+	/* A setting locked and opened steps its note back and forth with its words (below) */
+	transition: color var(--cr-state-change) ease;
 }
 /*
  * A box ticked or not (Checkbox drawn as a box), as the Main board draws it:
@@ -546,7 +551,7 @@
  * Under the pointer, on its words as on it, since a press on either ticks it:
  * lit as any pressable thing is, but for a box ticked, chosen and so unlit
  */
-.cr-ui-setting:hover .cr-ui-checkbox-box:not(:checked) {
+.cr-ui-setting:hover .cr-ui-checkbox-box:not(:checked, :disabled) {
 	background-image: linear-gradient(var(--cr-hover), var(--cr-hover));
 }
 .cr-ui-checkbox-check {
@@ -560,6 +565,63 @@
 }
 .cr-ui-checkbox-box:checked + .cr-ui-checkbox-check {
 	transform: scale(1);
+}
+/*
+ * A setting that hangs on the one above it (Checkbox `hangs`), as board
+ * StoryWriting draws it: a branch of a tree off that setting, a line from
+ * under its words, rounded at its turn, into this one's, in the colour and
+ * width of the line that joins a conversation's turns, across the settings'
+ * gap above it (--cr-settings-gap, which whatever stacks them stands them
+ * apart by); its words a step in, past room kept for a padlock, so locking
+ * it moves no word
+ */
+.cr-ui-setting-hanging {
+	position: relative;
+	padding-inline-start: --spacing(8);
+	transition: color var(--cr-state-change) ease;
+}
+.cr-ui-setting-hanging::before {
+	content: '';
+	position: absolute;
+	inset-block-start: calc(var(--cr-settings-gap) * -1);
+	inset-inline-start: --spacing(1.5);
+	width: --spacing(6);
+	height: calc(var(--cr-settings-gap) + var(--cr-setting-branch-meets));
+	border-inline-start: var(--cr-line) solid var(--cr-axis);
+	border-block-end: var(--cr-line) solid var(--cr-axis);
+	border-end-start-radius: --spacing(1.5);
+	transition: width var(--cr-state-change) ease-out;
+}
+/* Where the branch ends while the setting is locked, centred on its first line as the branch meets it */
+.cr-ui-setting-lock {
+	position: absolute;
+	inset-block-start: calc(var(--cr-setting-branch-meets) - var(--text-xs) / 2);
+	inset-inline-start: --spacing(4);
+	display: flex;
+	color: var(--cr-faint);
+	opacity: 0;
+	transition: opacity var(--cr-state-change) ease;
+}
+/*
+ * Locked while the setting it hangs on is off: its branch ends on the
+ * padlock; it is off, unticked, its words and note at the ink's border
+ * strength, fainter than any note, so it is told from what explains a
+ * setting, and its box on the column's ground. Opening, the padlock fades
+ * as the branch grows on into the words and they come on, over a change of
+ * state, but for a reader who asked for less motion (less-motion.css)
+ */
+.cr-ui-setting-locked::before {
+	width: --spacing(2);
+}
+.cr-ui-setting-locked .cr-ui-setting-lock {
+	opacity: 1;
+}
+.cr-ui-setting-locked,
+.cr-ui-setting-locked .cr-ui-setting-note {
+	color: var(--cr-ink-border);
+}
+.cr-ui-checkbox-box:disabled {
+	background-color: var(--color-base-200);
 }
 /*
  * A choice drawn as a chip (Checkbox drawn as one), the whole of which is the

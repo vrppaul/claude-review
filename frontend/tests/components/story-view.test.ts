@@ -173,6 +173,33 @@ describe('a review read as its story', () => {
 		expect(said(screen.getByTestId('story-round'))).toBe('round 1 the code moved on in round 2');
 	});
 
+	it('says under its round that the agent writes it again, and stops that at a press, the keyboard on its head', async () => {
+		const server = fakeServer();
+		server.answer('POST /api/story/cancel', null);
+		server.answer('PUT /api/guide', { seen_release: null, story_introduced: true });
+		review = openReview({ files, story: storyHeld(TOLD.story, { moved_on: codeMovedOn() }), asking: TAKEN });
+		review.views.choose('story');
+		render(ReviewScreen, { props: { review } });
+		const user = userEvent.setup();
+
+		expect(said(screen.getByTestId('story-written-again'))).toBe('The agent is writing it again Stop writing');
+		await user.click(screen.getByTestId('stop-writing-again'));
+		review.story.learnAsking({ ...TAKEN, stopped: true });
+		await settled();
+
+		expect(server.requestsTo('POST /api/story/cancel')).toHaveLength(1);
+		expect(screen.queryByTestId('story-written-again')).toBeNull();
+		expect(document.activeElement).toBe(screen.getAllByTestId('part-head')[0]);
+	});
+
+	it('says nothing is written again under the round of a story whose code is current, though one is asked for', () => {
+		review = openReview({ files, story: TOLD, asking: TAKEN });
+		review.views.choose('story');
+		render(ReviewScreen, { props: { review } });
+
+		expect(screen.queryByTestId('story-written-again')).toBeNull();
+	});
+
 	it('says what was asked and what was done, and nothing to doubt where the agent named nothing', () => {
 		render(ReviewScreen, { props: { review } });
 

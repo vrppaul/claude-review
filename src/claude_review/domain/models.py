@@ -1016,6 +1016,18 @@ class DiffLayout(StrEnum):
     SPLIT = auto()
 
 
+class StoryWriting(StrEnum):
+    """When a review's story is written: each story spends the agent's tokens, so it is the reader who says.
+
+    Asked first each time Story is pressed; at once when it is pressed; or
+    as each review opens, so the story is ready by the time it is read.
+    """
+
+    ASK_FIRST = auto()
+    WITHOUT_ASKING = auto()
+    AS_THE_REVIEW_OPENS = auto()
+
+
 class ReaderSettings(BaseModel):
     """How this reader reads a review, the same in every review on the machine.
 
@@ -1028,9 +1040,7 @@ class ReaderSettings(BaseModel):
     ignore_whitespace: bool = False
     # A tick when an answer arrives while the review is in a background tab
     sound_on_replies: bool = False
-    # Ask the agent for a story of every change reviewed: each story spends
-    # the agent's tokens, so it is the reader who turns them on
-    stories: bool = False
+    story_writing: StoryWriting = StoryWriting.ASK_FIRST
 
 
 class GuideState(BaseModel):

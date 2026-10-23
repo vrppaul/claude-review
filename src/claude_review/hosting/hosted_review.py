@@ -44,8 +44,8 @@ def host_review(
     but what was read, for files or a conversation. One broadcast is made
     with it and handed to both: to the review, as the channel it tells its
     pages through, and to the app, which serves those pages. So are the
-    reader's settings: the app reads them, and the review acts on whether
-    stories are on.
+    reader's settings: the app reads and changes them, and the review reads
+    as it opens whether its story is written then.
     """
     broadcast = BrowserBroadcast(backlog=PAGE_BACKLOG, identity=opening.identity_digest)
     records = _reader_records(reader_files)

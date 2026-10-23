@@ -11,13 +11,16 @@ was told of was written down as to the later take's. Its pieces are cut
 out of one take of the change, so it says which: a page that read the diff
 of a later take can tell that they are not yet of the code it shows.
 
-A story is asked for by the reader, or by the review itself where the
-reader wants stories. That asking is kept here, beside the story that ends
-it: when it was asked, when an agent took the request, whether the reader
-stopped it. A story is asked for only while no story held is current —
-none is held, or a round moved the code on under it — and none is awaited,
-so however many pages are open, and however often, the review is asked
-once.
+A story is asked for by the reader, or by the review itself as it opens
+where the reader has every review's story written so. Once asked for, the
+review wants its story kept told: a round that moves the code on under it
+asks for it again, until the reader stops it. One an agent told unasked
+is not asked for again: nobody chose to spend the tokens. That asking is
+kept here, beside the story that ends it: when it was asked, when an agent
+took the request, whether the reader stopped it. A story is asked for only
+while no story held is current — none is held, or a round moved the code
+on under it — and none is awaited, so however many pages are open, and
+however often, the review is asked once.
 """
 
 import asyncio
@@ -68,15 +71,14 @@ class _StoryKept(BaseModel):
 class ReviewStory(StandingRequest):
     """The story told of the review's change, the last told in place of any before, and the asking for one until then.
 
-    The one owner of a story being wanted. It asks for one itself where the
-    reader wants stories, one can be told of this review, and none is held
-    current, asked for or stopped by the reader: as the review opens, once
-    a retake leaves the story held stale, and when stories are turned on.
-    Whether they are on is the reader's setting, kept for every review on
-    the machine: it is handed in at each of those moments, never kept here,
-    so a change made in another review is acted on at this review's next
-    one. An agent's wait claims the asking (`claim`); nothing of it waits in
-    the agent's inbox, which keeps only what someone said.
+    The one owner of a story being wanted. The review wants its story from
+    the moment the reader asks for it, or from its opening where the reader
+    has every review's story written as it opens, which the review is told
+    as it opens; until the reader stops it. While wanted, it is asked for
+    wherever one can be told of this review and none is held current or
+    awaited: then, and once a retake leaves the story held stale. An agent's
+    wait claims the asking (`claim`); nothing of it waits in the agent's
+    inbox, which keeps only what someone said.
 
     What changes the asking — it is asked, an agent takes it, the reader
     stops it — answers with the asking as it then stands, or with None
@@ -84,7 +86,7 @@ class ReviewStory(StandingRequest):
 
     Whether a story can be told of this review at all is its own to say
     (`takes_a_story`): where none can, a story told and the reader's asking
-    for one are refused, and stories turned on ask for none.
+    for one are refused, and its opening asks for none.
     """
 
     def __init__(self, clock: Clock, takes: TakesCompared, *, takes_a_story: bool) -> None:
@@ -97,6 +99,9 @@ class ReviewStory(StandingRequest):
         self._kept: _StoryKept | None = None
         # From the asking until a story is told; None while nothing is asked
         self._asking: StoryAsking | None = None
+        # Whether the review wants its story kept told: from the reader's asking, or its opening where the reader
+        # has every review's story written so, until the reader stops it
+        self._wanted = False
         # Set while the asking waits for an agent to take it: what wakes an agent's wait
         self._due = asyncio.Event()
         # Stories that arrive together are told one after another, as they
@@ -125,27 +130,19 @@ class ReviewStory(StandingRequest):
         return self._due
 
     def ask(self) -> StoryAsking | None:
-        """The reader asking for a story: begun now, unless the story held is current or one is still awaited.
+        """The reader asking for a story: wanted from now, begun now unless the story held is current or awaited.
 
         Raises:
             NoRepositoryError: if no story can be told of this review: files read once, or a conversation.
         """
         self._require_a_change()
+        self._wanted = True
         return self._begun()
 
-    def want(self, *, stories_on: bool) -> StoryAsking | None:
-        """Ask for a story where the reader wants stories and none is asked: never over one the reader stopped.
-
-        They stopped it to keep the agent's tokens: only turning stories on
-        again asks once more.
-        """
-        if not stories_on or self._asking is not None:
-            return None
-        return self._begun()
-
-    def stories_turned(self, *, on: bool) -> StoryAsking | None:
-        """The reader turned stories on or off: on asks for this review's story, off stops one awaited."""
-        return self._begun() if on else self.stop()
+    def open(self, *, writes_as_it_opens: bool) -> StoryAsking | None:
+        """The review opening: its story wanted, and asked for, where the reader has it written as each review opens."""
+        self._wanted = writes_as_it_opens
+        return self._asked_where_wanted()
 
     @override
     def claim(self) -> StoryRequested | None:
@@ -160,10 +157,15 @@ class ReviewStory(StandingRequest):
         return StoryRequested(stale=self.went_stale())
 
     def stop(self) -> StoryAsking | None:
-        """Note that the reader stopped the story awaited: one told after all is still taken."""
+        """Note that the reader stopped the story awaited, and wants it no more: one told after all is still taken.
+
+        They stopped it to keep the agent's tokens: no retake asks for it
+        again, only their asking once more.
+        """
         awaited = self._awaited
         if awaited is None:
             return None
+        self._wanted = False
         return self._noted(awaited.stopped_by_the_reader())
 
     async def tell(self, story: Story[Step], change: ReviewContent, *, round_number: int) -> StoryHeld:
@@ -187,19 +189,19 @@ class ReviewStory(StandingRequest):
             self._noted(None)
             return held
 
-    async def follow(self, change: ReviewContent, *, round_number: int, stories_on: bool) -> StoryAsking | None:
+    async def follow(self, change: ReviewContent, *, round_number: int) -> StoryAsking | None:
         """Follow the story told onto a later take of the change, taken again in this round, and ask for one if due.
 
         Off the event loop and in turn with tellings, as a story is told: a
         story told while the diff was taken again is followed once it is held,
-        compared from the very take it was told of. Whether a story is then
-        wanted is asked after that, so a story that arrived during the retake
-        and ended the asking is asked for again if the retake left it stale.
-        Answers with the asking begun, or None.
+        compared from the very take it was told of. A story wanted is asked
+        for after that, so a story that arrived during the retake and ended
+        the asking is asked for again if the retake left it stale. Answers
+        with the asking begun, or None.
         """
         async with self._telling:
             await self._followed(change, round_number=round_number)
-            return self.want(stories_on=stories_on)
+            return self._asked_where_wanted()
 
     async def _followed(self, change: ReviewContent, *, round_number: int) -> None:
         """Follow the story told, if any, onto a later take of the change, taken again in this round."""
@@ -253,13 +255,17 @@ class ReviewStory(StandingRequest):
         if not self._takes_a_story:
             raise NoRepositoryError(NO_CHANGE_TO_TELL)
 
+    def _asked_where_wanted(self) -> StoryAsking | None:
+        """Ask for the story where the review wants it: begun as `_begun` begins it, or None where it is not wanted."""
+        return self._begun() if self._wanted else None
+
     def _begun(self) -> StoryAsking | None:
         """Begin asking for a story, now, where one can be told and no story held is current or awaited.
 
-        What the reader asking does, the review wanting one, and turning
-        stories on. A story held is current until a round moves the code on
-        under it: then it is asked for again, to be told of the code as it
-        stands. Asked again after the reader stopped it, the asking begins anew.
+        What the reader asking does, and the review wanting one. A story held
+        is current until a round moves the code on under it: then it is asked
+        for again, to be told of the code as it stands. Asked again after the
+        reader stopped it, the asking begins anew.
         """
         if not self._takes_a_story or self._is_current or self._awaited is not None:
             return None

@@ -20,7 +20,7 @@ import {
 import { fakeServer, SERVER_ERROR, takingStoryAskings, type FakeServer } from './fake-server';
 import { THIS_RUN } from './fake-socket';
 import { newComment, storyComment } from './new-comment';
-import { inReview, openReview, settingsWithStoriesOn } from './review';
+import { inReview, openReview, settingsWritingStories } from './review';
 import { chatPush, handedOf, handedPush, handOverNext, pushedAt } from './pushes';
 import { settled } from './settled';
 import { ASKED, codeMovedOn, readTheStoryAgain, STOPPED, storyHeld, storyResponse, TAKEN } from './story';
@@ -397,31 +397,6 @@ describe('what the server pushes, taken in', () => {
 			expect(review.story.arrival).toBe('none');
 		});
 	});
-
-	describe('with a story held that the retake leaves moved on', () => {
-		// The story the review followed onto the diff taken again, a round having moved the code on under it
-		const MOVED_ON = storyHeld({}, { take: A_LATER_TAKE, moved_on: codeMovedOn() });
-
-		/** A server a retake lands from, holding that story, and taking a story asked for. */
-		function retakingUnderAStoryThatMovedOn(): FakeServer {
-			const server = takingStoryAskings();
-			server.answer('POST /api/anchors/follow', { anchors: [] });
-			server.answer('GET /api/diff', diffResponse({ files: [untouched('a.py')], take: A_LATER_TAKE }));
-			server.answer('GET /api/story', storyResponse({ held: MOVED_ON }));
-			return server;
-		}
-
-		it('asks for no story told again, though the reader turned stories on: the review asked as it retook', async () => {
-			const server = retakingUnderAStoryThatMovedOn();
-			const settings = await settingsWithStoriesOn(server);
-			review = openReview({ files: [untouched('a.py')], story: storyHeld(), settings });
-
-			handOverNext(review, { type: 'diff', file_count: 1, changes: null });
-			await settled();
-
-			expect(server.requestsTo('POST /api/story/request')).toEqual([]);
-		});
-	});
 });
 
 // Where the telling goes on after what could not be handed over
@@ -494,15 +469,6 @@ describe('catching up on what the server could not hand over again', () => {
 		takePush(review, { type: 'story_asking', asking: TAKEN }, pushedAt(1));
 
 		expect(review.story.wait).toEqual({ kind: 'stopped' });
-	});
-
-	it('asks for no story after a gap, though stories are on: a review started again asked for one itself', async () => {
-		const server = takingStoryAskings(caughtUpFrom());
-		review = openReview({ settings: await settingsWithStoriesOn(server), asking: TAKEN });
-
-		await catchUp(review, GOES_ON_FROM);
-
-		expect(server.requestsTo('POST /api/story/request')).toEqual([]);
 	});
 
 	it('says what catching up did, and apart from it that the story could not be read, when the story alone fails', async () => {

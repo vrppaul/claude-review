@@ -28,6 +28,8 @@ export type ReviewMode = WhereTheChangeIs['kind'];
 export type DiffLayout = Schemas['DiffLayout'];
 /** How the review is coloured: as the system says, or always light or dark. */
 export type Theme = Schemas['Theme'];
+/** When a review's story is written: asked first, at once at a press on Story, or as each review opens. */
+export type StoryWriting = Schemas['StoryWriting'];
 
 /** How this reader reads a review, kept by the server for every review. */
 export type ReaderSettings = Schemas['ReaderSettings'];

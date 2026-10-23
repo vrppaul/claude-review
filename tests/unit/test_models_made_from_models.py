@@ -25,6 +25,7 @@ from claude_review.domain.models import (
     ReaderSettings,
     SaidAsHanded,
     SaidInPanel,
+    StoryWriting,
     Theme,
     ThreadAsHanded,
     ThreadDraft,
@@ -113,7 +114,11 @@ CHAPTER = Chapter[Step](
 STORY = canvas_story()
 # How a reader reads, with nothing left as a new reader gets it, and how far they were shown around
 SETTINGS = ReaderSettings(
-    theme=Theme.DARK, diff_layout=DiffLayout.SPLIT, ignore_whitespace=True, sound_on_replies=True, stories=True
+    theme=Theme.DARK,
+    diff_layout=DiffLayout.SPLIT,
+    ignore_whitespace=True,
+    sound_on_replies=True,
+    story_writing=StoryWriting.AS_THE_REVIEW_OPENS,
 )
 GUIDE = GuideState(seen_release="1.5.0", story_introduced=True)
 # A field the review refused, named under the part of the request it came in

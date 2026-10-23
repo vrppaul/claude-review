@@ -62,11 +62,11 @@
 	});
 
 	/**
-	 * The question before stories are turned on is closed. The browser gives the keyboard back to what held it
-	 * as it was asked; where that is gone — the news card's Try Story — Story, which the question was about, takes it.
+	 * The question before a story is written is closed. The browser gives the keyboard back to what held it as it
+	 * was asked; where that is gone — the news card's Try Story — Story, which the question was about, takes it.
 	 */
 	function stopAsking() {
-		review.wayIntoStory.stopAskingToTurnStoriesOn();
+		review.wayIntoStory.stopAskingBeforeWriting();
 		focusWhatRemains(() => buttons.story);
 	}
 </script>
@@ -123,7 +123,10 @@
 			/>
 		{/if}
 	</div>
-	{#if review.wayIntoStory.askingToTurnStoriesOn}
-		<StoryOptIn onTurnOn={() => review.wayIntoStory.turnStoriesOnAndRead()} onClose={stopAsking} />
+	{#if review.wayIntoStory.askingBeforeWriting}
+		<StoryOptIn
+			onWrite={(withoutAskingFromNowOn: boolean) => review.wayIntoStory.writeAndRead(withoutAskingFromNowOn)}
+			onClose={stopAsking}
+		/>
 	{/if}
 {/if}

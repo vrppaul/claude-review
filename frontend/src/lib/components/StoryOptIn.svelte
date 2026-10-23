@@ -4,6 +4,7 @@
 	import Actions from '$lib/ui/Actions.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import Callout from '$lib/ui/Callout.svelte';
+	import Checkbox from '$lib/ui/Checkbox.svelte';
 	import Dialog from '$lib/ui/Dialog.svelte';
 	import type { Closing } from '$lib/ui/dialog-closing';
 	import Icon from '$lib/ui/Icon.svelte';
@@ -11,24 +12,32 @@
 	import StorySketch from './StorySketch.svelte';
 
 	interface Props {
-		/** What turning stories on does, once the dialog has closed and given the keyboard back. */
-		onTurnOn: () => void;
+		/**
+		 * What writing the story does, once the dialog has closed and given the keyboard back: with whether every
+		 * later story is to be written without asking.
+		 */
+		onWrite: (withoutAskingFromNowOn: boolean) => void;
 		/** Called once it closes, either way, for whoever drew it to stop drawing it. */
 		onClose: () => void;
 	}
 
 	// What the dialog asks, as it says it and is named by
-	const QUESTION = 'Turn on stories?';
+	const QUESTION = 'Write a story of this change?';
 	// What a story costs, said first
 	const SPENDS_TOKENS = "It spends the agent's tokens.";
+	// Where the choice to be asked no more is kept, and turned back
+	const KEPT_IN_SETTINGS = 'In every review from now on. Settings, the gear in the header, turns it off.';
 
-	let { onTurnOn, onClose }: Props = $props();
+	let { onWrite, onClose }: Props = $props();
 	const review = useReview();
+	// Whether the reader ticked to have every later story written without asking: theirs until they answer
+	let withoutAskingFromNowOn = $state(false);
 </script>
 
-<!-- Asked before the first story is written: a story spends the agent's tokens, so whether to have them is
-	the reader's to say, knowing what this review would cost. The way on comes last, as every row of acts
-	ends, and takes the keyboard as the question opens; Escape and a press outside are "Not now" -->
+<!-- Asked before a story is written: a story spends the agent's tokens, so whether to have one is the reader's
+	to say, knowing what this review would cost; under the cost, the setting that asks them no more, as Settings
+	names it. The way on comes last, as every row of acts ends, and takes the keyboard as the question opens;
+	Escape and a press outside are "Not now" -->
 <Dialog label={QUESTION} width="wide" testId="story-opt-in" {onClose}>
 	{#snippet children({ close, closeThen }: Closing)}
 		<div class="flex flex-col gap-3 p-4 text-sm">
@@ -47,17 +56,29 @@
 				The agent reads the whole diff again and writes the story: here up to
 				<b>{formatWeight(review.weight)}</b> to read and a few thousand to write. Bigger changes cost more.
 			</Callout>
-			<p class="cr-muted text-xs">
-				Stories stay on for every review on this machine. Turn them off in Settings, the gear in the header.
-			</p>
+			<Checkbox
+				drawn="box"
+				note={KEPT_IN_SETTINGS}
+				checked={withoutAskingFromNowOn}
+				testId="write-without-asking-from-now-on"
+				onToggle={(checked: boolean) => (withoutAskingFromNowOn = checked)}
+			>
+				Write stories without asking
+			</Checkbox>
 			<Actions testId="story-opt-in-actions">
 				{#snippet others()}
 					<Button tone="quiet" size="sm" testId="stories-not-now" onclick={close}>Not now</Button>
 				{/snippet}
 				{#snippet main()}
 					<!-- The control a modal gives the keyboard to as it opens, by the browser's own word for it -->
-					<Button autofocus tone="primary" size="sm" testId="turn-on-stories" onclick={() => closeThen(onTurnOn)}>
-						Turn on stories
+					<Button
+						autofocus
+						tone="primary"
+						size="sm"
+						testId="write-story"
+						onclick={() => closeThen(() => onWrite(withoutAskingFromNowOn))}
+					>
+						Write the story
 					</Button>
 				{/snippet}
 			</Actions>

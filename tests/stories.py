@@ -449,9 +449,9 @@ class TakesComparedByTheirLines(TakesCompared):
 
 # What a story that is never followed onto a take is built with: no take to compare
 NO_TAKES = TakesComparedByTheirLines({})
-# Whether the reader wants a story of every change: they turned stories on, or left them off
-STORIES_ON = True
-STORIES_OFF = False
+# Whether the reader has every review's story written as the review opens, or waits to ask for one
+WRITTEN_AS_IT_OPENS = True
+NOT_AS_IT_OPENS = False
 
 
 async def told_then_followed(*takes: list[DiffFile]) -> ReviewStory:
@@ -465,7 +465,7 @@ async def told_then_followed(*takes: list[DiffFile]) -> ReviewStory:
     [told_of, *after] = [take_of(files, take) for take, files in numbered.items()]
     await story.tell(THE_FIRST_LINE, told_of, round_number=FIRST_ROUND)
     for round_number, change in enumerate(after, start=SECOND_ROUND):
-        await story.follow(change, round_number=round_number, stories_on=STORIES_OFF)
+        await story.follow(change, round_number=round_number)
     return story
 
 

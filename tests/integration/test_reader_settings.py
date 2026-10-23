@@ -46,23 +46,23 @@ async def test_a_reader_who_never_chose_gets_the_defaults_and_is_told_so(reviews
             "diff_layout": "unified",
             "ignore_whitespace": False,
             "sound_on_replies": False,
-            "stories": False,
+            "story_writing": "ask_first",
         },
         "stored": False,
     }
 
 
-async def test_settings_kept_before_stories_were_a_choice_are_read_with_stories_off(
+async def test_settings_kept_before_stories_were_a_choice_are_read_with_each_story_asked_first(
     reviews: ReviewFactory, reader_files: ReaderFiles
 ) -> None:
-    """A story spends the agent's tokens: a release that brings the choice turns it on for nobody."""
+    """A story spends the agent's tokens: a release that brings the choice writes one unasked for nobody."""
     reader_files.settings.parent.mkdir(parents=True)
     reader_files.settings.write_text(KEPT_BEFORE_STORIES)
 
     async with _client(reviews) as client:
         seen = (await client.get("/api/settings")).json()
 
-    assert (seen["record"]["theme"], seen["record"]["stories"], seen["stored"]) == ("dark", False, True)
+    assert (seen["record"]["theme"], seen["record"]["story_writing"], seen["stored"]) == ("dark", "ask_first", True)
 
 
 async def test_a_choice_made_in_one_review_is_there_in_the_next(reviews: ReviewFactory) -> None:

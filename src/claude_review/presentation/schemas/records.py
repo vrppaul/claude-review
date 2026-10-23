@@ -6,7 +6,7 @@ from pydantic import ConfigDict, Field, StrictBool
 
 from claude_review.domain import models
 from claude_review.domain.interfaces import RecordChange
-from claude_review.domain.models import DiffLayout, Theme
+from claude_review.domain.models import DiffLayout, StoryWriting, Theme
 from claude_review.presentation.schemas.base import Schema
 
 # A release number, generously: 1.5.0, 1.5.0rc1, 1.4.3.dev0
@@ -22,8 +22,8 @@ class ReaderSettings(Schema):
     ignore_whitespace: StrictBool
     # A tick when an answer arrives while the review is in a background tab
     sound_on_replies: StrictBool
-    # Ask the agent for a story of every change reviewed
-    stories: StrictBool
+    # When a review's story is written: asked first, at once at a press on Story, or as each review opens
+    story_writing: StoryWriting
 
     @classmethod
     def from_domain(cls, settings: models.ReaderSettings) -> Self:
@@ -32,7 +32,7 @@ class ReaderSettings(Schema):
             diff_layout=settings.diff_layout,
             ignore_whitespace=settings.ignore_whitespace,
             sound_on_replies=settings.sound_on_replies,
-            stories=settings.stories,
+            story_writing=settings.story_writing,
         )
 
 
@@ -74,7 +74,7 @@ class SettingsChange(Schema, RecordChange[models.ReaderSettings]):
     diff_layout: DiffLayout | None = None
     ignore_whitespace: StrictBool | None = None
     sound_on_replies: StrictBool | None = None
-    stories: StrictBool | None = None
+    story_writing: StoryWriting | None = None
 
     @override
     def applied_to(self, record: models.ReaderSettings) -> models.ReaderSettings:
@@ -84,7 +84,7 @@ class SettingsChange(Schema, RecordChange[models.ReaderSettings]):
             diff_layout=_sent_or_kept(self.diff_layout, record.diff_layout),
             ignore_whitespace=_sent_or_kept(self.ignore_whitespace, record.ignore_whitespace),
             sound_on_replies=_sent_or_kept(self.sound_on_replies, record.sound_on_replies),
-            stories=_sent_or_kept(self.stories, record.stories),
+            story_writing=_sent_or_kept(self.story_writing, record.story_writing),
         )
 
 

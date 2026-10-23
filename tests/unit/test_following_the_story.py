@@ -21,7 +21,6 @@ from tests.stories import (
     NOTHING_LEFT_OUT,
     ONE_MORE_LEFT_OUT,
     SECOND_ROUND,
-    STORIES_OFF,
     THE_FIRST_LINE,
     TOLD_OF,
     TakesComparedByTheirLines,
@@ -125,7 +124,7 @@ async def test_a_story_told_while_the_diff_is_taken_again_is_followed_onto_the_n
     # A turn of the loop, in which the telling begins
     await asyncio.sleep(0)
 
-    await story.follow(now, round_number=SECOND_ROUND, stories_on=STORIES_OFF)
+    await story.follow(now, round_number=SECOND_ROUND)
     await telling
 
     assert story.held is not None
@@ -140,7 +139,7 @@ async def test_a_story_told_of_a_take_git_never_wrote_down_is_followed_onto_no_c
     story = review_story(NO_TAKES)
     await story.tell(THE_FIRST_LINE, ReviewContent.opening_on(TOLD_OF), round_number=FIRST_ROUND)
 
-    await story.follow(take_of(TOLD_OF, FIRST_TAKE + 1), round_number=SECOND_ROUND, stories_on=STORIES_OFF)
+    await story.follow(take_of(TOLD_OF, FIRST_TAKE + 1), round_number=SECOND_ROUND)
 
     assert story.held is not None
     assert [told_step.now for told_step in story.held.story.chapters[0].steps] == [None]
@@ -150,7 +149,7 @@ async def test_a_story_whose_takes_git_will_not_compare_is_followed_onto_no_code
     story = review_story(TakesGitWillNotCompare())
     await story.tell(THE_FIRST_LINE, take_of(TOLD_OF, FIRST_TAKE), round_number=FIRST_ROUND)
 
-    await story.follow(take_of(TOLD_OF, FIRST_TAKE + 1), round_number=SECOND_ROUND, stories_on=STORIES_OFF)
+    await story.follow(take_of(TOLD_OF, FIRST_TAKE + 1), round_number=SECOND_ROUND)
 
     assert story.held is not None
     assert [told_step.now for told_step in story.held.story.chapters[0].steps] == [None]
@@ -159,6 +158,6 @@ async def test_a_story_whose_takes_git_will_not_compare_is_followed_onto_no_code
 async def test_a_take_with_no_story_told_holds_none() -> None:
     story = review_story(NO_TAKES)
 
-    await story.follow(take_of(ONE_MORE_LEFT_OUT, FIRST_TAKE + 1), round_number=SECOND_ROUND, stories_on=STORIES_OFF)
+    await story.follow(take_of(ONE_MORE_LEFT_OUT, FIRST_TAKE + 1), round_number=SECOND_ROUND)
 
     assert story.held is None

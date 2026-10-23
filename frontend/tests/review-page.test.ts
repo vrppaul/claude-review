@@ -151,13 +151,6 @@ function serving(): FakeServer {
 	return server;
 }
 
-/** The same server, for a reader who turned stories on in some review. */
-function servingAReaderWithStoriesOn(): FakeServer {
-	const server = serving();
-	server.answer('GET /api/settings', { record: { ...NEW_READER, stories: true }, stored: true });
-	return server;
-}
-
 describe('opening the page', () => {
 	beforeEach(() => {
 		FakeSocket.opened = [];
@@ -186,16 +179,6 @@ describe('opening the page', () => {
 		await page.open();
 
 		expect(openedReview(page).story.wait).toEqual({ kind: 'writing', asking: TAKEN });
-	});
-
-	it('asks for no story as it opens, though the reader turned stories on: the review asked for one itself', async () => {
-		const server = takingStoryAskings(servingAReaderWithStoriesOn());
-		const page = newPage();
-
-		await page.open();
-		await settled();
-
-		expect(server.requestsTo('POST /api/story/request')).toEqual([]);
 	});
 
 	it('asks for no story of a review that takes none, and holds none', async () => {
@@ -699,18 +682,6 @@ describe('the tab shown again', () => {
 		await settled();
 
 		expect(server.requestsTo('GET /api/diff')).toHaveLength(1);
-	});
-
-	it('asks for no story where another tab turned stories on: the server did, as that tab changed them', async () => {
-		const server = takingStoryAskings(serving());
-		const page = newPage();
-		await page.open();
-		changedElsewhere(server, { stories: true });
-
-		showTabAgain();
-		await settled();
-
-		expect(server.requestsTo('POST /api/story/request')).toEqual([]);
 	});
 
 	it('reads nothing as the tab is hidden', async () => {

@@ -146,6 +146,15 @@
 	--cr-turn-gap: --spacing(3);
 
 	/*
+	 * Settings of a pane that stand together, a setting and those hanging on
+	 * it (lib/ui Checkbox `hangs`): the gap between them, which the branch of
+	 * one hanging on another crosses; and where that branch meets it, half
+	 * its first line down, whatever size its words are set at.
+	 */
+	--cr-settings-gap: --spacing(2);
+	--cr-setting-branch-meets: 0.5lh;
+
+	/*
 	 * How tall a button stands (lib/ui/button.ts): among words and small
 	 * controls, and where it ends a pane, a card or a bar
 	 */

@@ -63,6 +63,8 @@ export const NOT_THE_AGENTS_OWN_CHANGE =
 export const CHANGED_AFTER_TOLD_LEAD = 'Changed after it was told.';
 /** What that warning says on a line of its own, while the agent tells the story again. */
 export const AGENT_UPDATING_REASONS = 'The agent is updating the reasons.';
+/** What the story's head says under its round while the agent writes the story again, a round having moved it on. */
+export const WRITTEN_AGAIN = 'The agent is writing it again';
 
 /** The lines a step tells: the first and the last, both among them. */
 type StepLines = FollowedStep['lines'];

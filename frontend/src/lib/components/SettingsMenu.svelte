@@ -1,7 +1,14 @@
 <script lang="ts">
 	import type { DiffLayout, Theme } from '$lib/types';
+	import {
+		chosenByAsTheReviewOpens,
+		chosenByWithoutAsking,
+		writesAsTheReviewOpens,
+		writesWithoutAsking
+	} from '$lib/reader/story-writing';
 	import { useReview } from '$lib/review/context';
 	import Checkbox from '$lib/ui/Checkbox.svelte';
+	import Heading from '$lib/ui/Heading.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import IconButton from '$lib/ui/IconButton.svelte';
 	import Popover from '$lib/ui/Popover.svelte';
@@ -11,8 +18,11 @@
 
 	// What the pane is called, and headed with, and what its control says to whoever cannot see the gear
 	const SETTINGS = 'Settings';
+	// The words of the setting the other of the Stories section hangs on, named again while it locks that one
+	const WITHOUT_ASKING_WORDS = 'Write stories without asking';
 
 	const review = useReview();
+	const storyWriting = $derived(review.settings.current.story_writing);
 
 	const layouts: { value: DiffLayout; label: string; testId: string }[] = [
 		{ value: 'unified', label: 'Unified', testId: 'layout-unified' },
@@ -87,15 +97,31 @@
 			Tick on a new reply
 		</Checkbox>
 
-		<!-- Drawn in every review, one no story can be told of too: the choice is the reader's, for all of them -->
-		<Checkbox
-			drawn="box"
-			note="Each story spends the agent's tokens"
-			checked={review.settings.current.stories}
-			testId="stories"
-			onToggle={(checked: boolean) => (checked ? review.turnStoriesOn() : review.turnStoriesOff())}
-		>
-			Stories
-		</Checkbox>
+		<!-- When a story is written, drawn in every review, one no story can be told of too: the choice is the
+			reader's, for all of them. A section of its own under the library's list heading, as Help's keys stand
+			under theirs: one choice of three drawn as two boxes, the second hanging on the first, locked while every
+			story is asked first, the two the settings' gap apart, which the branch crosses -->
+		<section class="mt-2 flex flex-col gap-(--cr-settings-gap)" data-testid="story-writing">
+			<Heading tag="h3" heads="list">Stories</Heading>
+			<Checkbox
+				drawn="box"
+				note="Each story spends the agent's tokens"
+				checked={writesWithoutAsking(storyWriting)}
+				testId="write-without-asking"
+				onToggle={(checked: boolean) => review.settings.change({ story_writing: chosenByWithoutAsking(checked) })}
+			>
+				{WITHOUT_ASKING_WORDS}
+			</Checkbox>
+			<Checkbox
+				drawn="box"
+				note="Ready by the time you open Story"
+				hangs={{ locked: !writesWithoutAsking(storyWriting), unlocksWith: `Unlocks with ${WITHOUT_ASKING_WORDS}` }}
+				checked={writesAsTheReviewOpens(storyWriting)}
+				testId="write-as-the-review-opens"
+				onToggle={(checked: boolean) => review.settings.change({ story_writing: chosenByAsTheReviewOpens(checked) })}
+			>
+				Write as soon as the review opens
+			</Checkbox>
+		</section>
 	</div>
 </Popover>

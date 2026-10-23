@@ -10,7 +10,7 @@ import { keepingSettings, takingStoryAskings, type FakeServer } from '../fake-se
 import { guideServer } from '../guide-server';
 import { handOverNext } from '../pushes';
 import { A_SECOND, NOTE_STANDS_FOR } from '../passing-note';
-import { openReview, settingsWithStoriesOn, type Opened } from '../review';
+import { openReview, settingsWritingStories, type Opened } from '../review';
 import { settled } from '../settled';
 import { storyHeld, storyResponse, TAKEN, toldChapter, toldStep } from '../story';
 
@@ -65,7 +65,7 @@ describe('Story introduced at the switch', () => {
 		expect(screen.getByTestId('story-introduction-close').getAttribute('aria-label')).toBe('Close for now');
 	});
 
-	it('asks before stories are turned on, where Try Story is pressed with stories off', async () => {
+	it('asks before a story is written, where Try Story is pressed and stories are asked first', async () => {
 		serving();
 		const user = userEvent.setup();
 		await drawn();
@@ -76,14 +76,15 @@ describe('Story introduced at the switch', () => {
 		expect(screen.queryByTestId('story-introduction')).toBeNull();
 	});
 
-	it('shows the story view where Try Story is pressed with stories on', async () => {
+	it('asks for the story and shows where it will be, where Try Story is pressed and stories are written unasked', async () => {
 		const server = serving();
 		const user = userEvent.setup();
-		await drawn({ settings: await settingsWithStoriesOn(server), asking: TAKEN });
+		await drawn({ settings: await settingsWritingStories(server, 'without_asking') });
 
 		await user.click(screen.getByTestId('try-story'));
 
 		expect(screen.getByTestId('story-view')).toBeTruthy();
+		expect(server.requestsTo('POST /api/story/request')).toHaveLength(1);
 	});
 
 	it('keeps that Story was introduced, once Try Story is pressed', async () => {
@@ -207,7 +208,7 @@ describe('Story introduced at the switch', () => {
 
 	it('waits while the note of a story that arrived stands under the switch', async () => {
 		const server = serving();
-		const review = await drawn({ settings: await settingsWithStoriesOn(server), asking: TAKEN });
+		const review = await drawn({ settings: await settingsWritingStories(server, 'without_asking'), asking: TAKEN });
 		server.answer('GET /api/story', storyResponse({ held: A_STORY }));
 
 		handOverNext(review, { type: 'story' });
@@ -219,7 +220,7 @@ describe('Story introduced at the switch', () => {
 
 	it('rings Story while it introduces it, and not while the note of a story that arrived stands in its place', async () => {
 		const server = serving();
-		const review = await drawn({ settings: await settingsWithStoriesOn(server), asking: TAKEN });
+		const review = await drawn({ settings: await settingsWritingStories(server, 'without_asking'), asking: TAKEN });
 		server.answer('GET /api/story', storyResponse({ held: A_STORY }));
 		const calling = () => screen.getByTestId('read-as-story').getAttribute('data-calling');
 		const whileIntroduced = calling();
@@ -232,7 +233,7 @@ describe('Story introduced at the switch', () => {
 
 	it('hands the keyboard it held to Story where the note of a story that arrived takes its place', async () => {
 		const server = serving();
-		const review = await drawn({ settings: await settingsWithStoriesOn(server), asking: TAKEN });
+		const review = await drawn({ settings: await settingsWritingStories(server, 'without_asking'), asking: TAKEN });
 		server.answer('GET /api/story', storyResponse({ held: A_STORY }));
 		screen.getByTestId('try-story').focus();
 

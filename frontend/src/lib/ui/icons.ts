@@ -153,6 +153,15 @@ export const ICONS = {
 		paths: ['M8 4.5v4', 'M8 11.2v.3', RING],
 		drawn: TRACED
 	},
+	// A padlock, its shackle over its body: a setting locked until the one it hangs on is on
+	locked: {
+		viewBox: '0 0 16 16',
+		paths: [
+			'M5.5 7V5.5a2.5 2.5 0 0 1 5 0V7',
+			'M4.5 7h7a1 1 0 0 1 1 1v4.5a1 1 0 0 1-1 1h-7a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z'
+		],
+		drawn: TRACED
+	},
 	compass: {
 		viewBox: '0 0 20 20',
 		paths: ['M2.5 10a7.5 7.5 0 1 0 15 0a7.5 7.5 0 1 0 -15 0', 'M12.8 7.2l-1.7 3.9-3.9 1.7 1.7-3.9z'],

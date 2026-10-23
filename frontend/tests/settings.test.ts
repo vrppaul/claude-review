@@ -132,11 +132,11 @@ describe('the reader settings', () => {
 	});
 
 	it('read again are what another tab chose meanwhile, the theme cached for the first paint with them', async () => {
-		serving({ ...NEW_READER, theme: 'dark', stories: true }, true);
+		serving({ ...NEW_READER, theme: 'dark', story_writing: 'without_asking' }, true);
 
 		await settings.readAgain();
 
-		expect(settings.current).toEqual({ ...NEW_READER, theme: 'dark', stories: true });
+		expect(settings.current).toEqual({ ...NEW_READER, theme: 'dark', story_writing: 'without_asking' });
 		expect(localStorage.getItem(THEME_KEPT_HERE)).toBe('dark');
 	});
 

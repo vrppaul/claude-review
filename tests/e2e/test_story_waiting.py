@@ -1,8 +1,8 @@
 """E2E: a reader asks for a story and waits for it, in a real browser.
 
-Story in the header asks before the first story is written, in a dialog
-that holds the keyboard and gives it back. A reader who turned stories on
-reads the review as its story before there is one: what they wait on is
+Story in the header asks before a story is written, in a dialog that holds
+the keyboard and gives it back. A reader who has stories written without
+asking reads the review as its story before there is one: what they wait on is
 drawn in its place, and changes under them as they stop the story, ask for
 it again, or the agent tells it. Each change takes away the control that
 held the keyboard, and the keyboard goes to what is drawn in its place. A
@@ -47,7 +47,7 @@ NOTE_STANDS_FOR_MS = 4_000
 
 
 class Answered(BaseModel):
-    """A way the question asked before stories are turned on is answered from the keyboard, and what is read after."""
+    """A way the question asked before a story is written is answered from the keyboard, and what is read after."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -56,15 +56,16 @@ class Answered(BaseModel):
     then_on_screen: str
 
 
-# The question opens with the keyboard on the way to turn stories on; the way to put it off stands before it
+# The question opens with the keyboard on the way to write the story; the way to put it off stands before it
 ANSWERS_BY_KEY = [
-    Answered(how="stories turned on", keys=("Enter",), then_on_screen="story-view"),
+    Answered(how="story written", keys=("Enter",), then_on_screen="story-view"),
     Answered(how="not now", keys=("Shift+Tab", "Enter"), then_on_screen="diff-view"),
     Answered(how="Escape", keys=("Escape",), then_on_screen="diff-view"),
 ]
-# What Tab puts the keyboard on, press by press, from the way to turn stories on, the last answer: nothing of the
-# page while the keyboard is on the browser's own controls, the other answer, and the way on again
-ROUND_THE_QUESTION = [None, "stories-not-now", "turn-on-stories"]
+# What Tab puts the keyboard on, press by press, from the way to write the story, the last answer: nothing of the
+# page while the keyboard is on the browser's own controls, the box that asks no more, the other answer, and the way
+# on again
+ROUND_THE_QUESTION = [None, "write-without-asking-from-now-on", "stories-not-now", "write-story"]
 # A corner of the window, which the question stands in the middle of: a press there is a press outside it
 BESIDE_THE_QUESTION = (5, 5)
 
@@ -100,23 +101,23 @@ async def _open(page: Page, review: RunningReview) -> None:
     await page.get_by_test_id("diff-view").wait_for()
 
 
-async def _open_with_stories_on(page: Page, review: RunningReview) -> None:
-    """Open the review and turn stories on behind the gear: the agent is asked for a story, and the files stay."""
+async def _open_writing_stories_unasked(page: Page, review: RunningReview) -> None:
+    """Open the review and choose behind the gear to have stories written without asking: the files stay."""
     await _open(page, review)
     await page.get_by_test_id("settings-toggle").click()
-    await page.get_by_test_id("stories").check()
+    await page.get_by_test_id("write-without-asking").check()
     await page.keyboard.press("Escape")
 
 
 async def _wait_for_a_story(page: Page, review: RunningReview) -> None:
-    """Open the review with stories on, and read it as its story: there is none yet."""
-    await _open_with_stories_on(page, review)
+    """Open the review with stories written unasked, and read it as its story: it is asked for, and none is there."""
+    await _open_writing_stories_unasked(page, review)
     await page.get_by_test_id("read-as-story").click()
     await page.get_by_test_id("story-waiting").wait_for()
 
 
 async def _ask_to_read_the_story(page: Page, review: RunningReview) -> None:
-    """Open the review with stories off, and press Story from the keyboard: the reader is asked first."""
+    """Open the review with each story asked first, and press Story from the keyboard: the reader is asked."""
     await _open(page, review)
     await page.get_by_test_id("read-as-story").press("Enter")
     await page.get_by_test_id("story-opt-in").wait_for()
@@ -223,7 +224,7 @@ async def test_a_story_told_while_a_comment_is_written_leaves_the_keyboard_in_th
     review: RunningReview, page: Page
 ) -> None:
     await _an_agent_attaches(review)
-    await _open_with_stories_on(page, review)
+    await _open_writing_stories_unasked(page, review)
     await page.get_by_test_id("line-gutter").first.press("Enter")
     await page.get_by_test_id("comment-input").wait_for()
     await page.keyboard.type("Half a thought")
@@ -241,7 +242,7 @@ async def test_the_note_of_a_storys_arrival_closed_from_the_keyboard_gives_the_k
     review: RunningReview, page: Page
 ) -> None:
     await _an_agent_attaches(review)
-    await _open_with_stories_on(page, review)
+    await _open_writing_stories_unasked(page, review)
     await _the_agent_tells_the_story(review)
 
     await page.get_by_test_id("story-ready-close").press("Enter")
@@ -255,7 +256,7 @@ async def test_the_note_of_a_storys_arrival_going_by_itself_gives_the_keyboard_i
 ) -> None:
     await page.clock.install()
     await _an_agent_attaches(review)
-    await _open_with_stories_on(page, review)
+    await _open_writing_stories_unasked(page, review)
     await _the_agent_tells_the_story(review)
     await page.get_by_test_id("open-story").focus()
 
@@ -272,7 +273,7 @@ async def test_the_note_of_a_storys_arrival_goes_by_itself_for_a_reader_who_aske
     await page.emulate_media(reduced_motion="reduce")
     await page.clock.install()
     await _an_agent_attaches(review)
-    await _open_with_stories_on(page, review)
+    await _open_writing_stories_unasked(page, review)
     await _the_agent_tells_the_story(review)
     await page.get_by_test_id("story-ready").wait_for()
 
@@ -288,7 +289,7 @@ async def test_what_the_note_of_a_storys_arrival_stood_over_takes_a_press_once_t
     """The note stands over the head of the first file: its fold is pressed where the note was."""
     await page.set_viewport_size(WIDE)
     await _an_agent_attaches(review)
-    await _open_with_stories_on(page, review)
+    await _open_writing_stories_unasked(page, review)
     await _the_agent_tells_the_story(review)
     await page.get_by_test_id("story-ready").wait_for()
 
@@ -303,7 +304,7 @@ async def test_opening_a_story_from_the_note_of_its_arrival_puts_the_keyboard_on
     review: RunningReview, page: Page
 ) -> None:
     await _an_agent_attaches(review)
-    await _open_with_stories_on(page, review)
+    await _open_writing_stories_unasked(page, review)
     await _the_agent_tells_the_story(review)
 
     await page.get_by_test_id("open-story").press("Enter")

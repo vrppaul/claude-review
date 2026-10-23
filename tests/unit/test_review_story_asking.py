@@ -1,9 +1,10 @@
 """The asking for a story, as the review's `ReviewStory` keeps it: its one owner, asked by the reader or by itself.
 
 A story is asked for while no story held is current: none is held, or a
-round moved the code on under the one held. The reader asks, or turns
-stories on; with stories on the story asks for itself as the review opens
-and after each retake, never over one the reader stopped. An agent's wait
+round moved the code on under the one held. The reader asks, or has every
+review's story written as it opens; a story so asked for is asked for again
+after each retake that leaves it stale, until the reader stops it. One the
+agent told unasked is not asked for again. An agent's wait
 claims the asking once, and is told what went stale of the story held, as
 it then stands. A review of no change asks for none, and refuses both the
 reader's asking and a story told of it.
@@ -21,9 +22,8 @@ from tests.stories import (
     NOTHING_LEFT_OUT,
     ONLY_CHAPTER,
     SECOND_ROUND,
+    NOT_AS_IT_OPENS,
     STORIED,
-    STORIES_OFF,
-    STORIES_ON,
     THE_FIRST_LINE,
     TOLD_OF,
     TakesComparedByTheirLines,
@@ -32,53 +32,25 @@ from tests.stories import (
     take_of,
     told_then_followed,
     tree_of,
+    WRITTEN_AS_IT_OPENS,
 )
 
-# The asking begun at the moment the review's clock says, and the same asking stopped by the reader
+# The asking begun at the moment the review's clock says
 ASKED = StoryAsking(asked_at=ASKED_AT, taken_at=None, stopped=False)
-STOPPED = StoryAsking(asked_at=ASKED_AT, taken_at=None, stopped=True)
 
 
-def test_a_review_whose_reader_wants_stories_asks_for_one_where_none_is_held() -> None:
-    assert review_story(NO_TAKES).want(stories_on=STORIES_ON) == ASKED
+def test_a_review_whose_reader_has_stories_written_as_each_review_opens_asks_for_one_as_it_opens() -> None:
+    assert review_story(NO_TAKES).open(writes_as_it_opens=WRITTEN_AS_IT_OPENS) == ASKED
 
 
-def test_a_review_whose_reader_wants_no_story_asks_for_none() -> None:
-    assert review_story(NO_TAKES).want(stories_on=STORIES_OFF) is None
+def test_a_review_whose_reader_waits_to_ask_for_a_story_asks_for_none_as_it_opens() -> None:
+    """Asked first, or written at a press on Story: either way the story waits for the reader."""
+    assert review_story(NO_TAKES).open(writes_as_it_opens=NOT_AS_IT_OPENS) is None
 
 
-def test_a_review_of_no_change_asks_for_no_story_whatever_the_reader_wants() -> None:
+def test_a_review_of_no_change_asks_for_no_story_as_it_opens_whatever_the_reader_chose() -> None:
     """Files read once, or a conversation: there is nothing to tell a story of."""
-    assert story_of_no_change().want(stories_on=STORIES_ON) is None
-
-
-def test_a_review_of_no_change_asks_for_no_story_as_stories_are_turned_on_and_refuses_nothing() -> None:
-    """Turned on for every review on the machine, stories ask nothing of a review with no change to tell."""
-    assert story_of_no_change().stories_turned(on=True) is None
-
-
-def test_a_story_the_reader_stopped_is_not_asked_for_again_while_stories_stay_on() -> None:
-    """They stopped it to keep the agent's tokens: a retake or a reload does not start it again."""
-    story = review_story(NO_TAKES)
-    story.ask()
-    story.stop()
-
-    assert story.want(stories_on=STORIES_ON) is None
-
-
-def test_stories_turned_on_ask_again_for_a_story_the_reader_stopped() -> None:
-    story = review_story(NO_TAKES)
-    story.ask()
-    story.stop()
-
-    assert story.stories_turned(on=True) == ASKED
-
-
-def test_stories_turned_off_stop_the_story_awaited() -> None:
-    story = review_story(NO_TAKES)
-    story.ask()
-
-    assert story.stories_turned(on=False) == STOPPED
+    assert story_of_no_change().open(writes_as_it_opens=WRITTEN_AS_IT_OPENS) is None
 
 
 def test_a_story_asked_for_is_due_for_an_agent_until_one_claims_it() -> None:
@@ -152,32 +124,50 @@ async def test_a_story_told_again_over_one_that_moved_on_ends_the_asking() -> No
     assert (story.asking, story.due.is_set()) == (None, False)
 
 
-async def test_a_retake_that_leaves_the_story_stale_asks_for_it_again_where_stories_are_on() -> None:
+async def test_a_story_the_reader_asked_for_is_asked_for_again_once_a_retake_leaves_it_stale() -> None:
+    """They asked for this review's story: told of the code before the round, it is told again of the code after."""
+    story = review_story(TakesComparedByTheirLines({tree_of(FIRST_TAKE): TOLD_OF, tree_of(2): FIRST_REWRITTEN}))
+    story.ask()
+    await story.tell(THE_FIRST_LINE, take_of(TOLD_OF, FIRST_TAKE), round_number=SECOND_ROUND)
+
+    assert await story.follow(take_of(FIRST_REWRITTEN, 2), round_number=SECOND_ROUND) == ASKED
+
+
+async def test_a_story_told_unasked_is_not_asked_for_again_once_a_retake_leaves_it_stale() -> None:
+    """Nobody asked for it in this review: telling it again would spend tokens nobody chose to spend."""
     story = review_story(TakesComparedByTheirLines({tree_of(FIRST_TAKE): TOLD_OF, tree_of(2): FIRST_REWRITTEN}))
     await story.tell(THE_FIRST_LINE, take_of(TOLD_OF, FIRST_TAKE), round_number=SECOND_ROUND)
 
-    asked = await story.follow(take_of(FIRST_REWRITTEN, 2), round_number=SECOND_ROUND, stories_on=STORIES_ON)
-
-    assert asked == ASKED
+    assert await story.follow(take_of(FIRST_REWRITTEN, 2), round_number=SECOND_ROUND) is None
 
 
-async def test_a_retake_that_leaves_the_story_current_asks_for_none() -> None:
+async def test_a_story_the_reader_stopped_is_not_asked_for_again_by_a_retake() -> None:
+    """They stopped it to keep the agent's tokens: the round's work does not start it again."""
+    story = review_story(TakesComparedByTheirLines({tree_of(FIRST_TAKE): TOLD_OF}))
+    story.ask()
+    story.stop()
+
+    assert await story.follow(take_of(TOLD_OF, FIRST_TAKE), round_number=SECOND_ROUND) is None
+
+
+async def test_a_retake_that_leaves_the_story_asked_for_current_asks_for_none() -> None:
     story = review_story(TakesComparedByTheirLines({tree_of(FIRST_TAKE): TOLD_OF, tree_of(2): NOTHING_LEFT_OUT}))
+    story.ask()
     await story.tell(THE_FIRST_LINE, take_of(TOLD_OF, FIRST_TAKE), round_number=SECOND_ROUND)
 
-    assert await story.follow(take_of(NOTHING_LEFT_OUT, 2), round_number=SECOND_ROUND, stories_on=STORIES_ON) is None
+    assert await story.follow(take_of(NOTHING_LEFT_OUT, 2), round_number=SECOND_ROUND) is None
 
 
 async def test_a_story_that_arrives_during_a_retake_which_leaves_it_stale_is_asked_for_again() -> None:
     """Told of the take before, it ends the asking as it arrives; followed once held, it is found stale, and the
     want is decided after that, so the story the reader sees is asked for again."""
     story = review_story(TakesComparedByTheirLines({tree_of(FIRST_TAKE): TOLD_OF, tree_of(2): FIRST_REWRITTEN}))
-    story.want(stories_on=STORIES_ON)
+    story.open(writes_as_it_opens=WRITTEN_AS_IT_OPENS)
     telling = asyncio.create_task(story.tell(THE_FIRST_LINE, take_of(TOLD_OF, FIRST_TAKE), round_number=SECOND_ROUND))
     # A turn of the loop, in which the telling begins
     await asyncio.sleep(0)
 
-    await story.follow(take_of(FIRST_REWRITTEN, 2), round_number=SECOND_ROUND, stories_on=STORIES_ON)
+    await story.follow(take_of(FIRST_REWRITTEN, 2), round_number=SECOND_ROUND)
     await telling
 
     assert (story.asking, story.due.is_set()) == (ASKED, True)

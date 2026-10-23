@@ -157,8 +157,8 @@ function raise(review: Review, push: PointPush): void {
  * the ones the agent rewrote. The review followed the story it holds onto
  * the diff before it said it was taken: read with the diff, the story is
  * of the same take, and what was read of it stands; one the round moved the
- * code on under is asked for again where the reader wants stories, as a
- * page opening asks for one it has not got. A diff the page read after the
+ * code on under is asked for again by the review, where it was asked for,
+ * and the page asks for nothing. A diff the page read after the
  * retake is already the retaken one, and so is the story: only the threads
  * move, and the ticks the draft kept from before it come off what it
  * rewrote, with no news of a retake.
@@ -192,8 +192,8 @@ export function takePush(review: Review, push: ServerPush, at: TellingPosition):
  * read with the diff: one that cannot be read is said so by itself, and
  * what catching up did to the review and its threads is still said. How
  * the asking for one stands comes with the facts: a review started again
- * in the gap holds none, and asks for one itself where the reader wants
- * stories.
+ * in the gap holds none, and asks for one itself where the reader has each
+ * review's story written as it opens.
  */
 export async function catchUp(review: Review, from: TellingPosition): Promise<void> {
 	review.telling.continueFrom(from);

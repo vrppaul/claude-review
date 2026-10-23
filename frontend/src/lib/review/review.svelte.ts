@@ -13,6 +13,7 @@ import type { PageLayout } from '$lib/reader/page-layout.svelte';
 import type { PageTheme } from '$lib/reader/page-theme.svelte';
 import type { ReplySound } from '$lib/reader/reply-sound';
 import type { Settings } from '$lib/reader/settings.svelte';
+import { WITHOUT_ASKING, writesWithoutAsking } from '$lib/reader/story-writing';
 import { Answerer } from '$lib/review/answerer.svelte';
 import { Clock } from '$lib/review/clock.svelte';
 import { CommentFields } from '$lib/review/comment-fields';
@@ -198,7 +199,10 @@ export class Review {
 		);
 		this.wayIntoStory = new WayIntoStory(this.views, this.guide, {
 			viewOpens: () => this.storyViewOpens,
-			turnStoriesOn: () => this.turnStoriesOn()
+			askedFirst: () => !writesWithoutAsking(this.settings.current.story_writing),
+			// Asked for, the server keeps it told through the rounds and says how the asking stands
+			writeStory: () => this.story.askFor(),
+			writeStoriesWithoutAsking: () => this.settings.change({ story_writing: WITHOUT_ASKING })
 		});
 		this.navigator = new Navigator(this.threads, this.sections, this.wayIntoStory);
 		// What the draft kept that had not gone out: the header's "unsent" counts the same
@@ -333,42 +337,16 @@ export class Review {
 	}
 
 	/**
-	 * Whether the story view opens without the reader being asked first:
-	 * they turned stories on; or a story is held already, told by an agent of
-	 * its own accord and so paid for; or one is on its way, asked for from
-	 * another page of this review, whose choice this page was never told.
-	 * Wherever the header says a story is being written, the way to stop it
-	 * must be in reach: the wait screen's Stop while no story is held; over
-	 * a story a round moved the code on under, drawn while it is told again,
-	 * the gear, turning stories off. Where none of these holds, reading the
-	 * review as its story means having one written, which spends the
-	 * agent's tokens: the reader is asked before that, and a review they
-	 * open is read by its files though they chose the story last.
+	 * Whether the story view opens as it is: a story is held, told by an
+	 * agent and so paid for, or one is on its way, asked for here, from
+	 * another page of this review, or by the review as it opened. Where
+	 * neither holds, reading the review as its story means having one
+	 * written, which spends the agent's tokens: only the reader's own press
+	 * does that, so a review they open is read by its files though they
+	 * chose the story last.
 	 */
 	get storyViewOpens(): boolean {
-		return this.settings.current.stories || this.story.held !== null || isAwaited(this.story.wait);
-	}
-
-	/**
-	 * Turn stories on, for this review and every later one. The server then
-	 * asks for this review's story wherever none is current or on its way,
-	 * one the reader stopped included, and tells the page how the asking
-	 * stands: whether a story is wanted is the server's to say.
-	 */
-	async turnStoriesOn(): Promise<void> {
-		await this.settings.change({ stories: true });
-	}
-
-	/**
-	 * Turn stories off, for this review and every later one: the server
-	 * stops a story still awaited, which would spend the tokens the reader
-	 * turned stories off to keep. With none held the files come on screen:
-	 * the story view has no story to draw, and the reader has said they want
-	 * none. A story held is paid for, and stays to be read.
-	 */
-	async turnStoriesOff(): Promise<void> {
-		if (this.story.held === null) this.views.showFiles();
-		await this.settings.change({ stories: false });
+		return this.story.held !== null || isAwaited(this.story.wait);
 	}
 
 	/**

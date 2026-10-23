@@ -155,6 +155,20 @@ tests. Remove items when done — don't check them off.
 
 ## The story, on the page
 
+- [ ] `feat(story)`: a review keeps its story past a restart and `/clear`:
+      the story told, the tree it was told of and whether it is wanted, in
+      a private directory of the system's temporary one, by the review's
+      identity; the trees git writes are kept there, not removed as the
+      review ends (agreed 2026-10-23).
+- [ ] `feat(ui)`: the head of a story a round moved the code on under says
+      how its telling again stands, as board StoryWriting states 8, 10 and
+      11 draw it: "Write it again" where none is asked, no agent attached,
+      and stopped; state 9, written again with "Stop writing", is built
+      (agreed 2026-10-23).
+- [ ] `docs`: What's new 1.6.0, the CHANGELOG, the README and the agent's
+      skill say when a story is written as 2026-10-23 settled it: asked
+      first by default, each review's own; the dialog's box and the gear's
+      two settings. They still say stories are turned on for every review.
 - [ ] `fix(ui)`: a story the reader asks for by hand whose request fails
       is said in the panel and nowhere else. The page goes on holding no
       asking, and the story view goes on saying "Asking the agent for a

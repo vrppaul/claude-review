@@ -47,7 +47,8 @@ STORY_ROUTE = "/api/story"
 SUBMIT_ROUTE = "/api/submit"
 RETAKE_ROUTE = "/api/retake"
 SETTINGS_ROUTE = "/api/settings"
-STORY_CANCEL_ROUTE = "/api/story/cancel"
+# What the agent hears first of a review opened under each choice of when stories are written
+OPENING_ASKS = {"ask_first": "timeout", "without_asking": "timeout", "as_the_review_opens": "story_request"}
 # The file the repository was committed with, as the change leaves it, with two lines gained that a story tells
 TOLD_FILE = "initial.txt"
 TOLD_CONTENT = "initial content\ntwo\nthree\n"
@@ -120,55 +121,29 @@ async def test_nothing_handed_over_says_so_and_nothing_else(client: AsyncClient)
     assert event == {"type": "timeout"}
 
 
-async def test_a_review_opened_while_the_reader_wants_stories_asks_its_agent_for_one_unasked(
+async def test_a_review_opened_asks_its_agent_for_a_story_unasked_only_where_each_is_written_as_it_opens(
     reviews: ReviewFactory, tmp_git_repo: Path
 ) -> None:
-    """Stories were turned on in an earlier review: no page asks, and the agent is asked all the same."""
+    """Chosen in an earlier review: no page asks; asked first, or written at a press on Story, the story waits."""
     write_files(tmp_git_repo, {TOLD_FILE: TOLD_CONTENT})
-    async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as earlier:
-        await earlier.put(SETTINGS_ROUTE, json={"stories": True})
+    heard: dict[str, str] = {}
+    for writing in OPENING_ASKS:
+        async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as earlier:
+            await earlier.put(SETTINGS_ROUTE, json={"story_writing": writing})
+        async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as agent:
+            heard[writing] = (await agent.post(EVENTS_ROUTE, params=GLANCE_AT_EVENTS)).json()["type"]
 
-    async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as agent:
-        event = (await agent.post(EVENTS_ROUTE, params=GLANCE_AT_EVENTS)).json()
-
-    assert event == {"type": "story_request", "stale": None}
+    assert heard == OPENING_ASKS
 
 
-async def test_stories_turned_on_ask_the_agent_for_this_reviews_story(
+async def test_choosing_when_stories_are_written_asks_the_review_it_is_chosen_in_for_none(
     reviews: ReviewFactory, tmp_git_repo: Path
 ) -> None:
+    """The choice is read where a review decides: as the next review opens, or at the next press on Story."""
     write_files(tmp_git_repo, {TOLD_FILE: TOLD_CONTENT})
     async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as agent:
-        await agent.put(SETTINGS_ROUTE, json={"stories": True})
+        await agent.put(SETTINGS_ROUTE, json={"story_writing": "as_the_review_opens"})
 
-        event = (await agent.post(EVENTS_ROUTE, params=GLANCE_AT_EVENTS)).json()
-
-    assert event == {"type": "story_request", "stale": None}
-
-
-async def test_stories_turned_off_tell_an_agent_that_took_the_request_to_stop(
-    reviews: ReviewFactory, tmp_git_repo: Path
-) -> None:
-    write_files(tmp_git_repo, {TOLD_FILE: TOLD_CONTENT})
-    async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as agent:
-        await agent.put(SETTINGS_ROUTE, json={"stories": True})
-        await agent.post(EVENTS_ROUTE, params=GLANCE_AT_EVENTS)
-
-        await agent.put(SETTINGS_ROUTE, json={"stories": False})
-        event = (await agent.post(EVENTS_ROUTE, params=GLANCE_AT_EVENTS)).json()
-
-    assert event == {"type": "story_cancel"}
-
-
-async def test_another_choice_made_while_stories_are_on_asks_for_no_story_the_reader_stopped(
-    reviews: ReviewFactory, tmp_git_repo: Path
-) -> None:
-    write_files(tmp_git_repo, {TOLD_FILE: TOLD_CONTENT})
-    async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as agent:
-        await agent.put(SETTINGS_ROUTE, json={"stories": True})
-        await agent.post(STORY_CANCEL_ROUTE)
-
-        await agent.put(SETTINGS_ROUTE, json={"theme": "dark"})
         event = (await agent.post(EVENTS_ROUTE, params=GLANCE_AT_EVENTS)).json()
 
     assert event == {"type": "timeout"}

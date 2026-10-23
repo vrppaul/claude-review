@@ -29,7 +29,7 @@ from contextlib import AbstractContextManager
 import structlog
 
 from claude_review.domain.exceptions import ReviewEndedError, UnknownFileError
-from claude_review.domain.interfaces import Clock, PageChannel, RecordChange
+from claude_review.domain.interfaces import Clock, PageChannel
 from claude_review.domain.models import (
     AgentEvent,
     AgentWork,
@@ -46,6 +46,7 @@ from claude_review.domain.models import (
     SaidInPanel,
     StoryCancelled,
     StoryRequested,
+    StoryWriting,
     Thread,
     ThreadAsHanded,
     ThreadDraft,
@@ -245,9 +246,14 @@ class Review:
         return [found.follow(anchor) for anchor in anchors]
 
     async def open(self) -> None:
-        """Note what the review opens on, before any page or agent can reach it, and ask for its story if wanted."""
+        """Note what the review opens on, before any page or agent can reach it, and ask for its story if wanted.
+
+        Wanted where the reader has every review's story written as it opens,
+        as their settings say now.
+        """
         await self._source.open(self._rounds)
-        self._tell_asking(self._story.want(stories_on=await self._stories_on()))
+        writing = (await self._kept_settings()).story_writing
+        self._tell_asking(self._story.open(writes_as_it_opens=writing is StoryWriting.AS_THE_REVIEW_OPENS))
 
     def work_under_way(self) -> AgentWork | None:
         """What the agent says it is doing now, if anything: a page opening, or coming back, learns it here."""
@@ -484,25 +490,6 @@ class Review:
         """
         self._story_stopped(self._story.stop())
 
-    async def change_settings(self, change: RecordChange[ReaderSettings]) -> ReaderSettings:
-        """Keep a choice the reader made, for this review and every later one, and act on it here.
-
-        Stories turned on ask for this review's story wherever none is
-        current or awaited, one the reader stopped included; turned off,
-        they stop one awaited. A change made in another review on the
-        machine is acted on at this review's next decision point: a retake,
-        or a change made here.
-        """
-        before = await self._kept_settings()
-        changed = await self._settings.change(change)
-        if changed.stories != before.stories:
-            turned = self._story.stories_turned(on=changed.stories)
-            if changed.stories:
-                self._tell_asking(turned)
-            else:
-                self._story_stopped(turned)
-        return changed
-
     def story_held(self) -> StoryHeld | None:
         """The story the review holds, on the take of its change on screen: None while nobody has told one."""
         return self._story.held
@@ -519,8 +506,7 @@ class Review:
             NoRepositoryError: if the review's content did not come from a repository.
         """
         retaken = await self._source.retake(self._rounds)
-        content, stories_on = self._source.content, await self._stories_on()
-        self._tell_asking(await self._story.follow(content, round_number=retaken.round, stories_on=stories_on))
+        self._tell_asking(await self._story.follow(self._source.content, round_number=retaken.round))
         self._page.tell(DiffRetaken(file_count=retaken.file_count, changes=retaken.changes))
         return retaken
 
@@ -571,10 +557,6 @@ class Review:
             self._inbox.hand_in(StoryCancelled())
         self._page.tell(StoryAskingChanged(asking=stopped))
         log.info("story_stopped")
-
-    async def _stories_on(self) -> bool:
-        """Whether the reader wants a story of every change, as their settings say now."""
-        return (await self._kept_settings()).stories
 
     async def _kept_settings(self) -> ReaderSettings:
         """The reader's settings as kept now, or what a reader who never chose gets."""

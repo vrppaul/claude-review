@@ -15,6 +15,7 @@ import type {
 	SaidInPanel,
 	StoryAsking,
 	StoryHeld,
+	StoryWriting,
 	ThreadAsHanded
 } from '$lib/types';
 import { openKeptReview, type KeptReview } from '$lib/page/kept-review';
@@ -90,9 +91,9 @@ export function openReview({
 	return openPage.review;
 }
 
-/** The settings of a reader who turned stories on in some review, as a page that read them from this server holds them. */
-export async function settingsWithStoriesOn(server: FakeServer): Promise<Settings> {
-	server.answer('GET /api/settings', { record: { ...NEW_READER, stories: true }, stored: true });
+/** The settings of a reader who chose in some review when stories are written, as a page that read them holds them. */
+export async function settingsWritingStories(server: FakeServer, writing: StoryWriting): Promise<Settings> {
+	server.answer('GET /api/settings', { record: { ...NEW_READER, story_writing: writing }, stored: true });
 	const settings = new Settings();
 	await settings.load();
 	return settings;

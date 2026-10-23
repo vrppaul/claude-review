@@ -2,19 +2,23 @@
 
 The page sends the choices being changed, and only those. A choice sent
 takes the place of the one kept; one not sent, or sent as null, leaves it;
-and no choice lands where another belongs, though three of them are each a
+and no choice lands where another belongs, though two of them are each a
 yes or a no.
 """
 
 import pytest
 from pydantic import BaseModel, ConfigDict
 
-from claude_review.domain.models import DiffLayout, GuideState, ReaderSettings, Theme
+from claude_review.domain.models import DiffLayout, GuideState, ReaderSettings, StoryWriting, Theme
 from claude_review.presentation.schemas.records import GuideChange, SettingsChange
 
 # How a reader reads, with the choices that are a yes or a no not all kept alike
 KEPT = ReaderSettings(
-    theme=Theme.DARK, diff_layout=DiffLayout.SPLIT, ignore_whitespace=True, sound_on_replies=False, stories=True
+    theme=Theme.DARK,
+    diff_layout=DiffLayout.SPLIT,
+    ignore_whitespace=True,
+    sound_on_replies=False,
+    story_writing=StoryWriting.WITHOUT_ASKING,
 )
 
 
@@ -37,7 +41,7 @@ CHOICES = [
             diff_layout=DiffLayout.SPLIT,
             ignore_whitespace=True,
             sound_on_replies=False,
-            stories=True,
+            story_writing=StoryWriting.WITHOUT_ASKING,
         ),
     ),
     Choice(
@@ -48,7 +52,7 @@ CHOICES = [
             diff_layout=DiffLayout.UNIFIED,
             ignore_whitespace=True,
             sound_on_replies=False,
-            stories=True,
+            story_writing=StoryWriting.WITHOUT_ASKING,
         ),
     ),
     Choice(
@@ -59,25 +63,29 @@ CHOICES = [
             diff_layout=DiffLayout.SPLIT,
             ignore_whitespace=False,
             sound_on_replies=False,
-            stories=True,
+            story_writing=StoryWriting.WITHOUT_ASKING,
         ),
     ),
     Choice(
         what="whether a reply sounds",
         change=SettingsChange(sound_on_replies=True),
         leaves=ReaderSettings(
-            theme=Theme.DARK, diff_layout=DiffLayout.SPLIT, ignore_whitespace=True, sound_on_replies=True, stories=True
+            theme=Theme.DARK,
+            diff_layout=DiffLayout.SPLIT,
+            ignore_whitespace=True,
+            sound_on_replies=True,
+            story_writing=StoryWriting.WITHOUT_ASKING,
         ),
     ),
     Choice(
-        what="whether a story is asked for",
-        change=SettingsChange(stories=False),
+        what="when a story is written",
+        change=SettingsChange(story_writing=StoryWriting.AS_THE_REVIEW_OPENS),
         leaves=ReaderSettings(
             theme=Theme.DARK,
             diff_layout=DiffLayout.SPLIT,
             ignore_whitespace=True,
             sound_on_replies=False,
-            stories=False,
+            story_writing=StoryWriting.AS_THE_REVIEW_OPENS,
         ),
     ),
 ]

@@ -11,7 +11,7 @@ import { keepingSettings, takingStoryAskings, type FakeServer } from '../fake-se
 import { guideServer, keepingTheGuide } from '../guide-server';
 import { handOverNext } from '../pushes';
 import { A_SECOND, NOTE_STANDS_FOR } from '../passing-note';
-import { openReview, settingsWithStoriesOn, type Opened } from '../review';
+import { openReview, settingsWritingStories, type Opened } from '../review';
 import { settled } from '../settled';
 import { ASKED, STOPPED, storyHeld, storyResponse, TAKEN, toldChapter, toldStep } from '../story';
 
@@ -46,9 +46,9 @@ function drawn(opened: Opened = {}): Review {
 	return review;
 }
 
-/** Draw a review of the change for a reader who turned stories on in an earlier review. */
-async function drawnWithStoriesOn(server: FakeServer, opened: Opened = {}): Promise<Review> {
-	return drawn({ settings: await settingsWithStoriesOn(server), ...opened });
+/** Draw a review of the change for a reader who chose in an earlier review to have stories written without asking. */
+async function drawnWritingStoriesUnasked(server: FakeServer, opened: Opened = {}): Promise<Review> {
+	return drawn({ settings: await settingsWritingStories(server, 'without_asking'), ...opened });
 }
 
 /** A reader who read the last review they opened as its story: the choice is kept for the next. */
@@ -64,15 +64,15 @@ async function toldMeanwhile(review: Review, server: FakeServer): Promise<void> 
 }
 
 describe('a review opened by a reader who read the last one as its story', () => {
-	it('opens as its story where they turned stories on', async () => {
+	it('opens by its files where stories are written without asking and none was asked for: only a press writes one', async () => {
 		havingChosenTheStoryLast();
 
-		await drawnWithStoriesOn(serving());
+		await drawnWritingStoriesUnasked(serving());
 
-		expect(screen.getByTestId('story-view')).toBeTruthy();
+		expect(screen.getByTestId('diff-view')).toBeTruthy();
 	});
 
-	it('opens as its story where one is held, though stories are off', () => {
+	it('opens as its story where one is held, though stories are asked first', () => {
 		havingChosenTheStoryLast();
 
 		drawn({ story: IN_TWO_CHAPTERS });
@@ -80,7 +80,7 @@ describe('a review opened by a reader who read the last one as its story', () =>
 		expect(screen.getByTestId('story-view')).toBeTruthy();
 	});
 
-	it('opens as its story where one is on its way, though this page holds stories as off', () => {
+	it('opens as its story where one is on its way, though stories are asked first', () => {
 		havingChosenTheStoryLast();
 
 		drawn({ asking: TAKEN });
@@ -88,7 +88,7 @@ describe('a review opened by a reader who read the last one as its story', () =>
 		expect(screen.getByTestId('story-view')).toBeTruthy();
 	});
 
-	it('opens by its files where stories are off and no story is held: nothing was asked for', () => {
+	it('opens by its files where no story is held or on its way: nothing was asked for', () => {
 		havingChosenTheStoryLast();
 
 		drawn();
@@ -98,7 +98,7 @@ describe('a review opened by a reader who read the last one as its story', () =>
 });
 
 describe('Story pressed in the header', () => {
-	it('asks before stories are turned on, and leaves the files on screen', async () => {
+	it('asks before a story is written, where stories are asked first, and leaves the files on screen', async () => {
 		const server = serving();
 		const user = userEvent.setup();
 		drawn();
@@ -111,17 +111,20 @@ describe('Story pressed in the header', () => {
 		expect(requestsMade(server)).toEqual(STORY_TRIED);
 	});
 
-	it('shows the story view where stories are on', async () => {
+	it('writes the story at once and shows where it will be, where stories are written without asking', async () => {
+		const server = serving();
 		const user = userEvent.setup();
-		await drawnWithStoriesOn(serving(), { asking: TAKEN });
+		await drawnWritingStoriesUnasked(server);
 
 		await user.click(screen.getByTestId('read-as-story'));
+		await settled();
 
 		expect(screen.getByTestId('story-view')).toBeTruthy();
 		expect(screen.queryByTestId('story-opt-in')).toBeNull();
+		expect(server.requestsTo('POST /api/story/request')).toHaveLength(1);
 	});
 
-	it('shows a story already held without asking, though stories are off: it is paid for', async () => {
+	it('shows a story already held without asking, though stories are asked first: it is paid for', async () => {
 		const user = userEvent.setup();
 		drawn({ story: IN_TWO_CHAPTERS });
 
@@ -135,7 +138,7 @@ describe('Story pressed in the header', () => {
 		{ where: 'an agent is writing it', asking: TAKEN },
 		{ where: 'it waits for an agent to attach', asking: ASKED }
 	])(
-		'shows the wait for a story asked for elsewhere, where $where, though this page holds stories as off',
+		'shows the wait for a story asked for elsewhere, where $where, though stories are asked first',
 		async ({ asking }) => {
 			const user = userEvent.setup();
 			drawn({ asking });
@@ -159,7 +162,7 @@ describe('Story pressed in the header', () => {
 		await vi.waitFor(() => expect(server.bodiesSentTo('PUT /api/guide')).toEqual([{ story_introduced: true }]));
 	});
 
-	it('asks first where the story was stopped and stories are off: writing it again spends tokens', async () => {
+	it('asks first where the story was stopped and stories are asked first: writing it again spends tokens', async () => {
 		const user = userEvent.setup();
 		drawn({ asking: STOPPED });
 
@@ -170,15 +173,15 @@ describe('Story pressed in the header', () => {
 	});
 });
 
-describe('what is asked before stories are turned on', () => {
-	it('says what a story is, what it spends on this review, and where stories are turned off', async () => {
+describe('what is asked before a story is written', () => {
+	it('says what a story is, what it spends on this review, and where writing them unasked is turned off', async () => {
 		const user = userEvent.setup();
 		const review = drawn();
 
 		await user.click(screen.getByTestId('read-as-story'));
 
 		const asked = said(screen.getByTestId('story-opt-in'));
-		expect(asked).toContain('Turn on stories?');
+		expect(asked).toContain('Write a story of this change?');
 		expect(asked).toContain(
 			'The agent that made the change tells it as a story: a short overview, then chapters with its reason above each piece of code.'
 		);
@@ -186,7 +189,7 @@ describe('what is asked before stories are turned on', () => {
 			`It spends the agent's tokens. The agent reads the whole diff again and writes the story: here up to ${formatWeight(review.weight)} to read and a few thousand to write. Bigger changes cost more.`
 		);
 		expect(asked).toContain(
-			'Stories stay on for every review on this machine. Turn them off in Settings, the gear in the header.'
+			'Write stories without asking In every review from now on. Settings, the gear in the header, turns it off.'
 		);
 	});
 
@@ -197,29 +200,45 @@ describe('what is asked before stories are turned on', () => {
 		await user.click(screen.getByTestId('read-as-story'));
 
 		expect(within(screen.getByTestId('story-opt-in')).getByRole('heading', { level: 2 }).textContent).toBe(
-			'Turn on stories?'
+			'Write a story of this change?'
 		);
 	});
 
-	it('turns stories on for every review, for the server to ask for this one, and shows where it will be', async () => {
+	it("asks for this review's story alone and shows where it will be, the box left unticked", async () => {
 		const server = serving();
 		const user = userEvent.setup();
 		drawn();
 		await user.click(screen.getByTestId('read-as-story'));
 
-		await user.click(screen.getByTestId('turn-on-stories'));
+		await user.click(screen.getByTestId('write-story'));
 		await settled();
 
-		expect(server.bodiesSentTo('PUT /api/settings')).toEqual([{ stories: true }]);
+		expect(server.requestsTo('POST /api/story/request')).toHaveLength(1);
+		expect(server.bodiesSentTo('PUT /api/settings')).toEqual([]);
 		expect(screen.getByTestId('story-view')).toBeTruthy();
 		expect(screen.queryByTestId('story-opt-in')).toBeNull();
 	});
 
-	it('turns nothing on where the reader says not now, and leaves the files on screen', async () => {
+	it('keeps every later story written without asking, the box ticked', async () => {
 		const server = serving();
 		const user = userEvent.setup();
 		drawn();
 		await user.click(screen.getByTestId('read-as-story'));
+
+		await user.click(screen.getByTestId('write-without-asking-from-now-on'));
+		await user.click(screen.getByTestId('write-story'));
+		await settled();
+
+		expect(server.bodiesSentTo('PUT /api/settings')).toEqual([{ story_writing: 'without_asking' }]);
+		expect(server.requestsTo('POST /api/story/request')).toHaveLength(1);
+	});
+
+	it('writes and keeps nothing where the reader says not now, the box ticked, and leaves the files on screen', async () => {
+		const server = serving();
+		const user = userEvent.setup();
+		drawn();
+		await user.click(screen.getByTestId('read-as-story'));
+		await user.click(screen.getByTestId('write-without-asking-from-now-on'));
 
 		await user.click(screen.getByTestId('stories-not-now'));
 		await settled();
@@ -232,14 +251,14 @@ describe('what is asked before stories are turned on', () => {
 
 describe('the Story segment while a story is being written', () => {
 	it('says so while the files are read', async () => {
-		await drawnWithStoriesOn(serving(), { asking: TAKEN });
+		await drawnWritingStoriesUnasked(serving(), { asking: TAKEN });
 
 		expect(said(screen.getByTestId('read-as-story'))).toBe('Story · writing');
 	});
 
 	it('says no more than Story once the story view is on screen: the view says the rest', async () => {
 		const user = userEvent.setup();
-		await drawnWithStoriesOn(serving(), { asking: TAKEN });
+		await drawnWritingStoriesUnasked(serving(), { asking: TAKEN });
 
 		await user.click(screen.getByTestId('read-as-story'));
 
@@ -250,7 +269,7 @@ describe('the Story segment while a story is being written', () => {
 		{ where: 'no agent is attached to write it', asking: ASKED },
 		{ where: 'the reader stopped it', asking: STOPPED }
 	])('says no more than Story where $where', async ({ asking }) => {
-		await drawnWithStoriesOn(serving(), { asking });
+		await drawnWritingStoriesUnasked(serving(), { asking });
 
 		expect(said(screen.getByTestId('read-as-story'))).toBe('Story');
 	});
@@ -259,7 +278,7 @@ describe('the Story segment while a story is being written', () => {
 describe('a story told while the files are read', () => {
 	it('is offered under the switch, with how many chapters it has', async () => {
 		const server = serving();
-		const review = await drawnWithStoriesOn(server, { asking: TAKEN });
+		const review = await drawnWritingStoriesUnasked(server, { asking: TAKEN });
 
 		await toldMeanwhile(review, server);
 
@@ -269,7 +288,7 @@ describe('a story told while the files are read', () => {
 
 	it('leaves the files on screen: when to read it is for the reader to choose', async () => {
 		const server = serving();
-		const review = await drawnWithStoriesOn(server, { asking: TAKEN });
+		const review = await drawnWritingStoriesUnasked(server, { asking: TAKEN });
 
 		await toldMeanwhile(review, server);
 
@@ -279,7 +298,7 @@ describe('a story told while the files are read', () => {
 
 	it('marks the Story segment until it is read', async () => {
 		const server = serving();
-		const review = await drawnWithStoriesOn(server, { asking: TAKEN });
+		const review = await drawnWritingStoriesUnasked(server, { asking: TAKEN });
 
 		await toldMeanwhile(review, server);
 
@@ -289,7 +308,7 @@ describe('a story told while the files are read', () => {
 	it('is put away by its close button, and the Story segment stays marked: the story is not read yet', async () => {
 		const server = serving();
 		const user = userEvent.setup();
-		const review = await drawnWithStoriesOn(server, { asking: TAKEN });
+		const review = await drawnWritingStoriesUnasked(server, { asking: TAKEN });
 		await toldMeanwhile(review, server);
 
 		await user.click(screen.getByTestId('story-ready-close'));
@@ -301,7 +320,7 @@ describe('a story told while the files are read', () => {
 	it('puts itself away once its four seconds are out, and the Story segment stays marked', async () => {
 		vi.useFakeTimers({ shouldAdvanceTime: true });
 		const server = serving();
-		const review = await drawnWithStoriesOn(server, { asking: TAKEN });
+		const review = await drawnWritingStoriesUnasked(server, { asking: TAKEN });
 		await toldMeanwhile(review, server);
 
 		vi.advanceTimersByTime(NOTE_STANDS_FOR);
@@ -314,7 +333,7 @@ describe('a story told while the files are read', () => {
 	it('stands until its four seconds are out', async () => {
 		vi.useFakeTimers({ shouldAdvanceTime: true });
 		const server = serving();
-		const review = await drawnWithStoriesOn(server, { asking: TAKEN });
+		const review = await drawnWritingStoriesUnasked(server, { asking: TAKEN });
 		await toldMeanwhile(review, server);
 
 		vi.advanceTimersByTime(NOTE_STANDS_FOR - A_SECOND);
@@ -326,7 +345,7 @@ describe('a story told while the files are read', () => {
 	it('leaves no mark on the Story segment once the story is read, its note put away before', async () => {
 		const server = serving();
 		const user = userEvent.setup();
-		const review = await drawnWithStoriesOn(server, { asking: TAKEN });
+		const review = await drawnWritingStoriesUnasked(server, { asking: TAKEN });
 		await toldMeanwhile(review, server);
 		await user.click(screen.getByTestId('story-ready-close'));
 
@@ -339,7 +358,7 @@ describe('a story told while the files are read', () => {
 	it('is shown where the reader opens it, and is offered no more', async () => {
 		const server = serving();
 		const user = userEvent.setup();
-		const review = await drawnWithStoriesOn(server, { asking: TAKEN });
+		const review = await drawnWritingStoriesUnasked(server, { asking: TAKEN });
 		await toldMeanwhile(review, server);
 
 		await user.click(screen.getByTestId('open-story'));
@@ -353,7 +372,7 @@ describe('a story told while the files are read', () => {
 		vi.useFakeTimers({ shouldAdvanceTime: true });
 		const server = serving();
 		const user = userEvent.setup();
-		const review = await drawnWithStoriesOn(server, { asking: TAKEN });
+		const review = await drawnWritingStoriesUnasked(server, { asking: TAKEN });
 		await toldMeanwhile(review, server);
 		await user.click(screen.getByTestId('open-story'));
 		await user.click(screen.getByTestId('read-as-files'));
@@ -370,7 +389,7 @@ describe('a story told while the files are read', () => {
 	it('is offered no more once the reader has read it by the switch and come back to the files', async () => {
 		const server = serving();
 		const user = userEvent.setup();
-		const review = await drawnWithStoriesOn(server, { asking: TAKEN });
+		const review = await drawnWritingStoriesUnasked(server, { asking: TAKEN });
 		await toldMeanwhile(review, server);
 
 		await user.click(screen.getByTestId('read-as-story'));
@@ -385,7 +404,7 @@ describe('a story told while the reader waits for it where it will be', () => {
 	it('is drawn there, and offered nowhere: the reader is reading it', async () => {
 		const server = serving();
 		const user = userEvent.setup();
-		const review = await drawnWithStoriesOn(server, { asking: TAKEN });
+		const review = await drawnWritingStoriesUnasked(server, { asking: TAKEN });
 		await user.click(screen.getByTestId('read-as-story'));
 
 		await toldMeanwhile(review, server);

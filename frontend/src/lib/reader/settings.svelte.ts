@@ -19,7 +19,7 @@ const NEW_READER: ReaderSettings = {
 	diff_layout: 'unified',
 	ignore_whitespace: false,
 	sound_on_replies: false,
-	stories: false
+	story_writing: 'ask_first'
 };
 
 /** The choices this browser kept before the server did: these four, and none added since. */
