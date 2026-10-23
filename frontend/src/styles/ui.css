@@ -119,7 +119,7 @@
 }
 /*
  * Where the room a button stands in grows narrow (button-room: a card of
- * lists, the top line of a frame of code), one whose words give way
+ * lists, a frame of code), one whose words give way
  * (Button's wordsGivingWay) stands as its icon alone, square as an icon
  * button's, its words kept for a screen reader and its name on the pointer
  */
@@ -1130,9 +1130,11 @@
  * edged as a pane at the box's corner, its file's bar and lines inside it,
  * cut where its corners round and never scrolled, so its file's bar stays in
  * sight within it; a step further from what stands above it than the blocks
- * round it stand from one another
+ * round it stand from one another. The room what its top line offers stands
+ * in, as wide as the frame
  */
 .cr-ui-code-frame {
+	container: button-room / inline-size;
 	margin-top: --spacing(1);
 	overflow: clip;
 	border: var(--cr-line) solid var(--cr-pane-edge);
@@ -1141,11 +1143,10 @@
 /*
  * Its top line (CodeFrameHead): what heads the code, in small muted words
  * after the agent's avatar, in a turn's avatar slot, a rule under it, and
- * what it offers at its end, the room that offer stands in. A band heading
- * the code is that line, lit across it, square, the frame rounding its top
+ * what it offers at its end. A band heading the code is that line, lit
+ * across it, square, the frame rounding its top
  */
 .cr-ui-code-frame-head {
-	container: button-room / inline-size;
 	display: flex;
 	align-items: center;
 	gap: --spacing(3);

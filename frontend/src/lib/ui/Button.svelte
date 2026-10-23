@@ -18,9 +18,9 @@
 		/** What it says: its words, an icon before them; or its icon alone, where its words may give way to it. */
 		children: Snippet;
 		/**
-		 * Its words, after its icon, where the room it stands in may grow too narrow for them: on a narrow card of
-		 * lists (ListsCard) or atop a narrow frame of code (CodeFrameHead) they give way, kept for a screen reader,
-		 * and the icon stands alone, square as an icon button's. None where its words are among its children.
+		 * Its words, after its icon, where the room it stands in (a container named button-room) may grow too narrow
+		 * for them: there they give way, kept for a screen reader, and the icon stands alone, square as an icon
+		 * button's. None where its words are among its children.
 		 */
 		wordsGivingWay?: string | undefined;
 	}
