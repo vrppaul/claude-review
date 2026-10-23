@@ -122,9 +122,6 @@ export function stepsChanged(steps: number): string {
 	return `${A_ROUND_CHANGED} ${steps} ${OF_ITS_STEPS}; ${THE_CODE_BELOW_AS_IT_IS}.`;
 }
 
-/** What the overview's part of the page is called, to whoever goes through the page by its parts. */
-export const THE_OVERVIEW = 'Overview';
-
 /** What the part that draws what no step tells is called, in its heading and by its part of the page. */
 export const NOT_IN_THE_STORY = 'Not in the story';
 

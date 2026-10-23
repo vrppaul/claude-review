@@ -14,6 +14,7 @@ const files = [
 	diffFile({ path: 'b.py', hunks: [hunk([addedLine(1, 'in b.py')])] })
 ];
 const TOLD = storyHeld({
+	title: 'Two chapters of a step each',
 	chapters: [
 		toldChapter('ch-1', [toldStep('a.py', 1)], { title: 'The beginnings' }),
 		toldChapter('ch-2', [toldStep('b.py', 1)], { title: 'The end' })
@@ -67,26 +68,34 @@ beforeEach(() => {
 
 describe('the parts of a story ticked in its contents', () => {
 	it('are none while the reader is in no part of it', () => {
-		expect(entriesCalled()).toEqual(['Overview', 'Chapter 1: The beginnings', 'Chapter 2: The end']);
+		expect(entriesCalled()).toEqual(['Two chapters of a step each', 'Chapter 1: The beginnings', 'Chapter 2: The end']);
 		expect(countSaid()).toBe('2 chapters');
 	});
 
 	it('are none while the reader is in the part the story begins with', () => {
 		readIn(screen.getByTestId('story-overview'));
 
-		expect(entriesCalled()).toEqual(['Overview', 'Chapter 1: The beginnings', 'Chapter 2: The end']);
+		expect(entriesCalled()).toEqual(['Two chapters of a step each', 'Chapter 1: The beginnings', 'Chapter 2: The end']);
 	});
 
 	it('are the parts above the one the reader is in, and not that one', () => {
 		readIn(chapters().theBeginnings);
 
-		expect(entriesCalled()).toEqual(['Overview, read', 'Chapter 1: The beginnings', 'Chapter 2: The end']);
+		expect(entriesCalled()).toEqual([
+			'Two chapters of a step each, read',
+			'Chapter 1: The beginnings',
+			'Chapter 2: The end'
+		]);
 	});
 
 	it('are every part above, however the reader came where they are: one they jumped over too', () => {
 		readIn(chapters().theEnd);
 
-		expect(entriesCalled()).toEqual(['Overview, read', 'Chapter 1: The beginnings, read', 'Chapter 2: The end']);
+		expect(entriesCalled()).toEqual([
+			'Two chapters of a step each, read',
+			'Chapter 1: The beginnings, read',
+			'Chapter 2: The end'
+		]);
 	});
 
 	it('are counted among the chapters in the head of the contents, the overview being no chapter', () => {
@@ -108,7 +117,11 @@ describe('the parts of a story ticked in its contents', () => {
 
 		readIn(chapters().theBeginnings);
 
-		expect(entriesCalled()).toEqual(['Overview, read', 'Chapter 1: The beginnings', 'Chapter 2: The end']);
+		expect(entriesCalled()).toEqual([
+			'Two chapters of a step each, read',
+			'Chapter 1: The beginnings',
+			'Chapter 2: The end'
+		]);
 		expect(countSaid()).toBe('2 chapters');
 	});
 

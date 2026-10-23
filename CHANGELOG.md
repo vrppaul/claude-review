@@ -317,6 +317,9 @@
   told" beside the reason. A step whose code is gone says, after its number
   and its file, "Its code is no longer found in this file.", in the frame,
   where it said "Its code in a.py is no longer found." under its reason.
+- **A story's contents begin with its title.** The entry that leads to the
+  overview is the story's title, as the page heads that part, where it said
+  "Overview", to the eye and to a screen reader.
 - **The reader rewrites or deletes only what the agent has not read.** Three
   dots at the head of each of the reader's own turns, the comment and each
   reply, offer Edit and Delete until the agent is handed it: with a round,

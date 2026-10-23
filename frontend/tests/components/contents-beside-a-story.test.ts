@@ -20,6 +20,7 @@ const files = [
 // The story told of it: line 1 of a.py and b.py in a first chapter, line 9 of a.py in a second; line 5
 // of a.py is told by no step, and the lock file is housekeeping
 const TOLD = storyHeld({
+	title: 'Lines added to two files',
 	chapters: [
 		toldChapter('ch-1', [toldStep('src/a.py', 1), toldStep('src/b.py', 5)], { title: 'The beginnings' }),
 		toldChapter('ch-2', [toldStep('src/a.py', 9)], { title: 'The end' })
@@ -59,9 +60,9 @@ describe('the contents beside a story', () => {
 		expect(contents.getByRole('heading', { name: '2 chapters' })).toBe(screen.getByTestId('contents-count'));
 	});
 
-	it('lists the overview, then every chapter by its number and its title', () => {
+	it('lists the story by its title, then every chapter by its number and its title', () => {
 		expect(entries().map((entry) => said(within(entry).getByTestId('go-to-part')))).toEqual([
-			'Overview',
+			'Lines added to two files',
 			'1 The beginnings',
 			'2 The end'
 		]);
@@ -81,7 +82,7 @@ describe('the contents beside a story', () => {
 		const contents = within(screen.getByTestId('contents'));
 
 		expect(marked).toEqual([['1'], [], ['2']]);
-		expect(contents.getByRole('button', { name: 'Overview, 1 thread' })).toBeTruthy();
+		expect(contents.getByRole('button', { name: 'Lines added to two files, 1 thread' })).toBeTruthy();
 		expect(contents.getByRole('button', { name: 'Chapter 2: The end, 2 threads' })).toBeTruthy();
 	});
 
@@ -95,7 +96,7 @@ describe('the contents beside a story', () => {
 	it('names each entry in full to whoever cannot see its node', () => {
 		const contents = within(screen.getByTestId('contents'));
 
-		expect(contents.getByRole('button', { name: 'Overview' })).toBeTruthy();
+		expect(contents.getByRole('button', { name: 'Lines added to two files' })).toBeTruthy();
 		expect(contents.getByRole('button', { name: 'Chapter 2: The end' })).toBeTruthy();
 	});
 
@@ -288,6 +289,7 @@ describe('the contents of a story whose code a round changed after it was told, 
 	// chapters show. The contents mark a chapter by what the review says of it, whatever its steps' marks
 	const FOLLOWED = storyHeld(
 		{
+			title: 'Lines added in three chapters',
 			chapters: [
 				toldChapter('ch-1', [toldStep('src/a.py', 1), toldStep('src/b.py', 5)], {
 					title: 'The beginnings',
@@ -313,7 +315,7 @@ describe('the contents of a story whose code a round changed after it was told, 
 
 	it('draws the number of a chapter a round changed in its node, in place of the check of one scrolled past', () => {
 		expect(entries().map((entry) => said(within(entry).getByTestId('go-to-part')))).toEqual([
-			'Overview',
+			'Lines added in three chapters',
 			'1 The beginnings',
 			'The middle',
 			'3 The end'

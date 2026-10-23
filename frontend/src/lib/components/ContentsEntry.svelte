@@ -9,7 +9,7 @@
 	interface Props {
 		/** What the part of the story it leads to is known by. */
 		part: string;
-		/** What it is called in full, to whoever cannot see its node: "Overview", "Chapter 2: The end". */
+		/** What it is called in full, to whoever cannot see its node: the story's title, "Chapter 2: The end". */
 		label: string;
 		/** What it says beside its node: the part's title. */
 		title: string;

@@ -27,8 +27,7 @@
 		chaptersCounted,
 		leftOutThenAndNow,
 		leftOutThenAndNowSaid,
-		NOT_IN_THE_STORY,
-		THE_OVERVIEW
+		NOT_IN_THE_STORY
 	} from './story-words';
 	import StoryHousekeeping from './StoryHousekeeping.svelte';
 
@@ -92,10 +91,11 @@
 		{/snippet}
 
 		<ol data-testid="contents-parts">
+			<!-- The overview by the title it begins with, as the page heads it -->
 			<ContentsEntry
 				part={OVERVIEW_PART}
-				label={THE_OVERVIEW}
-				title={THE_OVERVIEW}
+				label={story.title}
+				title={story.title}
 				threads={threadsOnTheOverview(story.overview, review.threads).length}
 			>
 				{#snippet node()}
