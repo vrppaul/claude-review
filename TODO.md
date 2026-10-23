@@ -52,6 +52,10 @@ tests. Remove items when done — don't check them off.
 
 ## Bugs
 
+- [ ] `fix(ui)`: with the keyboard on a thread's fold toggle, `u` folds the
+      file it stands in and leaves the keyboard on nothing (BODY), with
+      less motion asked for or not; page.md says what remains takes it.
+      Found by the review of chunk 8's last motion, older.
 - [ ] `fix(server)`: two reviews running at once can lose one another's
       change to a record about the reader. The lock that makes changes to
       a record one after the other is each review's own
@@ -256,6 +260,10 @@ of it is built yet.
       status line alone, so what an agent passes to `status --context` is
       its own words, or a guess. Until then the line stands under the
       panel's head.
+- [ ] `feat(ui)`: folding over a fold's time. The canvas's motion note asks
+      a fold's height to move with its chevron's turn; opening does (a
+      folder, a thread, a list), folding goes at once, since what is folded
+      is not drawn: it would have to stay drawn while it shrinks.
 - [ ] `feat(ui)`: a new look for the rows of the tree of files, and a new
       design of the tree itself.
 

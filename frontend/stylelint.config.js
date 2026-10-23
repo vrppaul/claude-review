@@ -55,9 +55,9 @@ const HOLDS_NO_ALPHA = '/^(?!--cr-(shadow-[a-z-]+|shade)$)/';
 // away narrowing to its rail and back (held still while its edge is dragged, which it would trail), the column and
 // its rail's marks coming in once the reader moved it, the chosen segment's ink sliding, a pane coming from its
 // control, what the reader unfolded opening (a folder, a thread, a list), a field the reader opened coming in, a
-// note fading, work breathing, what arrived lit, the tour's light gliding. Whatever else is selected holds none, a row and a band the keys move above
-// all, however a stylesheet
-// selects them: the keys outrun it, and two rows would stand lit at once. Where a reader asked for less motion it
+// note fading, work breathing, what arrived lit, the tour's light gliding. Whatever else is selected holds none, a
+// row and a band the keys move above all, however a stylesheet selects them: the keys outrun it, and two rows
+// would stand lit at once. Where a reader asked for less motion it
 // all stops, in a stylesheet of its own that may say `none` and nothing else of motion; and eslint refuses motion
 // written in the markup (MOTION_UTILITY, eslint.config.js)
 const WHAT_MOVES = [

@@ -45,6 +45,15 @@ export type WashedTone = 'reader' | 'agent' | 'warning';
  */
 export type CardHanging = 'line' | 'block' | 'head';
 
+/**
+ * How what stands under its bar comes in as the reader opens it: unfolding, a thread opened from its bar; or
+ * fading in as it unfolds, the field of a comment the reader opens on the card it becomes.
+ */
+export type CardOpening = 'unfolds' | 'fades-in';
+
+/** Whether each way in fades as well as unfolds. */
+export const OPENING_FADES: Record<CardOpening, boolean> = { unfolds: false, 'fades-in': true };
+
 // The class of each tone, and of each place a card hangs, in the library's stylesheet
 export const CARD_TONES: Record<CardTone, string> = {
 	quiet: 'cr-ui-card-quiet',

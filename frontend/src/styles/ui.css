@@ -1652,37 +1652,29 @@
 .cr-ui-unfolding {
 	animation: cr-unfold var(--cr-state-change) ease;
 }
-@keyframes cr-unfold {
-	from {
-		height: 0;
-		overflow: clip;
-		overflow-clip-margin: var(--cr-ring-reach);
-	}
-	to {
-		height: auto;
-		overflow: clip;
-		overflow-clip-margin: var(--cr-ring-reach);
-	}
-}
-/*
- * A field the reader opens (Unfolding, fading): it comes down and fades in
- * over a fold's time as it takes the cursor. Cut where it ends while it
- * moves, a ring's reach past its sides and its foot and an arrow's past its
- * top, so the tail of the card it hangs as stands whole
- */
+/* A field the reader opens on the card it becomes (Unfolding, fading): it fades in too as it comes down */
 .cr-ui-unfolding-fading {
-	animation: cr-unfold-fading var(--cr-state-change) ease;
+	animation:
+		cr-unfold var(--cr-state-change) ease,
+		cr-fade-in var(--cr-state-change) ease;
 }
-@keyframes cr-unfold-fading {
+/* Free to stand lower than what it holds, as a flex or grid item is not by itself, while it is cut where it ends */
+@keyframes cr-unfold {
+	from,
+	to {
+		min-height: 0;
+		clip-path: inset(calc(-1 * var(--cr-ring-reach)));
+	}
 	from {
 		height: 0;
-		opacity: 0;
-		clip-path: inset(calc(-1 * var(--cr-arrow)) calc(-1 * var(--cr-ring-reach)) calc(-1 * var(--cr-ring-reach)));
 	}
 	to {
 		height: auto;
-		opacity: 1;
-		clip-path: inset(calc(-1 * var(--cr-arrow)) calc(-1 * var(--cr-ring-reach)) calc(-1 * var(--cr-ring-reach)));
+	}
+}
+@keyframes cr-fade-in {
+	from {
+		opacity: 0;
 	}
 }
 /* One that says something by its colour (lib/ui Icon's tones) */

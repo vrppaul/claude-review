@@ -407,11 +407,12 @@
   can place one box by another in each track. A folder the reader unfolds
   in the tree, a thread opened from its bar and a list of the story's
   overview opened from its row come down over 150 ms as the chevron turns,
-  cut where they end only while they move; a tree brought back, a thread
-  opened by a way taken to it, or a list held open by a thread in it opens
-  at once. Folding goes at once. A field the reader opens to comment, ask
-  or reply comes down and fades in over 150 ms as it takes the cursor; one
-  brought back by a reload stands at once. A column moves
+  cut where they end only while they move; a tree or a thread drawn
+  again, or a list held open by a thread in it, opens at once. Folding
+  goes at once. A field the reader opens to comment on lines or on the
+  story's words comes down and fades in over 150 ms inside the card it
+  becomes, as it takes the cursor; one brought back by a reload, a reply
+  and a rewrite stand at once. A column moves
   only when the reader puts it away or brings it back: its room narrows or
   widens over 200 ms and what takes its place fades in. Drawn at first, or
   on screen of its own accord, as the agent's panel comes when an agent

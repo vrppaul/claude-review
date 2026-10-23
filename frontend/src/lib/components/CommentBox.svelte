@@ -16,7 +16,6 @@
 	import Icon from '$lib/ui/Icon.svelte';
 	import Segment from '$lib/ui/Segment.svelte';
 	import Segmented from '$lib/ui/Segmented.svelte';
-	import Unfolding from '$lib/ui/Unfolding.svelte';
 	import type { Voice } from '$lib/ui/voice';
 	import { hasSuggestion, withSuggestion } from '$lib/utils/suggestion';
 	import { ASK_AGENT_NOW, HANDED_WHILE_REWRITTEN } from './agent-waits';
@@ -94,8 +93,10 @@
 	}: Props = $props();
 	const review = useReview();
 	const fieldId = $props.id();
-	// Whether it comes in as it is drawn: a field the reader opens just now, taking the cursor, comes down and fades
-	// in over a fold's time; one drawn again, or brought back by a reload, stands at once. Read once, as it is drawn
+	// Whether it comes in as it is drawn: a field the reader opens just now on the card it becomes, under lines or the
+	// story's words, comes down and fades in over a fold's time inside the card; one drawn again, or brought back by a
+	// reload, stands at once, as does a reply or a rewrite, which takes the place of what stood there. Read once, as
+	// it is drawn, from whether it wants the cursor: set as it is opened, and as it is asked for again
 	const comesIn = untrack(() => field.focusWanted);
 
 	let failed = $state<string | null>(null);
@@ -184,47 +185,46 @@
 <!-- A comment being written is drawn as the card it becomes, on a dashed edge: where the card will stand, as wide,
 	pointing up at what it is about, its bar saying where it hangs, the way to suggest a change and what it asks for.
 	A reply is written at the foot of the card it joins, and is no card of its own -->
-<Unfolding byReader={comesIn} fading testId="comment-box-coming">
-	{#if hangs === 'in-its-thread'}
-		<div data-testid="comment-box" class="flex flex-col gap-2">
-			{@render writing()}
-		</div>
-	{:else}
-		<Card
-			tone="reader"
-			{hangs}
-			beingWritten
-			testId="comment-box"
-			data-tour={field.at.kind === 'new' ? tourStop('comment-field') : undefined}
-			foot={writingInTheCard}
-		>
-			{#snippet bar()}
-				<CardBar testId="comment-bar">
-					{#snippet place()}
-						<label for={fieldId}>{label}</label>
-					{/snippet}
-					{#if suggestFrom && suggestFrom.length > 0}
-						<Button
-							tone="secondary"
-							size="xs"
-							testId="suggest-change"
-							disabled={hasSuggestion(field.text)}
-							onclick={suggest}
-						>
-							<Icon name="suggestion" size="xs" />
-							{SUGGEST_A_CHANGE}
-						</Button>
+{#if hangs === 'in-its-thread'}
+	<div data-testid="comment-box" class="flex flex-col gap-2">
+		{@render writing()}
+	</div>
+{:else}
+	<Card
+		tone="reader"
+		{hangs}
+		beingWritten
+		testId="comment-box"
+		data-tour={field.at.kind === 'new' ? tourStop('comment-field') : undefined}
+		foot={writingInTheCard}
+		opening={comesIn ? 'fades-in' : undefined}
+	>
+		{#snippet bar()}
+			<CardBar testId="comment-bar">
+				{#snippet place()}
+					<label for={fieldId}>{label}</label>
+				{/snippet}
+				{#if suggestFrom && suggestFrom.length > 0}
+					<Button
+						tone="secondary"
+						size="xs"
+						testId="suggest-change"
+						disabled={hasSuggestion(field.text)}
+						onclick={suggest}
+					>
+						<Icon name="suggestion" size="xs" />
+						{SUGGEST_A_CHANGE}
+					</Button>
+				{/if}
+				{#snippet end()}
+					{#if severityPicker}
+						{@render severities()}
 					{/if}
-					{#snippet end()}
-						{#if severityPicker}
-							{@render severities()}
-						{/if}
-					{/snippet}
-				</CardBar>
-			{/snippet}
-		</Card>
-	{/if}
-</Unfolding>
+				{/snippet}
+			</CardBar>
+		{/snippet}
+	</Card>
+{/if}
 
 <!-- What the comment asks for, picked: at its card's bar's end, or beside its keys where it is rewritten in its
 	thread, whose bar is the thread's -->

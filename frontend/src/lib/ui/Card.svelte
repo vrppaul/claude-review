@@ -1,7 +1,15 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
-	import { CARD_HANGINGS, CARD_TONES, type CardHanging, type CardTone, type WashedTone } from './card';
+	import {
+		CARD_HANGINGS,
+		CARD_TONES,
+		OPENING_FADES,
+		type CardHanging,
+		type CardOpening,
+		type CardTone,
+		type WashedTone
+	} from './card';
 	import Unfolding from './Unfolding.svelte';
 
 	/**
@@ -10,23 +18,26 @@
 	 */
 	type Washing = { tone: CardTone; washed?: false } | { tone: WashedTone; washed: true };
 
+	/**
+	 * The bar that heads it (CardBar), the same open and folded, and what stands at its foot, under what it holds,
+	 * and how what stands under the bar comes in as the reader opens it, if they just did; or none of them, for a
+	 * card with one room round what it holds.
+	 */
+	type Heading =
+		| { bar: Snippet; foot?: Snippet | undefined; opening?: CardOpening | undefined }
+		| { bar?: undefined; foot?: undefined; opening?: undefined };
+
 	interface CardProps extends Omit<HTMLAttributes<HTMLDivElement>, 'class' | 'style' | 'children'> {
 		/** Where it hangs under what it is about; none for a card that stands where it is drawn. */
 		hangs?: CardHanging | undefined;
 		testId: string;
-		/** The bar that heads it (CardBar), the same open and folded; none for a card with one room round what it holds. */
-		bar?: Snippet | undefined;
 		/** What it holds; none for a card folded to its bar. */
 		children?: Snippet | undefined;
-		/** What stands at its foot, under what it holds: a card headed by a bar alone has one. */
-		foot?: Snippet | undefined;
 		/** Whether what it holds is not there yet, a comment being written: drawn as the card it becomes, on a dashed edge. */
 		beingWritten?: boolean;
-		/** Whether the reader just opened it from its bar, so what stands under the bar comes down as it opens. */
-		opening?: boolean;
 	}
 
-	type Props = CardProps & Washing;
+	type Props = CardProps & Washing & Heading;
 
 	let {
 		tone,
@@ -36,7 +47,7 @@
 		children,
 		foot,
 		beingWritten = false,
-		opening = false,
+		opening,
 		washed = false,
 		...attributes
 	}: Props = $props();
@@ -62,7 +73,11 @@
 		<!-- What stands under its bar, its body and its foot, coming down as one where the reader opens it; folded,
 			nothing, so the bar is all of it -->
 		{#if children || foot}
-			<Unfolding byReader={opening} testId="{testId}-under-its-bar">
+			<Unfolding
+				byReader={opening !== undefined}
+				fading={opening !== undefined && OPENING_FADES[opening]}
+				testId="{testId}-under-its-bar"
+			>
 				{#if children}
 					<div class="cr-ui-card-body">{@render children()}</div>
 				{/if}
