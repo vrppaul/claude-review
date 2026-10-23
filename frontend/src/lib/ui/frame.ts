@@ -1,60 +1,48 @@
 /**
- * A frame with an edge at its start (EdgeFrame): words set apart from what
- * stands around them by a line down their start, in the colour of whose
- * they are or what they are, on that colour's wash or on what is under them.
- * One radius for every one, and one room round what it holds.
+ * Where words stand apart from what is round them, and the band that lights
+ * a block of them the reader may ask about.
  *
- * A band (Band) is a block of a frame's words the reader may ask about: lit
- * across its frame from inside the frame's edge to its far side, it reaches
- * past its words into the room the frame keeps round them, on every side,
- * taking none, so its words stand where a frame's words would without it; and
- * it offers its act over its top right edge while it is lit. A block in a
- * frame of its own draws that frame itself; what hangs under the block hangs
- * from where its band ends.
+ * A warning may stand in a frame with an edge at its start (EdgeFrame): a
+ * line down its start in the warning's colour, on the warning's tint, one
+ * room round what it holds.
  *
- * A block may stand in no frame, its words on the edge of the part it stands
- * in, as a chapter's why does: its band reaches past them either side as far
- * as a card stands its words in, taking none of that room, and above and
- * below as far as a band reaches, taking that room, so it stands that far
- * from what is round it; it offers its act over its top right edge, as a
- * band in a frame does. What hangs under it is as wide as its band.
+ * Code a story tells stands in a frame of its own (CodeFrame), edged as a
+ * pane and rounded; what heads the code, the step's reason, is the frame's
+ * top line (CodeFrameHead), after the agent's avatar, a rule under it, and
+ * the file's bar and lines follow inside; where no code is drawn, a row as
+ * tall as a file's bar says what stands in its place (CodeFrameRow).
  *
- * A block may stand on a card of its own instead (Card, washed): one line of
- * what a story says in short, on the wash of whose it is. Its band fills the
- * card, lit to the card's edge, and offers its act inside the card's top
- * right corner. Blocks one under another (Bands) stand as close as cards in
- * a stack, whichever they are.
+ * A band (Band) is a block of words the reader may ask about, lit while it
+ * is pointed at or holds the keyboard, offering its act; what hangs under it
+ * hangs from where its band ends. Where its words stand sets how far it
+ * reaches past them and where its offer stands:
  *
- * Or it may be an item of a list on a card of lists (ListsCardRow), on no
- * frame of its own: its light a pill round its words, reaching a step and a
- * half past them above and below and two to either side and taking none of
- * that room; its offer in a column of its own beside the words, kept while
- * unseen, so no word moves as it shows. What hangs under it is as wide as
- * that light.
+ * - In no frame, its words on the edge of the part they stand in, as a
+ *   chapter's why does: its band reaches past them either side as far as a
+ *   card stands its words in, taking none of that room, and above and below
+ *   as far as a band reaches, taking that room, so it stands that far from
+ *   what is round it; it offers its act over its top right edge. What hangs
+ *   under it is as wide as its band.
+ * - On a card of its own (Card, washed): one line of what a story says in
+ *   short, on the wash of whose it is. Its band fills the card, lit to the
+ *   card's edge, and offers its act inside the card's top right corner.
+ * - As an item of a list on a card of lists (ListsCardRow), on no frame of
+ *   its own: its light a pill round its words, reaching a step and a half
+ *   past them above and below and two to either side and taking none of
+ *   that room; its offer in a column of its own beside the words, kept while
+ *   unseen, so no word moves as it shows. What hangs under it is as wide as
+ *   that light.
+ * - As the top line of a frame of code: its band is that line
+ *   (CodeFrameHead), lit across the frame, its offer at the line's end. What
+ *   hangs under it hangs in the frame, over the code.
  *
- * The frame, the card, the band and their stack are drawn together here and
- * in the library's stylesheet, so nothing outside the library lays out round
- * them.
+ * Blocks one under another (Bands) stand as close as cards in a stack,
+ * whichever they are. The frames, the card, the band and their stack are
+ * drawn together here and in the library's stylesheet, so nothing outside
+ * the library lays out round them.
  */
 
 import type { WashedTone } from './card';
-
-/**
- * Whose or what the framed words are, and the ground the tone lays:
- * - agent: what the agent says in a story; on its tint
- * - warning: what the review warns about, what a story costs; on its tint
- */
-export type FrameTone = 'agent' | 'warning';
-
-/** Whether the frame lays its tone's ground under the words, or stands them on what is under it. */
-export type FrameGround = 'tint' | 'none';
-
-/** A frame with an edge at its start: whose its words are, and whether it lays their colour's ground. */
-export interface EdgeLook {
-	shape: 'edge';
-	tone: FrameTone;
-	ground: FrameGround;
-}
 
 /** Words in no frame, on the edge of the part they stand in. */
 interface UnframedLook {
@@ -72,22 +60,18 @@ interface ListedLook {
 	shape: 'listed';
 }
 
-/** How a frame is drawn: for whoever hands one on, as a block of a story hands on the frame its words stand in. */
-export type FrameLook = EdgeLook | UnframedLook | CardLook | ListedLook;
+/** What heads a piece of code, the top line of its frame (CodeFrame). */
+interface HeadingCodeLook {
+	shape: 'heading-code';
+}
 
-// The class of each tone, and of a ground, in the library's stylesheet
-export const FRAME_TONES: Record<FrameTone, string> = {
-	agent: 'cr-ui-frame-agent',
-	warning: 'cr-ui-frame-warning'
-};
+/** Where a band's words stand: for whoever hands it on, as a block of a story hands on where its words stand. */
+export type FrameLook = UnframedLook | CardLook | ListedLook | HeadingCodeLook;
 
-export const FRAME_GROUNDS: Record<FrameGround, string | null> = { tint: 'cr-ui-frame-tinted', none: null };
-
-// The class of a band (Band) by where its words stand, in the library's stylesheet: one inside an edge frame is
-// drawn as a band is
-export const BANDS_BY_FRAME: Record<FrameLook['shape'], string | null> = {
-	edge: null,
+// The class of a band (Band) by where its words stand, in the library's stylesheet
+export const BANDS_BY_FRAME: Record<FrameLook['shape'], string> = {
 	unframed: 'cr-ui-band-unframed',
 	card: 'cr-ui-band-on-a-card',
-	listed: 'cr-ui-band-listed'
+	listed: 'cr-ui-band-listed',
+	'heading-code': 'cr-ui-band-heading-code'
 };

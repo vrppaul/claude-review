@@ -32,8 +32,9 @@
   The comment is
   written under the block, inviting "Ask about this…", with Ask, Save and
   Cancel as on a line of code, and its thread hangs there, the block banded
-  stronger meanwhile: below a chapter's Why, the card of its Doubt, or the
-  frame of a step's reason, never inside it. A list of the
+  stronger meanwhile: below a chapter's Why or the card of its Doubt, never
+  inside the card, and under a step's reason inside its frame, over its
+  code. A list of the
   overview stands open whenever a thread or a comment hangs under anything
   it holds, and folds away only once none does.
   The replies, the finish pane and the panel name it `Story · Doubt`;
@@ -306,6 +307,16 @@
   on the chapter's own edge; where to doubt it is a yellow card, as the
   overview's Doubt is. What the chapter says stands 12 pixels apart, where
   it stood 24.
+- **A step's code stands in a frame headed by its reason.** Each step is a
+  rounded frame on the chapter's edges, where its piece ran across the whole
+  area: its reason is the frame's top line, after the agent's avatar, then
+  the file's bar and the lines as Files draws them. Pointed at, the line
+  lights and offers "Ask about this" at its end; a question about it hangs
+  inside the frame, under the line and over the code. A step a round changed
+  after it was told has its number and reason faint, and "changed since
+  told" beside the reason. A step whose code is gone says, after its number
+  and its file, "Its code is no longer found in this file.", in the frame,
+  where it said "Its code in a.py is no longer found." under its reason.
 - **The reader rewrites or deletes only what the agent has not read.** Three
   dots at the head of each of the reader's own turns, the comment and each
   reply, offer Edit and Delete until the agent is handed it: with a round,

@@ -108,8 +108,8 @@
 	--cr-card-tail-under-a-block: 2.5rem;
 
 	/*
-	 * A frame with an edge at its start (lib/ui EdgeFrame) — the agent's words
-	 * in a story, a warning: its edge, a strong line; how far its words stand
+	 * A frame with an edge at its start (lib/ui EdgeFrame) — a warning, what a
+	 * story costs: its edge, a strong line; how far its words stand
 	 * in from it and from its other side, as far as a card stands what it
 	 * holds in from its own edge, so the two stand their words alike; and the
 	 * room it keeps above and below what it holds.
@@ -119,14 +119,13 @@
 	--cr-edge-end-room: var(--cr-card-room);
 	--cr-edge-block-room: --spacing(2);
 	/*
-	 * How far a band (lib/ui Band) reaches above and below its words: into
-	 * the room its frame keeps there, so a band fills its frame. And how far
-	 * a band of words in no frame reaches past them either side: as far as a
-	 * card stands its words in, so its light stands round them as a card's
-	 * edge would.
+	 * How far a band (lib/ui Band) of words in no frame reaches past them:
+	 * above and below, taking that room; and either side, as far as a card
+	 * stands its words in, so its light stands round them as a card's edge
+	 * would.
 	 */
-	--cr-band-reach: var(--cr-edge-block-room);
-	--cr-band-unframed-reach: var(--cr-card-room);
+	--cr-band-unframed-reach-block: --spacing(2);
+	--cr-band-unframed-reach-inline: var(--cr-card-room);
 	/*
 	 * A card of lists (lib/ui ListsCard), a row to each: how far apart its
 	 * columns stand — a list's name, its words and what an item offers, its

@@ -560,14 +560,14 @@ const NO_BANDS_OF_ITS_OWN = [
 
 // A part of the library keeps its own room, named after it in tokens.css — a frame's edge and room, a band's
 // reach, a card's, a notice's, a pane's and a track's room, a button's and a field's heights, a turn's avatar and
-// rows, a card of lists' gap and the reach of an item's light on it — and lays out what stands round it itself:
-// the page hung a band's threads past its reach, stood words as far in as a frame's and stacked blocks as far
-// apart as a button is tall, each by naming such a token. Named in a class list or in any
-// string, or set by a style directive, one is refused outside the library; stylelint refuses one named in a
-// stylesheet but the library's
+// rows, a card of lists' gap and the reach of an item's light on it, the height of a head on the row under the
+// header — and lays out what stands round it itself: the page hung a band's threads past its reach, stood words as
+// far in as a frame's, stacked blocks as far apart as a button is tall and laid a frame of code's rows as tall as a
+// bar by hand, each by naming such a token. Named in a class list or in any string, or set by a style directive, one
+// is refused outside the library; stylelint refuses one named in a stylesheet but the library's
 const LAID_OUT_BY_THE_LIBRARY =
 	'Lay out round a part of the library with the library: the tokens of its room are its own.';
-const A_LIBRARY_ROOM = '/--cr-(edge|band|card|notice|pane|track|button|field|turn|lists-card|listed)-/';
+const A_LIBRARY_ROOM = '/--cr-(edge|band|card|notice|pane|track|button|field|turn|lists-card|listed|head)-/';
 const NO_LAYOUT_ROUND_THE_LIBRARY = [
 	...inClassLists(A_LIBRARY_ROOM, LAID_OUT_BY_THE_LIBRARY),
 	{ selector: `Literal[value=${A_LIBRARY_ROOM}]`, message: LAID_OUT_BY_THE_LIBRARY },
@@ -696,9 +696,9 @@ const MODALS = ['src/lib/components/StoryOptIn.svelte', 'src/lib/components/Stor
 const A_PANE_OF_A_CONTROL =
 	'A pane opened from a control is a Popover: a modal (Dialog) is only for what MODALS in eslint.config.js lists, with why.';
 
-// A turn of a conversation is drawn by lib/ui Turn, the one part that stands an avatar by what was said, so a page
-// that imports the avatar, by whatever path, draws a turn by hand. A turn drawn with no avatar, as the panel drew
-// its turns on cards before Turn drew them, is no import's to tell
+// A turn of a conversation is drawn by lib/ui Turn, which stands an avatar by what was said, as CodeFrameHead stands
+// the agent's by what heads a frame of code, so a page that imports the avatar, by whatever path, draws a turn by
+// hand. A turn drawn with no avatar, as the panel drew its turns on cards before Turn drew them, is no import's to tell
 const AVATAR_OF_A_TURN = {
 	regex: String.raw`(^|/)ui/Avatar\.svelte$`,
 	message: 'Draw a turn of a conversation with lib/ui Turn, which stands the avatar by what was said.'

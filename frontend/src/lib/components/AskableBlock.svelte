@@ -21,10 +21,10 @@
 		/** The block itself, as its part of the story draws it: what the story heads it with, and its words. */
 		children: Snippet;
 		/**
-		 * Where its words stand, as its part of the story draws them: in a frame
-		 * of their own, which its band fills and what hangs under the block
-		 * hangs below; in none, on the edge of the part they stand in; or as an
-		 * item of a list on a card of lists.
+		 * Where its words stand, as its part of the story draws them: in none,
+		 * on the edge of the part they stand in; on a card of their own, which
+		 * its band fills and what hangs under the block hangs below; as an item
+		 * of a list on a card of lists; or as the top line of a frame of code.
 		 */
 		frame: FrameLook;
 	}

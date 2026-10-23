@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import type { ClassValue } from 'svelte/elements';
 	import { useReview } from '$lib/review/context';
 	import { threadsOnThePiece } from '$lib/review/story-reading';
 	import type { DiffFile } from '$lib/types';
@@ -31,6 +32,14 @@
 	const AS_ITS_HEADING = 'h3';
 	const AS_PLAIN_WORDS = 'p';
 
+	// How a piece is set among what stands round it, by what it shows: a step's inside the frame its step draws round
+	// it, on the chapter's edges; what no step tells across the whole area, through the story's gutter, between rules,
+	// as the files draw a file
+	const SET_AMONG_ITS_NEIGHBOURS: Record<PieceShows, ClassValue | undefined> = {
+		'a-step': undefined,
+		'what-no-step-tells': 'cr-story-bleed border-y border-base-300'
+	};
+
 	let { sectionKey, piece, shows, above, numbered, beside, afterTheFile }: Props = $props();
 	const review = useReview();
 
@@ -41,8 +50,8 @@
 	const threads = $derived(threadsOnThePiece(sectionKey, piece.path, review.story, review.threads).length);
 </script>
 
-<!-- A piece of a file under whatever heads it, drawn as the files draw a file: across the whole width of
-	the area, through the story's gutter, headed as a file is. Nothing of a story is folded away -->
+<!-- A piece of a file under whatever heads it, headed and drawn as the files draw a file. Nothing of a story is
+	folded away -->
 <LinesSection
 	{sectionKey}
 	file={piece}
@@ -51,7 +60,7 @@
 	{extent}
 	folded={false}
 	testId="story-piece"
-	class="cr-story-bleed border-y border-base-300"
+	class={SET_AMONG_ITS_NEIGHBOURS[shows]}
 	{above}
 >
 	{#snippet header()}

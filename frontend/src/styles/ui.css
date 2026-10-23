@@ -995,30 +995,25 @@
 }
 
 /*
- * A frame with an edge at its start (EdgeFrame, lib/ui/frame.ts): the edge
- * in its tone's colour, round at its other corners, on its tone's ground
- * where it lays one; its words in from its edge and its far side, and above
- * and below them
+ * A warning in a frame with an edge at its start (EdgeFrame, lib/ui/frame.ts):
+ * the edge in the warning's colour, round at its other corners, on the
+ * warning's tint; its words in from its edge and its far side, and above and
+ * below them
  */
 .cr-ui-edge-frame {
 	padding: var(--cr-edge-block-room) var(--cr-edge-end-room) var(--cr-edge-block-room) var(--cr-edge-inset);
-	border-left: var(--cr-edge-width) solid;
+	border-left: var(--cr-edge-width) solid var(--color-warning);
 	border-radius: 0 var(--radius-field) var(--radius-field) 0;
+	background: var(--cr-warning-tint);
 }
 /*
- * A band (Band) in a frame: across the frame from inside its edge to its
- * far side, its corners at the far side the frame's. It reaches past its
- * words into the room the frame keeps round them, on every side, and takes
- * none: its words stand where the frame's would without it. As the one the
+ * A band (Band, lib/ui/frame.ts): what it offers stands over it, and where
+ * its words stand sets how far it reaches past them (below). As the one the
  * reader is at (.cr-ui-band-current) it is painted as a row the reader is
  * at, below
  */
 .cr-ui-band {
 	position: relative;
-	margin: calc(-1 * var(--cr-band-reach)) calc(-1 * var(--cr-edge-end-room)) calc(-1 * var(--cr-band-reach))
-		calc(-1 * var(--cr-edge-inset));
-	padding: var(--cr-band-reach) var(--cr-edge-end-room) var(--cr-band-reach) var(--cr-edge-inset);
-	border-radius: 0 var(--radius-field) var(--radius-field) 0;
 }
 /*
  * Blocks one under another (Bands): as close as cards in a stack, whichever
@@ -1035,19 +1030,14 @@
 	background-image: linear-gradient(var(--cr-hover), var(--cr-hover));
 }
 /*
- * What it offers over its top right edge: out of the flow, so no word moves
- * as it shows; standing on the line its words begin at, over its top edge
- * and the room above it, so none of its words lies under it, its end where
- * they end. Seen while the band is pointed at or holds the keyboard
+ * What it offers, where its shape sets, its room kept while it is unseen or
+ * taken out of the flow, so no word moves as it shows. Seen while the band is
+ * pointed at or holds the keyboard
  */
 .cr-ui-band-offer {
-	position: absolute;
-	right: var(--cr-edge-end-room);
-	bottom: calc(100% - var(--cr-band-reach));
-	z-index: var(--cr-layer-over-content);
 	opacity: 0;
 }
-.cr-ui-band:is(:hover, :focus-within) > .cr-ui-band-offer {
+.cr-ui-band:is(:hover, :focus-within) .cr-ui-band-offer {
 	opacity: 1;
 }
 /*
@@ -1055,16 +1045,23 @@
  * none of that room, so they stand on the edge of the part they stand in;
  * and above and below as far as a band reaches, taking that room, as no
  * frame keeps any round them. Rounded at every corner, since it stands
- * against no edge
+ * against no edge. Its offer stands over its top right edge, on the line
+ * its words begin at, its end where they end
  */
 .cr-ui-band-unframed {
-	margin: 0 calc(-1 * var(--cr-band-unframed-reach));
-	padding: var(--cr-band-reach) var(--cr-band-unframed-reach);
+	margin: 0 calc(-1 * var(--cr-band-unframed-reach-inline));
+	padding: var(--cr-band-unframed-reach-block) var(--cr-band-unframed-reach-inline);
 	border-radius: var(--radius-box);
+}
+.cr-ui-band-unframed > .cr-ui-band-offer {
+	position: absolute;
+	right: var(--cr-band-unframed-reach-inline);
+	bottom: calc(100% - var(--cr-band-unframed-reach-block));
+	z-index: var(--cr-layer-over-content);
 }
 /* What hangs under it, as wide as its band, two steps below it */
 .cr-ui-band-unframed + .cr-ui-band-under {
-	margin: --spacing(2) calc(-1 * var(--cr-band-unframed-reach)) 0;
+	margin: --spacing(2) calc(-1 * var(--cr-band-unframed-reach-inline)) 0;
 }
 /*
  * A band on a card of its own (Card, washed) fills the card: it reaches past
@@ -1078,9 +1075,10 @@
 	border-radius: calc(var(--radius-box) - var(--cr-line));
 }
 .cr-ui-band-on-a-card > .cr-ui-band-offer {
+	position: absolute;
 	top: --spacing(3);
 	right: --spacing(3);
-	bottom: auto;
+	z-index: var(--cr-layer-over-content);
 }
 /*
  * A band of an item listed on a card of lists (ListsCardRow): its words and
@@ -1100,7 +1098,6 @@
 }
 /* Its offer on its first line, as tall as the line: a small button stands taller than a line of the words */
 .cr-ui-band-listed > .cr-ui-band-offer {
-	position: static;
 	display: flex;
 	align-items: center;
 	height: var(--cr-one-line);
@@ -1114,6 +1111,58 @@
 .cr-ui-band-listed + .cr-ui-band-under {
 	margin: calc(var(--cr-listed-reach-block) + var(--cr-pane-gap) - var(--cr-thread-hang-above))
 		calc(-1 * (var(--cr-listed-reach-inline) + var(--cr-thread-inset))) calc(-1 * var(--cr-thread-hang-below));
+}
+
+/*
+ * A frame of code (CodeFrame, lib/ui/frame.ts): a piece of code set apart,
+ * edged as a pane at the box's corner, its file's bar and lines inside it,
+ * cut where its corners round and never scrolled, so its file's bar stays in
+ * sight within it; a step further from what stands above it than the blocks
+ * round it stand from one another
+ */
+.cr-ui-code-frame {
+	margin-top: --spacing(1);
+	overflow: clip;
+	border: var(--cr-line) solid var(--cr-pane-edge);
+	border-radius: var(--radius-box);
+}
+/*
+ * Its top line (CodeFrameHead): what heads the code, in small muted words
+ * after the agent's avatar, in a turn's avatar slot, a rule under it, and
+ * what it offers at its end. A band heading the code is that line, lit
+ * across it, square, the frame rounding its top
+ */
+.cr-ui-code-frame-head {
+	display: flex;
+	align-items: center;
+	gap: --spacing(3);
+	padding: --spacing(2) --spacing(3);
+	border-bottom: var(--cr-line) solid var(--cr-pane-edge);
+	color: var(--cr-muted);
+	font-size: var(--text-sm);
+	line-height: var(--text-sm--line-height);
+}
+.cr-ui-code-frame-head > .cr-ui-avatar {
+	flex: none;
+	width: var(--cr-turn-avatar-size);
+}
+.cr-ui-code-frame-head-end {
+	margin-inline-start: auto;
+}
+/* A row of it where no code is drawn: as tall as a file's bar, its words small and muted, in from its edge */
+.cr-ui-code-frame-row {
+	display: flex;
+	align-items: center;
+	gap: --spacing(3);
+	min-height: var(--cr-head-row);
+	padding-inline: --spacing(3);
+	color: var(--cr-muted);
+	font-size: var(--text-sm);
+	line-height: var(--text-sm--line-height);
+}
+/* What hangs under a band heading the code stands in the frame, over the code, a rule under it too */
+.cr-ui-band-heading-code + .cr-ui-band-under {
+	border-bottom: var(--cr-line) solid var(--cr-pane-edge);
 }
 
 /*
@@ -1243,18 +1292,6 @@
 		aspect-ratio: 1;
 		padding-inline: 0;
 	}
-}
-.cr-ui-frame-agent {
-	border-left-color: var(--cr-agent);
-}
-.cr-ui-frame-agent.cr-ui-frame-tinted {
-	background: var(--cr-agent-tint);
-}
-.cr-ui-frame-warning {
-	border-left-color: var(--color-warning);
-}
-.cr-ui-frame-warning.cr-ui-frame-tinted {
-	background: var(--cr-warning-tint);
 }
 
 /*
@@ -1722,9 +1759,13 @@
 	font-size: var(--text-2xs);
 	line-height: var(--text-2xs--line-height);
 }
-/* A tag is its colour's chip under its colour's words, with no edge, in a small label's weight */
+/*
+ * A tag is its colour's chip under its colour's words, with no edge, in a
+ * small label's weight, on one line however little room the line leaves it
+ */
 .cr-ui-tag {
 	font-weight: var(--font-weight-medium);
+	white-space: nowrap;
 }
 .cr-ui-tag-quiet {
 	background-color: var(--cr-ink-chip);

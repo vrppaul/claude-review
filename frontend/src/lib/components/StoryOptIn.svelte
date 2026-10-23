@@ -8,7 +8,6 @@
 	import EdgeFrame from '$lib/ui/EdgeFrame.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import PaneQuestion from '$lib/ui/PaneQuestion.svelte';
-	import { A_WARNING } from './story-frames';
 	import StorySketch from './StorySketch.svelte';
 
 	interface Props {
@@ -41,7 +40,7 @@
 				The agent that made the change tells it as a story: a short overview, then chapters with its reason above each
 				piece of code.
 			</p>
-			<EdgeFrame look={A_WARNING} testId="story-cost">
+			<EdgeFrame testId="story-cost">
 				<p class="cr-cost-note">
 					<span class="mt-0.5"><Icon name="notice" size="base" tone="warning" /></span>
 					<span>

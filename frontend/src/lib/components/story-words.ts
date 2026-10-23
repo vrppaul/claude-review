@@ -47,9 +47,6 @@ const THE_CODE_BELOW_AS_IT_IS = 'the code below is as it is now';
 // What is said of the changed lines no step told, between how many there were and how many there are now, and after both
 const NO_STEP_TOLD_WHEN_TOLD = 'no step told when the story was told';
 const NOW = 'now';
-// What a step whose code is no longer found says, before its file and after it
-const ITS_CODE_IN = 'Its code in';
-const IS_NO_LONGER_FOUND = 'is no longer found';
 
 // What stands between how much a story left out when it was told and how much it leaves out now
 const THEN_AND_NOW = ' → ';
@@ -184,10 +181,11 @@ export function chapterCounts(files: number, steps: number): readonly TwinHalf[]
 	return [{ icon: 'file', words: counted(files, FILES) }, itsSteps];
 }
 
-/** What a step whose code the review cannot place in the change now says in its place. */
-export function codeNoLongerFound(file: string): string {
-	return `${ITS_CODE_IN} ${file} ${IS_NO_LONGER_FOUND}.`;
-}
+/** What a step whose code the review cannot place in the change now says in its place, after its file. */
+export const CODE_NO_LONGER_FOUND = 'Its code is no longer found in this file.';
+
+/** What marks the reason of a step whose code a round changed after it was told. */
+export const CHANGED_SINCE_TOLD = 'changed since told';
 
 /** The numbers of some chapters, by their places: "1", "1, 4". */
 function numbersOf(places: readonly number[]): string {

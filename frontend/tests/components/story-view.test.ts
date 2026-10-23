@@ -287,14 +287,13 @@ describe('a review read as its story', () => {
 		expect(within(second).queryByTestId('step-reason')).toBeNull();
 	});
 
-	it("numbers each step in its piece's header, before its file: a step with no reason draws nothing above it", () => {
+	it("numbers each step in its piece's header, before its file", () => {
 		render(ReviewScreen, { props: { review } });
 
 		const [, second] = pieces();
 		const header = within(second).getByTestId('story-piece-header');
 
 		expect(said(header)).toMatch(/^1\.2 b\.py/);
-		expect(within(second).queryByTestId('step-above')).toBeNull();
 	});
 
 	it("counts in a piece's header the threads on the lines it draws, as a file's header does", () => {
@@ -933,7 +932,9 @@ describe('a story whose code a round changed after it was told', () => {
 		const [withoutCode] = within(beginnings).getAllByTestId('story-step-without-code');
 
 		expect(said(within(withoutCode).getByTestId('step-reason'))).toBe('Why a.py starts so.');
-		expect(said(within(withoutCode).getByTestId('step-code-not-found'))).toBe('Its code in a.py is no longer found.');
+		expect(said(within(withoutCode).getByTestId('step-code-not-found'))).toBe(
+			'1.1 a.py Its code is no longer found in this file.'
+		);
 		expect(within(beginnings).getAllByTestId('story-piece')).toHaveLength(1);
 	});
 
@@ -956,6 +957,18 @@ describe('a story whose code a round changed after it was told', () => {
 		const [withoutCode] = screen.getAllByTestId('story-step-without-code');
 
 		expect(within(withoutCode).getByTestId('step-reason-block')).toBeTruthy();
+	});
+
+	it('marks the reason of a step a round changed after it was told, and of no other', () => {
+		const story = followedWith([changedStep('a.py', 1, 'Why a.py starts so.'), toldStep('b.py', 5, 'Why b.py.')], 1);
+		review = openReview({ files, story });
+		review.views.choose('story');
+		render(ReviewScreen, { props: { review } });
+
+		const [changed, asTold] = pieces();
+
+		expect(within(changed).getByTestId('step-changed').textContent).toBe('changed since told');
+		expect(within(asTold).queryByTestId('step-changed')).toBeNull();
 	});
 
 	it('names a step it changed so to whoever cannot see it stepped back, and a step it did not as ever', () => {

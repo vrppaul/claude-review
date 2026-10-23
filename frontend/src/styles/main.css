@@ -332,6 +332,14 @@
 	font: inherit;
 	font-variant-numeric: tabular-nums;
 }
+/*
+ * The keyboard's ring inside it: outside, the scroller's edge and a frame of
+ * a story's code, which cut what reaches past them, would cut the ring of a
+ * first or last line
+ */
+.cr-gutter-button:focus-visible {
+	outline-offset: calc(-1 * var(--cr-focus-ring-width));
+}
 
 /* A section the reader is taken to lands under what stands over the area too, not behind it */
 .cr-lines-section {
@@ -421,14 +429,6 @@
 	max-width: 100%;
 	height: auto;
 }
-/*
- * The number and reason of a step a round changed after it was told step
- * back, in faint words: the code under them is what stands now
- */
-.cr-step-changed {
-	color: var(--cr-faint);
-}
-
 /* A chapter's number on the bar it is read under: quieter than its title, at the size of the line it is on */
 .cr-chapter-number {
 	color: var(--cr-muted);

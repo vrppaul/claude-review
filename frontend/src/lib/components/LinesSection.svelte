@@ -22,8 +22,11 @@
 		/** Whether its lines are folded away, its header left alone on the page. */
 		folded: boolean;
 		testId: string;
-		/** How its header and lines are set among their neighbours: a rule under them, a frame around them. */
-		class: ClassValue;
+		/**
+		 * How its header and lines are set among their neighbours: a rule under them, rules round them; none where
+		 * they stand in a frame its view draws round the whole section.
+		 */
+		class?: ClassValue | undefined;
 		/** What its view says before the header, inside the section: the number and reason of a story's step. */
 		above?: Snippet | undefined;
 		/** Its header, a section's `Bar` (lib/ui): the file's name, and what its view says and offers beside it. */

@@ -35,8 +35,8 @@ DEEP_IN_THE_PIECE = 1500
 # and why the second is as it is, said above its piece
 LAST_LINE_OF_THE_FIRST_STEP = 100
 REASON_OF_THE_SECOND_STEP = "The second half of the file goes on from the first."
-# The frame a step's reason stands in, which is drawn from where the step begins: its words stand inside it
-REASONS_FRAME = "step-reason-block-frame"
+# A step's reason, the top line of the frame its step stands in, where the step begins
+REASONS_LINE = "step-reason-block"
 THE_LONG_FILE_IN_TWO_STEPS = story_of(
     step(LONG_FILE, 1, LAST_LINE_OF_THE_FIRST_STEP),
     Step(
@@ -162,7 +162,7 @@ async def test_a_step_gone_to_brings_its_reason_into_view(
     await page.keyboard.press("]")
     await page.keyboard.press("]")
 
-    await expect(page.get_by_test_id(REASONS_FRAME)).to_be_in_viewport()
+    await expect(page.get_by_test_id(REASONS_LINE)).to_be_in_viewport()
 
 
 async def test_a_file_picked_in_the_contents_of_a_story_brings_the_reason_of_its_step_into_view(
@@ -174,7 +174,7 @@ async def test_a_file_picked_in_the_contents_of_a_story_brings_the_reason_of_its
     # The long file as the second chapter lists it: its step there is the one with a reason
     await page.get_by_test_id("contents-file").nth(1).click()
 
-    await expect(page.get_by_test_id(REASONS_FRAME)).to_be_in_viewport()
+    await expect(page.get_by_test_id(REASONS_LINE)).to_be_in_viewport()
 
 
 async def test_a_chapter_picked_in_the_contents_of_a_story_comes_into_view_under_no_bar(
