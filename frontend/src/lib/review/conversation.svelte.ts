@@ -1,7 +1,7 @@
 /**
  * The conversation with the agent that is answering this review.
  *
- * A thread is about one line. This is about everything else — the plan, the
+ * A thread is about the lines it hangs on. This is about everything else — the plan, the
  * tests, a file nobody commented on — and it reaches the same agent: the
  * process driving `claude-review wait`, which wrote the change and has the
  * repository in front of it.

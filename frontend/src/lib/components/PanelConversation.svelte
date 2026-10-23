@@ -108,8 +108,8 @@
 			<!-- The note in the middle of the panel's height, as it stands alone in it -->
 			<div data-testid="panel-empty-room" class="flex h-full flex-col justify-center">
 				<EmptyNote within="view" mark="conversation" testId="panel-empty">
-					Ask about anything — the plan, the tests, a file nobody commented on. A thread is about one line; this is
-					about the rest.
+					Ask about anything — the plan, the tests, a file nobody commented on. A thread is about the lines it hangs on;
+					this is about the rest.
 				</EmptyNote>
 			</div>
 		{:else}

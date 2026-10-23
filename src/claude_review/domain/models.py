@@ -638,7 +638,7 @@ class ThreadQuestion(BaseModel):
 class PanelMessage(BaseModel):
     """Something the reader typed in the agent panel.
 
-    A thread is about one line; this is about everything else — the plan,
+    A thread is about the lines it hangs on; this is about everything else — the plan,
     the tests, a file nobody commented on. It may still point at threads,
     and then it carries them, so the agent is not left guessing which lines
     "that one" meant.

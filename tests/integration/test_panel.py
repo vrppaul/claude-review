@@ -1,4 +1,4 @@
-"""The agent panel: talking about the review, not about one line.
+"""The agent panel: talking about the review, not about the lines a thread hangs on.
 
 A thread hangs on a line. The panel is for everything else — the plan, the
 tests, a file nobody commented on — and it reaches the same agent, over the
