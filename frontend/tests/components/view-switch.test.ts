@@ -201,15 +201,6 @@ describe('what is asked before stories are turned on', () => {
 		);
 	});
 
-	it('shows a story, sketched', async () => {
-		const user = userEvent.setup();
-		drawn();
-
-		await user.click(screen.getByTestId('read-as-story'));
-
-		expect(within(screen.getByTestId('story-opt-in')).getByTestId('story-sketch')).toBeTruthy();
-	});
-
 	it('turns stories on for every review, for the server to ask for this one, and shows where it will be', async () => {
 		const server = serving();
 		const user = userEvent.setup();

@@ -2,10 +2,6 @@
  * Where words stand apart from what is round them, and the band that lights
  * a block of them the reader may ask about.
  *
- * A warning may stand in a frame with an edge at its start (EdgeFrame): a
- * line down its start in the warning's colour, on the warning's tint, one
- * room round what it holds.
- *
  * Code a story tells stands in a frame of its own (CodeFrame), edged as a
  * pane and rounded; what heads the code, the step's reason, is the frame's
  * top line (CodeFrameHead), after the agent's avatar, a rule under it, and

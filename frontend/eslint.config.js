@@ -558,16 +558,17 @@ const NO_BANDS_OF_ITS_OWN = [
 	{ selector: `TemplateElement[value.raw=${A_BAND_OF_ITS_OWN}]`, message: DRAWN_AS_A_BAND }
 ];
 
-// A part of the library keeps its own room, named after it in tokens.css — a frame's edge and room, a band's
-// reach, a card's, a notice's, a pane's and a track's room, a button's and a field's heights, a turn's avatar and
-// rows, a card of lists' gap and the reach of an item's light on it, the height of a head on the row under the
-// header — and lays out what stands round it itself: the page hung a band's threads past its reach, stood words as
-// far in as a frame's, stacked blocks as far apart as a button is tall and laid a frame of code's rows as tall as a
-// bar by hand, each by naming such a token. Named in a class list or in any string, or set by a style directive, one
-// is refused outside the library; stylelint refuses one named in a stylesheet but the library's
+// A part of the library keeps its own room, named after it in tokens.css — a band's reach, a card's, a notice's and
+// a track's room, a pane's widths and its gap, a button's and a field's heights, a turn's avatar and rows, a card of
+// lists' gap and the reach of an item's light on it, the height of a head on the row under the header — and lays
+// out what stands round it itself: the page hung a band's threads past its reach, stacked blocks as far apart as a
+// button is tall and laid a frame of code's rows as tall as a bar by hand, each by naming such a token. A pane's
+// edge is a colour, not a room. Named in a class list or in any string, or set by a style directive, one is refused
+// outside the library; stylelint refuses one named in a stylesheet but the library's
 const LAID_OUT_BY_THE_LIBRARY =
 	'Lay out round a part of the library with the library: the tokens of its room are its own.';
-const A_LIBRARY_ROOM = '/--cr-(edge|band|card|notice|pane|track|button|field|turn|lists-card|listed|head)-/';
+const A_LIBRARY_ROOM =
+	'/--cr-((band|card|notice|track|button|field|turn|lists-card|listed|head)-|pane-(gap|medium|wide))/';
 const NO_LAYOUT_ROUND_THE_LIBRARY = [
 	...inClassLists(A_LIBRARY_ROOM, LAID_OUT_BY_THE_LIBRARY),
 	{ selector: `Literal[value=${A_LIBRARY_ROOM}]`, message: LAID_OUT_BY_THE_LIBRARY },

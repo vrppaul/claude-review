@@ -7,20 +7,23 @@ import { readFileSync } from 'node:fs';
 const A_LAYER = ['/^var\\(--cr-layer-[a-z-]+\\)$/'];
 const A_SHADOW = ['/^var\\(--cr-shadow-[a-z-]+\\)$/', 'none'];
 // The tints a notice's tones stand on, the warning's and the reader's, are laid by the library alone (lib/ui
-// NoticeBar, EdgeFrame's and Callout's warning): a rule of another stylesheet naming one draws a notice its own
-// way, as main.css's .cr-warning-bar drew the bar saying the review cannot be reached beside the library's
+// NoticeBar, Callout's warning, a washed Card in the warning's tone): a rule of another stylesheet naming one draws a
+// notice its own way, as main.css's .cr-warning-bar drew the bar saying the review cannot be reached beside the
+// library's
 const A_NOTICE_TINT = ['/var\\(--cr-(warning|mark)-tint\\)/'];
 // The colour of what fails is the library's alone (lib/ui Failure, and a Button and an Icon of tone danger), as
 // eslint holds the markup to: a rule of another stylesheet painting with it says what failed its own way
 const THE_COLOUR_OF_FAILING = ['/var\\(--color-error/'];
-// A part of the library keeps its own room, named after it in tokens.css — an EdgeFrame's edge and room, a band's
-// reach, a card's, a notice's, a pane's and a track's room, a button's and a field's heights, a turn's avatar and
-// rows, a card of lists' gap and the reach of an item's light on it, the height of a head on the row under the
-// header — and lays out what stands round it itself, so no rule outside the library names such a token: the page's
-// band reached back over its frame's room and edge with a margin, page rules hung threads past a band's reach, stood
-// words as far in as a frame's and stacked blocks as far apart as a button is tall, and a thread's spine ended half
-// as far down as the field to reply in stood tall. Refused in every stylesheet but the library's, and the tokens' own
-const A_LIBRARY_ROOM = ['/var\\(--cr-(edge|band|card|notice|pane|track|button|field|turn|lists-card|listed|head)-/'];
+// A part of the library keeps its own room, named after it in tokens.css — a band's reach, a card's, a notice's and
+// a track's room, a pane's widths and its gap, a button's and a field's heights, a turn's avatar and rows, a card of
+// lists' gap and the reach of an item's light on it, the height of a head on the row under the header — and lays
+// out what stands round it itself, so no rule outside the library names such a token: page rules hung threads past
+// a band's reach, stacked blocks as far apart as a button is tall, and a thread's spine ended half as far down as
+// the field to reply in stood tall. A pane's edge is a colour, not a room. Refused in every stylesheet but the
+// library's, and the tokens' own
+const A_LIBRARY_ROOM = [
+	'/var\\(--cr-((band|card|notice|track|button|field|turn|lists-card|listed|head)-|pane-(gap|medium|wide))/'
+];
 // The functions that write a colour, and the curve a motion eases along: each written once, in tokens.css
 const WRITTEN_IN_THE_TOKENS = [
 	'rgb',

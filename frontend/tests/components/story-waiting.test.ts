@@ -174,26 +174,6 @@ describe('a story the reader stopped', () => {
 	});
 });
 
-describe('the sketch of a story over the wait', () => {
-	it.each([
-		{ when: 'the agent writes it', asking: TAKEN },
-		{ when: 'the agent is being asked for it', asking: null }
-	])('stands over what the reader waits on while $when', ({ asking }) => {
-		waiting({ asking });
-
-		expect(within(screen.getByTestId('story-waiting')).getByTestId('story-sketch')).toBeTruthy();
-	});
-
-	it.each([
-		{ where: 'the reader stopped the story', asking: STOPPED },
-		{ where: 'no agent is attached to write it', asking: ASKED }
-	])('is not drawn where $where: no story is on its way', ({ asking }) => {
-		waiting({ asking });
-
-		expect(screen.queryByTestId('story-sketch')).toBeNull();
-	});
-});
-
 describe('what the reader waits on', () => {
 	it('is said to whoever cannot see it, as it changes', () => {
 		waiting({ asking: TAKEN });

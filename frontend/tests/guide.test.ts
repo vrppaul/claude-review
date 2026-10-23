@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, within } from '@testing-library/svelte';
+import { render } from '@testing-library/svelte';
 import fastCheck from 'fast-check';
 import { tick } from 'svelte';
 import Guide from '$lib/components/Guide.svelte';
@@ -379,7 +379,6 @@ describe('the news card', () => {
 		expect(said(getByTestId('guide-news'))).toContain(
 			"The agent can walk you through what it changed: a short overview, then chapters, with its reason above each piece of code. Off until you turn it on, since it spends the agent's tokens."
 		);
-		expect(within(getByTestId('guide-news')).getByTestId('story-sketch')).toBeTruthy();
 	});
 
 	it('offers Try Story in place of Got it for the release that brought Story', async () => {

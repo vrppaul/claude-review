@@ -258,15 +258,6 @@ of it is built yet.
       panel's head.
 - [ ] `feat(ui)`: a new look for the rows of the tree of files, and a new
       design of the tree itself.
-- [ ] `feat(ui)`: a new look for the question asked before stories are
-      turned on (`StoryOptIn`). What a story costs stands in a frame with an
-      edge at its start (lib/ui EdgeFrame), and the sketch of a story in it
-      (`StorySketch`) draws a step's reason with an edge at its start: a
-      look the story's chapters dropped in chunk 7, where Callout's warning
-      and a frame of code now stand. No board draws the question in the
-      page's new look. Nor does any board draw what no step tells in it: it
-      still runs through the gutter between rules, beside steps that stand
-      in frames.
 - [ ] `feat(ui)`: animations.
 
 ## The page's library, what its steps left

@@ -1007,18 +1007,6 @@
 }
 
 /*
- * A warning in a frame with an edge at its start (EdgeFrame, lib/ui/frame.ts):
- * the edge in the warning's colour, round at its other corners, on the
- * warning's tint; its words in from its edge and its far side, and above and
- * below them
- */
-.cr-ui-edge-frame {
-	padding: var(--cr-edge-block-room) var(--cr-edge-end-room) var(--cr-edge-block-room) var(--cr-edge-inset);
-	border-left: var(--cr-edge-width) solid var(--color-warning);
-	border-radius: 0 var(--radius-field) var(--radius-field) 0;
-	background: var(--cr-warning-tint);
-}
-/*
  * A band (Band, lib/ui/frame.ts): what it offers stands over it, and where
  * its words stand sets how far it reaches past them (below). As the one the
  * reader is at (.cr-ui-band-current) it is painted as a row the reader is
@@ -1721,8 +1709,8 @@
 }
 
 /*
- * A callout (Callout, lib/ui/callout.ts): what a part says of itself before
- * what it heads, on its tone's tint, at the box's corner, with no edge; its
+ * A callout (Callout, lib/ui/callout.ts): what to know before reading on or
+ * acting, on its tone's tint, at the box's corner, with no edge; its
  * mark at its start, on the first line of its words, and its first words in
  * its tone's colour. What the agent is doing about it a step under them,
  * where it stands (Standing)

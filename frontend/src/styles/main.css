@@ -312,13 +312,6 @@
 	font-style: italic;
 }
 
-/* What something costs, said before the reader agrees to it, in a warning's frame: its mark, and the words beside it */
-.cr-cost-note {
-	display: grid;
-	grid-template-columns: auto minmax(0, 1fr);
-	gap: --spacing(2);
-}
-
 /*
  * A line number is a control: leaving a comment must not need a mouse. The
  * button fills its cell so the target is the whole gutter, not the digits.
@@ -831,27 +824,47 @@
 
 /*
  * A story, sketched (StorySketch.svelte): its contents on the left, on
- * their axis, and on the right the page — the overview in the agent's
- * voice, a diagram, a step's reason over its code. Each part is painted by
- * what it is, in the colour it has in a story told.
+ * their axis, and on the right the page — the overview's three cards, a
+ * chapter's head, a step's code in a frame headed by its reason. Each part
+ * is painted by what it is, in the colour it has in a story told, as board
+ * StoryOptIn draws it.
  */
 .cr-sketch {
 	--cr-sketch-ground: var(--cr-ground-reading);
 	/* A line of words; the titles of the chapters not being read stand fainter */
 	--cr-sketch-words: var(--cr-gutter-fg);
 	--cr-sketch-faded: 0.6;
-	/* The title of the chapter being read, and the overview's doubt */
+	/* The title of a chapter: the one being read in the contents, the one on the page */
 	--cr-sketch-strong: var(--color-base-content);
-	--cr-sketch-doubt: var(--color-warning);
+	/*
+	 * The overview's cards, each as the page grounds and edges it, its mark's
+	 * tile on its colour's chip: the task the reader's, what was done the
+	 * agent's, the doubt the warning's at the tint, the one to look at. The
+	 * doubt's tint is a notice's, which only the library lays: here it draws
+	 * the card the library lays, so the rule that keeps it the library's
+	 * cannot tell the two apart
+	 */
+	--cr-sketch-task-ground: var(--cr-mark-wash);
+	--cr-sketch-task-edge: var(--cr-mark-border);
+	--cr-sketch-task-tile: var(--cr-mark-chip);
+	--cr-sketch-done-ground: var(--cr-agent-wash);
+	--cr-sketch-done-edge: var(--cr-agent-border);
+	--cr-sketch-done-tile: var(--cr-agent-chip);
+	/* stylelint-disable-next-line declaration-property-value-disallowed-list -- the Doubt card drawn, not a notice */
+	--cr-sketch-doubt-ground: var(--cr-warning-tint);
+	--cr-sketch-doubt-edge: var(--cr-warning-border);
+	--cr-sketch-doubt-tile: var(--cr-warning-chip);
+	/* A chapter's number, its counts' chip and the agent's avatar heading a step's code, and the frame round it */
+	--cr-sketch-number: var(--cr-agent);
+	--cr-sketch-agent-chip: var(--cr-agent-chip);
+	--cr-sketch-frame: var(--cr-pane-edge);
 	/* The chapter being read, ringed */
 	--cr-sketch-current-edge: var(--cr-mark);
 	--cr-sketch-current-ring: var(--cr-mark-chip);
 	/* A file's status, its letter shrunk to a dot */
 	--cr-sketch-added-dot: var(--cr-add-text);
 	--cr-sketch-modified-dot: var(--cr-status-modified);
-	/* The diagram's heart, the edge of a step's reason, and the lines its code added */
-	--cr-sketch-lit: var(--cr-agent);
-	--cr-sketch-reason: var(--cr-agent);
+	/* The lines a step's code added */
 	--cr-sketch-added-edge: var(--cr-add);
 	--cr-sketch-added-tint: var(--cr-add-tint);
 	/* What the agent writes first, as it stands in a story told: the first chapter, read, and the task */
@@ -869,23 +882,33 @@
 }
 /*
  * While the story is being written: nothing of it is there yet, so the
- * sketch is greyed whole — but for the overview's edge, the voice that
- * writes — and what the agent writes first stands in its colour,
- * breathing as its dots do (.cr-sketch-writing). It is awaited on the
- * reading ground, so it is laid a step off it, as a card on the page is
+ * sketch is greyed whole, its cards edged and their tiles grounded in the
+ * grey of what is not there, and what the agent writes first, the task
+ * and the first chapter, stands in its colour, breathing as its dots do
+ * (.cr-sketch-writing). It is awaited on the reading ground, so it is laid
+ * a step off it, as a card on the page is
  */
 .cr-sketch-waiting {
 	--cr-sketch-ground: var(--cr-ground-card);
 	--cr-sketch-words: var(--cr-node-edge);
 	--cr-sketch-faded: 1;
 	--cr-sketch-strong: var(--cr-node-edge);
-	--cr-sketch-doubt: var(--cr-node-edge);
+	--cr-sketch-task-ground: none;
+	--cr-sketch-task-edge: var(--cr-node-edge);
+	--cr-sketch-task-tile: var(--color-base-300);
+	--cr-sketch-done-ground: none;
+	--cr-sketch-done-edge: var(--cr-node-edge);
+	--cr-sketch-done-tile: var(--color-base-300);
+	--cr-sketch-doubt-ground: none;
+	--cr-sketch-doubt-edge: var(--cr-node-edge);
+	--cr-sketch-doubt-tile: var(--color-base-300);
+	--cr-sketch-number: var(--cr-node-edge);
+	--cr-sketch-agent-chip: var(--color-base-300);
+	--cr-sketch-frame: var(--color-base-300);
 	--cr-sketch-current-edge: var(--cr-node-edge);
 	--cr-sketch-current-ring: none;
 	--cr-sketch-added-dot: var(--cr-node-edge);
 	--cr-sketch-modified-dot: var(--cr-node-edge);
-	--cr-sketch-lit: var(--cr-node-edge);
-	--cr-sketch-reason: var(--cr-node-edge);
 	--cr-sketch-added-edge: var(--color-base-300);
 	--cr-sketch-added-tint: var(--color-base-300);
 	--cr-sketch-read-fill: none;

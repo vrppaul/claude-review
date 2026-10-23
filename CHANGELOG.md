@@ -324,6 +324,14 @@
 - **A story's contents begin with its title.** The entry that leads to the
   overview is the story's title, as the page heads that part, where it said
   "Overview", to the eye and to a screen reader.
+- **The question before stories are turned on, in the page's look.** What a
+  story costs is a warning, as a chapter changed after it was told says it:
+  on the yellow tint, "It spends the agent's tokens." first in yellow, where
+  it stood in a frame with an edge at its start. The sketch of a story, in
+  the question, in Story's introduction, in What's new and while a story is
+  written, draws one as it looks now: the overview's Task, Done and Doubt as
+  a card each in its colour, a chapter's head, a step's code in a frame
+  headed by its reason.
 - **The reader rewrites or deletes only what the agent has not read.** Three
   dots at the head of each of the reader's own turns, the comment and each
   reply, offer Edit and Delete until the agent is handed it: with a round,

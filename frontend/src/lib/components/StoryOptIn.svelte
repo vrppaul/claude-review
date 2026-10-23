@@ -3,9 +3,9 @@
 	import { formatWeight } from '$lib/review/weight';
 	import Actions from '$lib/ui/Actions.svelte';
 	import Button from '$lib/ui/Button.svelte';
+	import Callout from '$lib/ui/Callout.svelte';
 	import Dialog from '$lib/ui/Dialog.svelte';
 	import type { Closing } from '$lib/ui/dialog-closing';
-	import EdgeFrame from '$lib/ui/EdgeFrame.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import PaneQuestion from '$lib/ui/PaneQuestion.svelte';
 	import StorySketch from './StorySketch.svelte';
@@ -19,6 +19,8 @@
 
 	// What the dialog asks, as it says it and is named by
 	const QUESTION = 'Turn on stories?';
+	// What a story costs, said first
+	const SPENDS_TOKENS = "It spends the agent's tokens.";
 
 	let { onTurnOn, onClose }: Props = $props();
 	const review = useReview();
@@ -40,15 +42,11 @@
 				The agent that made the change tells it as a story: a short overview, then chapters with its reason above each
 				piece of code.
 			</p>
-			<EdgeFrame testId="story-cost">
-				<p class="cr-cost-note">
-					<span class="mt-0.5"><Icon name="notice" size="base" tone="warning" /></span>
-					<span>
-						It spends the agent's tokens. The agent reads the whole diff again and writes the story: here up to
-						<b>{formatWeight(review.weight)}</b> to read and a few thousand to write. Bigger changes cost more.
-					</span>
-				</p>
-			</EdgeFrame>
+			<!-- What it costs, to weigh before answering: a warning, as a chapter changed since it was told says it -->
+			<Callout tone="warning" lead={SPENDS_TOKENS} testId="story-cost">
+				The agent reads the whole diff again and writes the story: here up to
+				<b>{formatWeight(review.weight)}</b> to read and a few thousand to write. Bigger changes cost more.
+			</Callout>
 			<p class="cr-muted text-xs">
 				Stories stay on for every review on this machine. Turn them off in Settings, the gear in the header.
 			</p>

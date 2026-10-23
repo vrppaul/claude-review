@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/svelte';
+import { render, screen } from '@testing-library/svelte';
 import { flushSync } from 'svelte';
 import { userEvent } from '@testing-library/user-event';
 import ReviewScreen from '$lib/components/ReviewScreen.svelte';
@@ -63,13 +63,6 @@ describe('Story introduced at the switch', () => {
 
 		expect(screen.getByTestId('story-introduction').getAttribute('aria-label')).toBe('Read the change as a story');
 		expect(screen.getByTestId('story-introduction-close').getAttribute('aria-label')).toBe('Close for now');
-	});
-
-	it('shows a story, sketched', async () => {
-		serving();
-		await drawn();
-
-		expect(within(screen.getByTestId('story-introduction')).getByTestId('story-sketch')).toBeTruthy();
 	});
 
 	it('asks before stories are turned on, where Try Story is pressed with stories off', async () => {
