@@ -27,9 +27,11 @@
 		thread: Thread;
 		/** Whether the thread is folded to this bar, which then says what it holds. */
 		folded: boolean;
+		/** Called as the reader folds the thread or opens it with its toggle, with whether it will stand folded. */
+		onFold: (folding: boolean) => void;
 	}
 
-	let { thread, folded }: Props = $props();
+	let { thread, folded, onFold }: Props = $props();
 	const review = useReview();
 
 	const AnchorHeading = $derived(headingOf(thread.anchor));
@@ -41,6 +43,7 @@
 
 	/** Fold the thread away or open it; the keyboard stays on the toggle, drawn anew on the bar as it now stands. */
 	function toggleFold() {
+		onFold(!folded);
 		review.threads.reading.setFolded(thread.id, !folded);
 		review.sections.keyboardToThreadFold(thread.id);
 	}

@@ -1634,6 +1634,30 @@
 .cr-ui-icon-up {
 	rotate: 180deg;
 }
+/*
+ * What a fold opens where the reader opened it (Unfolding, a Card opened
+ * under its bar, a list of a card of lists): it comes down from under what
+ * heads it over a fold's time, as its chevron turns. Cut where it ends only
+ * while it moves, a ring's reach past its edges so a ring on what it holds
+ * stands whole; once open, nothing of it is cut, so a light or a thread
+ * reaching past its edges stands whole too. Folding goes at once: what is
+ * folded is not drawn
+ */
+.cr-ui-unfolding {
+	animation: cr-unfold var(--cr-state-change) ease;
+}
+@keyframes cr-unfold {
+	from {
+		height: 0;
+		overflow: clip;
+		overflow-clip-margin: calc(var(--cr-focus-ring-width) + var(--cr-focus-ring-offset));
+	}
+	to {
+		height: auto;
+		overflow: clip;
+		overflow-clip-margin: calc(var(--cr-focus-ring-width) + var(--cr-focus-ring-offset));
+	}
+}
 .cr-ui-icon-left {
 	rotate: 90deg;
 }

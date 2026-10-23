@@ -402,8 +402,11 @@
   note the page puts up does not fade in. The chosen
   segment's ink slides to the one pressed over 150 ms, where the browser
   can place one box by another in each track. A folder the reader unfolds
-  in the tree opens over 150 ms as its chevron turns; a tree brought back,
-  or read again in Files, opens none of its folders again. A column moves
+  in the tree, a thread opened from its bar and a list of the story's
+  overview opened from its row come down over 150 ms as the chevron turns,
+  cut where they end only while they move; a tree brought back, a thread
+  opened by a way taken to it, or a list held open by a thread in it opens
+  at once. Folding goes at once. A column moves
   only when the reader puts it away or brings it back: its room narrows or
   widens over 200 ms and what takes its place fades in. Drawn at first, or
   on screen of its own accord, as the agent's panel comes when an agent

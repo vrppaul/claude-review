@@ -33,6 +33,10 @@
 
 	// Why what was asked could not be handed over, said under the words it was asked about
 	let failed = $state<string | null>(null);
+	// Whether the reader opened it with its toggle while it has been drawn: only then does what stands under its bar
+	// come down over a fold's time. Held by the card's own drawing, so a thread drawn again, or opened by a way taken
+	// to it, stands open at once, since nothing moves but in answer to the reader
+	let openedByReader = $state(false);
 
 	// The reply being written here, held by the review so that folding the
 	// thread or its file, or reloading the page, keeps it
@@ -109,9 +113,10 @@
 	onfocusin={markRead}
 	children={folded ? undefined : conversation}
 	foot={folded ? undefined : nextTurn}
+	opening={openedByReader}
 >
 	{#snippet bar()}
-		<ThreadBar {thread} {folded} />
+		<ThreadBar {thread} {folded} onFold={(folding) => (openedByReader = !folding)} />
 	{/snippet}
 </Card>
 

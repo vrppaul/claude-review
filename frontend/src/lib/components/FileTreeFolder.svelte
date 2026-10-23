@@ -2,6 +2,7 @@
 	import type { Snippet } from 'svelte';
 	import type { TreeFolder, TreeNode } from '$lib/utils/file-tree';
 	import Row from '$lib/ui/Row.svelte';
+	import Unfolding from '$lib/ui/Unfolding.svelte';
 
 	interface Props {
 		folder: TreeFolder;
@@ -38,10 +39,12 @@
 		{/snippet}
 	</Row>
 	{#if !folded}
-		<ul class={[unfoldedByReader && 'cr-tree-unfolding']}>
-			{#each folder.children as child (child.path)}
-				{@render node(child, depth + 1)}
-			{/each}
-		</ul>
+		<Unfolding byReader={unfoldedByReader} testId="folder-files">
+			<ul>
+				{#each folder.children as child (child.path)}
+					{@render node(child, depth + 1)}
+				{/each}
+			</ul>
+		</Unfolding>
 	{/if}
 </li>

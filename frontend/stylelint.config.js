@@ -54,8 +54,9 @@ const HOLDS_NO_ALPHA = '/^(?!--cr-(shadow-[a-z-]+|shade)$)/';
 // easing in, a box filling as it is ticked and its check drawn in, a chevron turning, a side column the reader put
 // away narrowing to its rail and back (held still while its edge is dragged, which it would trail), the column and
 // its rail's marks coming in once the reader moved it, the chosen segment's ink sliding, a pane coming from its
-// control, a folder the reader unfolded opening, a note fading, work breathing, what arrived lit, the tour's light
-// gliding. Whatever else is selected holds none, a row and a band the keys move above all, however a stylesheet
+// control, what the reader unfolded opening (a folder, a thread, a list), a note fading, work breathing, what
+// arrived lit, the tour's light gliding. Whatever else is selected holds none, a row and a band the keys move above
+// all, however a stylesheet
 // selects them: the keys outrun it, and two rows would stand lit at once. Where a reader asked for less motion it
 // all stops, in a stylesheet of its own that may say `none` and nothing else of motion; and eslint refuses motion
 // written in the markup (MOTION_UTILITY, eslint.config.js)
@@ -69,7 +70,7 @@ const WHAT_MOVES = [
 	'\\.cr-ui-column-rail-marks-coming',
 	'\\.cr-ui-segmented::before',
 	'\\.cr-ui-pane-coming',
-	'\\.cr-tree-unfolding',
+	'\\.cr-ui-unfolding',
 	'\\.cr-ui-pane-fading',
 	'\\.cr-ui-note-time-left',
 	'\\.cr-ui-dot-breathing(:nth-of-type\\(\\d\\))?',

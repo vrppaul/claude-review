@@ -629,21 +629,6 @@
 }
 
 /*
- * A folder the reader unfolded in the tree: its files come down from under
- * it over a fold's time, as its chevron turns, their rings kept whole
- */
-.cr-tree-unfolding {
-	/* Its files cut where it ends while it opens, a ring's reach past its edges, so their rings stand whole */
-	clip-path: inset(calc(-1 * (var(--cr-focus-ring-width) + var(--cr-focus-ring-offset))));
-	transition: height var(--cr-state-change) ease;
-}
-@starting-style {
-	.cr-tree-unfolding {
-		height: 0;
-	}
-}
-
-/*
  * The steps of a piece of the agent's work, a checklist under the line that
  * heads it: each says for itself whether it is still running or done, by
  * its mark, so three subagents read as three steps rather than as a

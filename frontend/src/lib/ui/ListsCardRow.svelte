@@ -68,7 +68,8 @@
 		</button>
 	{/if}
 	{#if open || fits}
-		<ul class="cr-ui-lists-row-items">{@render children()}</ul>
+		<!-- Opened by the reader's press, its items come down over a fold's time; held open or fitting, they stand -->
+		<ul class={['cr-ui-lists-row-items', openedByReader && 'cr-ui-unfolding']}>{@render children()}</ul>
 	{:else}
 		<p data-testid="{testId}-line" class="cr-ui-lists-row-line">{firstWords}</p>
 	{/if}

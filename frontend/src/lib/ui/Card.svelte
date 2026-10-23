@@ -2,6 +2,7 @@
 	import type { Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
 	import { CARD_HANGINGS, CARD_TONES, type CardHanging, type CardTone, type WashedTone } from './card';
+	import Unfolding from './Unfolding.svelte';
 
 	/**
 	 * Whose it is, or where what it holds stands; and whether its tone's wash lies over the whole of it, a line of
@@ -21,6 +22,8 @@
 		foot?: Snippet | undefined;
 		/** Whether what it holds is not there yet, a comment being written: drawn as the card it becomes, on a dashed edge. */
 		beingWritten?: boolean;
+		/** Whether the reader just opened it from its bar, so what stands under the bar comes down as it opens. */
+		opening?: boolean;
 	}
 
 	type Props = CardProps & Washing;
@@ -33,6 +36,7 @@
 		children,
 		foot,
 		beingWritten = false,
+		opening = false,
 		washed = false,
 		...attributes
 	}: Props = $props();
@@ -54,12 +58,20 @@
 	]}
 >
 	{@render bar?.()}
-	{#if bar && children}
-		<div class="cr-ui-card-body">{@render children()}</div>
+	{#if bar}
+		<!-- What stands under its bar, its body and its foot, coming down as one where the reader opens it; folded,
+			nothing, so the bar is all of it -->
+		{#if children || foot}
+			<Unfolding byReader={opening} testId="{testId}-under-its-bar">
+				{#if children}
+					<div class="cr-ui-card-body">{@render children()}</div>
+				{/if}
+				{#if foot}
+					<div class="cr-ui-card-foot">{@render foot()}</div>
+				{/if}
+			</Unfolding>
+		{/if}
 	{:else}
 		{@render children?.()}
-	{/if}
-	{#if foot}
-		<div class="cr-ui-card-foot">{@render foot()}</div>
 	{/if}
 </div>
