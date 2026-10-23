@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { focusWhatRemains } from '$lib/dom/keyboard';
+	import { tourStop } from '$lib/guide/tour';
 	import type { ReadingViewName } from '$lib/reader/page-layout.svelte';
 	import { useReview } from '$lib/review/context';
 	import BreathingDots from '$lib/ui/BreathingDots.svelte';
@@ -78,7 +79,7 @@
 {#if review.story.canBeTold}
 	<div class="relative">
 		<!-- As the window narrows, each segment's words give way to its icon, said on the pointer -->
-		<Segmented label="How to read this review" size="sm" testId="reading-view">
+		<Segmented label="How to read this review" size="sm" testId="reading-view" data-tour={tourStop('story-switch')}>
 			<Segment
 				bind:element={buttons.story}
 				testId="read-as-story"

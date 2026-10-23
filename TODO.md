@@ -159,11 +159,12 @@ tests. Remove items when done — don't check them off.
       how its telling again stands, as board StoryWriting states 8, 10 and
       11 draw it: "Write it again" where none is asked, no agent attached,
       and stopped; state 9, written again with "Stop writing", is built
-      (agreed 2026-10-23).
-- [ ] `docs`: What's new 1.6.0, the CHANGELOG, the README and the agent's
-      skill say when a story is written as 2026-10-23 settled it: asked
-      first by default, each review's own; the dialog's box and the gear's
-      two settings. They still say stories are turned on for every review.
+      (agreed 2026-10-23). With it, Story pressed after a stop opens the
+      stopped wait, "You stopped it." with "Write it again", where it now
+      asks again at once under "Write stories without asking"
+      (`way-into-story.svelte.ts` `viewOpens` leaves a stopped asking out):
+      a stopped story is asked for again only by that press, as state 11
+      says.
 - [ ] `fix(ui)`: a story the reader asks for by hand whose request fails
       is said in the panel and nowhere else. The page goes on holding no
       asking, and the story view goes on saying "Asking the agent for a

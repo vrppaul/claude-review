@@ -120,6 +120,7 @@ const DRAWING: Record<TourTarget, () => void | Promise<void>> = {
 	'review-base': drawHeader,
 	'review-base-list': drawBaseList,
 	'file-tree': drawFileTree,
+	'story-switch': drawHeader,
 	'line-number': drawDiff,
 	'comment-field': drawCommentField,
 	'unsent-count': drawHeaderWithAComment,

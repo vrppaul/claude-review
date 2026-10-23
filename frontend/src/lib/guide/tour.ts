@@ -17,6 +17,7 @@ export const TOUR_TARGETS = [
 	'review-base',
 	'review-base-list',
 	'file-tree',
+	'story-switch',
 	'line-number',
 	'comment-field',
 	'unsent-count',
@@ -89,6 +90,8 @@ export interface TourStep {
 	waitsFor?: WaitsFor;
 	/** Whether the step belongs in this review at all. */
 	applies?: (context: TourContext) => boolean;
+	/** The step is Story's introduction: the tour stopping there introduces Story, and nothing at the switch follows. */
+	introducesStory?: true;
 }
 
 export const TOUR_STEPS: TourStep[] = [
@@ -103,6 +106,13 @@ export const TOUR_STEPS: TourStep[] = [
 		targets: ['file-tree'],
 		title: 'Everything that changed',
 		body: 'Each file, with what it added and removed. Mark one viewed when you are through with it; a file the agent rewrites later loses that mark.'
+	},
+	{
+		id: 'story',
+		targets: ['story-switch'],
+		title: 'Or read it as a story',
+		body: "The agent that made the change tells it: a short overview, then chapters with its reason above each piece of code. Story asks first, since a story spends the agent's tokens, until you tell it not to.",
+		introducesStory: true
 	},
 	{
 		id: 'comment-line',

@@ -101,9 +101,9 @@ Each rule of `good_story.md`, and what it rests on.
 
 ## Decisions, and why
 
-- **Off until the reader turns it on.** A story spends the agent's tokens,
-  so the reader is told the cost and asked first. The choice holds for
-  every review on the machine.
+- **Asked first, for each review.** A story spends the agent's tokens, so
+  the reader is told the cost and asked before a review's story is
+  written, until they choose to be asked no more. Decided 2026-10-23.
 - **Short first.** Each kind of text has a length limit in the data
   (`TEXT_LIMITS`), and a text over it is refused with where the rest
   belongs, so shortness does not rest on goodwill.

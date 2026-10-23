@@ -46,7 +46,7 @@ A story opens with an overview: what was asked, what was done, and the one thing
 
 Nothing is left out: every changed line is in a step, in a file the agent named as housekeeping, or under "Not in the story". Every block of the agent's words offers "Ask about this", and the answer comes in its thread, as on a line of code. After a round the steps follow their code, a step whose code changed is marked, and the agent tells the story again. A story told from commits, by an agent that did not make the change, is marked reconstructed.
 
-Stories are off until you turn them on. The first press on Story says that a story spends the agent's tokens and asks first; they then stay on for every review on the machine, and Settings, the gear in the header, turns them off. A story is told by the agent attached to the review, and you can read the files while it writes.
+A story spends the agent's tokens, so Story asks before it has one written for a review, and says what this one would cost. "Write stories without asking" there, or under Stories in Settings, the gear in the header, stops the asking from now on, in every review; under it, "Write as soon as the review opens" has each story ready by the time you open Story. A story asked for is told again after a round moves its code on, until you stop it, and a review stopped and opened again keeps its story until you finish the review. A story is told by the agent attached to the review, and you can read the files while it writes.
 
 How the agent is advised to tell one, and why: [docs/stories.md](docs/stories.md).
 

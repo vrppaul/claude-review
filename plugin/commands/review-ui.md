@@ -176,9 +176,10 @@ somebody who is waiting.
      same field then carries. Drop what you were doing for it if you still
      can, and say nothing about it unless it is already half done.
    - `{"type":"story_request","stale":null}` — the change is wanted told as
-     a story: the user asked for one, or turned stories on, and is watching
-     how long it takes. It comes once nothing the user said is left for
-     you, so the story is of the code their rounds left. Run
+     a story: the user asked for one, or has each review's story written as
+     it opens, and is watching how long it takes. It comes once nothing the
+     user said is left for you, so the story is of the code their rounds
+     left. Run
      `claude-review story --help` once: it shows the document whole, how
      long each of its texts may be, and what makes a story good for the
      person who reads it. Write the whole document to a file

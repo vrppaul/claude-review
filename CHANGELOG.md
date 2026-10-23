@@ -54,9 +54,14 @@
 - **The reader asks the agent for a story of the change, and sees it being
   written.** A story is the change told by the agent that made it: a short
   overview, then chapters with its reason above each piece of code. Story in
-  the header asks before the first one is written, since a story spends the
-  agent's tokens, and says what this review would cost; the choice is kept
-  behind the gear for every review. Where the story will be, the page says
+  the header asks before this review's story is written, since a story
+  spends the agent's tokens, and says what this review would cost. A box
+  there has every later one written without asking; Settings, the gear in
+  the header, keeps that choice under "Stories", and hangs on it a second,
+  locked until the first is ticked: to have each review's story written as
+  it opens. The first counts from the next press on Story; the second from
+  the next review, never the one it is chosen in. A review opens on its
+  files, and on its story only where one is held or being written. Where the story will be, the page says
   when it was asked for, when the agent took the request and how long it has
   been waited for, with the files to read meanwhile and a way to stop and to
   ask again. While the files are read the switch says the story is being
@@ -77,7 +82,10 @@
   clears it; once the reader finishes the review its record goes, and the
   same change opened then is a new review. One another user made first, a
   link left in its place, or one open to others, is refused in one line.
-- **Story is introduced once: by this release's news, or at the switch.**
+- **Story is introduced once: by this release's news, the tour, or at the
+  switch.** The tour of a review that can tell a story stops at Story,
+  after the files: what a story is, in a line, and that Story asks before
+  one is written; once it has stopped there, nothing at the switch follows.
   A reader back from an older release is told of Story on the news card,
   with the sketch and Try Story in place of Got it (Got it where the
   review tells no story), and under it, a line each, of the new look,
@@ -89,9 +97,9 @@
   the tour are done, a pane under the switch pointing at Story, which is
   ringed in the agent's colour: what a story is, sketched, and what it
   spends, with Try Story and Don't show again. Try Story, on the card or
-  the pane, does what Story in the header does, asking first while
-  stories are off; the cross puts the pane away for this review alone;
-  Don't show again puts it away in every review, and a note in its place
+  the pane, does what Story in the header does, asking first unless the
+  reader chose not to be asked; the cross puts the pane away for this
+  review alone; Don't show again puts it away in every review, and a note in its place
   says so for four seconds, fading, with Undo for a slip. A story's
   arrival, offered under the switch, stands there first, and the keyboard
   the pane held goes to Story. Story pressed, or a story on screen,
@@ -101,7 +109,7 @@
   `GET /api/guide` says `story_introduced` beside the release last shown,
   false for a reader shown around by a release before stories; `PUT
   /api/guide` takes either fact alone and keeps the other as it was.
-- **A story, sketched.** The question asked before stories are turned on
+- **A story, sketched.** The question asked before a story is written
   shows what a story is in the review's own colours, without a word: the
   contents on their axis, a chapter read and the one being read with its
   files, beside the overview with its doubt, a diagram, and a step's reason
@@ -340,7 +348,7 @@
 - **A story's contents begin with its title.** The entry that leads to the
   overview is the story's title, as the page heads that part, where it said
   "Overview", to the eye and to a screen reader.
-- **The question before stories are turned on, in the page's look.** What a
+- **The question before a story is written, in the page's look.** What a
   story costs is a warning, as a chapter changed after it was told says it:
   on the yellow tint, "It spends the agent's tokens." first in yellow, where
   it stood in a frame with an edge at its start. The sketch of a story, in
@@ -479,7 +487,7 @@
   where it was edged; the Undo in Story's note is quiet among its words,
   where it was edged. eslint holds a row to it, and refuses a main act laid out among
   other acts by hand. Where a row takes the keyboard as it opens — the
-  question before stories are turned on, the guide's welcome and its news,
+  question before a story is written, the guide's welcome and its news,
   Story's introduction — its main act still takes it, now last, and the act
   beside it is a Shift+Tab away.
 - **Tests hold what someone can name, and run when their part changed.**
@@ -680,14 +688,14 @@
   code moved on in round 2" on the warning's; the contents then say
   beside "Not in the story" how many changed lines no step told when it
   was told, and how many none tells now, "2 → 5", where the two differ,
-  said in words to a screen reader. Where the reader turned stories on, the
-  review asks for a story itself, whatever pages are open: as it opens,
-  as stories are turned on, and again once a retake leaves the story held
-  stale, never over one the reader stopped; the agent is handed it once
-  nothing the reader said is left for it. While the files are read the
-  header says "Story · writing", the warning ends "The agent is updating
-  them." while
-  it is so, and turning stories off in the gear stops it. The agent's
+  said in words to a screen reader. A story the reader asked for in this
+  review, or one written as each review opens, is asked for again by the
+  review itself once a retake leaves it stale, whatever pages are open,
+  never once the reader stopped it; one the agent told unasked is not. The
+  agent is handed it once nothing the reader said is left for it. While the
+  files are read the header says "Story · writing", the warning ends "The
+  agent is updating them." while it is so, and "Stop writing" under the
+  story's round stops it. The agent's
   `story_request` carries `stale`, `null` for a first story: the round,
   each changed step's chapter, file and lines as they now stand
   ("104-131"), and how many changed lines no step tells, read as the agent
@@ -737,7 +745,7 @@
   guide's card — stands on one ground, edge, corner and lift, at one of
   four widths, and one with a name is headed alike: the name at one size,
   the way to put it away at the far end. A pane that asks a question —
-  before a comment is deleted or put away, before stories are turned on —
+  before a comment is deleted or put away, before a story is written —
   is headed by it, at that size. A pane stands whole where the
   reader sees it: moved in from the window's edges, never under a file's
   header or a chapter's bar kept in sight over what is read, nor past the
@@ -1059,9 +1067,8 @@
 - **A tab you come back to takes in the settings changed in another.**
   Every review keeps the reader's settings in one place, and a tab read
   them only as it opened. Now a tab shown again reads them again: the theme
-  and the layout follow, the diff is taken again where whitespace stopped
-  or started counting, and turning stories on asks this review for its
-  story.
+  and the layout follow, and the diff is taken again where whitespace
+  stopped or started counting.
 - **What the agent said before the page opened is in the panel when it
   opens.** A page in another browser, or a private window, draws the whole
   conversation too: the reader's messages with their screenshots and the

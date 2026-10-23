@@ -7,11 +7,12 @@
  * The tour narrates from that same card while a light moves over the review.
  *
  * Story, a way of reading the reader may never have tried, is introduced
- * once: by the news of the release that brought it, or else at the switch,
- * once the card and the tour are done. It counts as introduced once that
- * news was shown, once the reader said at the switch not to show it again,
- * or once they tried it, by pressing it or with the story on screen; that
- * is kept for every review on the machine, as the release seen is.
+ * once: by the news of the release that brought it, by the tour's stop at
+ * it, or else at the switch, once the card and the tour are done. It counts
+ * as introduced once that news was shown, once the tour stopped there, once
+ * the reader said at the switch not to show it again, or once they tried
+ * it, by pressing it or with the story on screen; that is kept for every
+ * review on the machine, as the release seen is.
  */
 
 import { keepGuide, readGuide } from '$lib/api/review-api';
@@ -391,8 +392,14 @@ export class Guide {
 			direction === 1
 				? this.#steps.slice(index).find((step) => this.#shows(step))
 				: this.#steps.slice(0, index + 1).findLast((step) => this.#shows(step));
-		if (landing) this.#stepId = landing.id;
+		if (landing) this.#landOn(landing);
 		else if (direction === -1) this.#landFrom(0, 1);
 		else this.endTour();
+	}
+
+	/** Show a step of the tour; the one that introduces Story introduces it, so nothing at the switch follows. */
+	#landOn(step: TourStep): void {
+		this.#stepId = step.id;
+		if (step.introducesStory) this.noteStoryIntroduced();
 	}
 }

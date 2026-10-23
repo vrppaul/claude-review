@@ -239,6 +239,18 @@ describe('Story introduced at the switch', () => {
 		expect(review.guide.introducesStory).toBe(true);
 	});
 
+	it('is introduced by the tour once it stops at Story: nothing follows the tour, here or in a later review', async () => {
+		const server = guideServer(null);
+		await arriveAt('1.5.0');
+		review.guide.startTour();
+		review.guide.seeTargets(new Set(['story-switch']));
+
+		review.guide.endTour();
+
+		expect(review.guide.introducesStory).toBe(false);
+		await vi.waitFor(() => expect(server.bodiesSentTo('PUT /api/guide')).toContainEqual({ story_introduced: true }));
+	});
+
 	it('is introduced at once to a returning reader with no news to read', async () => {
 		guideServer('1.5.0');
 
@@ -368,7 +380,7 @@ describe('the news card', () => {
 		expect(image.alt).toBe('A screenshot pasted');
 	});
 
-	it('tells of Story in the release that brought it, as board 0 words it', async () => {
+	it('tells of Story in the release that brought it', async () => {
 		guideServer('1.5.0');
 		await arriveAt(STORY_RELEASE);
 
@@ -376,9 +388,6 @@ describe('the news card', () => {
 		await tick();
 
 		expect(said(getByTestId('guide-news'))).toContain('Read a change as a story');
-		expect(said(getByTestId('guide-news'))).toContain(
-			"The agent can walk you through what it changed: a short overview, then chapters, with its reason above each piece of code. Off until you turn it on, since it spends the agent's tokens."
-		);
 	});
 
 	it('tells, a line each, what else the release that brought Story changed', async () => {

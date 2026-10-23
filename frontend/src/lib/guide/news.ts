@@ -49,7 +49,7 @@ export const RELEASE_NEWS: ReleaseNews[] = [
 		// Seen by no reader until the release brings pyproject to its number
 		release: '1.6.0',
 		title: 'Read a change as a story',
-		body: "The agent can walk you through what it changed: a short overview, then chapters, with its reason above each piece of code. Off until you turn it on, since it spends the agent's tokens.",
+		body: "The agent can walk you through what it changed: a short overview, then chapters, with its reason above each piece of code. Story asks first, since a story spends the agent's tokens, until you tell it not to.",
 		also: [
 			'A new look: the header says which repository and branch you review, Send counts what goes with it, and both side columns can be put away to a rail.',
 			'Edit or delete your comment or reply until the agent has read it, and take back a question you asked.',
