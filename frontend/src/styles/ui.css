@@ -1250,13 +1250,26 @@
 	grid-column: 2;
 	min-width: 0;
 }
-/* Its fold, the chevron on its first line at the row's end; off, while something hangs in the list, in faint words */
+/*
+ * Its fold, the chevron on its first line at the row's end, in a square as
+ * large as a small button, as a thread's and a file's fold toggle: open,
+ * the pointer lights that square and the keyboard rings it (folded, the row
+ * is lit and ringed whole, below). The square reaches past the chevron, an
+ * icon as wide as small words, into the room round it and takes none, so
+ * the chevron stands on one spot open and folded. Off, while something
+ * hangs in the list, in faint words
+ */
 .cr-ui-lists-row-fold {
 	display: inline-flex;
 	grid-row: 1;
 	grid-column: 3;
 	align-items: center;
-	height: var(--cr-one-line);
+	justify-content: center;
+	width: var(--cr-button-xs);
+	height: var(--cr-button-xs);
+	margin-block: calc((var(--cr-one-line) - var(--cr-button-xs)) / 2);
+	margin-inline: calc((var(--text-xs) - var(--cr-button-xs)) / 2);
+	border-radius: var(--radius-field);
 	color: var(--cr-muted);
 }
 .cr-ui-lists-row-fold[aria-disabled='true'] {

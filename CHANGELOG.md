@@ -287,7 +287,8 @@
   a row to each list.** "More about this change" is gone: each list is a row
   of its own, its mark, its name and how many it holds, folded to the words
   of its first item, cut where the line ends; a press anywhere on the row
-  opens that list alone, and the chevron at its end folds it again. A list
+  opens that list alone, and the chevron at its end folds it again, lit and
+  ringed in a square as a thread's fold is. A list
   of one item whose words fit the line is that item, with nothing to open,
   until the window is too narrow for them. Each item names the chapter it
   leads to by the chapter's title, a chip that takes the reader there, where
