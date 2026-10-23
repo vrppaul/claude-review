@@ -10,13 +10,20 @@
  * taking none, so its words stand where a frame's words would without it; and
  * it offers its act over its top right edge while it is lit. A block in a
  * frame of its own draws that frame itself; what hangs under the block hangs
- * from where its band ends. Blocks one under another (Bands) stand as far
- * apart as that offer is tall, so it lies over none of the words above it.
+ * from where its band ends.
+ *
+ * A block may stand in no frame, its words on the edge of the part it stands
+ * in, as a chapter's why does: its band reaches past them either side as far
+ * as a card stands its words in, taking none of that room, and above and
+ * below as far as a band reaches, taking that room, so it stands that far
+ * from what is round it; it offers its act over its top right edge, as a
+ * band in a frame does. What hangs under it is as wide as its band.
  *
  * A block may stand on a card of its own instead (Card, washed): one line of
  * what a story says in short, on the wash of whose it is. Its band fills the
  * card, lit to the card's edge, and offers its act inside the card's top
- * right corner; cards one under another stand as close as cards in a stack.
+ * right corner. Blocks one under another (Bands) stand as close as cards in
+ * a stack, whichever they are.
  *
  * Or it may be an item of a list on a card of lists (ListsCardRow), on no
  * frame of its own: its light a pill round its words, reaching a step and a
@@ -35,8 +42,7 @@ import type { WashedTone } from './card';
 /**
  * Whose or what the framed words are, and the ground the tone lays:
  * - agent: what the agent says in a story; on its tint
- * - warning: what the review warns about, where to doubt it, what it costs;
- *   on its tint
+ * - warning: what the review warns about, what a story costs; on its tint
  */
 export type FrameTone = 'agent' | 'warning';
 
@@ -48,6 +54,11 @@ export interface EdgeLook {
 	shape: 'edge';
 	tone: FrameTone;
 	ground: FrameGround;
+}
+
+/** Words in no frame, on the edge of the part they stand in. */
+interface UnframedLook {
+	shape: 'unframed';
 }
 
 /** A card of a block's own, washed in its tone: whose the block is, or that it is what to look at. */
@@ -62,7 +73,7 @@ interface ListedLook {
 }
 
 /** How a frame is drawn: for whoever hands one on, as a block of a story hands on the frame its words stand in. */
-export type FrameLook = EdgeLook | CardLook | ListedLook;
+export type FrameLook = EdgeLook | UnframedLook | CardLook | ListedLook;
 
 // The class of each tone, and of a ground, in the library's stylesheet
 export const FRAME_TONES: Record<FrameTone, string> = {
@@ -76,6 +87,7 @@ export const FRAME_GROUNDS: Record<FrameGround, string | null> = { tint: 'cr-ui-
 // drawn as a band is
 export const BANDS_BY_FRAME: Record<FrameLook['shape'], string | null> = {
 	edge: null,
+	unframed: 'cr-ui-band-unframed',
 	card: 'cr-ui-band-on-a-card',
 	listed: 'cr-ui-band-listed'
 };

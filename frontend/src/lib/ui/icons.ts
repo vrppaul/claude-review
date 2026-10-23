@@ -20,7 +20,7 @@ export interface IconShape {
 const FILLED: HowDrawn = { kind: 'filled' };
 // The line most icons are traced with
 const TRACED: HowDrawn = { kind: 'traced', width: 1.5 };
-// The finer line of what can be done to a thread, at the size it is drawn at there
+// The finer line of a mark drawn small beside words: what can be done to a thread, a list's mark, what a chapter counts
 const TRACED_FINE: HowDrawn = { kind: 'traced', width: 1.4 };
 // The firmer line of a mark read at a glance: a cross, a wait, what a card in a colour is about
 const TRACED_FIRM: HowDrawn = { kind: 'traced', width: 1.6 };
@@ -28,6 +28,8 @@ const TRACED_FIRM: HowDrawn = { kind: 'traced', width: 1.6 };
 const WINDOW = 'M3.5 3h9a1.5 1.5 0 0 1 1.5 1.5v7a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 11.5v-7A1.5 1.5 0 0 1 3.5 3z';
 // A ring as wide as the drawing leaves room for, which a mark stands in
 const RING = 'M2 8a6 6 0 1 0 12 0a6 6 0 1 0 -12 0';
+// A page with its top corner cut off, which a file and a change suggested to one are drawn on
+const PAGE = 'M4 2.5h5l3 3v8H4z';
 
 export const ICONS = {
 	// An arrow coming round to where it began: a round of the review, and the one a story was told in
@@ -49,7 +51,7 @@ export const ICONS = {
 	// A page with a line taken away and one put in: a change suggested in a comment
 	suggestion: {
 		viewBox: '0 0 16 16',
-		paths: ['M4 2.5h5l3 3v8H4z', 'M6.5 7.5h3M8 6v3M6.5 11h3'],
+		paths: [PAGE, 'M6.5 7.5h3M8 6v3M6.5 11h3'],
 		drawn: TRACED_FINE
 	},
 	// Three dots in a row: more that can be done to a thing, in a menu
@@ -66,6 +68,19 @@ export const ICONS = {
 	trash: { viewBox: '0 0 16 16', paths: ['M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.7 8.5h5.6l.7-8.5'], drawn: TRACED_FINE },
 	// A stack of files: the change read file by file
 	files: { viewBox: '0 0 16 16', paths: ['M5.5 2.5h4.5l3 3v8H5.5z', 'M10 2.5v3h3', 'M3 5v9.5h7'], drawn: TRACED },
+	// A page with its corner folded over: one file, as a chapter counts the files it tells
+	file: { viewBox: '0 0 16 16', paths: [PAGE, 'M9 2.5v3h3'], drawn: TRACED_FINE },
+	// Lines one under another, a dot before each: steps, as a chapter counts the steps it tells
+	steps: {
+		viewBox: '0 0 16 16',
+		paths: [
+			'M6 4h7M6 8h7M6 12h7',
+			'M2.2 4a.8.8 0 1 0 1.6 0a.8.8 0 1 0 -1.6 0',
+			'M2.2 8a.8.8 0 1 0 1.6 0a.8.8 0 1 0 -1.6 0',
+			'M2.2 12a.8.8 0 1 0 1.6 0a.8.8 0 1 0 -1.6 0'
+		],
+		drawn: TRACED_FINE
+	},
 	// A line that points down; turned for up, left or right, or to say something is folded
 	chevron: { viewBox: '0 0 12 12', paths: ['M3 4.5l3 3 3-3'], drawn: TRACED },
 	check: { viewBox: '0 0 12 12', paths: ['M4.6 8.8L2 6.2l.9-.9 1.7 1.7L9.1 2.4l.9.9z'], drawn: FILLED },

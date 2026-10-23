@@ -1,8 +1,7 @@
 /**
  * The frames a story's words stand in, each written once for every part of
- * the story that draws one: the agent's voice, down the edge of what it says
- * about the change; and a warning, on its tint, where to doubt a chapter,
- * that a round changed its code after it was told, and what a story costs.
+ * the story that draws one: the agent's voice, down the edge of a step's
+ * reason; and a warning, on its tint, of what a story costs.
  */
 
 import type { EdgeLook } from '$lib/ui/frame';

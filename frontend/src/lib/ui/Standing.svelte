@@ -14,7 +14,8 @@
 
 	/**
 	 * Where it stands, which sets the size of its words:
-	 * - on-a-bar: on the line of a card's bar, at the size of the bar's small words
+	 * - on-a-bar: on the line of a card's bar, at the size of the bar's small words; or so on a line of its own, under
+	 *   a callout's words
 	 * - under-a-heading: under the title it says something of, a step smaller, so the title reads first
 	 */
 	type StandingPlace = 'on-a-bar' | 'under-a-heading';

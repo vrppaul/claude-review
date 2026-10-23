@@ -23,7 +23,8 @@
 		/**
 		 * Where its words stand, as its part of the story draws them: in a frame
 		 * of their own, which its band fills and what hangs under the block
-		 * hangs below; or as an item of a list on a card of lists.
+		 * hangs below; in none, on the edge of the part they stand in; or as an
+		 * item of a list on a card of lists.
 		 */
 		frame: FrameLook;
 	}

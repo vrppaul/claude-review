@@ -258,8 +258,6 @@ of it is built yet.
       panel's head.
 - [ ] `feat(ui)`: a new look for the rows of the tree of files, and a new
       design of the tree itself.
-- [ ] `feat(ui)`: a new look for a chapter's frames: its warning, its why
-      and where to doubt it.
 - [ ] `feat(ui)`: animations.
 
 ## The page's library, what its steps left

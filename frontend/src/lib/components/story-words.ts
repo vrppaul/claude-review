@@ -5,6 +5,7 @@
  */
 
 import type { FollowedStep } from '$lib/types';
+import type { TwinHalf } from '$lib/ui/twin-chip';
 import { counted, type CountedWords, FILES } from '$lib/utils/words';
 
 // What joins the first line of a step to its last, and a chapter's number to a step's
@@ -26,8 +27,6 @@ const STEPS: CountedWords = { one: 'step', many: 'steps' };
 const THREADS: CountedWords = { one: 'thread', many: 'threads' };
 // What the lines a change added or removed are called where the part no step tells counts them
 const CHANGED_LINES: CountedWords = { one: 'changed line', many: 'changed lines' };
-// What stands between the two counts of a chapter's head
-const BETWEEN_COUNTS = ' · ';
 // What stands between the numbers of several chapters
 const BETWEEN_NUMBERS = ', ';
 // How a file says that other chapters tell it too, before it names them
@@ -41,8 +40,10 @@ const CHANGED_AFTER_TOLD = 'changed after it was told';
 const OUT_OF = 'of';
 // What the round under a story's title says once a later round moved the code on, before that round
 const CODE_MOVED_ON_IN_ROUND = 'the code moved on in round';
-// What a chapter's warning says of the steps a round changed, after how many
-const IN_THIS_CHAPTER_CHANGED = `in this ${A_CHAPTER} changed`;
+// What a chapter's warning says of the steps a round changed, before how many and after, and then of the code
+const A_ROUND_CHANGED = 'A round changed';
+const OF_ITS_STEPS = 'of its steps';
+const THE_CODE_BELOW_AS_IT_IS = 'the code below is as it is now';
 // What is said of the changed lines no step told, between how many there were and how many there are now, and after both
 const NO_STEP_TOLD_WHEN_TOLD = 'no step told when the story was told';
 const NOW = 'now';
@@ -61,12 +62,10 @@ export const RECONSTRUCTED = 'Reconstructed.';
 export const NOT_THE_AGENTS_OWN_CHANGE =
 	'The agent did not make this change: the reasons below are its reading of the code and of the commit messages, not what was decided at the time.';
 
-/** What heads the warning of a chapter whose code a round changed after the story was told. */
-export const CHANGED_AFTER_TOLD_HEAD = 'Changed after it was told.';
-/** What that warning says of the code under it, and of the reasons beside it. */
-export const CODE_BELOW_IS_CURRENT = 'The code below is current; the reasons beside it may not be.';
-/** And last, while the agent tells the story again. */
-export const AGENT_UPDATING_REASONS = 'The agent is updating them.';
+/** What leads the warning of a chapter whose code a round changed after the story was told. */
+export const CHANGED_AFTER_TOLD_LEAD = 'Changed after it was told.';
+/** What that warning says on a line of its own, while the agent tells the story again. */
+export const AGENT_UPDATING_REASONS = 'The agent is updating the reasons.';
 
 /** The lines a step tells: the first and the last, both among them. */
 type StepLines = FollowedStep['lines'];
@@ -118,9 +117,12 @@ export function leftOutThenAndNowSaid(then: number, now: number): string {
 	return `${NOT_IN_THE_STORY}, ${counted(then, CHANGED_LINES)} ${NO_STEP_TOLD_WHEN_TOLD}, ${now} ${NOW}`;
 }
 
-/** How many of a chapter's steps a round changed after the story was told: "3 steps in this chapter changed." */
+/**
+ * How many of a chapter's steps a round changed after the story was told, and so what the code under them is: "A
+ * round changed 2 of its steps; the code below is as it is now."
+ */
 export function stepsChanged(steps: number): string {
-	return `${counted(steps, STEPS)} ${IN_THIS_CHAPTER_CHANGED}.`;
+	return `${A_ROUND_CHANGED} ${steps} ${OF_ITS_STEPS}; ${THE_CODE_BELOW_AS_IT_IS}.`;
 }
 
 /** What the overview's part of the page is called, to whoever goes through the page by its parts. */
@@ -173,12 +175,13 @@ export function chaptersCounted(chapters: number, read: number): string {
 }
 
 /**
- * How much a chapter tells, as its head says: "3 files · 4 steps"; "1 step" where none of its steps shows code
- * of any file any more.
+ * How much a chapter tells, as the twin chip on its head counts it: "3 files", then "4 steps"; its steps alone where
+ * none of them shows code of any file any more.
  */
-export function filesAndSteps(files: number, steps: number): string {
-	if (files === 0) return counted(steps, STEPS);
-	return [counted(files, FILES), counted(steps, STEPS)].join(BETWEEN_COUNTS);
+export function chapterCounts(files: number, steps: number): readonly TwinHalf[] {
+	const itsSteps: TwinHalf = { icon: 'steps', words: counted(steps, STEPS) };
+	if (files === 0) return [itsSteps];
+	return [{ icon: 'file', words: counted(files, FILES) }, itsSteps];
 }
 
 /** What a step whose code the review cannot place in the change now says in its place. */

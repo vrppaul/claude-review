@@ -208,9 +208,9 @@ describe('a review read as its story', () => {
 		const [beginnings, end] = screen.getAllByTestId('story-chapter');
 
 		expect(within(beginnings).getByTestId('chapter-why').textContent).toBe('Why the changes of ch-1 belong together.');
-		expect(within(beginnings).getByText('2 files · 2 steps')).toBeTruthy();
+		expect(said(within(beginnings).getByTestId('chapter-counts'))).toBe('2 files 2 steps');
 		expect(within(end).getByTestId('chapter-why').textContent).toBe('Why the changes of ch-2 belong together.');
-		expect(within(end).getByText('1 file · 1 step')).toBeTruthy();
+		expect(said(within(end).getByTestId('chapter-counts'))).toBe('1 file 1 step');
 	});
 
 	it('counts a file a chapter tells in two steps once', () => {
@@ -219,7 +219,7 @@ describe('a review read as its story', () => {
 		review.views.choose('story');
 		render(ReviewScreen, { props: { review } });
 
-		expect(within(screen.getByTestId('story-chapter')).getByText('2 files · 3 steps')).toBeTruthy();
+		expect(said(within(screen.getByTestId('story-chapter')).getByTestId('chapter-counts'))).toBe('2 files 3 steps');
 	});
 
 	it('says in the head of a piece the other chapter that tells its file, and nothing of a file told in one', () => {
@@ -269,7 +269,8 @@ describe('a review read as its story', () => {
 	it('says where to doubt a chapter, where the agent said', () => {
 		render(ReviewScreen, { props: { review } });
 
-		expect(screen.getByTestId('chapter-doubt').textContent).toContain('Whether b.py needs its line at all.');
+		const doubt = within(screen.getByTestId('chapter-doubt-block')).getByTestId('block-words');
+		expect(doubt.textContent).toBe('Whether b.py needs its line at all.');
 	});
 
 	it('numbers each step by its chapter and its place in it, and says its reason where it has one', () => {
@@ -888,7 +889,7 @@ describe('a story whose code a round changed after it was told', () => {
 			'chapter-why-block'
 		]);
 		expect(said(within(beginnings).getByTestId('chapter-changed'))).toBe(
-			'Changed after it was told. 2 steps in this chapter changed. The code below is current; the reasons beside it may not be.'
+			'Changed after it was told. A round changed 2 of its steps; the code below is as it is now.'
 		);
 	});
 
@@ -899,7 +900,7 @@ describe('a story whose code a round changed after it was told', () => {
 		render(ReviewScreen, { props: { review } });
 
 		expect(said(screen.getByTestId('chapter-changed'))).toBe(
-			'Changed after it was told. 1 step in this chapter changed. The code below is current; the reasons beside it may not be. The agent is updating them.'
+			'Changed after it was told. A round changed 1 of its steps; the code below is as it is now. The agent is updating the reasons.'
 		);
 	});
 
@@ -909,7 +910,7 @@ describe('a story whose code a round changed after it was told', () => {
 		review.views.choose('story');
 		render(ReviewScreen, { props: { review } });
 
-		expect(said(screen.getByTestId('chapter-changed'))).not.toContain('The agent is updating them.');
+		expect(said(screen.getByTestId('chapter-changed'))).not.toContain('The agent is updating the reasons.');
 	});
 
 	it('says nothing of it in a chapter the review says it changed nothing of', () => {

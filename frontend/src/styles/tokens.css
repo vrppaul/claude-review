@@ -120,9 +120,13 @@
 	--cr-edge-block-room: --spacing(2);
 	/*
 	 * How far a band (lib/ui Band) reaches above and below its words: into
-	 * the room its frame keeps there, so a band fills its frame
+	 * the room its frame keeps there, so a band fills its frame. And how far
+	 * a band of words in no frame reaches past them either side: as far as a
+	 * card stands its words in, so its light stands round them as a card's
+	 * edge would.
 	 */
 	--cr-band-reach: var(--cr-edge-block-room);
+	--cr-band-unframed-reach: var(--cr-card-room);
 	/*
 	 * A card of lists (lib/ui ListsCard), a row to each: how far apart its
 	 * columns stand — a list's name, its words and what an item offers, its

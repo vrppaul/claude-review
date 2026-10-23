@@ -429,7 +429,7 @@
 	color: var(--cr-faint);
 }
 
-/* A chapter's number, wherever it heads the chapter: quieter than its title, at the size of the line it is on */
+/* A chapter's number on the bar it is read under: quieter than its title, at the size of the line it is on */
 .cr-chapter-number {
 	color: var(--cr-muted);
 	font-weight: var(--font-weight-normal);

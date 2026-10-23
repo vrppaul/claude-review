@@ -7,8 +7,8 @@ import { readFileSync } from 'node:fs';
 const A_LAYER = ['/^var\\(--cr-layer-[a-z-]+\\)$/'];
 const A_SHADOW = ['/^var\\(--cr-shadow-[a-z-]+\\)$/', 'none'];
 // The tints a notice's tones stand on, the warning's and the reader's, are laid by the library alone (lib/ui
-// NoticeBar, and EdgeFrame's warning): a rule of another stylesheet naming one draws a notice its own way, as
-// main.css's .cr-warning-bar drew the bar saying the review cannot be reached beside the library's
+// NoticeBar, EdgeFrame's and Callout's warning): a rule of another stylesheet naming one draws a notice its own
+// way, as main.css's .cr-warning-bar drew the bar saying the review cannot be reached beside the library's
 const A_NOTICE_TINT = ['/var\\(--cr-(warning|mark)-tint\\)/'];
 // The colour of what fails is the library's alone (lib/ui Failure, and a Button and an Icon of tone danger), as
 // eslint holds the markup to: a rule of another stylesheet painting with it says what failed its own way

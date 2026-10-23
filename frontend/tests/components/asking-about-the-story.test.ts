@@ -57,7 +57,6 @@ const EVERY_OTHER_BLOCK = [
 
 // The blocks whose words stand in a frame of their own, by the test id of what draws each
 const FRAMED_BLOCKS = [
-	{ called: "a chapter's why", drawnIn: 'chapter-why-block' },
 	{ called: 'where to doubt a chapter', drawnIn: 'chapter-doubt-block' },
 	{ called: "a step's reason", drawnIn: 'step-reason-block' }
 ];

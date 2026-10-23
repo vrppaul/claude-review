@@ -32,8 +32,8 @@
   The comment is
   written under the block, inviting "Ask about this…", with Ask, Save and
   Cancel as on a line of code, and its thread hangs there, the block banded
-  stronger meanwhile: below the frame of a chapter's Why, the warning of
-  its Doubt, or a step's reason, never inside it. A list of the
+  stronger meanwhile: below a chapter's Why, the card of its Doubt, or the
+  frame of a step's reason, never inside it. A list of the
   overview stands open whenever a thread or a comment hangs under anything
   it holds, and folds away only once none does.
   The replies, the finish pane and the panel name it `Story · Doubt`;
@@ -294,6 +294,18 @@
   offers "Ask about this" beside them, and its thread hangs as wide as that
   light. On a narrow card each list's name stands over its words, and the
   offer is its icon alone, its name on the pointer.
+- **A chapter's head and what it says first, as the board draws them.** The
+  chapter's number stands in a column of its own in the agent's violet, its
+  title after it, and how much the chapter tells a chip of two halves on the
+  title's line, "2 files" and "3 steps", where it said "2 files · 3 steps" in
+  faint words at the far end. A chapter a round changed after it was told
+  says so under its head on a yellow tint, "Changed after it was told. A
+  round changed 2 of its steps; the code below is as it is now.", and while
+  the agent tells the story again, on a line of its own, "The agent is
+  updating the reasons." Why its changes belong together stands in no frame,
+  on the chapter's own edge; where to doubt it is a yellow card, as the
+  overview's Doubt is. What the chapter says stands 12 pixels apart, where
+  it stood 24.
 - **The reader rewrites or deletes only what the agent has not read.** Three
   dots at the head of each of the reader's own turns, the comment and each
   reply, offer Edit and Delete until the agent is handed it: with a round,

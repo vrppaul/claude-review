@@ -279,6 +279,17 @@
 	font-size: var(--text-lg);
 	line-height: var(--text-lg--line-height);
 }
+/*
+ * The number hangs in a column of its own, as wide for one figure as for
+ * two, so every title follows it on one edge; in the agent's colour, as a
+ * step's number is
+ */
+.cr-ui-heading-number {
+	flex: none;
+	width: --spacing(6);
+	color: var(--cr-agent);
+	font-variant-numeric: tabular-nums;
+}
 .cr-ui-heading-pane {
 	font-size: var(--text-sm);
 	line-height: var(--text-sm--line-height);
@@ -1010,20 +1021,13 @@
 	border-radius: 0 var(--radius-field) var(--radius-field) 0;
 }
 /*
- * Blocks one under another (Bands): as far apart as the offer over a band
- * is tall, so it lies over none of the words of the block above; and as far
- * from words that head them, where they stand under some
+ * Blocks one under another (Bands): as close as cards in a stack, whichever
+ * they are, an offer over a band's top edge standing over the room above
+ * it, and over a step of what stands above that
  */
 .cr-ui-bands {
 	display: flex;
 	flex-direction: column;
-	row-gap: var(--cr-button-xs);
-}
-.cr-ui-bands-headed {
-	margin-top: var(--cr-button-xs);
-}
-/* Blocks each on a card of its own, which holds its offer inside it: as close as cards in a stack */
-.cr-ui-bands:has(> .cr-ui-band-block-carded) {
 	row-gap: --spacing(3);
 }
 /* Pointed at, or holding the keyboard, in the pointer's light, the frame's wash showing through */
@@ -1045,6 +1049,22 @@
 }
 .cr-ui-band:is(:hover, :focus-within) > .cr-ui-band-offer {
 	opacity: 1;
+}
+/*
+ * A band of words in no frame: it reaches past them either side, taking
+ * none of that room, so they stand on the edge of the part they stand in;
+ * and above and below as far as a band reaches, taking that room, as no
+ * frame keeps any round them. Rounded at every corner, since it stands
+ * against no edge
+ */
+.cr-ui-band-unframed {
+	margin: 0 calc(-1 * var(--cr-band-unframed-reach));
+	padding: var(--cr-band-reach) var(--cr-band-unframed-reach);
+	border-radius: var(--radius-box);
+}
+/* What hangs under it, as wide as its band, two steps below it */
+.cr-ui-band-unframed + .cr-ui-band-under {
+	margin: --spacing(2) calc(-1 * var(--cr-band-unframed-reach)) 0;
 }
 /*
  * A band on a card of its own (Card, washed) fills the card: it reaches past
@@ -1646,7 +1666,8 @@
  * A callout (Callout, lib/ui/callout.ts): what a part says of itself before
  * what it heads, on its tone's tint, at the box's corner, with no edge; its
  * mark at its start, on the first line of its words, and its first words in
- * its tone's colour
+ * its tone's colour. What the agent is doing about it a step under them,
+ * where it stands (Standing)
  */
 .cr-ui-callout {
 	display: flex;
@@ -1660,17 +1681,26 @@
 .cr-ui-callout > .cr-ui-icon {
 	margin-top: --spacing(0.5);
 }
-.cr-ui-callout > p {
+.cr-ui-callout-words {
 	max-width: var(--cr-prose-measure);
 }
 .cr-ui-callout-lead {
 	font-weight: var(--font-weight-semibold);
+}
+.cr-ui-callout-under-way {
+	margin-top: --spacing(1);
 }
 .cr-ui-callout-agent {
 	background-color: var(--cr-agent-tint);
 }
 .cr-ui-callout-agent .cr-ui-callout-lead {
 	color: var(--cr-agent);
+}
+.cr-ui-callout-warning {
+	background-color: var(--cr-warning-tint);
+}
+.cr-ui-callout-warning .cr-ui-callout-lead {
+	color: var(--color-warning);
 }
 
 /*
@@ -1802,6 +1832,30 @@
 	align-self: stretch;
 	padding-inline: --spacing(0.5);
 	border-radius: calc(var(--radius-field) - var(--cr-line));
+}
+
+/*
+ * A twin chip (TwinChip, lib/ui/twin-chip.ts): its halves side by side, a
+ * half step apart, rounded as one at the box's corner, their words on one
+ * line; each on the agent's chip, its mark before its words, at a chapter
+ * link's size, in the words' own weight, since it only says
+ */
+.cr-ui-twin-chip {
+	display: inline-flex;
+	gap: --spacing(0.5);
+	overflow: clip;
+	border-radius: var(--radius-box);
+	color: var(--cr-agent);
+	font-size: var(--text-xs);
+	line-height: var(--text-xs--line-height);
+	white-space: nowrap;
+}
+.cr-ui-twin-chip-half {
+	display: inline-flex;
+	align-items: center;
+	gap: --spacing(1.5);
+	padding: --spacing(1) --spacing(2);
+	background-color: var(--cr-agent-chip);
 }
 
 /*

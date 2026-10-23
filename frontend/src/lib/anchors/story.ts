@@ -147,8 +147,13 @@ export function overviewItems(overview: ToldStory['overview']): StoryBlock[] {
 	return OVERVIEW_LISTS_IN_ORDER.flatMap((list) => overview[list].map((_, item) => overviewItem(list, item)));
 }
 
+/** What a chapter says of itself, as a block of the story: one of its texts, or the one named. */
+export type ChapterBlock<Text extends ChapterText = ChapterText> = Extract<StoryBlock, { at: 'chapter' }> & {
+	text: Text;
+};
+
 /** The block of what a chapter says of itself, the chapter by its id. */
-export function chapterText(chapter: string, text: ChapterText): StoryBlock {
+export function chapterText<Text extends ChapterText>(chapter: string, text: Text): ChapterBlock<Text> {
 	return { at: 'chapter', chapter, text };
 }
 

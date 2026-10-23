@@ -12,11 +12,12 @@
  * - story: the story's own title, or what stands in its place while it is
  *   written, at the largest of the scale's sizes.
  * - part: a part of the story, a chapter or what the story leaves out: its
- *   number, where it has one, beside its title, which wraps beside it.
+ *   number, where it has one, in a column of its own before its title, in
+ *   the agent's colour, as a step's number is; the title wraps beside it.
  * - pane: a pane, a column beside what is read, the question a pane asks, a
  *   step of the tour, a list on a card of lists — one size for all of them.
  * - list: a small head over what stands under it inside one of those — a
- *   line of the overview, a chapter's warning — at the size of its words.
+ *   line of the overview, where to doubt a chapter — at the size of its words.
  * - piece: a piece of code, by its file's name or by a step's number, in the
  *   code's face, a name broken anywhere rather than run past its column.
  */
