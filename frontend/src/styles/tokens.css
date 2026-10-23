@@ -414,6 +414,8 @@
 	/* The ring: a strong line, a line's width off what it rings */
 	--cr-focus-ring-width: var(--cr-line-strong);
 	--cr-focus-ring-offset: var(--cr-line);
+	/* How far the ring stands past what it rings: what is cut where it ends keeps that much room for it */
+	--cr-ring-reach: calc(var(--cr-focus-ring-width) + var(--cr-focus-ring-offset));
 	/* How far under the words that lead somewhere their line is drawn, under the pointer */
 	--cr-underline-offset: 0.2em;
 	/* An answer or a thread from the agent that the reader has not looked at yet: an arrival of the agent's */

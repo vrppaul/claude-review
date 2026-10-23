@@ -1634,6 +1634,12 @@
 .cr-ui-icon-up {
 	rotate: 180deg;
 }
+.cr-ui-icon-left {
+	rotate: 90deg;
+}
+.cr-ui-icon-right {
+	rotate: -90deg;
+}
 /*
  * What a fold opens where the reader opened it (Unfolding, a Card opened
  * under its bar, a list of a card of lists): it comes down from under what
@@ -1650,19 +1656,34 @@
 	from {
 		height: 0;
 		overflow: clip;
-		overflow-clip-margin: calc(var(--cr-focus-ring-width) + var(--cr-focus-ring-offset));
+		overflow-clip-margin: var(--cr-ring-reach);
 	}
 	to {
 		height: auto;
 		overflow: clip;
-		overflow-clip-margin: calc(var(--cr-focus-ring-width) + var(--cr-focus-ring-offset));
+		overflow-clip-margin: var(--cr-ring-reach);
 	}
 }
-.cr-ui-icon-left {
-	rotate: 90deg;
+/*
+ * A field the reader opens (Unfolding, fading): it comes down and fades in
+ * over a fold's time as it takes the cursor. Cut where it ends while it
+ * moves, a ring's reach past its sides and its foot and an arrow's past its
+ * top, so the tail of the card it hangs as stands whole
+ */
+.cr-ui-unfolding-fading {
+	animation: cr-unfold-fading var(--cr-state-change) ease;
 }
-.cr-ui-icon-right {
-	rotate: -90deg;
+@keyframes cr-unfold-fading {
+	from {
+		height: 0;
+		opacity: 0;
+		clip-path: inset(calc(-1 * var(--cr-arrow)) calc(-1 * var(--cr-ring-reach)) calc(-1 * var(--cr-ring-reach)));
+	}
+	to {
+		height: auto;
+		opacity: 1;
+		clip-path: inset(calc(-1 * var(--cr-arrow)) calc(-1 * var(--cr-ring-reach)) calc(-1 * var(--cr-ring-reach)));
+	}
 }
 /* One that says something by its colour (lib/ui Icon's tones) */
 .cr-ui-icon-done {
