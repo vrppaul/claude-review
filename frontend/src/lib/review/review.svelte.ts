@@ -162,7 +162,7 @@ export class Review {
 
 		// What the review picks up: the draft it opened from, or nothing yet
 		const kept = draft ?? emptyDraft(facts.round);
-		// A server restarted mid-review comes back at round one: the draft knows better
+		// A server restarted mid-review that lost what it kept comes back at round one: the draft knows better
 		this.rounds = new Rounds(facts.round);
 		this.rounds.reach(kept.round);
 		this.telling = new Telling({ instance: facts.instance, sequence: facts.sequence }, kept.told);

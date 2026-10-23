@@ -11,6 +11,10 @@ was told of was written down as to the later take's. Its pieces are cut
 out of one take of the change, so it says which: a page that read the diff
 of a later take can tell that they are not yet of the code it shows.
 
+A review opened again before its reader finished it is the same review: it
+holds the story it kept, followed onto the take it opens on as any later
+take is, and wants it as it did.
+
 A story is asked for by the reader, or by the review itself as it opens
 where the reader has every review's story written so. Once asked for, the
 review wants its story kept told: a round that moves the code on under it
@@ -35,6 +39,7 @@ from claude_review.domain.models import DiffFile, StaleStep, StoryRequested, Sto
 from claude_review.domain.story import (
     CodeMovedOn,
     FollowedStep,
+    KeptStory,
     LeftOutChanged,
     Step,
     Story,
@@ -53,19 +58,22 @@ log = structlog.get_logger()
 NO_CHANGE_TO_TELL = "This review is of no change: its content came from no repository"
 
 
-class _StoryKept(BaseModel):
-    """A story told, kept both ways at once: as it was told, and as it is held on the take on screen."""
+class _StoryTold(BaseModel):
+    """A story told, both ways at once: as it is kept, and as it stands on the take on screen."""
 
     model_config = ConfigDict(frozen=True)
 
-    # What every take after the one it was told of follows it from: its
-    # pieces are what each step was told with
-    told: ToldStory[ToldStep]
-    # The tree the take it was told of was written down as, which each later
-    # take is compared with: None where git wrote none
-    told_on: str | None
-    # The story told until the diff is taken again; followed onto each take after
-    held: StoryHeld
+    # What every take after the one it was told of follows it from
+    kept: KeptStory
+    # The story as it stands on the take on screen, and which take that is: the story told until the diff is taken
+    # again, then followed onto each take after
+    followed: ToldStory[FollowedStep]
+    take: int
+
+    @property
+    def held(self) -> StoryHeld:
+        """The story as the review holds it on the take on screen, with the round it was told in."""
+        return StoryHeld(story=self.followed, round=self.kept.round, take=self.take, moved_on=self.kept.moved_on)
 
 
 class ReviewStory(StandingRequest):
@@ -73,12 +81,13 @@ class ReviewStory(StandingRequest):
 
     The one owner of a story being wanted. The review wants its story from
     the moment the reader asks for it, or from its opening where the reader
-    has every review's story written as it opens, which the review is told
-    as it opens; until the reader stops it. While wanted, it is asked for
-    wherever one can be told of this review and none is held current or
-    awaited: then, and once a retake leaves the story held stale. An agent's
-    wait claims the asking (`claim`); nothing of it waits in the agent's
-    inbox, which keeps only what someone said.
+    has every review's story written as it opens, or as it wanted it before
+    it was opened again, which the review is told as it opens; until the
+    reader stops it. While wanted, it is asked for wherever one can be told
+    of this review and none is held current or awaited: then, and once a
+    retake leaves the story held stale. An agent's wait claims the asking
+    (`claim`); nothing of it waits in the agent's inbox, which keeps only
+    what someone said.
 
     What changes the asking — it is asked, an agent takes it, the reader
     stops it — answers with the asking as it then stands, or with None
@@ -96,11 +105,11 @@ class ReviewStory(StandingRequest):
         # Whether a story can be told of this review: its content is a change to a repository
         self._takes_a_story = takes_a_story
         # None while nobody has told one
-        self._kept: _StoryKept | None = None
+        self._told: _StoryTold | None = None
         # From the asking until a story is told; None while nothing is asked
         self._asking: StoryAsking | None = None
-        # Whether the review wants its story kept told: from the reader's asking, or its opening where the reader
-        # has every review's story written so, until the reader stops it
+        # Whether the review wants its story kept told: from the reader's asking, or its opening where it wants
+        # one, until the reader stops it
         self._wanted = False
         # Set while the asking waits for an agent to take it: what wakes an agent's wait
         self._due = asyncio.Event()
@@ -117,7 +126,17 @@ class ReviewStory(StandingRequest):
     @property
     def held(self) -> StoryHeld | None:
         """The story held, on the take of the change on screen: None while nobody has told one."""
-        return None if self._kept is None else self._kept.held
+        return None if self._told is None else self._told.held
+
+    @property
+    def kept(self) -> KeptStory | None:
+        """The story told, as the review keeps it to be found again: None while nobody has told one."""
+        return None if self._told is None else self._told.kept
+
+    @property
+    def wanted(self) -> bool:
+        """Whether the review wants its story kept told: asked for, and not stopped."""
+        return self._wanted
 
     @property
     def asking(self) -> StoryAsking | None:
@@ -139,10 +158,17 @@ class ReviewStory(StandingRequest):
         self._wanted = True
         return self._begun()
 
-    def open(self, *, writes_as_it_opens: bool) -> StoryAsking | None:
-        """The review opening: its story wanted, and asked for, where the reader has it written as each review opens."""
-        self._wanted = writes_as_it_opens
-        return self._asked_where_wanted()
+    async def open(
+        self, kept: KeptStory | None, change: ReviewContent, *, round_number: int, wanted: bool
+    ) -> StoryAsking | None:
+        """The review opening on a take of its change, in this round: the story it kept, if any, followed onto it.
+
+        Asked for where the review wants its story and none held is current,
+        as after a retake.
+        """
+        self._wanted = wanted
+        async with self._telling:
+            return await self._followed_and_asked(kept, change, round_number=round_number)
 
     @override
     def claim(self) -> StoryRequested | None:
@@ -184,10 +210,10 @@ class ReviewStory(StandingRequest):
         self._require_a_change()
         async with self._telling:
             told = await asyncio.to_thread(story_telling.tell, story, change.files)
-            held = StoryHeld(story=story_telling.as_told(told), round=round_number, take=change.take, moved_on=None)
-            self._kept = _StoryKept(told=told, told_on=change.written_as, held=held)
+            kept = KeptStory(told=told, told_on=change.written_as, round=round_number, moved_on=None)
+            self._told = _StoryTold(kept=kept, followed=story_telling.as_told(told), take=change.take)
             self._noted(None)
-            return held
+            return self._told.held
 
     async def follow(self, change: ReviewContent, *, round_number: int) -> StoryAsking | None:
         """Follow the story told onto a later take of the change, taken again in this round, and ask for one if due.
@@ -200,22 +226,22 @@ class ReviewStory(StandingRequest):
         with the asking begun, or None.
         """
         async with self._telling:
-            await self._followed(change, round_number=round_number)
-            return self._asked_where_wanted()
+            return await self._followed_and_asked(self.kept, change, round_number=round_number)
 
-    async def _followed(self, change: ReviewContent, *, round_number: int) -> None:
-        """Follow the story told, if any, onto a later take of the change, taken again in this round."""
-        kept = self._kept
+    async def _followed_and_asked(
+        self, kept: KeptStory | None, change: ReviewContent, *, round_number: int
+    ) -> StoryAsking | None:
+        """Hold a story kept, if any, followed onto a later take of the change, taken in this round; ask if wanted."""
         if kept is not None:
-            since_told = await self._changed_since(kept.told_on, change.written_as)
-            followed = await asyncio.to_thread(story_telling.follow, kept.told, change.files, since_told)
-            held = StoryHeld(
-                story=followed,
-                round=kept.held.round,
-                take=change.take,
-                moved_on=_moved_on(kept.told, followed, moved_on_before=kept.held.moved_on, round_number=round_number),
-            )
-            self._kept = _StoryKept(told=kept.told, told_on=kept.told_on, held=held)
+            self._told = await self._followed(kept, change, round_number=round_number)
+        return self._asked_where_wanted()
+
+    async def _followed(self, kept: KeptStory, change: ReviewContent, *, round_number: int) -> _StoryTold:
+        """A story kept, followed onto a later take of the change, taken in this round."""
+        since_told = await self._changed_since(kept.told_on, change.written_as)
+        followed = await asyncio.to_thread(story_telling.follow, kept.told, change.files, since_told)
+        found = kept.as_found(_moved_on(kept.told, followed, moved_on_before=kept.moved_on, round_number=round_number))
+        return _StoryTold(kept=found, followed=followed, take=change.take)
 
     def went_stale(self) -> StoryWentStale | None:
         """What went stale of the story held, as it stands now: None while it is current, or none is held."""

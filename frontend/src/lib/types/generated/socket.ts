@@ -459,9 +459,10 @@ export interface components {
          * @description What the browser says on connecting, and whenever its threads change.
          *
          *     The review on screen is the only side that knows what has been written
-         *     in it — the threads are unsent work — and the only side that survives a
-         *     server restarted mid-review. So it says both, and neither costs anybody
-         *     anything: this never leaves the machine until an agent asks for it.
+         *     in it — the threads are unsent work — and keeps the round it reached
+         *     even where a server restarted mid-review lost what it kept. So it says
+         *     both, and neither costs anybody anything: this never leaves the machine
+         *     until an agent asks for it.
          */
         SessionHello: {
             /**

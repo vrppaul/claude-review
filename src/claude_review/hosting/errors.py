@@ -11,3 +11,7 @@ class PortUnavailableError(Exception):
 
 class ReviewStoppedError(Exception):
     """Raised when Ctrl+C or `kill` stopped a review before it ever ran."""
+
+
+class WorkspaceRefusedError(Exception):
+    """Raised when where every review keeps what it kept of itself is not a directory of the user's own."""

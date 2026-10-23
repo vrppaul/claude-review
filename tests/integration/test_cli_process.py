@@ -25,6 +25,7 @@ import pytest
 
 from claude_review.cli.launch_commands import NOTHING_TO_REVIEW
 from claude_review.domain.models import CommentSeverity, ReviewMode
+from claude_review.hosting.workspace import KEPT_BY_EVERY_REVIEW
 from claude_review.presentation.schemas.pushes import (
     AnswererPush,
     ReplyPush,
@@ -300,6 +301,25 @@ def test_busy_port_reports_one_readable_line(changed_repo: Path, cli: CliProcess
     assert "already in use" in result.stderr
 
 
+def test_a_temporary_directory_another_user_could_reach_is_refused_in_one_readable_line(
+    changed_repo: Path, cli: CliProcesses, tmp_path: Path
+) -> None:
+    """A link where every review keeps its own stops the review, and says what to do."""
+    temporary = tmp_path / "temporary"
+    elsewhere = tmp_path / "elsewhere"
+    temporary.mkdir()
+    elsewhere.mkdir()
+    (temporary / KEPT_BY_EVERY_REVIEW.format(user=os.getuid())).symlink_to(elsewhere)
+
+    review = cli.start("diff", str(changed_repo), "--no-open", environment={"TMPDIR": str(temporary)})
+
+    assert review.finish() == 1
+    said = review.said()
+    assert said.startswith(ONE_LINE_FAILURE)
+    assert said.count("\n") == 1
+    assert "TMPDIR" in said
+
+
 def _read(port: int, route: str) -> dict:
     """What a route of the review served on the port answers, read as the page reads it."""
     with urllib.request.urlopen(f"http://{LOOPBACK}:{port}{route}", timeout=COMMAND_SECONDS) as response:
@@ -546,10 +566,10 @@ def test_what_the_review_prints_as_it_ends_is_shown_never_obeyed(
     assert SHOWN_ESCAPE in printed
 
 
-def test_a_review_stopped_by_a_signal_cleans_up_and_hands_over_the_last_round(
+def test_a_review_stopped_by_a_signal_hands_over_the_last_round_and_keeps_itself_for_when_it_opens_again(
     changed_repo: Path, cli: CliProcesses, port: int, tmp_path: Path
 ) -> None:
-    """`kill` is how a detached review is stopped; it must not skip the way out."""
+    """`kill` is how a detached review is stopped; it must not skip the way out, and the review is not finished."""
     temporary = tmp_path / "temporary"
     temporary.mkdir()
     review = cli.start(
@@ -561,7 +581,7 @@ def test_a_review_stopped_by_a_signal_cleans_up_and_hands_over_the_last_round(
     review.terminate()
 
     assert "Rename the helper." in review.printed()
-    assert not list(temporary.glob("*.claude-review-objects"))
+    assert {kept.name for kept in temporary.glob("claude-review-*/*/*")} == {"review.json", "objects"}
 
 
 def test_a_review_stopped_by_a_signal_while_its_page_is_open_exits_without_being_killed(

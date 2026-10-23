@@ -204,7 +204,7 @@ def test_a_thread_whose_words_two_other_blocks_say_moves_to_the_first_the_story_
 
 
 def test_a_thread_on_the_story_is_left_as_it_is_while_no_story_is_held() -> None:
-    """A review restarted holds no story until one is told again: nothing says the words changed."""
+    """A review finished and opened again holds no story until one is told: nothing says the words changed."""
     written = story_anchor(THE_DOUBT, quote=[OTHER_WORDS], outdated=True)
 
     assert NO_STORY.follow(written) == written

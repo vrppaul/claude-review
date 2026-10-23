@@ -367,7 +367,9 @@ class ReviewFactory:
     """Hosts reviews the way the command line does, each a review of its own.
 
     A review of a repository is given room to write down its trees, as the
-    command line gives it, unless the test is about one that has none.
+    command line gives it, unless the test is about one that has none. Each
+    keeps its record by its identity, as the command line keeps it: two
+    hosted on one change are one review, opened again.
     """
 
     def __init__(
@@ -387,7 +389,10 @@ class ReviewFactory:
     ) -> HostedReview:
         """The review put together as the command line puts it together, over git unless the test names another."""
         reads_a_repository = isinstance(opening.source, OpenedRepository)
-        workspace = self._marking_workspace if reads_a_repository and keeps_marks else self._workspace
+        shared = self._marking_workspace if reads_a_repository and keeps_marks else self._workspace
+        workspace = ReviewWorkspace(
+            kept=shared.kept / opening.identity_digest, objects=shared.objects, images=shared.images
+        )
         return host_review(
             opening,
             repository=repository or GitRepository(objects=workspace.objects),

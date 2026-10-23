@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel, ConfigDict
 
 from claude_review.domain.interfaces import Clock, ReviewedRepository
+from claude_review.domain.kept_review import KeptReview
 from claude_review.domain.models import GuideState, ReaderSettings
 from claude_review.hosting.workspace import ReaderFiles, ReviewWorkspace
 from claude_review.presentation.app import create_app
@@ -14,6 +15,7 @@ from claude_review.services.image_service import REVIEW_IMAGE_QUOTA, ImageServic
 from claude_review.services.reader_record_service import ReaderRecords, ReaderRecordService
 from claude_review.services.review.content_sources import content_source
 from claude_review.services.review.review import Review
+from claude_review.services.review.review_record import ReviewRecord
 from claude_review.services.review_opening import ReviewOpening
 
 
@@ -45,7 +47,8 @@ def host_review(
     with it and handed to both: to the review, as the channel it tells its
     pages through, and to the app, which serves those pages. So are the
     reader's settings: the app reads and changes them, and the review reads
-    as it opens whether its story is written then.
+    as it opens whether its story is written then. What the review keeps of
+    itself is kept in the workspace too.
     """
     broadcast = BrowserBroadcast(backlog=PAGE_BACKLOG, identity=opening.identity_digest)
     records = _reader_records(reader_files)
@@ -54,7 +57,7 @@ def host_review(
         page=broadcast,
         clock=clock,
         images=ImageService(DirectoryImageStore(workspace.images), REVIEW_IMAGE_QUOTA),
-        settings=records.settings,
+        record=ReviewRecord(JsonRecordStore(workspace.record, KeptReview), settings=records.settings),
     )
     return HostedReview(review=review, app=create_app(review, broadcast, records))
 

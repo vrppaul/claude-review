@@ -13,10 +13,12 @@ whether it is on the reader's screen, `Answerer` of the agent answering it,
 `AgentInbox` of what the reader handed over for the agent, `RoundTracker`
 of which round is being written, `Conversation` of what was said in the
 panel, `ReaderThreads` of the threads the page holds, `ReviewStory` of the
-story told of its change and of the reader's asking for one, and the
-`ContentSource` of where its content comes from. That one is handed in:
-its host picks it by what was opened, so a review of files is never handed
-git, and the review reads what it was opened on from it. `ThreadHandover`
+story told of its change and of the reader's asking for one, the
+`ReviewRecord` of what it keeps of itself to go on from if it is opened
+again, and the `ContentSource` of where its content comes from. Those two
+are handed in: its host says where the record is kept, and picks the
+source by what was opened, so a review of files is never handed git, and
+the review reads what it was opened on from it. `ThreadHandover`
 makes a thread's screenshots files the agent may open, and a
 `RoundFormatter`, chosen once for the kind of review, writes a round as it
 is sent.
@@ -30,6 +32,7 @@ import structlog
 
 from claude_review.domain.exceptions import ReviewEndedError, UnknownFileError
 from claude_review.domain.interfaces import Clock, PageChannel
+from claude_review.domain.kept_review import KeptReview
 from claude_review.domain.models import (
     AgentEvent,
     AgentWork,
@@ -41,12 +44,10 @@ from claude_review.domain.models import (
     PanelEntry,
     PanelMessage,
     ProgressStep,
-    ReaderSettings,
     RoundSubmission,
     SaidInPanel,
     StoryCancelled,
     StoryRequested,
-    StoryWriting,
     Thread,
     ThreadAsHanded,
     ThreadDraft,
@@ -73,7 +74,6 @@ from claude_review.services.exit_report import exit_report
 from claude_review.services.file_window_service import FileWindow
 from claude_review.services.image_service import ImageService, StoredImage
 from claude_review.services.place_words import place_in_words
-from claude_review.services.reader_record_service import ReaderRecordService
 from claude_review.services.review.agent_inbox import AgentInbox, Silence
 from claude_review.services.review.answerer import ANSWERER_LEASE_SECONDS, Answerer
 from claude_review.services.review.browser_presence import (
@@ -85,6 +85,7 @@ from claude_review.services.review.content_sources import ContentSource, DiffVie
 from claude_review.services.review.conversation import Conversation
 from claude_review.services.review.reader_threads import ReaderThreads
 from claude_review.services.review.review_lifetime import EndReason, ReviewLifetime
+from claude_review.services.review.review_record import ReviewRecord
 from claude_review.services.review.review_story import ReviewStory
 from claude_review.services.review.round_tracker import RoundTracker
 from claude_review.services.review.standing import CatchUp, ReviewStanding
@@ -104,7 +105,7 @@ class Review:
         page: PageChannel,
         clock: Clock,
         images: ImageService,
-        settings: ReaderRecordService[ReaderSettings],
+        record: ReviewRecord,
     ) -> None:
         # What it was opened on, read from the source made from it: handed once, it cannot be another's
         opening = source.opening
@@ -126,10 +127,7 @@ class Review:
         self._source = source
         self._story = ReviewStory(clock, takes=source, takes_a_story=source.is_a_change)
         self._inbox = AgentInbox(self._lifetime, standing=self._story)
-        # The reader's choices, kept for every review on the machine: read
-        # where one decides something here, never copied, since another
-        # review may change them at any moment
-        self._settings = settings
+        self._record = record
         # Chosen once: a review of a conversation quotes what each comment is
         # on, since the agent will not have the conversation in front of it
         self._formatter = RoundFormatter.for_mode(opening.mode)
@@ -248,12 +246,22 @@ class Review:
     async def open(self) -> None:
         """Note what the review opens on, before any page or agent can reach it, and ask for its story if wanted.
 
-        Wanted where the reader has every review's story written as it opens,
-        as their settings say now.
+        A review opened again before its reader finished it goes on as it was
+        kept: in its round, with its story followed onto the code as it now
+        stands, wanted as it was. One opened for the first time wants its story
+        where the reader has every review's story written as it opens, as their
+        settings say now.
         """
+        kept = await self._record.opening()
+        self._rounds.catch_up(kept.round)
         await self._source.open(self._rounds)
-        writing = (await self._kept_settings()).story_writing
-        self._tell_asking(self._story.open(writes_as_it_opens=writing is StoryWriting.AS_THE_REVIEW_OPENS))
+        self._tell_asking(
+            await self._story.open(
+                kept.story, self._source.content, round_number=self._rounds.current, wanted=kept.story_wanted
+            )
+        )
+        # Kept from its opening on: opened again, a review is never taken for one opened for the first time
+        await self._keep()
 
     def work_under_way(self) -> AgentWork | None:
         """What the agent says it is doing now, if anything: a page opening, or coming back, learns it here."""
@@ -407,8 +415,11 @@ class Review:
         [read] = self._hand_over([self._threads.find(thread_id)])
         return read
 
-    def submit(self, *, threads: list[ThreadDraft], body: str | None, ends: bool) -> RoundSubmission:
+    async def submit(self, *, threads: list[ThreadDraft], body: str | None, ends: bool) -> RoundSubmission:
         """Send what has been written as a round, and either end the review or carry on to the next round.
+
+        Sent before anything is awaited, so a second round sent at once finds
+        the review ended or the next round begun.
 
         Raises:
             ReviewEndedError: if the review has already ended.
@@ -437,6 +448,7 @@ class Review:
             self._page.tell(RoundBegan(number=self._rounds.begin_next()))
 
         log.info("review_submitted", comment_count=result.comment_count, round=number, ended=ends)
+        await self._keep()
         return submission
 
     async def tell_story(self, story: Story[Step]) -> StoryHeld:
@@ -465,9 +477,10 @@ class Review:
             round=held.round,
             take=held.take,
         )
+        await self._keep()
         return held
 
-    def ask_for_story(self) -> None:
+    async def ask_for_story(self) -> None:
         """Take the reader's asking for a story of the change, for an agent to pick up, and tell the pages it is asked.
 
         Asked once however often it is said: while a story is awaited, or
@@ -480,8 +493,9 @@ class Review:
             NoRepositoryError: if the review is of no change: files read once, or a conversation.
         """
         self._tell_asking(self._story.ask())
+        await self._keep()
 
-    def stop_story(self) -> None:
+    async def stop_story(self) -> None:
         """Stop the story the reader asked for, and tell the pages it is stopped; with none awaited, nothing changes.
 
         A request no agent took is taken back, and no agent hears of it or
@@ -489,6 +503,7 @@ class Review:
         the word to stop, and decides what to do about it.
         """
         self._story_stopped(self._story.stop())
+        await self._keep()
 
     def story_held(self) -> StoryHeld | None:
         """The story the review holds, on the take of its change on screen: None while nobody has told one."""
@@ -508,6 +523,7 @@ class Review:
         retaken = await self._source.retake(self._rounds)
         self._tell_asking(await self._story.follow(self._source.content, round_number=retaken.round))
         self._page.tell(DiffRetaken(file_count=retaken.file_count, changes=retaken.changes))
+        await self._keep()
         return retaken
 
     def end(self) -> None:
@@ -558,9 +574,17 @@ class Review:
         self._page.tell(StoryAskingChanged(asking=stopped))
         log.info("story_stopped")
 
-    async def _kept_settings(self) -> ReaderSettings:
-        """The reader's settings as kept now, or what a reader who never chose gets."""
-        return await self._settings.read() or self._settings.defaults()
+    async def _keep(self) -> None:
+        """Keep what the review would go on from if it were opened again now: its round, and its story.
+
+        Nothing once its reader finished it: it is forgotten as its serving
+        ends, and a record written after would bring it back. However else
+        it ended, what a request still under way changes is kept.
+        """
+        if self._lifetime.reason is not EndReason.FINISHED:
+            await self._record.keep(
+                KeptReview(round=self._rounds.current, story=self._story.kept, story_wanted=self._story.wanted)
+            )
 
     def _check_threads(self, threads: list[ThreadDraft]) -> None:
         """Refuse threads the agent cannot be handed as they are, before any of them is handed over with its images.

@@ -155,11 +155,6 @@ tests. Remove items when done — don't check them off.
 
 ## The story, on the page
 
-- [ ] `feat(story)`: a review keeps its story past a restart and `/clear`:
-      the story told, the tree it was told of and whether it is wanted, in
-      a private directory of the system's temporary one, by the review's
-      identity; the trees git writes are kept there, not removed as the
-      review ends (agreed 2026-10-23).
 - [ ] `feat(ui)`: the head of a story a round moved the code on under says
       how its telling again stands, as board StoryWriting states 8, 10 and
       11 draw it: "Write it again" where none is asked, no agent attached,

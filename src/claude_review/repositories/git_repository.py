@@ -301,7 +301,8 @@ class GitRepository(ReviewedRepository):
         megabytes behind. None throws them away when the staging ends, which
         is all a diff read once needs. A directory given here keeps them for
         as long as it lasts, which is what lets a tree written down be read
-        back later: the review owns that directory and takes it with it.
+        back later, by the review that wrote it or by the same review opened
+        again: the review owns that directory, and the system clears it.
         """
         self._objects = objects
 

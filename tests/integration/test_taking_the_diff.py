@@ -161,7 +161,7 @@ async def test_a_round_sent_while_the_diff_is_taken_again_leaves_the_take_in_the
     retaking = asyncio.create_task(review.retake())
     await _until_asked(first)
 
-    review.submit(threads=[], body=A_ROUND, ends=False)
+    await review.submit(threads=[], body=A_ROUND, ends=False)
     first.answer.set()
 
     assert (await retaking).round == FIRST_ROUND
@@ -178,7 +178,7 @@ async def test_a_retake_waiting_its_turn_while_a_round_is_sent_is_taken_in_that_
     # A turn of the loop, in which the second retake is asked for
     await asyncio.sleep(0)
 
-    review.submit(threads=[], body=A_ROUND, ends=False)
+    await review.submit(threads=[], body=A_ROUND, ends=False)
     first.answer.set()
     await _until_asked(second)
     second.answer.set()

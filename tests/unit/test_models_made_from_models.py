@@ -33,7 +33,7 @@ from claude_review.domain.models import (
     TurnDraft,
     Unshown,
 )
-from claude_review.domain.story import Chapter, LeftOut, Step, StepNow, StoryAsking
+from claude_review.domain.story import CodeMovedOn, Chapter, KeptStory, LeftOut, Step, StepNow, StoryAsking
 from claude_review.presentation.schemas.records import GuideChange, SettingsChange
 from claude_review.presentation.schemas.refusal import FieldRefusal
 from tests.helpers import line_anchor, story_anchor
@@ -138,6 +138,9 @@ ASKED_AT = 1_760_000_000_000
 TAKEN_AT = 1_760_000_004_000
 ASKING = StoryAsking(asked_at=ASKED_AT, taken_at=None, stopped=False)
 TAKEN_ASKING = StoryAsking(asked_at=ASKED_AT, taken_at=TAKEN_AT, stopped=False)
+# A story kept as it was told, in the first round, and a round's work that moved the code on under it
+KEPT_STORY = KeptStory(told=TOLD_STORY, told_on="a tree written down", round=1, moved_on=None)
+MOVED_ON = CodeMovedOn(round=2, left_out=None)
 
 MADE = [
     MadeFrom(what="a piece of a file", source=FILE, made=FILE.showing(OTHER_ROWS), replaced={"hunks"}),
@@ -224,6 +227,12 @@ MADE = [
         source=TAKEN_ASKING,
         made=TAKEN_ASKING.stopped_by_the_reader(),
         replaced={"stopped"},
+    ),
+    MadeFrom(
+        what="a story kept, as a later take found its code",
+        source=KEPT_STORY,
+        made=KEPT_STORY.as_found(MOVED_ON),
+        replaced={"moved_on"},
     ),
 ]
 EACH_MADE = pytest.mark.parametrize("model", MADE, ids=[model.what for model in MADE])

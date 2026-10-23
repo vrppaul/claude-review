@@ -146,7 +146,7 @@ async def ask_for_a_story(review: ReviewDep) -> None:
     two presses, hand the agent one request. The reader does not wait here:
     every page is told how the asking stands, and then that a story was told.
     """
-    review.ask_for_story()
+    await review.ask_for_story()
 
 
 @router.post("/story/cancel", status_code=HTTPStatus.NO_CONTENT)
@@ -157,7 +157,7 @@ async def stop_the_story(review: ReviewDep) -> None:
     and that is what the reader wanted. A story an agent sends all the
     same is still taken.
     """
-    review.stop_story()
+    await review.stop_story()
 
 
 @router.get("/diff", responses=refusals(UnknownVersionError, NoRepositoryError, takes=Takes.PARAMETERS))
@@ -351,7 +351,7 @@ async def submit_review(request: SubmitRequest, review: ReviewDep) -> SubmitResp
     stdout. A round keeps the review open instead — the threads stay on
     screen, so an answer has somewhere to come back to.
     """
-    sent = review.submit(
+    sent = await review.submit(
         threads=[thread.to_domain() for thread in request.threads], body=request.body, ends=request.end
     )
     return SubmitResponse(

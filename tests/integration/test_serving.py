@@ -45,10 +45,13 @@ from tests.page_socket import page_socket_held
 SUBMIT_ROUTE = "/api/submit"
 MESSAGE_ROUTE = "/api/message"
 THE_ROUND = "Rename the helper."
-# The last round, sent and ending the review
+# A round sent with the review kept open for the next, and the last round, sent and ending the review
+A_ROUND = {"threads": [], "body": THE_ROUND, "end": False}
 LAST_ROUND = {"threads": [], "body": THE_ROUND, "end": True}
 # What the pieces of a staging are called in the temporary directory
 STAGING_LEFTOVERS = ("*.git-index", "*.git-objects")
+# The record every review keeps of itself in the temporary directory, each in a directory of its own
+KEPT_RECORDS = "claude-review-*/*/review.json"
 # The name the review reads how long it waits for its first page by, as it is put together
 FIRST_PAGE_DEADLINE_NAME = "claude_review.services.review.review.FIRST_PAGE_DEADLINE_SECONDS"
 # A wait for a first page a test outlasts, and which the server still comes up well within, as it does in the real one
@@ -328,6 +331,20 @@ async def test_an_opening_cancelled_by_anything_but_a_stop_signal_stays_cancelle
 
     with pytest.raises(asyncio.CancelledError):
         await opening
+
+
+async def test_a_review_its_reader_finished_leaves_no_record_of_itself(
+    opening: ReviewOpening, announcer: RecordingAnnouncer, tmp_path: Path
+) -> None:
+    """The same change opened after it is a new review, in its first round, with no story."""
+    serving = asyncio.ensure_future(_held_open(opening, announcer))
+    address = await asyncio.wait_for(announcer.address, SETTLE_SECONDS)
+    async with AsyncClient(base_url=address) as page:
+        await page.post(SUBMIT_ROUTE, json=A_ROUND)
+        await page.post(SUBMIT_ROUTE, json=LAST_ROUND)
+    await asyncio.wait_for(serving, timeout=SETTLE_SECONDS)
+
+    assert list(tmp_path.glob(KEPT_RECORDS)) == []
 
 
 async def test_images_never_sent_go_with_the_review_and_those_sent_stay_for_the_agent(

@@ -18,7 +18,9 @@ decides that a story may be told, cuts what its steps show, and follows it.
 
 What the review holds is the last story told, followed onto the take of the
 change on screen (`StoryHeld`): with the round it was told in, and whether
-a round's work moved the code on under it since (`CodeMovedOn`). Only
+a round's work moved the code on under it since (`CodeMovedOn`). What it
+keeps of it is the story as told (`KeptStory`), which every take after is
+followed from, and which a review opened again finds. Only
 `services/review/review_story.py` holds one, and decides when its code
 moved on.
 """
@@ -363,6 +365,28 @@ class CodeMovedOn(BaseModel):
     # Said only where the round changed how much is left out; None where as
     # much is left out as when it was told
     left_out: LeftOutChanged | None
+
+
+class KeptStory(BaseModel):
+    """A story told, as the review keeps it: what every later take follows it from, and a review opened again finds.
+
+    Its pieces are what each step was told with; the tree the take it was
+    told of was written down as is what a later take is compared with.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    told: ToldStory[ToldStep]
+    # The tree the take it was told of was written down as: None where git wrote none
+    told_on: str | None
+    # The round it was told in
+    round: int = Field(ge=FIRST_ROUND)
+    # Set while the code under it moved on after it was told, as the last take found it
+    moved_on: CodeMovedOn | None
+
+    def as_found(self, moved_on: CodeMovedOn | None) -> KeptStory:
+        """The same story told, with the code under it as a later take found it: moved on, or not."""
+        return KeptStory(told=self.told, told_on=self.told_on, round=self.round, moved_on=moved_on)
 
 
 class StoryHeld(BaseModel):

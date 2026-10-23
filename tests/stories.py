@@ -449,9 +449,12 @@ class TakesComparedByTheirLines(TakesCompared):
 
 # What a story that is never followed onto a take is built with: no take to compare
 NO_TAKES = TakesComparedByTheirLines({})
-# Whether the reader has every review's story written as the review opens, or waits to ask for one
-WRITTEN_AS_IT_OPENS = True
-NOT_AS_IT_OPENS = False
+# Whether a review opens wanting its story — written as each review opens, or wanted before it was opened again —
+# or waits for the reader to ask for one
+WANTED = True
+NOT_WANTED = False
+# What a review opened for the first time finds of a story: none was told in it
+NOTHING_KEPT = None
 
 
 async def told_then_followed(*takes: list[DiffFile]) -> ReviewStory:

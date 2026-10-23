@@ -4,10 +4,11 @@ Four things run while a review is open, and the review ending stops all of
 them: the server, the word to whoever started it that it is listening, the
 check that its reader came and is still there, and the watch on the working
 tree. Whichever way it ends — sent, closed, never opened, Ctrl+C or `kill`,
-the server stopping, a fault — the way out is the same: the directories it
-wrote go, and the last round is handed back. Ctrl+C and `kill` are answered
-from the moment the review starts to open, so one that arrives before it
-runs still leaves nothing behind.
+the server stopping, a fault — the way out is the same: what git staged
+goes, and the last round is handed back. The record the review kept of
+itself stays, unless its reader finished it. Ctrl+C and `kill` are
+answered from the moment the review starts to open, so one that arrives
+before it runs still leaves no staging behind.
 """
 
 import asyncio
@@ -24,7 +25,7 @@ from claude_review.hosting.errors import ReviewStoppedError
 from claude_review.hosting.hosted_review import HostedReview, host_review
 from claude_review.hosting.ports import bind, stable_port
 from claude_review.hosting.review_server import ReviewServer
-from claude_review.hosting.workspace import reader_files, review_workspace
+from claude_review.hosting.workspace import forget_review, reader_files, review_workspace
 from claude_review.repositories.git_repository import GitRepository
 from claude_review.repositories.system_clock import SystemClock
 from claude_review.services.review.review import Review
@@ -111,13 +112,18 @@ async def hold_open(
     The review gets a workspace of its own, reads its repository through
     git, and is served on `port` — the one asked for; None works it out from
     what is reviewed, so the review comes back on the same one whenever it
-    is opened again.
+    is opened again. The record it kept of itself is forgotten once its
+    reader finished it, and stays for when it is opened again however else
+    it ended.
 
     Raises:
         PortUnavailableError: If the port asked for is taken.
         ServerStartError: If the server stopped before it ever listened.
+        WorkspaceRefusedError: If where every review keeps its own is not a directory of the user's.
     """
-    with review_workspace(writes_trees=isinstance(opening.source, OpenedRepository), announcer=announcer) as workspace:
+    async with review_workspace(
+        opening.identity_digest, writes_trees=isinstance(opening.source, OpenedRepository), announcer=announcer
+    ) as workspace:
         hosted = host_review(
             opening,
             repository=GitRepository(objects=workspace.objects),
@@ -126,7 +132,10 @@ async def hold_open(
             clock=SystemClock(),
         )
         listening = bind(port if port is not None else stable_port(opening.identity), may_fall_back=port is None)
-        return await serve_review(hosted, listening=listening, announcer=announcer, signals=signals)
+        handed_back = await serve_review(hosted, listening=listening, announcer=announcer, signals=signals)
+        if hosted.review.lifetime.reason is EndReason.FINISHED:
+            await forget_review(workspace)
+        return handed_back
 
 
 async def serve_review(

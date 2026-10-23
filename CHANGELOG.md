@@ -64,6 +64,19 @@
   after four seconds, a bar running out as it waits, or at once by its ×:
   the view never changes by itself. With no agent attached the page says
   how one is attached, and offers the files meanwhile.
+- **A review stopped under its reader goes on as it was, opened again.**
+  Ctrl+C, `kill` or a closed terminal no longer cost the story the agent
+  told: the same change opened again before the reader finished the review
+  holds it, followed onto the code as it now stands, says in which round
+  the code moved on under it, and asks for it again where it was asked for
+  and went stale; a story the reader stopped stays stopped. The review goes
+  on in the round it had reached, which an agent attaching hears before
+  any page is open. What it keeps — its round, its story, and the trees git
+  wrote, copies of untracked files among them — lies in the system's
+  temporary directory, in one only the user can enter, until the system
+  clears it; once the reader finishes the review its record goes, and the
+  same change opened then is a new review. One another user made first, a
+  link left in its place, or one open to others, is refused in one line.
 - **Story is introduced once: by this release's news, or at the switch.**
   A reader back from an older release is told of Story on the news card,
   with the sketch and Try Story in place of Got it (Got it where the

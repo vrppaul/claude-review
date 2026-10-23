@@ -37,13 +37,17 @@ def tmp_git_repo(tmp_path: Path) -> Path:
 @pytest.fixture
 def workspace(tmp_path_factory: pytest.TempPathFactory) -> ReviewWorkspace:
     """The directory a review owns, laid out as for one that leaves no marks."""
-    return ReviewWorkspace(objects=None, images=tmp_path_factory.mktemp("images"))
+    return ReviewWorkspace(kept=tmp_path_factory.mktemp("kept"), objects=None, images=tmp_path_factory.mktemp("images"))
 
 
 @pytest.fixture
 def marking_workspace(tmp_path_factory: pytest.TempPathFactory) -> ReviewWorkspace:
     """The directory a review of a repository owns, with room for its marks."""
-    return ReviewWorkspace(objects=tmp_path_factory.mktemp("objects"), images=tmp_path_factory.mktemp("images"))
+    return ReviewWorkspace(
+        kept=tmp_path_factory.mktemp("kept"),
+        objects=tmp_path_factory.mktemp("objects"),
+        images=tmp_path_factory.mktemp("images"),
+    )
 
 
 @pytest.fixture

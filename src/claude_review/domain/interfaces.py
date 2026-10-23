@@ -117,7 +117,7 @@ class ImageStore(ABC):
 
 
 class RecordStore[Record: BaseModel](ABC):
-    """Where one record about the reader is kept between reviews."""
+    """Where one record is kept past a review's process: one about the reader, for every review, or a review's own."""
 
     @abstractmethod
     async def read(self) -> Record | None:
@@ -125,7 +125,11 @@ class RecordStore[Record: BaseModel](ABC):
 
     @abstractmethod
     async def write(self, record: Record) -> None:
-        """Replace the record whole."""
+        """Replace the record whole.
+
+        Raises:
+            OSError: if it cannot be written.
+        """
 
 
 class RecordChange[Record: BaseModel](ABC):

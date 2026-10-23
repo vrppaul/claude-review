@@ -42,11 +42,12 @@ class RoundTracker(RoundBeingWritten):
         return self._last_sent
 
     def catch_up(self, number: int) -> None:
-        """Take the round a page says it had got to, never going back.
+        """Take a round the review is known to have got to, as it kept it or a page says, never going back.
 
-        A review restarted mid-way comes back believing it is round one, and
-        would number the next round wrongly for everyone reading it; a reader
-        opening fresh must not drag the review back to the beginning either.
+        A review restarted mid-way that lost what it kept comes back believing
+        it is round one, and would number the next round wrongly for everyone
+        reading it; a reader opening fresh must not drag the review back to
+        the beginning either.
         """
         if number > self._current:
             log.info("round_caught_up", was=self._current, now=number)

@@ -1,4 +1,4 @@
-"""A record about the reader, kept as one JSON file shared by every review."""
+"""A record kept as one JSON file: one about the reader, shared by every review, or one a review keeps of itself."""
 
 import asyncio
 import os
@@ -20,9 +20,10 @@ RECORD_ENCODING = "utf-8"
 class JsonRecordStore[Record: BaseModel](RecordStore[Record]):
     """Keeps one record as a JSON file, replaced whole on every write.
 
-    Several reviews can be open at once, each in its own process. A write goes
-    to a file of its own first and then takes the record's name in one step,
-    so whoever reads finds the old record or the new one, never half of one.
+    Several reviews can be open at once, each in its own process, and a
+    review can be stopped while it writes. A write goes to a file of its own
+    first and then takes the record's name in one step, so whoever reads
+    finds the old record or the new one, never half of one.
     """
 
     def __init__(self, path: Path, record_type: type[Record]) -> None:
@@ -41,8 +42,8 @@ class JsonRecordStore[Record: BaseModel](RecordStore[Record]):
         try:
             return self._record_type.model_validate_json(text)
         except ValidationError as error:
-            # A file edited by hand into nonsense costs the reader their
-            # choices, not the review
+            # A file edited by hand into nonsense, or written by a release
+            # that kept other fields, costs what it held, not the review
             log.warning("record_unreadable", path=str(self._path), reason=str(error))
             return None
 

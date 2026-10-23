@@ -4,53 +4,110 @@ A story is asked for while no story held is current: none is held, or a
 round moved the code on under the one held. The reader asks, or has every
 review's story written as it opens; a story so asked for is asked for again
 after each retake that leaves it stale, until the reader stops it. One the
-agent told unasked is not asked for again. An agent's wait
-claims the asking once, and is told what went stale of the story held, as
-it then stands. A review of no change asks for none, and refuses both the
-reader's asking and a story told of it.
+agent told unasked is not asked for again. A review opened again holds the
+story it kept, followed onto the take it opens on, and wants it as it did.
+An agent's wait claims the asking once, and is told what went stale of the
+story held, as it then stands. A review of no change asks for none, and
+refuses both the reader's asking and a story told of it.
 """
 
 import asyncio
 
-from claude_review.domain.models import FIRST_TAKE, LineSpan, StaleStep, StoryRequested, StoryWentStale
+from claude_review.domain.models import (
+    FIRST_ROUND,
+    FIRST_TAKE,
+    DiffFile,
+    LineSpan,
+    StaleStep,
+    StoryRequested,
+    StoryWentStale,
+)
 from claude_review.domain.story import StoryAsking
 from claude_review.services.review.review_content import ReviewContent
 from tests.stories import (
     ASKED_AT,
     FIRST_REWRITTEN,
     NO_TAKES,
+    NOT_WANTED,
+    NOTHING_KEPT,
     NOTHING_LEFT_OUT,
     ONLY_CHAPTER,
     SECOND_ROUND,
-    NOT_AS_IT_OPENS,
     STORIED,
     THE_FIRST_LINE,
     TOLD_OF,
+    WANTED,
     TakesComparedByTheirLines,
     review_story,
     story_of_no_change,
     take_of,
     told_then_followed,
     tree_of,
-    WRITTEN_AS_IT_OPENS,
 )
 
 # The asking begun at the moment the review's clock says
 ASKED = StoryAsking(asked_at=ASKED_AT, taken_at=None, stopped=False)
+# The take a review opens on, where no story was told in it before
+FIRST_OPENED_ON = take_of(TOLD_OF, FIRST_TAKE)
+# The take a review opened again opens on: the one after the take its story was told of
+OPENED_AGAIN_ON = FIRST_TAKE + 1
 
 
-def test_a_review_whose_reader_has_stories_written_as_each_review_opens_asks_for_one_as_it_opens() -> None:
-    assert review_story(NO_TAKES).open(writes_as_it_opens=WRITTEN_AS_IT_OPENS) == ASKED
+async def test_a_review_that_opens_wanting_its_story_asks_for_one_as_it_opens() -> None:
+    """Wanted where the reader has every review's story written as it opens."""
+    story = review_story(NO_TAKES)
+
+    assert await story.open(NOTHING_KEPT, FIRST_OPENED_ON, round_number=FIRST_ROUND, wanted=WANTED) == ASKED
 
 
-def test_a_review_whose_reader_waits_to_ask_for_a_story_asks_for_none_as_it_opens() -> None:
+async def test_a_review_that_opens_not_wanting_its_story_asks_for_none_as_it_opens() -> None:
     """Asked first, or written at a press on Story: either way the story waits for the reader."""
-    assert review_story(NO_TAKES).open(writes_as_it_opens=NOT_AS_IT_OPENS) is None
+    story = review_story(NO_TAKES)
+
+    assert await story.open(NOTHING_KEPT, FIRST_OPENED_ON, round_number=FIRST_ROUND, wanted=NOT_WANTED) is None
 
 
-def test_a_review_of_no_change_asks_for_no_story_as_it_opens_whatever_the_reader_chose() -> None:
+async def test_a_review_of_no_change_asks_for_no_story_as_it_opens_however_it_is_wanted() -> None:
     """Files read once, or a conversation: there is nothing to tell a story of."""
-    assert story_of_no_change().open(writes_as_it_opens=WRITTEN_AS_IT_OPENS) is None
+    story = story_of_no_change()
+
+    assert await story.open(NOTHING_KEPT, FIRST_OPENED_ON, round_number=FIRST_ROUND, wanted=WANTED) is None
+
+
+async def test_a_review_opened_again_holds_the_story_it_kept_as_it_would_hold_it_had_it_stayed_open() -> None:
+    """Followed from the story as told onto the take it opens on, as a retake follows it: nobody tells it again."""
+    stayed_open = await told_then_followed(TOLD_OF, FIRST_REWRITTEN)
+    kept = (await told_then_followed(TOLD_OF)).kept
+    opened_again = review_story(_takes_since_told(FIRST_REWRITTEN))
+
+    asking = await opened_again.open(
+        kept, take_of(FIRST_REWRITTEN, OPENED_AGAIN_ON), round_number=SECOND_ROUND, wanted=NOT_WANTED
+    )
+
+    assert (opened_again.held, asking) == (stayed_open.held, None)
+
+
+async def test_a_review_opened_again_asks_for_its_story_kept_only_where_it_is_wanted_and_the_code_moved_on() -> None:
+    """As a retake asks: one the reader stopped, or the agent told unasked, is not wanted; one current needs no telling."""
+    asked = {
+        "moved on, wanted": await _asked_as_it_opens_again(FIRST_REWRITTEN, wanted=WANTED),
+        "moved on, not wanted": await _asked_as_it_opens_again(FIRST_REWRITTEN, wanted=NOT_WANTED),
+        "current, wanted": await _asked_as_it_opens_again(TOLD_OF, wanted=WANTED),
+    }
+
+    assert asked == {"moved on, wanted": ASKED, "moved on, not wanted": None, "current, wanted": None}
+
+
+def _takes_since_told(opened_on: list[DiffFile]) -> TakesComparedByTheirLines:
+    """The take the story was told of, and the take a review opened again opens on."""
+    return TakesComparedByTheirLines({tree_of(FIRST_TAKE): TOLD_OF, tree_of(OPENED_AGAIN_ON): opened_on})
+
+
+async def _asked_as_it_opens_again(opened_on: list[DiffFile], *, wanted: bool) -> StoryAsking | None:
+    """How a review opened again on these files, wanting its story or not, asks for the story it kept."""
+    kept = (await told_then_followed(TOLD_OF)).kept
+    opened_again = review_story(_takes_since_told(opened_on))
+    return await opened_again.open(kept, take_of(opened_on, OPENED_AGAIN_ON), round_number=SECOND_ROUND, wanted=wanted)
 
 
 def test_a_story_asked_for_is_due_for_an_agent_until_one_claims_it() -> None:
@@ -162,7 +219,7 @@ async def test_a_story_that_arrives_during_a_retake_which_leaves_it_stale_is_ask
     """Told of the take before, it ends the asking as it arrives; followed once held, it is found stale, and the
     want is decided after that, so the story the reader sees is asked for again."""
     story = review_story(TakesComparedByTheirLines({tree_of(FIRST_TAKE): TOLD_OF, tree_of(2): FIRST_REWRITTEN}))
-    story.open(writes_as_it_opens=WRITTEN_AS_IT_OPENS)
+    await story.open(NOTHING_KEPT, FIRST_OPENED_ON, round_number=FIRST_ROUND, wanted=WANTED)
     telling = asyncio.create_task(story.tell(THE_FIRST_LINE, take_of(TOLD_OF, FIRST_TAKE), round_number=SECOND_ROUND))
     # A turn of the loop, in which the telling begins
     await asyncio.sleep(0)

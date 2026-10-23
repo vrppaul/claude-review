@@ -25,6 +25,7 @@ from pydantic import TypeAdapter
 from starlette.testclient import WebSocketTestSession
 
 from claude_review.domain.interfaces import PageChannel
+from claude_review.domain.kept_review import KeptReview
 from claude_review.domain.models import FIRST_ROUND, FIRST_TAKE, ReaderSettings
 from claude_review.domain.page_events import DiffRetaken, PageEvent
 from claude_review.domain.story import Step, Story, StoryHeld
@@ -48,6 +49,8 @@ from claude_review.services.image_service import REVIEW_IMAGE_QUOTA, ImageServic
 from claude_review.services.reader_record_service import ReaderRecordService
 from claude_review.services.review.content_sources import content_source
 from claude_review.services.review.review import Review
+from claude_review.services.review.review_lifetime import EndReason
+from claude_review.services.review.review_record import ReviewRecord
 from claude_review.services.review_opening import ReviewOpening
 from tests.helpers import (
     DIFF_ROUTE,
@@ -74,6 +77,7 @@ from tests.stories import as_the_agent_writes, chapter_of, planted, rows_of, ste
 STORY_ROUTE = "/api/story"
 SUBMIT_ROUTE = "/api/submit"
 RETAKE_ROUTE = "/api/retake"
+SETTINGS_ROUTE = "/api/settings"
 # The base a page asks for to read only what changed since the first round began
 SINCE_THE_FIRST_ROUND = "round:1"
 
@@ -353,6 +357,75 @@ async def test_a_story_told_after_the_diff_was_taken_again_is_of_the_take_the_di
     assert (await held_by(agent)).held.take == (await own_diff(agent)).take
 
 
+async def test_a_review_opened_again_before_it_is_finished_holds_its_story_on_the_code_as_it_now_stands(
+    reviews: ReviewFactory, tmp_git_repo: Path
+) -> None:
+    """Stopped under its reader and opened again on the same change, it is the same review: the story cost tokens once.
+
+    Followed from the story as told, through the trees the review kept, onto
+    the code the round's work left, and said to have moved on in the round
+    the review had reached, before any page could tell it so.
+    """
+    write_files(tmp_git_repo, THE_CHANGE)
+    opening = await repository_opening(tmp_git_repo)
+    async with http_client(reviews.app(opening)) as before:
+        await tell(before, WHOLE_STORY)
+        await before.post(SUBMIT_ROUTE, json={"threads": [], "body": "Another word for it, please.", "end": False})
+    write_files(tmp_git_repo, {EDITED_FILE: REWORDED_SINCE})
+
+    async with http_client(reviews.app(opening)) as again:
+        held = (await held_by(again)).held
+        facts = ReviewResponse.model_validate_json((await again.get(REVIEW_ROUTE)).content)
+
+    assert rows_of(held.story.chapters[0].steps[0].now.piece) == ["and a line reworded since"]
+    assert (held.round, held.moved_on) == (FIRST_ROUND, CodeMovedOn(round=FIRST_ROUND + 1, left_out=None))
+    assert (facts.round, facts.story_asking) == (FIRST_ROUND + 1, None)
+
+
+async def test_a_story_told_as_its_review_is_stopped_under_its_reader_is_held_once_it_is_opened_again(
+    reviews: ReviewFactory, opened_on_the_change: ReviewOpening
+) -> None:
+    """Ctrl+C lets a telling already under way finish: it cost the agent's tokens, and the review is not finished."""
+    stopped = reviews.hosted(opened_on_the_change)
+    async with http_client(stopped.app):
+        stopped.review.lifetime.end(EndReason.STOPPED)
+        await stopped.review.tell_story(WHOLE_STORY)
+
+    async with http_client(reviews.app(opened_on_the_change)) as again:
+        held = (await held_by(again)).held
+
+    assert held is not None
+
+
+async def test_a_story_asked_for_in_a_review_is_asked_for_again_once_it_is_opened_again(
+    reviews: ReviewFactory, opened_on_the_change: ReviewOpening
+) -> None:
+    """No agent took it before the review stopped: the review still wants it."""
+    async with http_client(reviews.app(opened_on_the_change)) as before:
+        await before.post(STORY_REQUEST_ROUTE)
+
+    async with http_client(reviews.app(opened_on_the_change)) as again:
+        asking = ReviewResponse.model_validate_json((await again.get(REVIEW_ROUTE)).content).story_asking
+
+    assert asking is not None
+    assert (asking.taken_at, asking.stopped) == (None, False)
+
+
+async def test_a_story_the_reader_stopped_is_not_asked_for_once_its_review_is_opened_again_whatever_they_chose(
+    reviews: ReviewFactory, opened_on_the_change: ReviewOpening
+) -> None:
+    """Every story written as each review opens is a choice for the next review: the stop stands in this one."""
+    async with http_client(reviews.app(opened_on_the_change)) as before:
+        await before.put(SETTINGS_ROUTE, json={"story_writing": "as_the_review_opens"})
+        await before.post(STORY_REQUEST_ROUTE)
+        await before.post(STORY_CANCEL_ROUTE)
+
+    async with http_client(reviews.app(opened_on_the_change)) as again:
+        asking = ReviewResponse.model_validate_json((await again.get(REVIEW_ROUTE)).content).story_asking
+
+    assert asking is None
+
+
 async def test_a_diff_read_against_a_narrower_base_says_the_take_of_the_reviews_own(
     agent: AsyncClient, tmp_git_repo: Path
 ) -> None:
@@ -406,7 +479,10 @@ async def page_reading_the_story(
         page=page,
         clock=clock,
         images=ImageService(DirectoryImageStore(workspace.images), REVIEW_IMAGE_QUOTA),
-        settings=ReaderRecordService(JsonRecordStore(reader_files.settings, ReaderSettings), ReaderSettings),
+        record=ReviewRecord(
+            JsonRecordStore(workspace.record, KeptReview),
+            settings=ReaderRecordService(JsonRecordStore(reader_files.settings, ReaderSettings), ReaderSettings),
+        ),
     )
     await page.review.open()
     return page
@@ -428,7 +504,7 @@ async def test_a_page_told_the_diff_was_taken_again_reads_the_story_already_foll
 
 async def test_where_the_review_stands_says_how_the_readers_asking_for_a_story_stands(review: Review) -> None:
     """Read in one piece with the rest of where it stands, as a page opening reads it."""
-    review.ask_for_story()
+    await review.ask_for_story()
 
     asking = review.standing().story_asking
 
@@ -466,7 +542,7 @@ async def test_a_story_is_held_with_the_round_it_arrived_in_though_a_round_begin
     telling = asyncio.ensure_future(review.tell_story(A_LONG_STORY))
     await asyncio.sleep(0)
 
-    review.submit(threads=[], body="One more line, please.", ends=False)
+    await review.submit(threads=[], body="One more line, please.", ends=False)
 
     assert (await telling).round == FIRST_ROUND
 

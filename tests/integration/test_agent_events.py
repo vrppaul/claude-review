@@ -23,6 +23,7 @@ from tests.helpers import (
     STORY_REQUEST_ROUTE,
     CallerThatLeaves,
     ReviewFactory,
+    files_opening_of,
     http_client,
     line_json,
     message_json,
@@ -121,32 +122,39 @@ async def test_nothing_handed_over_says_so_and_nothing_else(client: AsyncClient)
     assert event == {"type": "timeout"}
 
 
+@pytest.mark.parametrize(("writing", "heard_first"), OPENING_ASKS.items(), ids=OPENING_ASKS.keys())
 async def test_a_review_opened_asks_its_agent_for_a_story_unasked_only_where_each_is_written_as_it_opens(
-    reviews: ReviewFactory, tmp_git_repo: Path
+    reviews: ReviewFactory, tmp_git_repo: Path, writing: str, heard_first: str
 ) -> None:
-    """Chosen in an earlier review: no page asks; asked first, or written at a press on Story, the story waits."""
+    """Chosen in an earlier review of another change: no page asks; asked first, or written at a press on Story, the
+    story waits."""
     write_files(tmp_git_repo, {TOLD_FILE: TOLD_CONTENT})
-    heard: dict[str, str] = {}
-    for writing in OPENING_ASKS:
-        async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as earlier:
-            await earlier.put(SETTINGS_ROUTE, json={"story_writing": writing})
-        async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as agent:
-            heard[writing] = (await agent.post(EVENTS_ROUTE, params=GLANCE_AT_EVENTS)).json()["type"]
+    async with http_client(reviews.app(files_opening_of([one_line_file()]))) as earlier:
+        await earlier.put(SETTINGS_ROUTE, json={"story_writing": writing})
 
-    assert heard == OPENING_ASKS
+    async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as agent:
+        heard = (await agent.post(EVENTS_ROUTE, params=GLANCE_AT_EVENTS)).json()["type"]
+
+    assert heard == heard_first
 
 
 async def test_choosing_when_stories_are_written_asks_the_review_it_is_chosen_in_for_none(
     reviews: ReviewFactory, tmp_git_repo: Path
 ) -> None:
-    """The choice is read where a review decides: as the next review opens, or at the next press on Story."""
+    """The choice is read where a review decides: as the next review opens, or at the next press on Story.
+
+    Opened again before it is finished, it is still the review the choice was made in.
+    """
     write_files(tmp_git_repo, {TOLD_FILE: TOLD_CONTENT})
-    async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as agent:
+    opening = await repository_opening(tmp_git_repo)
+    async with http_client(reviews.app(opening)) as agent:
         await agent.put(SETTINGS_ROUTE, json={"story_writing": "as_the_review_opens"})
 
         event = (await agent.post(EVENTS_ROUTE, params=GLANCE_AT_EVENTS)).json()
+    async with http_client(reviews.app(opening)) as opened_again:
+        event_once_opened_again = (await opened_again.post(EVENTS_ROUTE, params=GLANCE_AT_EVENTS)).json()
 
-    assert event == {"type": "timeout"}
+    assert (event, event_once_opened_again) == ({"type": "timeout"}, {"type": "timeout"})
 
 
 async def test_a_step_a_round_pushed_down_and_partly_rewrote_is_told_to_the_agent_where_it_now_stands(

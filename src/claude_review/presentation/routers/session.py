@@ -108,10 +108,10 @@ async def _hear_the_page(review: Review, websocket: WebSocket) -> None:
 def _take_the_hello(review: Review, said: str) -> None:
     """Take what the page knows and the review does not.
 
-    Two things. The round: a review restarted mid-way comes back believing
-    it is round one, so the page says where it had got to. And the threads:
-    they are unsent work, held in that page, and an agent attaching later
-    has no other way to learn they exist.
+    Two things. The round: a review restarted mid-way that lost what it kept
+    comes back believing it is round one, so the page says where it had got
+    to. And the threads: they are unsent work, held in that page, and an
+    agent attaching later has no other way to learn they exist.
     """
     try:
         heard = ReceivedHello.model_validate_json(said)
