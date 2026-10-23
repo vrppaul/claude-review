@@ -67,7 +67,10 @@
 - **Story is introduced once: by this release's news, or at the switch.**
   A reader back from an older release is told of Story on the news card,
   with the sketch and Try Story in place of Got it (Got it where the
-  review tells no story); once shown, the card was the introduction. A
+  review tells no story), and under it, a line each, of the new look,
+  rewriting or deleting what the agent has not read, the comment kept
+  through a reload, and the review that cannot be reached; once shown,
+  the card was the introduction. A
   reader who has never tried Story, by pressing it or by having a story
   on screen, and is shown no such card meets, once the welcome card and
   the tour are done, a pane under the switch pointing at Story, which is

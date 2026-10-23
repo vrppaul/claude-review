@@ -46,12 +46,16 @@ export const RELEASE_NEWS: ReleaseNews[] = [
 		illustration: { kind: 'drawing', name: 'pasted-screenshot' }
 	},
 	{
-		// Seen by no reader until the release brings pyproject to its number: the release settles that
-		// number and the lines of what else it brings
+		// Seen by no reader until the release brings pyproject to its number
 		release: '1.6.0',
 		title: 'Read a change as a story',
 		body: "The agent can walk you through what it changed: a short overview, then chapters, with its reason above each piece of code. Off until you turn it on, since it spends the agent's tokens.",
-		also: [],
+		also: [
+			'A new look: the header says which repository and branch you review, Send counts what goes with it, and both side columns can be put away to a rail.',
+			'Edit or delete your comment or reply until the agent has read it, and take back a question you asked.',
+			'A comment you are writing is never lost: a reload brings it back as it was.',
+			'The page says when the review cannot be reached, and catches up once it is back.'
+		],
 		illustration: { kind: 'drawing', name: 'story-sketch' },
 		introducesStory: true
 	}

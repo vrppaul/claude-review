@@ -381,6 +381,24 @@ describe('the news card', () => {
 		);
 	});
 
+	it('tells, a line each, what else the release that brought Story changed', async () => {
+		guideServer('1.5.0');
+		await arriveAt(STORY_RELEASE);
+
+		const { getByTestId } = render(Guide, inReview(review));
+		await tick();
+
+		const told = said(getByTestId('guide-news'));
+		expect(told).toContain(
+			'A new look: the header says which repository and branch you review, Send counts what goes with it, and both side columns can be put away to a rail.'
+		);
+		expect(told).toContain(
+			'Edit or delete your comment or reply until the agent has read it, and take back a question you asked.'
+		);
+		expect(told).toContain('A comment you are writing is never lost: a reload brings it back as it was.');
+		expect(told).toContain('The page says when the review cannot be reached, and catches up once it is back.');
+	});
+
 	it('offers Try Story in place of Got it for the release that brought Story', async () => {
 		guideServer('1.5.0');
 		await arriveAt(STORY_RELEASE);
