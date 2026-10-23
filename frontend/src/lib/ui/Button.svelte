@@ -19,8 +19,8 @@
 		children: Snippet;
 		/**
 		 * Its words, after its icon, where the room it stands in may grow too narrow for them: on a narrow card of
-		 * lists (ListsCard) they give way, kept for a screen reader, and the icon stands alone, square as an icon
-		 * button's. None where its words are among its children.
+		 * lists (ListsCard) or atop a narrow frame of code (CodeFrameHead) they give way, kept for a screen reader,
+		 * and the icon stands alone, square as an icon button's. None where its words are among its children.
 		 */
 		wordsGivingWay?: string | undefined;
 	}
@@ -46,7 +46,7 @@
 	data-testid={testId}
 	class={['cr-ui-button cr-pressable', BUTTON_TONES[tone], BUTTON_SIZES[size], listed && 'cr-ui-button-listed']}
 >
-	{@render children()}{#if wordsGivingWay}<span
-			class="cr-ui-button-words-giving-way @max-cr-lists-card-narrow/lists-card:sr-only">{wordsGivingWay}</span
+	{@render children()}{#if wordsGivingWay}<span class="cr-ui-button-words-giving-way @max-cr-narrow/button-room:sr-only"
+			>{wordsGivingWay}</span
 		>{/if}
 </button>

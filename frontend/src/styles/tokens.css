@@ -553,13 +553,16 @@
 
 /*
  * Where a card of lists (lib/ui ListsCard) stands each list's name over its
- * words, by its own width: narrower, its columns of names, an item's offer
- * and the fold would leave the words some thirty characters. A container
- * query cannot read a custom property either, so it is written as
- * Tailwind's container sizes are
+ * words, and where a button on it or atop a frame of code (CodeFrameHead)
+ * lets its words give way to its icon (Button's wordsGivingWay), by the
+ * width it stands in: narrower, its columns of names, an item's offer and
+ * the fold would leave the words some thirty characters, and a step's
+ * reason beside the offer's words little more. A container query cannot
+ * read a custom property either, so it is written as Tailwind's container
+ * sizes are
  */
 @theme {
-	--container-cr-lists-card-narrow: 40rem;
+	--container-cr-narrow: 40rem;
 }
 
 [data-theme='dark'] {

@@ -117,6 +117,18 @@
 	justify-content: flex-start;
 	gap: --spacing(2);
 }
+/*
+ * Where the room a button stands in grows narrow (button-room: a card of
+ * lists, the top line of a frame of code), one whose words give way
+ * (Button's wordsGivingWay) stands as its icon alone, square as an icon
+ * button's, its words kept for a screen reader and its name on the pointer
+ */
+@container button-room (width < theme(--container-cr-narrow)) {
+	.cr-ui-button:has(> .cr-ui-button-words-giving-way) {
+		aspect-ratio: 1;
+		padding-inline: 0;
+	}
+}
 /* An icon alone: as wide as it is tall */
 .cr-ui-icon-button {
 	aspect-ratio: 1;
@@ -1129,10 +1141,11 @@
 /*
  * Its top line (CodeFrameHead): what heads the code, in small muted words
  * after the agent's avatar, in a turn's avatar slot, a rule under it, and
- * what it offers at its end. A band heading the code is that line, lit
- * across it, square, the frame rounding its top
+ * what it offers at its end, the room that offer stands in. A band heading
+ * the code is that line, lit across it, square, the frame rounding its top
  */
 .cr-ui-code-frame-head {
+	container: button-room / inline-size;
 	display: flex;
 	align-items: center;
 	gap: --spacing(3);
@@ -1172,10 +1185,10 @@
  * name and count; its words, where an item keeps its offer beside them; its
  * fold. A row keeps the card's room either side, and above and below it the
  * room an item's light reaches into and as much again. Edged and grounded as
- * a card, its corners cut, not scrolled
+ * a card, its corners cut, not scrolled, and the room its offers stand in
  */
 .cr-ui-lists-card {
-	container: lists-card / inline-size;
+	container: lists-card button-room / inline-size;
 	display: grid;
 	grid-template-columns: max-content minmax(0, 1fr) auto;
 	column-gap: var(--cr-lists-card-gap);
@@ -1271,11 +1284,9 @@
 /*
  * A narrow card: each list's name over its words, as the change in short's
  * terms stand over theirs, as far above them as an item's light needs; the
- * fold keeps its column; and a button whose words give way to its icon
- * (Button's wordsGivingWay), an item's offer, stands as its icon alone,
- * square as an icon button's
+ * fold keeps its column
  */
-@container lists-card (width < theme(--container-cr-lists-card-narrow)) {
+@container lists-card (width < theme(--container-cr-narrow)) {
 	.cr-ui-lists-row {
 		grid-template-columns: minmax(0, 1fr) auto;
 		gap: calc(2 * var(--cr-listed-reach-block)) var(--cr-lists-card-gap);
@@ -1287,10 +1298,6 @@
 	.cr-ui-lists-row-items {
 		grid-row: 2;
 		grid-column: 1;
-	}
-	.cr-ui-button:has(> .cr-ui-button-words-giving-way) {
-		aspect-ratio: 1;
-		padding-inline: 0;
 	}
 }
 

@@ -306,12 +306,15 @@
   updating the reasons." Why its changes belong together stands in no frame,
   on the chapter's own edge; where to doubt it is a yellow card, as the
   overview's Doubt is. What the chapter says stands 12 pixels apart, where
-  it stood 24.
+  it stood 24, and 16 pixels under its head, so the offer over the first
+  block never covers the counts on the head's line.
 - **A step's code stands in a frame headed by its reason.** Each step is a
   rounded frame on the chapter's edges, where its piece ran across the whole
   area: its reason is the frame's top line, after the agent's avatar, then
   the file's bar and the lines as Files draws them. Pointed at, the line
-  lights and offers "Ask about this" at its end; a question about it hangs
+  lights and offers "Ask about this" at its end, in a frame narrower than
+  40rem its icon alone, its name on the pointer, as on a narrow card of
+  lists, so a long reason keeps the room; a question about it hangs
   inside the frame, under the line and over the code. A step a round changed
   after it was told has its number and reason faint, and "changed since
   told" beside the reason. A step whose code is gone says, after its number

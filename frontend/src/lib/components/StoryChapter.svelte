@@ -32,12 +32,13 @@
 	const underWay = $derived(review.story.wait?.kind === 'writing' ? AGENT_UPDATING_REASONS : undefined);
 </script>
 
-<!-- Changes that belong together: why they do, where to look hardest, then one step after another; its head as far
-	above what it says as the blocks of what it says stand from one another -->
+<!-- Changes that belong together: why they do, where to look hardest, then one step after another; its head a step
+	further above what it says than the blocks of what it says stand from one another, so the offer standing over the
+	first block's top edge stands clear of the counts on the head's line -->
 <StoryPart
 	partKey={chapter.part}
 	testId="story-chapter"
-	class="cr-story-chapter flex flex-col gap-3 border-t border-base-300 pt-6"
+	class="cr-story-chapter flex flex-col gap-4 border-t border-base-300 pt-6"
 >
 	{#snippet head(heading)}
 		<!-- Its number and title, and on their line how much it tells; where the title runs long, what the chapter tells
