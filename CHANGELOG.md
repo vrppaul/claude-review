@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [1.6.0] - 2026-10-24
 
 ### Added
 - **A story's diagram is drawn.** The diagram the agent writes in Mermaid
