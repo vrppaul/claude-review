@@ -35,8 +35,8 @@ export interface components {
             /** At */
             at: number;
         };
-        "Anchor-Input": components["schemas"]["LineAnchor-Input"] | components["schemas"]["StoryAnchor-Input"];
-        "Anchor-Output": components["schemas"]["LineAnchor-Output"] | components["schemas"]["StoryAnchor-Output"];
+        "Anchor-Input": components["schemas"]["LineAnchor"] | components["schemas"]["StoryAnchor-Input"];
+        "Anchor-Output": components["schemas"]["LineAnchor"] | components["schemas"]["StoryAnchor-Output"];
         /** AnswererPush */
         AnswererPush: {
             /**
@@ -76,21 +76,7 @@ export interface components {
          * ChapterBlock
          * @description What a chapter says of itself, the chapter by its id.
          */
-        "ChapterBlock-Input": {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            at: "chapter";
-            /** Chapter */
-            chapter: string;
-            text: components["schemas"]["ChapterText"];
-        };
-        /**
-         * ChapterBlock
-         * @description What a chapter says of itself, the chapter by its id.
-         */
-        "ChapterBlock-Output": {
+        ChapterBlock: {
             /**
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
@@ -203,21 +189,7 @@ export interface components {
          * ItemBlock
          * @description One thing a list of the overview holds, by where it stands in the list, counted from 0.
          */
-        "ItemBlock-Input": {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            at: "item";
-            list: components["schemas"]["OverviewList"];
-            /** Item */
-            item: number;
-        };
-        /**
-         * ItemBlock
-         * @description One thing a list of the overview holds, by where it stands in the list, counted from 0.
-         */
-        "ItemBlock-Output": {
+        ItemBlock: {
             /**
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
@@ -233,31 +205,7 @@ export interface components {
          *
          *     A quote sent empty is filled in by the review from its diff.
          */
-        "LineAnchor-Input": {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            kind: "line";
-            /** File */
-            file: string;
-            side: components["schemas"]["LineSide"];
-            /** Start Line */
-            start_line: number;
-            /** End Line */
-            end_line: number;
-            /** Quote */
-            quote: string[];
-            /** Outdated */
-            outdated: boolean;
-        };
-        /**
-         * LineAnchor
-         * @description Lines of one side of a file in the review's own diff, as the page names them: where, and what they said.
-         *
-         *     A quote sent empty is filled in by the review from its diff.
-         */
-        "LineAnchor-Output": {
+        LineAnchor: {
             /**
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
@@ -290,19 +238,7 @@ export interface components {
          * OverviewBlock
          * @description One of the overview's three lines, by its name.
          */
-        "OverviewBlock-Input": {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            at: "overview";
-            text: components["schemas"]["OverviewText"];
-        };
-        /**
-         * OverviewBlock
-         * @description One of the overview's three lines, by its name.
-         */
-        "OverviewBlock-Output": {
+        OverviewBlock: {
             /**
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
@@ -365,22 +301,7 @@ export interface components {
          * ReasonBlock
          * @description A step's reason, the step by its file and the first line it tells.
          */
-        "ReasonBlock-Input": {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            at: "reason";
-            /** File */
-            file: string;
-            /** First Line */
-            first_line: number;
-        };
-        /**
-         * ReasonBlock
-         * @description A step's reason, the step by its file and the first line it tells.
-         */
-        "ReasonBlock-Output": {
+        ReasonBlock: {
             /**
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
@@ -560,8 +481,8 @@ export interface components {
             type: "story_asking";
             asking: components["schemas"]["StoryAsking"] | null;
         };
-        "StoryBlock-Input": components["schemas"]["OverviewBlock-Input"] | components["schemas"]["ItemBlock-Input"] | components["schemas"]["ChapterBlock-Input"] | components["schemas"]["ReasonBlock-Input"];
-        "StoryBlock-Output": components["schemas"]["OverviewBlock-Output"] | components["schemas"]["ItemBlock-Output"] | components["schemas"]["ChapterBlock-Output"] | components["schemas"]["ReasonBlock-Output"];
+        "StoryBlock-Input": components["schemas"]["OverviewBlock"] | components["schemas"]["ItemBlock"] | components["schemas"]["ChapterBlock"] | components["schemas"]["ReasonBlock"];
+        "StoryBlock-Output": components["schemas"]["OverviewBlock"] | components["schemas"]["ItemBlock"] | components["schemas"]["ChapterBlock"] | components["schemas"]["ReasonBlock"];
         /**
          * StoryPush
          * @description A story was told of the change, in place of any before it: the page fetches it.

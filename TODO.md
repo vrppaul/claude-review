@@ -437,18 +437,13 @@ The owner put it after the rest of the work.
       `finish-review.test.ts`, …), a branch `tests.md` refuses; reached
       directly, as `const [field] = review.threads.writing.fields` does, a
       missing value fails the test all the same.
-- [ ] `test_whatever_a_route_is_sent_it_answers_as_its_schema_says`
-      (`tests/integration/test_api_schema.py`) failed once for `POST
-      /api/anchors/follow`, in a run of every test at `3090d46`, and passed
-      in the six runs of it that followed, one of them of every test again.
-      Schemathesis draws its requests anew each run, and the request that
-      failed was not kept. On 2026-10-22, with the server work of `af03a57`
-      on top of `8acf722` (which changed no request's schema), it failed in
-      three of seven runs: twice for `POST /api/ask` with the failure kept —
-      no answer of the server's, but Hypothesis's health check,
-      `FailedHealthCheck` (9 inputs drawn, 50 filtered out), drawing the
-      ask's request body — and once for `POST /api/message`, its cause not
-      kept.
+- [ ] The schema's fuzzing (`-m schema`, `tests/integration/test_api_schema.py`)
+      failed once in 28 runs on 2026-10-24, after its health check on
+      filtering was let off, its cause not kept: the failures before it were
+      that health check, Schemathesis throwing away the ids it drew ending
+      in a newline. Schemathesis draws its requests anew each run; keep the
+      failure the next time it comes (`--tb=short -rf`). It failed once for
+      `POST /api/anchors/follow` at `3090d46` too, its cause not kept either.
 - [ ] `page_reading_the_story` (`tests/integration/test_story.py`) puts a
       `Review` together by hand, not through `host_review`, against
       server.md's one place for it: the pages it stands for read the story

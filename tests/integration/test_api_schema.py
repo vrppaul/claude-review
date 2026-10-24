@@ -14,7 +14,7 @@ from pathlib import Path
 import pytest
 import schemathesis
 from fastapi import FastAPI
-from hypothesis import settings
+from hypothesis import HealthCheck, settings
 from schemathesis import Case
 from schemathesis.checks import CheckFunction
 from schemathesis.specs.openapi.checks import positive_data_acceptance
@@ -43,6 +43,13 @@ schema = schemathesis.pytest.from_fixture("described_schema")
 
 # How many requests are drawn for each route: a quarter of what Hypothesis draws by default, a run a quarter as long
 DRAWN_PER_ROUTE = 25
+# Schemathesis draws a string of a pattern anchored with `$` by Python's reading of it, where `$` stands before a
+# trailing newline too, and throws away each such draw the schema's reading refuses (its generation/jsonschema/
+# strategy.py: "Python also matches `$` before a trailing newline"). One id loses some four draws in ten so, and a
+# panel message carries dozens — its own, its threads', their turns' and images' — so most of its bodies are thrown
+# away, and Hypothesis would stop the route for filtering. The waste is the generator's, not the server's: every
+# route still gets its draws
+THROWN_AWAY_BY_THE_GENERATOR = [HealthCheck.filter_too_much]
 
 # The agent's long poll waits out whatever it is asked to, up to ten
 # minutes: a wait drawn within its bounds is cut to this, and one drawn
@@ -160,7 +167,7 @@ def _answers_as_its_schema_says(case: Case, reviews_by_operation: ReviewsByOpera
 
 @pytest.mark.schema
 @schema.parametrize()
-@settings(max_examples=DRAWN_PER_ROUTE)
+@settings(max_examples=DRAWN_PER_ROUTE, suppress_health_check=THROWN_AWAY_BY_THE_GENERATOR)
 def test_whatever_a_route_is_sent_it_answers_as_its_schema_says(
     case: Case, reviews_read_once: ReviewsByOperation
 ) -> None:
@@ -169,7 +176,7 @@ def test_whatever_a_route_is_sent_it_answers_as_its_schema_says(
 
 @pytest.mark.schema
 @schema.parametrize()
-@settings(max_examples=DRAWN_PER_ROUTE)
+@settings(max_examples=DRAWN_PER_ROUTE, suppress_health_check=THROWN_AWAY_BY_THE_GENERATOR)
 def test_a_review_of_a_repository_answers_whatever_it_is_sent_as_its_schema_says(
     case: Case, reviews_of_a_repository: ReviewsByOperation
 ) -> None:

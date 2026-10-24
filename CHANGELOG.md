@@ -1024,6 +1024,11 @@
   plus is as large as the compass above it.
 
 ### Fixed
+- **The API's schema says what an anchor needs.** A thread's anchor names
+  its kind, `line` or `story`, and a block of a story its `at`, and the
+  review refuses a body without them; the schema said both could be left
+  out. It now says they are required, and a hook refuses any union of the
+  API whose label a branch leaves optional.
 - **A file the agent points at is marked as wide as it is drawn.** In a
   story, a file under "Not in the story" runs the whole width of the
   reading area, and its mark ran 24 pixels short of it either side.

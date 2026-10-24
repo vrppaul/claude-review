@@ -198,6 +198,21 @@ repos:
         files: ^(src/claude_review/(presentation|domain)/|frontend/src/lib/types/generated/)
         pass_filenames: false
 
+  # Each union the API takes or sends requires its label in every branch, as
+  # the server does: a label left optional by a default let the schema say a
+  # body without one is well formed, and the schema fuzzing failed on it
+  - repo: local
+    hooks:
+      - id: union-labels
+        name: union labels required in every branch of the API's schemas
+        entry: >-
+          bash -c 'set -o pipefail; for document in http socket; do
+          uv run python -m claude_review.presentation.api_schema "$document"
+          | uv run python scripts/check_union_labels.py || exit 1; done'
+        language: system
+        files: ^(src/claude_review/(presentation|domain)/|scripts/check_union_labels\.py$)
+        pass_filenames: false
+
   # The skill ships twice — as a skill, and as the plugin's command — and
   # the two copies must say the same thing
   - repo: local

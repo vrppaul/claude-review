@@ -59,7 +59,7 @@ class LineAnchor(Schema):
     A quote sent empty is filled in by the review from its diff.
     """
 
-    kind: Literal[AnchorKind.LINE] = AnchorKind.LINE
+    kind: Literal[AnchorKind.LINE]
     file: FilePath
     side: LineSide
     start_line: StrictInt = Field(ge=FIRST_LINE)
@@ -128,7 +128,7 @@ class PointedLines(Schema):
 class OverviewBlock(Schema):
     """One of the overview's three lines, by its name."""
 
-    at: Literal[StoryBlockKind.OVERVIEW] = StoryBlockKind.OVERVIEW
+    at: Literal[StoryBlockKind.OVERVIEW]
     text: OverviewText
 
     @classmethod
@@ -142,7 +142,7 @@ class OverviewBlock(Schema):
 class ItemBlock(Schema):
     """One thing a list of the overview holds, by where it stands in the list, counted from 0."""
 
-    at: Literal[StoryBlockKind.ITEM] = StoryBlockKind.ITEM
+    at: Literal[StoryBlockKind.ITEM]
     list: OverviewList
     item: StrictInt = Field(ge=FIRST_ITEM)
 
@@ -157,7 +157,7 @@ class ItemBlock(Schema):
 class ChapterBlock(Schema):
     """What a chapter says of itself, the chapter by its id."""
 
-    at: Literal[StoryBlockKind.CHAPTER] = StoryBlockKind.CHAPTER
+    at: Literal[StoryBlockKind.CHAPTER]
     chapter: ChapterId
     text: ChapterText
 
@@ -172,7 +172,7 @@ class ChapterBlock(Schema):
 class ReasonBlock(Schema):
     """A step's reason, the step by its file and the first line it tells."""
 
-    at: Literal[StoryBlockKind.REASON] = StoryBlockKind.REASON
+    at: Literal[StoryBlockKind.REASON]
     file: FilePath
     first_line: StrictInt = Field(ge=FIRST_LINE)
 
@@ -213,7 +213,7 @@ class StoryAnchor(Schema):
     A quote sent empty is filled in by the review from the story it holds.
     """
 
-    kind: Literal[AnchorKind.STORY] = AnchorKind.STORY
+    kind: Literal[AnchorKind.STORY]
     block: StoryBlock
     quote: list[QuotedWords] = Field(max_length=STORY_QUOTE_TEXTS)
     outdated: StrictBool
