@@ -13,15 +13,16 @@
  * hangs from where its band ends. Where its words stand sets how far it
  * reaches past them and where its offer stands:
  *
- * - In no frame, its words on the edge of the part they stand in, as a
- *   chapter's why does: its band reaches past them either side as far as a
- *   card stands its words in, taking none of that room, and above and below
- *   as far as a band reaches, taking that room, so it stands that far from
- *   what is round it; it offers its act over its top right edge. What hangs
- *   under it is as wide as its band.
+ * - In no frame, as a chapter's why: its band stands on the edges of the
+ *   part it stands in, as a card does, its words in from them as far as a
+ *   card stands its words in, and reaches above and below them as far as a
+ *   band reaches, taking that room, so it stands that far from what is round
+ *   it; it offers its act over its top right edge. What hangs under it is as
+ *   wide as its band.
  * - On a card of its own (Card, washed): one line of what a story says in
  *   short, on the wash of whose it is. Its band fills the card, lit to the
  *   card's edge, and offers its act inside the card's top right corner.
+ *   What hangs under it is as wide as the card.
  * - As an item of a list on a card of lists (ListsCardRow), on no frame of
  *   its own: its light a pill round its words, reaching a step and a half
  *   past them above and below and two to either side and taking none of

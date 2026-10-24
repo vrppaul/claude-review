@@ -1024,6 +1024,24 @@
   plus is as large as the compass above it.
 
 ### Fixed
+- **A file the agent points at is marked as wide as it is drawn.** In a
+  story, a file under "Not in the story" runs the whole width of the
+  reading area, and its mark ran 24 pixels short of it either side.
+- **What hangs under a block of the story hangs as wide as the block.**
+  Under the overview's task, done and doubt, a chapter's why and its
+  doubt, a thread and a comment being written stood in from the block's
+  edges; they are now as wide as its light, as under an item of a list. A
+  chapter's why stands on the column's edges, as a card does, its words in
+  from them as a card's are. A hanging card casts half the shadow, half as
+  far.
+- **The skill no longer hands an agent a wait that hides events.** It
+  offered a loop that printed every event and ended only with the review;
+  an agent woken when a background command ends, as Claude Code is, never
+  heard what the loop printed, and a story asked for went unwritten. The
+  skill now has one way: a single `wait --until-event` in the background,
+  started again after every event. Each event that starts work — a round, a
+  panel message, a story asked for — now says to show it with `progress`
+  first, so the reader sees the agent at work rather than a silence.
 - **A review nobody opens ends after an hour.** One started in the
   background whose page never opened held its port and some 35 MB until the
   machine stopped, and twelve were once found running at once. It now ends

@@ -124,22 +124,15 @@ somebody who is waiting.
    shape as a question's `thread`. Reading a thread in full hands its
    images over to you; the index hands over nothing.
 
-5. Stay in the loop until the review is over:
+5. Stay in the loop until the review is over, one `wait` at a time:
    ```bash
    claude-review wait --port <port> --until-event
    ```
-   It waits until the reader hands something over, prints it as one JSON
-   object, and exits. Waiting only between your own turns leaves the review
-   unattended — the silence the first rule is about — so keep one running in
-   the background at all times. Either start it again after every event, if
-   what wakes you is a background command finishing, or run a loop that
-   prints every event and stops when the review is over:
-   ```bash
-   while out=$(claude-review wait --port <port> --until-event); do
-     printf '%s\n' "$out"
-     case "$out" in *'"type":"closed"'*) break ;; esac
-   done
-   ```
+   Run it in the background. It waits until the reader hands something
+   over, prints it as one JSON object, and exits, and its exit is what
+   brings you back to the review. Start it again after every event: waiting
+   only between your own turns leaves the review unattended — the silence
+   the first rule is about.
    - `{"type":"question","question":{"question_id":"...","body":"...",
      "images":[...],"thread":{...}}}` — answer it (step 6), then wait
      again. `body` and `images` are what is asked: the user's last reply in
@@ -162,14 +155,16 @@ somebody who is waiting.
    - `{"type":"message","message":{"message_id":"panel-1","body":"...",
      "threads":[...],"images":[...]}}` — the user has said something in
      the agent panel, which is about the review rather than about one line:
-     the plan, the tests, a file nobody commented on. Answer it with `say`
-     (step 7). Any threads it points at come with it, in the same shape as
+     the plan, the tests, a file nobody commented on. Say what you do for
+     it while you do it, with `progress --message` (step 8), and answer it
+     with `say` (step 7). Any threads it points at come with it, in the same shape as
      a question's `thread`. `images` are absolute paths to screenshots they attached, and
      the text may be empty when an image is the whole question: open each
      with your file reader before answering. They outlive the review in
      the system's temporary directory, so the last round's are still there.
    - `{"type":"round","round":{"number":1,"markdown":"..."}}` — the
-     user has sent a round. The markdown is the review itself; address it as
+     user has sent a round. Say so first, with `progress` (step 8): they
+     wait on it. The markdown is the review itself; address it as
      you would a finished one, then take the diff again (step 9) and keep
      waiting. An `Image: /path` line under a comment or a turn is a
      screenshot pasted there: open it before answering what it came with.
@@ -180,7 +175,9 @@ somebody who is waiting.
      can, and say nothing about it unless it is already half done.
    - `{"type":"story_request","stale":null}` — the change is wanted told as
      a story: the user asked for one, or has each review's story written as
-     it opens, and is watching how long it takes. It comes once nothing the
+     it opens, and is watching how long it takes. Say so first, with
+     `progress` (step 8), and put the line out with `--done` once the story
+     is sent. It comes once nothing the
      user said is left for you, so the story is of the code their rounds
      left. Run
      `claude-review story --help` once: it shows the document whole, how
@@ -199,7 +196,7 @@ somebody who is waiting.
      for. Stop writing it, and send nothing.
    - `{"type":"timeout"}` — nothing was asked. Only a `wait` without
      `--until-event` prints it, after `--seconds`; wait again.
-   - `{"type":"closed"}` — the review is over. Stop looping. The last round
+   - `{"type":"closed"}` — the review is over. Stop waiting. The last round
      reached you as its own event just before this one; the background
      process also writes it to its log on the way out, which is where to
      look if you were not waiting at the time. Anything else you never took

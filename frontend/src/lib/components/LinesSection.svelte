@@ -23,8 +23,9 @@
 		folded: boolean;
 		testId: string;
 		/**
-		 * How its header and lines are set among their neighbours: a rule under them, rules round them; none where
-		 * they stand in a frame its view draws round the whole section.
+		 * How the section is set among its neighbours: a rule under it, rules round it and across the whole area;
+		 * none where it stands in a frame its view draws round it. On the section itself, so what is marked or
+		 * brought into view as the section is what is drawn.
 		 */
 		class?: ClassValue | undefined;
 		/** What its view says before the header, inside the section: the number and reason of a story's step. */
@@ -33,7 +34,7 @@
 		header: Snippet;
 	}
 
-	let { sectionKey, file, language, view, extent, folded, testId, class: framed, above, header }: Props = $props();
+	let { sectionKey, file, language, view, extent, folded, testId, class: placed, above, header }: Props = $props();
 	const review = useReview();
 	// The area its view scrolls in, which it comes near to be built: null while that is not drawn yet
 	const scrollArea = useScrollArea();
@@ -56,10 +57,10 @@
 	Of what is drawn in it, its view says three things: what stands in its header, how its lines are
 	drawn, and what stands above them. That last is inside the section: a reader taken to it reads from
 	there -->
-<section bind:this={element} data-testid={testId} data-path={file.path} class="cr-lines-section">
+<section bind:this={element} data-testid={testId} data-path={file.path} class={['cr-lines-section', placed]}>
 	{@render above?.()}
 	<!-- The header and the lines in a frame of their own, which the header stays in sight within -->
-	<div class={framed}>
+	<div>
 		{@render header()}
 		{#if !folded}
 			<!-- The lines alone are left undrawn off screen, holding the room they are counted to take: the

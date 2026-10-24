@@ -1103,15 +1103,14 @@
 	opacity: 1;
 }
 /*
- * A band of words in no frame: it reaches past them either side, taking
- * none of that room, so they stand on the edge of the part they stand in;
- * and above and below as far as a band reaches, taking that room, as no
- * frame keeps any round them. Rounded at every corner, since it stands
+ * A band of words in no frame: it stands on the edges of the part it stands
+ * in, as a card does, its words in from them as far as a card stands its
+ * words in; and above and below as far as a band reaches, taking that room,
+ * as no frame keeps any round them. Rounded at every corner, since it stands
  * against no edge. Its offer stands over its top right edge, on the line
  * its words begin at, its end where they end
  */
 .cr-ui-band-unframed {
-	margin: 0 calc(-1 * var(--cr-band-unframed-reach-inline));
 	padding: var(--cr-band-unframed-reach-block) var(--cr-band-unframed-reach-inline);
 	border-radius: var(--radius-box);
 }
@@ -1121,9 +1120,12 @@
 	bottom: calc(100% - var(--cr-band-unframed-reach-block));
 	z-index: var(--cr-layer-over-content);
 }
-/* What hangs under it, as wide as its band, two steps below it */
+/*
+ * What hangs under it, as wide as its band, two steps below it: the room
+ * every thread keeps either side where it hangs reached past by as much
+ */
 .cr-ui-band-unframed + .cr-ui-band-under {
-	margin: --spacing(2) calc(-1 * var(--cr-band-unframed-reach-inline)) 0;
+	margin: --spacing(2) calc(-1 * var(--cr-thread-inset)) 0;
 }
 /*
  * A band on a card of its own (Card, washed) fills the card: it reaches past
@@ -1141,6 +1143,10 @@
 	top: --spacing(3);
 	right: --spacing(3);
 	z-index: var(--cr-layer-over-content);
+}
+/* What hangs under the card, as wide as the card: the room every thread keeps either side reached past by as much */
+.cr-ui-card-washed + .cr-ui-band-under {
+	margin-inline: calc(-1 * var(--cr-thread-inset));
 }
 /*
  * A band of an item listed on a card of lists (ListsCardRow): its words and

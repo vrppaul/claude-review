@@ -110,8 +110,8 @@
 	/*
 	 * How far a band (lib/ui Band) of words in no frame reaches past them:
 	 * above and below, taking that room; and either side, as far as a card
-	 * stands its words in, so its light stands round them as a card's edge
-	 * would.
+	 * stands its words in, taking that room too, so its light stands on the
+	 * edges a card would.
 	 */
 	--cr-band-unframed-reach-block: --spacing(2);
 	--cr-band-unframed-reach-inline: var(--cr-card-room);
@@ -271,7 +271,7 @@
 	/* A line inside the edge of the control the page introduces the agent's way of reading at: Story, while it does */
 	--cr-shadow-introduced-edge: inset 0 0 0 var(--cr-line) var(--cr-agent);
 	/* What lifts a card off what it hangs under: a thread's, or a comment being written */
-	--cr-shadow-hanging: 0 8px 24px rgb(0 0 0 / 0.25);
+	--cr-shadow-hanging: 0 4px 12px rgb(0 0 0 / 0.125);
 	/* A hanging card the keyboard was brought to: lifted as ever, its edge as a field's the keyboard is in */
 	--cr-shadow-hanging-focused: var(--cr-shadow-hanging), var(--cr-shadow-focused-edge);
 	/* The line under a card's bar, inside it, that rules the bar off from what the card holds */
