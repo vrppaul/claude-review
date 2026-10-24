@@ -97,7 +97,10 @@ somebody who is waiting.
    The port is worked out from the repository and the base, so reopening the
    same review comes back to the same address — and to the draft left in it.
    `--port` after the command picks one yourself; if it is taken, the
-   command says so.
+   command says so. A review still open from before a `/clear`, or from
+   another session, is not opened twice: the log says `Error: this review
+   is already open, at …` with its address. Take its port, and go on with
+   step 4 and the loop of step 5.
 
    The reader is in the review from the moment it opens, and until your
    first `wait` the panel tells them the agent has not joined yet. So start

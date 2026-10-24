@@ -82,6 +82,12 @@
   clears it; once the reader finishes the review its record goes, and the
   same change opened then is a new review. One another user made first, a
   link left in its place, or one open to others, is refused in one line.
+- **A review still open is not opened twice.** A review holds its own
+  directory while it runs, and a second process of it — opened again
+  before a `/clear`, or from another session, on any port — opens nothing
+  and says in one line where the open one is. Another user's review of
+  the same change is theirs, and stops nobody. The agent's skill says to
+  take the port it names.
 - **Story is introduced once: by this release's news, the tour, or at the
   switch.** The tour of a review that can tell a story stops at Story,
   after the files: what a story is, in a line, and that Story asks before

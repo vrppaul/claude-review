@@ -301,6 +301,21 @@ def test_busy_port_reports_one_readable_line(changed_repo: Path, cli: CliProcess
     assert "already in use" in result.stderr
 
 
+def test_a_review_of_a_change_already_open_is_not_opened_twice_and_says_where_it_is(
+    changed_repo: Path, cli: CliProcesses
+) -> None:
+    """An agent that lost track of it, after /clear or in a new session, is sent to the review it would duplicate."""
+    first = cli.start("diff", str(changed_repo), "--no-open")
+    address = first.wait_for_address()
+
+    again = cli.run("diff", str(changed_repo), "--no-open")
+
+    assert again.returncode == 1
+    assert again.stderr.startswith(ONE_LINE_FAILURE)
+    assert again.stderr.count("\n") == 1
+    assert address in again.stderr
+
+
 def test_a_temporary_directory_another_user_could_reach_is_refused_in_one_readable_line(
     changed_repo: Path, cli: CliProcesses, tmp_path: Path
 ) -> None:
@@ -581,7 +596,7 @@ def test_a_review_stopped_by_a_signal_hands_over_the_last_round_and_keeps_itself
     review.terminate()
 
     assert "Rename the helper." in review.printed()
-    assert {kept.name for kept in temporary.glob("claude-review-*/*/*")} == {"review.json", "objects"}
+    assert {kept.name for kept in temporary.glob("claude-review-*/*/*")} == {"review.json", "objects", "open", "port"}
 
 
 def test_a_review_stopped_by_a_signal_while_its_page_is_open_exits_without_being_killed(

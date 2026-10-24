@@ -25,7 +25,7 @@ from claude_review.hosting.errors import ReviewStoppedError
 from claude_review.hosting.hosted_review import HostedReview, host_review
 from claude_review.hosting.ports import bind, stable_port
 from claude_review.hosting.review_server import ReviewServer
-from claude_review.hosting.workspace import forget_review, reader_files, review_workspace
+from claude_review.hosting.workspace import forget_review, note_address, reader_files, review_workspace
 from claude_review.repositories.git_repository import GitRepository
 from claude_review.repositories.system_clock import SystemClock
 from claude_review.services.review.review import Review
@@ -120,6 +120,7 @@ async def hold_open(
         PortUnavailableError: If the port asked for is taken.
         ServerStartError: If the server stopped before it ever listened.
         WorkspaceRefusedError: If where every review keeps its own is not a directory of the user's.
+        ReviewAlreadyOpenError: If this review runs already, in another process.
     """
     async with review_workspace(
         opening.identity_digest, writes_trees=isinstance(opening.source, OpenedRepository), announcer=announcer
@@ -132,6 +133,7 @@ async def hold_open(
             clock=SystemClock(),
         )
         listening = bind(port if port is not None else stable_port(opening.identity), may_fall_back=port is None)
+        await note_address(workspace, listening.getsockname()[1])
         handed_back = await serve_review(hosted, listening=listening, announcer=announcer, signals=signals)
         if hosted.review.lifetime.reason is EndReason.FINISHED:
             await forget_review(workspace)

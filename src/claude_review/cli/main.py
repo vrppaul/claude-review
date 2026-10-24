@@ -21,6 +21,7 @@ from claude_review.domain.exceptions import UnknownVersionError
 from claude_review.domain.interfaces import GitError
 from claude_review.hosting.errors import (
     PortUnavailableError,
+    ReviewAlreadyOpenError,
     ReviewStoppedError,
     ServerStartError,
     WorkspaceRefusedError,
@@ -42,7 +43,8 @@ COMMAND_MODULES = {
 # traceback: no review on that port or a refusal from it, a directory that
 # is no repository, a base that is no commit, a file that is not text, a port
 # taken, a server that never came up, a review stopped before it opened, a
-# temporary directory where another user could reach what a review keeps
+# temporary directory where another user could reach what a review keeps, a
+# review open already
 EXPLAINED_FAILURES = (
     ReviewCallError,
     GitError,
@@ -52,6 +54,7 @@ EXPLAINED_FAILURES = (
     ServerStartError,
     ReviewStoppedError,
     WorkspaceRefusedError,
+    ReviewAlreadyOpenError,
 )
 
 

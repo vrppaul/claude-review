@@ -13,5 +13,9 @@ class ReviewStoppedError(Exception):
     """Raised when Ctrl+C or `kill` stopped a review before it ever ran."""
 
 
+class ReviewAlreadyOpenError(Exception):
+    """Raised when the review about to be opened runs already, in another process, on whatever port."""
+
+
 class WorkspaceRefusedError(Exception):
     """Raised when where every review keeps what it kept of itself is not a directory of the user's own."""

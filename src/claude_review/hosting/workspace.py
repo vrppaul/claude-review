@@ -2,16 +2,19 @@
 
 import asyncio
 import contextlib
+import fcntl
 import os
 import stat
 import tempfile
 from collections.abc import AsyncGenerator
 from pathlib import Path
+from typing import BinaryIO
 
 from pydantic import BaseModel
 
+from claude_review.hosting.address import review_url
 from claude_review.hosting.announcer import ReviewAnnouncer
-from claude_review.hosting.errors import WorkspaceRefusedError
+from claude_review.hosting.errors import ReviewAlreadyOpenError, WorkspaceRefusedError
 
 # Where every review of one user keeps what it kept of itself, in the system's
 # temporary directory: named by the user's id, so each user has one
@@ -24,6 +27,11 @@ REACHABLE_BY_OTHERS = stat.S_IRWXG | stat.S_IRWXO
 RECORD_FILE = "review.json"
 # Where in that directory the trees a review of a repository writes down are kept
 OBJECTS_DIRECTORY = "objects"
+# What the process a review runs in holds there, alone; and where it writes the port it serves on, apart from it,
+# since closing a file of the one held can let go of the hold where the system keeps it as a POSIX lock (NFS)
+OPEN_FILE = "open"
+PORT_FILE = "port"
+PORT_FILE_ENCODING = "utf-8"
 # What the directory of a review's pasted images is called, so it can be told apart in /tmp
 IMAGES_SUFFIX = ".claude-review-images"
 
@@ -85,7 +93,10 @@ async def review_workspace(
     until its reader finishes it (`forget_review`). The trees hold a copy of
     every untracked file, so every review of the user keeps its own in a
     directory only the user can enter. They go when the system clears its
-    temporary directory, on its own schedule.
+    temporary directory, on its own schedule. One process holds the
+    directory while the review runs: a second, an agent opening the review
+    again after it lost track of it, is sent to the first, which says where
+    it serves (`note_address`).
 
     The images handed to the agent stay; the review drops the rest before it
     lets the workspace go. The last round names them, and the agent reads it
@@ -94,21 +105,28 @@ async def review_workspace(
 
     Raises:
         WorkspaceRefusedError: if where every review of the user keeps its own is not a directory of the user's.
+        ReviewAlreadyOpenError: if this review runs already, in another process.
     """
-    workspace = await asyncio.to_thread(_workspace_of, identity, writes_trees=writes_trees)
-    try:
-        yield workspace
-    finally:
-        if await asyncio.to_thread(_left_if_written_into, workspace.images):
-            announcer.images_left_in(workspace.images)
+    kept = await asyncio.to_thread(_kept_for, identity)
+    async with _alone_in(kept):
+        workspace = await asyncio.to_thread(_workspace_in, kept, writes_trees=writes_trees)
+        try:
+            yield workspace
+        finally:
+            if await asyncio.to_thread(_left_if_written_into, workspace.images):
+                announcer.images_left_in(workspace.images)
+
+
+async def note_address(workspace: ReviewWorkspace, port: int) -> None:
+    """Say where the review serves, beside its hold on its directory: where a second opening of it is sent."""
+    await asyncio.to_thread((workspace.kept / PORT_FILE).write_text, str(port), encoding=PORT_FILE_ENCODING)
 
 
 async def forget_review(workspace: ReviewWorkspace) -> None:
     """Remove the record a review kept of itself once its reader finished it: the same change opened then is new.
 
     The record alone: the trees are of no use to a new review but take
-    nothing from it, and another review of the same change, opened beside
-    this one, may still be reading them.
+    nothing from it.
     """
     await asyncio.to_thread(workspace.record.unlink, missing_ok=True)
 
@@ -123,13 +141,57 @@ def reader_files() -> ReaderFiles:
     )
 
 
-def _workspace_of(identity: str, *, writes_trees: bool) -> ReviewWorkspace:
-    """The directories of the review of this identity, made or found again, and a new one for its images.
+def _kept_for(identity: str) -> Path:
+    """The directory the review of this identity keeps what it kept of itself in, made or found again.
 
     Raises:
         WorkspaceRefusedError: if where every review of the user keeps its own is not a directory of the user's.
     """
-    kept = _directory_in(_kept_by_every_review(), identity)
+    return _directory_in(_kept_by_every_review(), identity)
+
+
+@contextlib.asynccontextmanager
+async def _alone_in(kept: Path) -> AsyncGenerator[None]:
+    """Hold a review's directory for this process alone, for as long as the review runs.
+
+    Raises:
+        ReviewAlreadyOpenError: if another process holds it.
+    """
+    held = await asyncio.to_thread(_held, kept)
+    try:
+        yield
+    finally:
+        await asyncio.to_thread(held.close)
+
+
+def _held(kept: Path) -> BinaryIO:
+    """The file a review holds while it runs, held now by this process; the port another once served on forgotten.
+
+    Held by the system for the process, so a review stopped by any means,
+    `kill -9` among them, lets it go.
+
+    Raises:
+        ReviewAlreadyOpenError: if another process holds it: it says where that one serves, once it does.
+    """
+    held = (kept / OPEN_FILE).open("ab")
+    try:
+        fcntl.flock(held, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        held.close()
+        raise ReviewAlreadyOpenError(_already_open(kept / PORT_FILE)) from None
+    (kept / PORT_FILE).unlink(missing_ok=True)
+    return held
+
+
+def _already_open(port_file: Path) -> str:
+    """What a second opening of a review is told: where the first serves, or that it is still being opened."""
+    with contextlib.suppress(FileNotFoundError):
+        return f"this review is already open, at {review_url(int(port_file.read_text(encoding=PORT_FILE_ENCODING)))}"
+    return "this review is already being opened: run the command again in a moment"
+
+
+def _workspace_in(kept: Path, *, writes_trees: bool) -> ReviewWorkspace:
+    """A review's directories: its own, the trees in it where it writes them, and a new one for its images."""
     return ReviewWorkspace(
         kept=kept,
         objects=_directory_in(kept, OBJECTS_DIRECTORY) if writes_trees else None,

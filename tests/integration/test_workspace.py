@@ -17,8 +17,9 @@ import pytest
 
 from claude_review.cli.terminal_announcer import TerminalAnnouncer
 from claude_review.hosting.announcer import ReviewAnnouncer
-from claude_review.hosting.errors import WorkspaceRefusedError
-from claude_review.hosting.workspace import KEPT_BY_EVERY_REVIEW, ONLY_THE_USER, review_workspace
+from claude_review.hosting.address import review_url
+from claude_review.hosting.errors import ReviewAlreadyOpenError, WorkspaceRefusedError
+from claude_review.hosting.workspace import KEPT_BY_EVERY_REVIEW, ONLY_THE_USER, note_address, review_workspace
 from tests.helpers import PNG
 
 # Two reviews, by the short names of their identities, as the command line names each
@@ -28,6 +29,8 @@ ANOTHER_REVIEW = "9a7b3d64"
 UNTRACKED_COPY = "blob"
 # What a directory anybody may enter and read is made with
 OPEN_TO_EVERYONE = 0o755
+# The port a review open already serves on
+OPEN_ON = 41234
 
 
 class ImagesNoted(ReviewAnnouncer):
@@ -81,6 +84,22 @@ async def test_a_review_opened_again_finds_the_trees_it_wrote_and_no_other_revie
         }
 
     assert found == {"again": True, "another": False}
+
+
+async def test_a_review_open_already_is_not_opened_beside_itself_and_says_where_it_is() -> None:
+    """Two processes of one review would keep one record over each other: the second is sent to the first.
+
+    Until the first says where it serves, the second is told it is being opened.
+    """
+    async with review_workspace(A_REVIEW, writes_trees=True, announcer=ImagesNoted()) as first:
+        with pytest.raises(ReviewAlreadyOpenError, match="being opened"):
+            async with review_workspace(A_REVIEW, writes_trees=True, announcer=ImagesNoted()):
+                pass
+        await note_address(first, OPEN_ON)
+
+        with pytest.raises(ReviewAlreadyOpenError, match=review_url(OPEN_ON)):
+            async with review_workspace(A_REVIEW, writes_trees=True, announcer=ImagesNoted()):
+                pass
 
 
 async def test_a_review_nobody_pasted_into_leaves_no_images_and_says_nothing() -> None:
