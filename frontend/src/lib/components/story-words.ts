@@ -1,7 +1,9 @@
 /**
  * How a story's parts are numbered, named and counted on the page, said one
  * way wherever they are said: in a chapter's heading, beside a step, in the
- * head of a piece, in the story's contents.
+ * head of a piece, in the story's contents. And how its writing is said: the
+ * acts that have it written again or stop it, by one name in the wait for a
+ * story and in its head, and the command that attaches the agent to write it.
  */
 
 import type { FollowedStep } from '$lib/types';
@@ -65,6 +67,13 @@ export const CHANGED_AFTER_TOLD_LEAD = 'Changed after it was told.';
 export const AGENT_UPDATING_REASONS = 'The agent is updating the reasons.';
 /** What the story's head says under its round while the agent writes the story again, a round having moved it on. */
 export const WRITTEN_AGAIN = 'The agent is writing it again';
+
+/** What the act is called that has the agent write a story again: where the reader stopped one, or a round moved it on. */
+export const WRITE_IT_AGAIN = 'Write it again';
+/** What the act is called that stops the agent writing a story the reader asked for. */
+export const STOP_WRITING = 'Stop writing';
+/** What the reader types in the agent's session to attach it to the review, and so have a story written. */
+export const ATTACH_COMMAND = '/review-ui';
 
 /** The lines a step tells: the first and the last, both among them. */
 type StepLines = FollowedStep['lines'];

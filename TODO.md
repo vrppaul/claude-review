@@ -155,16 +155,19 @@ tests. Remove items when done — don't check them off.
 
 ## The story, on the page
 
-- [ ] `feat(ui)`: the head of a story a round moved the code on under says
-      how its telling again stands, as board StoryWriting states 8, 10 and
-      11 draw it: "Write it again" where none is asked, no agent attached,
-      and stopped; state 9, written again with "Stop writing", is built
-      (agreed 2026-10-23). With it, Story pressed after a stop opens the
-      stopped wait, "You stopped it." with "Write it again", where it now
-      asks again at once under "Write stories without asking"
-      (`way-into-story.svelte.ts` `viewOpens` leaves a stopped asking out):
-      a stopped story is asked for again only by that press, as state 11
-      says.
+- [ ] `fix(ui)`: the story's title, lent the keyboard where what was said
+      under its round goes with no act in its place (the story told again,
+      or asked for with no agent attached), draws its ring `--spacing(2)`
+      off it (`.cr-lent-keyboard`, `main.css`), and the ring's lower edge
+      strikes through the round, which stands `--spacing(0.5)` under the
+      title.
+      Seen in a browser, in both themes.
+- [ ] `refactor(ui)`: three effects hand the keyboard on as the story's
+      wait changes under it, each written its own way: `StoryView` (from
+      the wait to the story told), `StoryWaiting` (from one wait to the
+      next) and `StoryHead` (what is said under the round). Each looks,
+      before the page redraws, at whether what it drew held the keyboard,
+      and gives it to what is drawn in its place.
 - [ ] `fix(ui)`: a story the reader asks for by hand whose request fails
       is said in the panel and nowhere else. The page goes on holding no
       asking, and the story view goes on saying "Asking the agent for a

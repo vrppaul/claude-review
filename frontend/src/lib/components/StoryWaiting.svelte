@@ -7,9 +7,11 @@
 	import Card from '$lib/ui/Card.svelte';
 	import Heading from '$lib/ui/Heading.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
+	import InlineCode from '$lib/ui/InlineCode.svelte';
 	import type { IconName, IconTone } from '$lib/ui/icons';
 	import StorySketch from './StorySketch.svelte';
 	import { factsOnTheWay, type WaitFact } from './story-wait-facts';
+	import { ATTACH_COMMAND, STOP_WRITING, WRITE_IT_AGAIN } from './story-words';
 
 	interface Props {
 		/** What the reader is waiting on, there being no story to draw. */
@@ -53,8 +55,8 @@
 		<div class="flex flex-col items-center gap-3 text-center">
 			<p>No story for this review. A story is told by the agent that made the change, and no agent is attached.</p>
 			<p class="cr-muted">
-				Attach one with <code class="font-mono text-base-content">/review-ui</code> in that session; the story starts as soon
-				as it joins.
+				Attach one with <InlineCode code={ATTACH_COMMAND} kind="command" /> in that session; the story starts as soon as it
+				joins.
 			</p>
 			{@render waysOn(false)}
 		</div>
@@ -70,7 +72,7 @@
 						testId="write-story-again"
 						onclick={() => review.story.askFor()}
 					>
-						Write it again
+						{WRITE_IT_AGAIN}
 					</Button>
 				{/snippet}
 			</Actions>
@@ -110,7 +112,9 @@
 		<Actions testId="story-waiting-actions">
 			{#snippet others()}
 				{#if stoppable}
-					<Button tone="quiet" size="sm" testId="stop-writing" onclick={() => review.story.stop()}>Stop writing</Button>
+					<Button tone="quiet" size="sm" testId="stop-writing" onclick={() => review.story.stop()}>
+						{STOP_WRITING}
+					</Button>
 				{/if}
 			{/snippet}
 			{#snippet main()}

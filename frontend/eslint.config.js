@@ -717,6 +717,10 @@ const SVG_IN_ITS_COMPONENT = { elements: ['svg'], message: DRAWN_IN_ITS_COMPONEN
 // A key of the keyboard is drawn by the library's Key alone, the one component that writes a `kbd`
 const KEY_COMPONENTS = ['src/lib/ui/Key.svelte'];
 const KBD_IN_ITS_COMPONENT = { elements: ['kbd'], message: 'Draw a key of the keyboard with lib/ui Key.' };
+// Code said among words is the library's InlineCode alone, the one component that writes a `code`: the page set a
+// command and a file's path each in a `code` of its own utilities, one size apart
+const INLINE_CODE_COMPONENTS = ['src/lib/ui/InlineCode.svelte'];
+const CODE_IN_ITS_COMPONENT = { elements: ['code'], message: 'Say code among words with lib/ui InlineCode.' };
 
 // The page makes an HTTP request in one place, which holds every request to the
 // server's schema; its session socket is the other way it talks to the server
@@ -800,18 +804,25 @@ export default tseslint.config(
 		rules: { 'svelte/no-at-html-tags': 'off' }
 	},
 	{
-		// A drawing and a key of the keyboard each in its one component, and in no other. The rule takes one list of
-		// what it refuses in a file, the last written for it, so each list below names again what it still refuses
+		// A drawing, a key of the keyboard and code said among words each in its one component, and in no other. The
+		// rule takes one list of what it refuses in a file, the last written for it, so each list below names again
+		// what it still refuses
 		files: ['**/*.svelte'],
-		rules: { 'svelte/no-restricted-html-elements': ['error', SVG_IN_ITS_COMPONENT, KBD_IN_ITS_COMPONENT] }
+		rules: {
+			'svelte/no-restricted-html-elements': ['error', SVG_IN_ITS_COMPONENT, KBD_IN_ITS_COMPONENT, CODE_IN_ITS_COMPONENT]
+		}
 	},
 	{
 		files: DRAWING_COMPONENTS,
-		rules: { 'svelte/no-restricted-html-elements': ['error', KBD_IN_ITS_COMPONENT] }
+		rules: { 'svelte/no-restricted-html-elements': ['error', KBD_IN_ITS_COMPONENT, CODE_IN_ITS_COMPONENT] }
 	},
 	{
 		files: KEY_COMPONENTS,
-		rules: { 'svelte/no-restricted-html-elements': ['error', SVG_IN_ITS_COMPONENT] }
+		rules: { 'svelte/no-restricted-html-elements': ['error', SVG_IN_ITS_COMPONENT, CODE_IN_ITS_COMPONENT] }
+	},
+	{
+		files: INLINE_CODE_COMPONENTS,
+		rules: { 'svelte/no-restricted-html-elements': ['error', SVG_IN_ITS_COMPONENT, KBD_IN_ITS_COMPONENT] }
 	},
 	{
 		// Outside the library a component draws no button, field, image, link, fold or heading of its own either
@@ -822,6 +833,7 @@ export default tseslint.config(
 				'error',
 				SVG_IN_ITS_COMPONENT,
 				KBD_IN_ITS_COMPONENT,
+				CODE_IN_ITS_COMPONENT,
 				BUTTON_IN_THE_LIBRARY,
 				FIELD_IN_THE_LIBRARY,
 				IMAGE_IN_THE_LIBRARY,
@@ -839,6 +851,7 @@ export default tseslint.config(
 				'error',
 				SVG_IN_ITS_COMPONENT,
 				KBD_IN_ITS_COMPONENT,
+				CODE_IN_ITS_COMPONENT,
 				FIELD_IN_THE_LIBRARY,
 				IMAGE_IN_THE_LIBRARY,
 				LINK_IN_THE_LIBRARY,
@@ -855,6 +868,7 @@ export default tseslint.config(
 			'svelte/no-restricted-html-elements': [
 				'error',
 				KBD_IN_ITS_COMPONENT,
+				CODE_IN_ITS_COMPONENT,
 				BUTTON_IN_THE_LIBRARY,
 				FIELD_IN_THE_LIBRARY,
 				IMAGE_IN_THE_LIBRARY,

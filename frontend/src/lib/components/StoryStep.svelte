@@ -7,6 +7,7 @@
 	import CodeFrameHead from '$lib/ui/CodeFrameHead.svelte';
 	import CodeFrameRow from '$lib/ui/CodeFrameRow.svelte';
 	import Heading from '$lib/ui/Heading.svelte';
+	import InlineCode from '$lib/ui/InlineCode.svelte';
 	import Tag from '$lib/ui/Tag.svelte';
 	import AskableBlock from './AskableBlock.svelte';
 	import { reportBroken } from './broken-parts';
@@ -83,7 +84,7 @@
 		{@render reasonLine()}
 		<CodeFrameRow testId="step-code-not-found">
 			{@render stepNumber()}
-			<code class="font-mono text-xs wrap-anywhere text-base-content">{told.file}</code>
+			<InlineCode code={told.file} kind="path" />
 			<span>{CODE_NO_LONGER_FOUND}</span>
 		</CodeFrameRow>
 	</CodeFrame>

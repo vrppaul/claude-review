@@ -4,10 +4,10 @@ import { userEvent } from '@testing-library/user-event';
 import { flushSync } from 'svelte';
 import ReviewScreen from '$lib/components/ReviewScreen.svelte';
 import type { Review } from '$lib/review/review.svelte';
-import type { FollowedStep, StoryHeld } from '$lib/types';
+import type { FollowedStep, StoryAsking, StoryHeld } from '$lib/types';
 import { A_LATER_TAKE, addedLine, diffFile, diffResponse, hunk, sinceRound } from '../diff';
 import { broughtIntoView, said } from '../elements';
-import { fakeServer, keepingSettings, SERVER_ERROR } from '../fake-server';
+import { fakeServer, keepingSettings, SERVER_ERROR, takingStoryAskings, type FakeServer } from '../fake-server';
 import { newComment } from '../new-comment';
 import { handOverNext } from '../pushes';
 import { openReview } from '../review';
@@ -20,7 +20,9 @@ import {
 	gainedPiece,
 	stepStandingAt,
 	stepWithoutCode,
+	STOPPED,
 	storyHeld,
+	storyResponse,
 	TAKEN,
 	toldChapter,
 	toldStep,
@@ -56,6 +58,23 @@ const SAID_TO_BE_RECONSTRUCTED = /^Reconstructed\. The agent did not make this c
 const NOT_THE_AGENTS_OWN_CHANGE = /The agent did not make this change/;
 
 let review: Review;
+
+// The same story, a round having moved its code on since it was told
+const MOVED_ON = storyHeld(TOLD.story, { moved_on: codeMovedOn() });
+
+/** A server that takes every story asked for or stopped, and keeps that Story was introduced to the reader. */
+function takingAskings(): FakeServer {
+	const server = takingStoryAskings();
+	server.answer('PUT /api/guide', { seen_release: null, story_introduced: true });
+	return server;
+}
+
+/** Draw the review read as its story, a round having moved the story's code on, the asking for it standing as given. */
+function drawnMovedOn(asking: StoryAsking | null): void {
+	review = openReview({ files, story: MOVED_ON, asking });
+	review.views.choose('story');
+	render(ReviewScreen, { props: { review } });
+}
 
 /** The pieces of files the story draws, in the order it draws them. */
 function pieces(): HTMLElement[] {
@@ -173,31 +192,79 @@ describe('a review read as its story', () => {
 		expect(said(screen.getByTestId('story-round'))).toBe('round 1 the code moved on in round 2');
 	});
 
-	it('says under its round that the agent writes it again, and stops that at a press, the keyboard on its head', async () => {
-		const server = fakeServer();
-		server.answer('POST /api/story/cancel', null);
-		server.answer('PUT /api/guide', { seen_release: null, story_introduced: true });
-		review = openReview({ files, story: storyHeld(TOLD.story, { moved_on: codeMovedOn() }), asking: TAKEN });
-		review.views.choose('story');
-		render(ReviewScreen, { props: { review } });
+	it('says under its round that the agent writes it again, and stops that at a press, the keyboard on the way to write it again', async () => {
+		const server = takingAskings();
+		drawnMovedOn(TAKEN);
 		const user = userEvent.setup();
 
-		expect(said(screen.getByTestId('story-written-again'))).toBe('The agent is writing it again Stop writing');
+		expect(said(screen.getByTestId('story-rewriting'))).toBe('The agent is writing it again Stop writing');
 		await user.click(screen.getByTestId('stop-writing-again'));
 		review.story.learnAsking({ ...TAKEN, stopped: true });
 		await settled();
 
 		expect(server.requestsTo('POST /api/story/cancel')).toHaveLength(1);
-		expect(screen.queryByTestId('story-written-again')).toBeNull();
+		expect(document.activeElement).toBe(screen.getByTestId('write-stale-story-again'));
+	});
+
+	it.each([
+		{ where: 'nobody asked for it in this review', asking: null, says: 'Write it again' },
+		{ where: 'the reader stopped it', asking: STOPPED, says: 'You stopped it. Write it again' }
+	])(
+		'offers under its round to write it again, where $where, and asks the agent for it at a press',
+		async ({ asking, says }) => {
+			const server = takingAskings();
+			drawnMovedOn(asking);
+			const user = userEvent.setup();
+
+			expect(said(screen.getByTestId('story-rewriting'))).toBe(says);
+			await user.click(screen.getByTestId('write-stale-story-again'));
+
+			expect(server.requestsTo('POST /api/story/request')).toHaveLength(1);
+		}
+	);
+
+	it('says under its round how to attach an agent, where it was asked for and none is attached, and offers no stop', () => {
+		drawnMovedOn(ASKED);
+
+		const rewriting = screen.getByTestId('story-rewriting');
+
+		expect(said(rewriting)).toBe('No agent is attached to write it. Attach one with /review-ui.');
+		expect(within(rewriting).queryByRole('button')).toBeNull();
+	});
+
+	it.each([
+		{ then: 'the agent writes it, to the stop', asking: TAKEN, takes: () => screen.getByTestId('stop-writing-again') },
+		{ then: 'no agent is attached, to the head', asking: ASKED, takes: () => screen.getAllByTestId('part-head')[0] }
+	])('hands the keyboard on from Write it again once $then', async ({ asking, takes }) => {
+		takingAskings();
+		drawnMovedOn(null);
+		const user = userEvent.setup();
+
+		await user.click(screen.getByTestId('write-stale-story-again'));
+		review.story.learnAsking(asking);
+		await settled();
+
+		expect(document.activeElement).toBe(takes());
+	});
+
+	it('hands the keyboard on from Stop writing to its head once the agent has told it again', async () => {
+		const server = takingAskings();
+		server.answer('GET /api/story', storyResponse({ held: TOLD }));
+		drawnMovedOn(TAKEN);
+		screen.getByTestId('stop-writing-again').focus();
+
+		handOverNext(review, { type: 'story' });
+		await settled();
+
 		expect(document.activeElement).toBe(screen.getAllByTestId('part-head')[0]);
 	});
 
-	it('says nothing is written again under the round of a story whose code is current, though one is asked for', () => {
+	it('says nothing under the round of a story whose code is current, though one is asked for', () => {
 		review = openReview({ files, story: TOLD, asking: TAKEN });
 		review.views.choose('story');
 		render(ReviewScreen, { props: { review } });
 
-		expect(screen.queryByTestId('story-written-again')).toBeNull();
+		expect(screen.queryByTestId('story-rewriting')).toBeNull();
 	});
 
 	it('says what was asked and what was done, and nothing to doubt where the agent named nothing', () => {

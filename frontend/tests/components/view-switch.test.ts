@@ -80,10 +80,13 @@ describe('a review opened by a reader who read the last one as its story', () =>
 		expect(screen.getByTestId('story-view')).toBeTruthy();
 	});
 
-	it('opens as its story where one is on its way, though stories are asked first', () => {
+	it.each([
+		{ where: 'one is on its way', asking: TAKEN },
+		{ where: 'the reader stopped one, which it says', asking: STOPPED }
+	])('opens as its story where $where, though stories are asked first', ({ asking }) => {
 		havingChosenTheStoryLast();
 
-		drawn({ asking: TAKEN });
+		drawn({ asking });
 
 		expect(screen.getByTestId('story-view')).toBeTruthy();
 	});
@@ -162,15 +165,24 @@ describe('Story pressed in the header', () => {
 		await vi.waitFor(() => expect(server.bodiesSentTo('PUT /api/guide')).toEqual([{ story_introduced: true }]));
 	});
 
-	it('asks first where the story was stopped and stories are asked first: writing it again spends tokens', async () => {
-		const user = userEvent.setup();
-		drawn({ asking: STOPPED });
+	it.each([
+		{ how: 'asked first', writing: 'ask_first' },
+		{ how: 'written without asking', writing: 'without_asking' }
+	] as const)(
+		'shows the story stopped where the reader stopped it, stories $how: only its own way on asks for it again',
+		async ({ writing }) => {
+			const server = serving();
+			const user = userEvent.setup();
+			drawn({ settings: await settingsWritingStories(server, writing), asking: STOPPED });
 
-		await user.click(screen.getByTestId('read-as-story'));
+			await user.click(screen.getByTestId('read-as-story'));
+			await settled();
 
-		expect(screen.getByTestId('story-opt-in')).toBeTruthy();
-		expect(screen.getByTestId('diff-view')).toBeTruthy();
-	});
+			expect(said(screen.getByTestId('story-waiting'))).toContain('you stopped it');
+			expect(screen.queryByTestId('story-opt-in')).toBeNull();
+			expect(server.requestsTo('POST /api/story/request')).toHaveLength(0);
+		}
+	);
 });
 
 describe('what is asked before a story is written', () => {

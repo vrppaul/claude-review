@@ -2262,6 +2262,22 @@
 	line-height: var(--text-sm--line-height);
 }
 
+/*
+ * Code said among words (InlineCode): in the code's face, and in ink
+ * however quiet the words round it are, so the code reads first. A command
+ * the reader types stands at the words' size; a file's path a step smaller,
+ * broken anywhere, so a long one wraps in its line
+ */
+.cr-ui-inline-code {
+	color: var(--color-base-content);
+	font-family: var(--font-mono);
+}
+.cr-ui-inline-code-path {
+	font-size: var(--text-xs);
+	line-height: var(--text-xs--line-height);
+	overflow-wrap: anywhere;
+}
+
 /* A dot (Dot, lib/ui/dot.ts): round, in its tone's colour */
 .cr-ui-dot {
 	display: inline-block;

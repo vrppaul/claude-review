@@ -34,12 +34,12 @@ const UNASKED: StoryWait = { kind: 'unasked' };
 const NOBODY_ATTACHED: StoryWait = { kind: 'nobody-attached' };
 const STOPPED: StoryWait = { kind: 'stopped' };
 
-// Whether a story is still awaited in each kind of wait: asked for, and not stopped
-const AWAITED: Record<StoryWait['kind'], boolean> = {
+// Whether the reader asked for a story in each kind of wait: it is on its way, waits for an agent, or they stopped it
+const ASKED_FOR: Record<StoryWait['kind'], boolean> = {
 	unasked: false,
 	writing: true,
 	'nobody-attached': true,
-	stopped: false
+	stopped: true
 };
 
 /**
@@ -54,7 +54,11 @@ export function waitOf(asking: StoryAsking | null, agentAttached: boolean): Stor
 	return NOBODY_ATTACHED;
 }
 
-/** Whether the reader still waits for a story they asked for. With a current story held there is no wait at all. */
-export function isAwaited(wait: StoryWait | null): boolean {
-	return wait !== null && AWAITED[wait.kind];
+/**
+ * Whether the reader asked for a story, which has not been told since: on
+ * its way, waiting for an agent, or stopped by them. With a current story
+ * held there is no wait at all.
+ */
+export function isAskedFor(wait: StoryWait | null): boolean {
+	return wait !== null && ASKED_FOR[wait.kind];
 }

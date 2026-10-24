@@ -61,7 +61,10 @@
   locked until the first is ticked: to have each review's story written as
   it opens. The first counts from the next press on Story; the second from
   the next review, never the one it is chosen in. A review opens on its
-  files, and on its story only where one is held or being written. Where the story will be, the page says
+  files, and on its story only where one is held or was asked for, being
+  written or stopped; Story then shows it as it stands and asks nothing, so
+  a story the reader stopped is asked for again only by its own "Write it
+  again". Where the story will be, the page says
   when it was asked for, when the agent took the request and how long it has
   been waited for, with the files to read meanwhile and a way to stop and to
   ask again. While the files are read the switch says the story is being
@@ -701,7 +704,11 @@
   agent is handed it once nothing the reader said is left for it. While the
   files are read the header says "Story · writing", the warning ends "The
   agent is updating them." while it is so, and "Stop writing" under the
-  story's round stops it. The agent's
+  story's round stops it. While it is not being written, the line under
+  the round says what can be done: "Write it again" where nobody asked for
+  it in this review; how to attach an agent where it was asked for and none
+  is there to write it; "You stopped it." and "Write it again" once the
+  reader stopped it. The agent's
   `story_request` carries `stale`, `null` for a first story: the round,
   each changed step's chapter, file and lines as they now stand
   ("104-131"), and how many changed lines no step tells, read as the agent

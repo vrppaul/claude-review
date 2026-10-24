@@ -29,7 +29,7 @@ export interface StoryIntroductions {
 
 /** What reading the review as its story depends on, beyond the views it is read in. */
 export interface StoryReadings {
-	/** Whether the story view opens as it is: a story is held, or one is on its way. */
+	/** Whether the story view opens as it is: a story is held, or one was asked for, on its way or stopped. */
 	viewOpens: () => boolean;
 	/** Whether the reader is asked before a story is written. */
 	askedFirst: () => boolean;

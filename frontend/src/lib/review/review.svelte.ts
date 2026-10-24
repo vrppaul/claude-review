@@ -30,7 +30,7 @@ import { ReviewDiff } from '$lib/review/review-diff.svelte';
 import { ReviewStory } from '$lib/review/review-story.svelte';
 import type { StepListed } from '$lib/review/story-contents';
 import { StoryReading } from '$lib/review/story-reading';
-import { isAwaited } from '$lib/review/story-wait';
+import { isAskedFor } from '$lib/review/story-wait';
 import { Rounds } from '$lib/review/rounds.svelte';
 import { ServerLink } from '$lib/review/server-link.svelte';
 import { Submission } from '$lib/review/submission.svelte';
@@ -338,15 +338,16 @@ export class Review {
 
 	/**
 	 * Whether the story view opens as it is: a story is held, told by an
-	 * agent and so paid for, or one is on its way, asked for here, from
-	 * another page of this review, or by the review as it opened. Where
-	 * neither holds, reading the review as its story means having one
-	 * written, which spends the agent's tokens: only the reader's own press
-	 * does that, so a review they open is read by its files though they
-	 * chose the story last.
+	 * agent and so paid for, or one was asked for — here, from another page
+	 * of this review, or by the review as it opened — and is on its way, or
+	 * was stopped by the reader, which the view says with the way to have it
+	 * written after all. Where neither holds, reading the review as its
+	 * story means having one written, which spends the agent's tokens: only
+	 * the reader's own press does that, so a review they open is read by its
+	 * files though they chose the story last.
 	 */
 	get storyViewOpens(): boolean {
-		return this.story.held !== null || isAwaited(this.story.wait);
+		return this.story.held !== null || isAskedFor(this.story.wait);
 	}
 
 	/**
