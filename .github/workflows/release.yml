@@ -17,7 +17,7 @@ jobs:
     needs: ci
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write # the GitHub release
       id-token: write # PyPI trusted publishing (OIDC)
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
@@ -39,6 +39,18 @@ jobs:
             exit 1
           fi
 
+      # Before PyPI, so a version with no entry in CHANGELOG.md publishes nothing.
+      # Kept out of the checkout, since the sdist takes every file git does not ignore.
+      - name: Take the release notes from the changelog
+        run: |
+          awk -v heading="## [${GITHUB_REF_NAME#v}]" \
+            'index($0, heading) == 1 { found = 1; next } /^## \[/ { found = 0 } found' \
+            CHANGELOG.md > "$RUNNER_TEMP/release-notes.md"
+          if ! grep -q '[^[:space:]]' "$RUNNER_TEMP/release-notes.md"; then
+            echo "CHANGELOG.md has no entry for $GITHUB_REF_NAME"
+            exit 1
+          fi
+
       - run: uv build
 
       - run: python3 scripts/verify_artifacts.py
@@ -46,3 +58,9 @@ jobs:
       # --check-url makes re-runs idempotent: files already uploaded are
       # skipped instead of failing on PyPI's duplicate-filename rejection.
       - run: uv publish --trusted-publishing always --check-url https://pypi.org/simple/
+
+      # What's new in the review links here for everything else a release holds
+      - name: Publish the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" --verify-tag --notes-file "$RUNNER_TEMP/release-notes.md"

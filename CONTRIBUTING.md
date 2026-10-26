@@ -82,12 +82,12 @@ See [AGENTS.md](AGENTS.md) for the rules that bind all code, and the files under
 1. Update version in **all three places** (keep in sync):
    - `pyproject.toml` — Python package version
    - `plugin/.claude-plugin/plugin.json` — plugin marketplace version
-   - `CHANGELOG.md` — release notes
+   - `CHANGELOG.md` — release notes; the version's section becomes its GitHub release
 2. If the release is worth telling a returning reader about, write its entry in `frontend/src/lib/guide/news.ts` under the same version — the review shows it once to whoever last saw an older release (optional; no entry, no card)
 3. Update skill files if description or usage changed: `plugin/commands/review-ui.md` and `skills/review-ui/SKILL.md`
 4. Update `README.md` features and `TODO.md` (remove completed items)
 5. Commit: `chore: release vX.Y.Z`
-6. Push + tag: `git push origin master && git tag vX.Y.Z && git push origin vX.Y.Z` — the tag triggers `release.yml`, which runs the full CI suite on the tagged commit, verifies the artifacts (`scripts/verify_artifacts.py`), and publishes to PyPI via trusted publishing. The workflow fails if the tag doesn't match the `pyproject.toml` version or if `plugin.json` is out of sync.
+6. Push + tag: `git push origin master && git tag vX.Y.Z && git push origin vX.Y.Z` — the tag triggers `release.yml`, which runs the full CI suite on the tagged commit, verifies the artifacts (`scripts/verify_artifacts.py`), publishes to PyPI via trusted publishing, and then publishes the GitHub release that What's new links to, its notes taken from the version's `CHANGELOG.md` section. The workflow fails, before PyPI, if the tag doesn't match the `pyproject.toml` version, if `plugin.json` is out of sync, or if `CHANGELOG.md` has no section for the version. The release's title is the tag; give it a better one by hand with `gh release edit vX.Y.Z --title …`.
 7. **Wait for the Release workflow to go green** — the version must be live on PyPI before skills point users at it (`uv tool install claude-review` fails until then).
 8. Update local skill: `npx skills update review-ui -g -y`
 9. Reinstall CLI locally: `uv tool install --upgrade --editable .`

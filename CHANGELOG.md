@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.6.1] - 2026-10-26
+
+### Fixed
+- **Every release has its page on GitHub.** What's new links to the
+  release for everything else it holds, and 1.6.0 went out without one:
+  the link led to a bare tag. Tagging a version now publishes its GitHub release, with
+  this file's section for it as the notes, and a version with no section
+  here is refused before it reaches PyPI.
+
 ## [1.6.0] - 2026-10-24
 
 ### Added
