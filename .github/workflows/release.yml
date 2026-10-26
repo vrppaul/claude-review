@@ -41,11 +41,20 @@ jobs:
 
       # Before PyPI, so a version with no entry in CHANGELOG.md publishes nothing.
       # Kept out of the checkout, since the sdist takes every file git does not ignore.
+      # GitHub draws every newline of a release's notes as a break, so the lines
+      # the changelog wraps are joined back into whole items and paragraphs.
       - name: Take the release notes from the changelog
         run: |
           awk -v heading="## [${GITHUB_REF_NAME#v}]" \
             'index($0, heading) == 1 { found = 1; next } /^## \[/ { found = 0 } found' \
-            CHANGELOG.md > "$RUNNER_TEMP/release-notes.md"
+            CHANGELOG.md |
+          awk '
+            function flush() { if (held != "") print held; held = "" }
+            /^$/ || /^#/ { flush(); print; next }
+            /^- / { flush(); held = $0; next }
+            { sub(/^ +/, ""); held = (held == "" ? $0 : held " " $0) }
+            END { flush() }
+          ' > "$RUNNER_TEMP/release-notes.md"
           if ! grep -q '[^[:space:]]' "$RUNNER_TEMP/release-notes.md"; then
             echo "CHANGELOG.md has no entry for $GITHUB_REF_NAME"
             exit 1
