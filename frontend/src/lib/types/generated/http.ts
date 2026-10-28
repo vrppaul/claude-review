@@ -707,6 +707,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/feedback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Write The Issue
+         * @description Write the issue of what the reader wrote and left ticked, to the letter, and the address that opens it.
+         *
+         *     Nothing is sent from here: the page shows the issue as written, and the reader opens it on GitHub or hands
+         *     it to the agent themselves.
+         */
+        post: operations["write_the_issue_api_feedback_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -983,6 +1006,41 @@ export interface components {
             take: number;
         };
         EventResponse: components["schemas"]["QuestionEvent"] | components["schemas"]["RoundEvent"] | components["schemas"]["MessageEvent"] | components["schemas"]["CancelEvent"] | components["schemas"]["StoryRequestEvent"] | components["schemas"]["StoryCancelEvent"] | components["schemas"]["TimeoutEvent"] | components["schemas"]["ClosedEvent"];
+        /**
+         * FeedbackIssueResponse
+         * @description The issue written of the feedback, to the letter, and the ways it can go: to GitHub, or to the agent.
+         */
+        FeedbackIssueResponse: {
+            /** Title */
+            title: string;
+            /** Body */
+            body: string;
+            /** Address */
+            address: string;
+            /** Filled */
+            filled: boolean;
+            /** For Agent */
+            for_agent: string;
+        };
+        /**
+         * FeedbackKind
+         * @description What the feedback is: something wrong with claude-review, or something wanted of it.
+         * @enum {string}
+         */
+        FeedbackKind: "bug" | "idea";
+        /**
+         * FeedbackRequest
+         * @description Request body for POST /api/feedback — what the reader wrote, and what they left ticked to go with it.
+         */
+        FeedbackRequest: {
+            kind: components["schemas"]["FeedbackKind"];
+            /** Words */
+            words: string;
+            /** With Machine */
+            with_machine: boolean;
+            reading: components["schemas"]["ReadingSent"] | null;
+            part: components["schemas"]["PartSent"] | null;
+        };
         /**
          * FieldRefusal
          * @description One field a request had wrong, as pydantic and FastAPI both describe it.
@@ -1381,6 +1439,22 @@ export interface components {
             images: string[];
         };
         /**
+         * PartSent
+         * @description A part of the page the reader pointed at, named in the page's own words, and where it stood in the window.
+         */
+        PartSent: {
+            /** Name */
+            name: string;
+            /** Left */
+            left: number;
+            /** Top */
+            top: number;
+            /** Width */
+            width: number;
+            /** Height */
+            height: number;
+        };
+        /**
          * PointRequest
          * @description Request body for POST /api/point — the author raising a thread.
          *
@@ -1470,6 +1544,24 @@ export interface components {
             sound_on_replies: boolean;
             story_writing: components["schemas"]["StoryWriting"];
         };
+        /**
+         * ReadingSent
+         * @description What the reader was reading in: the view, the theme they saw and the window's size.
+         */
+        ReadingSent: {
+            view: components["schemas"]["ReadingView"];
+            theme: components["schemas"]["ShownTheme"];
+            /** Window Width */
+            window_width: number;
+            /** Window Height */
+            window_height: number;
+        };
+        /**
+         * ReadingView
+         * @description Which way the review was being read: its files, or the story told of them.
+         * @enum {string}
+         */
+        ReadingView: "files" | "story";
         /**
          * ReasonBlock
          * @description A step's reason, the step by its file and the first line it tells.
@@ -1717,6 +1809,12 @@ export interface components {
             /** Narrowed */
             narrowed: boolean;
         };
+        /**
+         * ShownTheme
+         * @description The theme the page was drawn in, as the reader saw it.
+         * @enum {string}
+         */
+        ShownTheme: "light" | "dark";
         /**
          * StaleStep
          * @description A step of the story told whose code a round changed after it was told: its chapter, its file, its lines now.
@@ -3819,6 +3917,68 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GuideState"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Refusal"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Refusal"];
+                };
+            };
+            /** @description Content Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Refusal"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Refusal"];
+                };
+            };
+        };
+    };
+    write_the_issue_api_feedback_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "user-agent"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FeedbackRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FeedbackIssueResponse"];
                 };
             };
             /** @description Bad Request */

@@ -4,7 +4,7 @@ from fastapi import APIRouter
 
 from claude_review.presentation.errors import documented
 from claude_review.presentation.origin_guard import NOT_ITS_PAGE_STATUS
-from claude_review.presentation.routers import agent, page, reader, session
+from claude_review.presentation.routers import agent, feedback, page, reader, session
 
 API_PREFIX = "/api"
 
@@ -15,3 +15,4 @@ api_router.include_router(page.router)
 api_router.include_router(agent.router)
 api_router.include_router(reader.router)
 api_router.include_router(session.router)
+api_router.include_router(feedback.router)

@@ -13,7 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError,
 from claude_review.cli.review_client import REASON_SEPARATOR, fields_said_wrong
 from claude_review.domain.models import FIRST_LINE, MAX_QUOTE_LINES, FilePath, StepText, runs_backwards
 from claude_review.presentation.schemas.agent import MAX_PROGRESS_STEPS, ProgressText, StatusText
-from claude_review.presentation.schemas.base import MAX_FILES_NAMED, AgentText, SafeId
+from claude_review.presentation.schemas.base import MAX_FILES_NAMED, SafeId, SaidWords
 from claude_review.presentation.schemas.refusal import FieldRefusal
 from claude_review.presentation.schemas.story import StoryRequest
 from claude_review.services.place_words import lines_named
@@ -69,7 +69,7 @@ ID = CheckedParameter("id", TypeAdapter[str](SafeId))
 # A file as the diff names it
 FILE = CheckedParameter("path", TypeAdapter[str](FilePath))
 # What the agent says: words that say something
-SAID = TextParameter("text", TypeAdapter[str](AgentText))
+SAID = TextParameter("text", TypeAdapter[str](SaidWords))
 # What the agent is doing, and what that has branched into
 WORK = TextParameter("text", TypeAdapter[str](ProgressText))
 STEP = CheckedParameter("text", TypeAdapter[str](StepText))

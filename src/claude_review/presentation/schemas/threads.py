@@ -35,9 +35,9 @@ from claude_review.domain.models import (
 from claude_review.presentation.schemas.base import (
     MAX_TEXT_LENGTH,
     MAX_THREADS,
-    AgentText,
     ImageIds,
     SafeId,
+    SaidWords,
     Schema,
 )
 from claude_review.services.place_words import place_in_words
@@ -570,7 +570,7 @@ class PointRequest(Schema):
     """
 
     lines: PointedLines
-    body: AgentText
+    body: SaidWords
     severity: CommentSeverity
 
 

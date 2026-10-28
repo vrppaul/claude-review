@@ -18,7 +18,8 @@ What passes between the server, its page and its agent. How a module does its pa
 - A schema may implement an interface the domain holds, where a service asks for what the request carries: a change to a reader's record is a `RecordChange`.
 - A yes or a no in a request's or an answer's body is pydantic's `StrictBool`, `true` or `false` and nothing else. A query parameter is read as FastAPI reads one.
 - A number that names a place in a body — a line, an item of a list — is pydantic's `StrictInt`, a number and nothing else: read leniently, `false` would name the first.
-- A route lives in `src/claude_review/presentation/routers/` and is thin: it reads the request, calls one method of the `Review` it is handed as `ReviewDep`, and writes the answer.
+- A route lives in `src/claude_review/presentation/routers/` and is thin: it reads the request, makes one call, and writes the answer.
+- That call is one method of what the route is handed (`ReviewDep`, `GuideServiceDep`), or one function of a service that holds nothing (`issue_of`).
 - A route raises a `ReviewError`, and never catches one or raises `HTTPException`: `src/claude_review/presentation/errors.py` is the one table from kind to status.
 
 ## The API's contract

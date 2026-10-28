@@ -69,9 +69,10 @@ def _says_something(text: str) -> str:
     return text
 
 
-# What the agent says — an answer, a panel message, a thread it raises:
-# words, since it has no screenshots to send
-AgentText = Annotated[str, Field(min_length=1, max_length=MAX_TEXT_LENGTH), AfterValidator(_says_something)]
+# What is said in words alone, which must say something: what the agent says —
+# an answer, a panel message, a thread it raises — since it has no screenshots
+# to send; and the reader's feedback on the review, which carries none
+SaidWords = Annotated[str, Field(min_length=1, max_length=MAX_TEXT_LENGTH), AfterValidator(_says_something)]
 
 # How the API describes a step's lines: text, as `LINES_WRITTEN` has it
 LINES_SCHEMA = {"type": "string", "pattern": LINES_WRITTEN.pattern}

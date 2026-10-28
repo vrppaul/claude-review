@@ -11,9 +11,9 @@ from claude_review.domain.models import EpochMillis, FilePath, StepText, TurnAut
 from claude_review.presentation.schemas.base import (
     MAX_FILES_NAMED,
     MAX_TEXT_LENGTH,
-    AgentText,
     LinesWritten,
     SafeId,
+    SaidWords,
     Schema,
     made_or_none,
 )
@@ -283,7 +283,7 @@ class SayRequest(Schema):
     """
 
     message_id: SafeId | None = None
-    body: AgentText
+    body: SaidWords
     # Files worth opening at what was said. They travel as chips under the
     # turn, so the reader jumps rather than searches.
     files: NamedFiles = Field(default_factory=list)
@@ -336,7 +336,7 @@ class ReplyRequest(Schema):
     """Request body for POST /api/reply — the answer coming back."""
 
     thread_id: SafeId
-    body: AgentText
+    body: SaidWords
     # Which question is being answered. Omitted, the answer goes to the
     # oldest question in that thread still waiting for one.
     question_id: SafeId | None = None
