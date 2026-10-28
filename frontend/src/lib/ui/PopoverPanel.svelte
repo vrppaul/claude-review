@@ -40,8 +40,10 @@
 		/** What it holds, scrolling inside it, held by whoever opened it to give the keyboard to the first of it. */
 		body?: HTMLDivElement | undefined;
 		children: Snippet;
-		/** What stays at its foot while what it holds scrolls: the act it leads to. */
+		/** What stays at its foot while what it holds scrolls: the act it leads to, or what it asks of the reader. */
 		foot?: Snippet | undefined;
+		/** Whether its foot asks something of the reader, standing apart from the pane on the page's plainest ground. */
+		footAsks?: boolean;
 	}
 
 	let {
@@ -60,6 +62,7 @@
 		body = $bindable(),
 		children,
 		foot,
+		footAsks = false,
 		...attributes
 	}: Props = $props();
 
@@ -121,7 +124,7 @@
 			{@render children()}
 		</div>
 		{#if foot}
-			<div class="cr-ui-pane-foot">{@render foot()}</div>
+			<div class={['cr-ui-pane-foot', footAsks && 'cr-ui-pane-foot-asking']}>{@render foot()}</div>
 		{/if}
 	</div>
 </div>

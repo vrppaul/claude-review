@@ -7,6 +7,7 @@
 	import KeyList from '$lib/ui/KeyList.svelte';
 	import Popover from '$lib/ui/Popover.svelte';
 	import FeedbackIntroduction from './FeedbackIntroduction.svelte';
+	import StarOnGitHub from './StarOnGitHub.svelte';
 	import { HELP_BUTTON_ROLE, keysOf } from './keymap';
 
 	// What the pane is called, said to whoever cannot see it, and what heads it
@@ -64,7 +65,13 @@
 		width="medium"
 		testId="help-menu"
 		onkeydown={closeOnQuestionMark}
+		footAsks
 	>
+		<!-- The ask for a star stays in sight at the foot while the keys scroll: Help is opened on purpose, so it is
+			always there and never comes to the reader -->
+		{#snippet foot()}
+			<StarOnGitHub onfollow={() => review.guide.setHelpOpen(false)} />
+		{/snippet}
 		{#snippet trigger(control)}
 			<Button
 				{...control}

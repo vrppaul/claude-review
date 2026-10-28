@@ -550,4 +550,20 @@ describe('the ? list', () => {
 
 		expect(getByTestId('shortcuts-list')).toBeTruthy();
 	});
+
+	it('is put away as the reader follows the repository or Star to GitHub, as every way out of it is', async () => {
+		const opened = openReview({ files: [diffFile({ path: 'a.py', hunks: [hunk([contextLine(1, 1, 'x')])] })] });
+		const { getByTestId, queryByTestId } = render(ReviewScreen, { props: { review: opened } });
+		const stillOpen: boolean[] = [];
+
+		for (const wayOut of ['star-repository', 'star-on-github']) {
+			getByTestId('open-help').click();
+			await tick();
+			getByTestId(wayOut).click();
+			await tick();
+			stillOpen.push(queryByTestId('shortcuts-list') !== null);
+		}
+
+		expect(stillOpen).toEqual([false, false]);
+	});
 });

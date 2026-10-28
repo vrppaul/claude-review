@@ -2,6 +2,7 @@
 	import { onDestroy } from 'svelte';
 	import { focusWhatCarries, focusWhatRemainsInItsCard } from '$lib/dom/keyboard';
 	import { PartPicker, type PointedPart } from '$lib/dom/part-picking';
+	import { REPOSITORY, REPOSITORY_URL } from '$lib/guide/repository';
 	import { useReview } from '$lib/review/context';
 	import type { FeedbackKind, FeedbackIssue, GoesWithIt } from '$lib/types';
 	import Actions from '$lib/ui/Actions.svelte';
@@ -38,11 +39,9 @@
 	];
 	// The review's promise over what goes, and where anyone can read the code that keeps it
 	const PROMISE = 'None of your code goes, and nothing of your review.';
-	const WRITER_OF_THE_ISSUE =
-		'https://github.com/vrppaul/claude-review/blob/master/src/claude_review/services/feedback.py';
+	const WRITER_OF_THE_ISSUE = `${REPOSITORY_URL}/blob/master/src/claude_review/services/feedback.py`;
 	// Where the issue opens, said before it does
-	const WHERE_IT_OPENS =
-		'Opens a public issue in vrppaul/claude-review, where you read it once more before it is sent.';
+	const WHERE_IT_OPENS = `Opens a public issue in ${REPOSITORY}, where you read it once more before it is sent.`;
 	const TOO_LONG = 'Too long for GitHub to take filled in.';
 
 	const review = useReview();

@@ -120,6 +120,26 @@
 	justify-content: flex-start;
 	gap: --spacing(2);
 }
+/*
+ * What following a link drawn as a button adds (LinkButton's adds), where
+ * GitHub's Star button keeps its count: a cell of its own at its end, as tall
+ * as the button, set off from its words on the page's plainest ground, in the
+ * code's face; what it adds in the colour of what is added
+ */
+.cr-ui-button-adding {
+	overflow: hidden;
+	padding-inline-end: 0;
+}
+.cr-ui-button-adds {
+	display: flex;
+	align-items: center;
+	align-self: stretch;
+	margin-inline-start: --spacing(1.5);
+	padding-inline: --spacing(2);
+	background-color: var(--color-base-100);
+	color: var(--cr-add-text);
+	font-family: var(--font-mono);
+}
 /* What a listed way says of itself at its end (Button's note): quieter than its words, as what explains a part */
 .cr-ui-button-note {
 	margin-inline-start: auto;
@@ -214,6 +234,11 @@
 	align-items: center;
 	gap: --spacing(2);
 	margin-inline-end: auto;
+}
+/* An aside whose words wrap beside the acts (Actions' asideWraps): it takes the room the acts leave, and no more */
+.cr-ui-actions-aside-wrapping {
+	flex: 1 1 0;
+	min-width: 0;
 }
 
 /*
@@ -741,6 +766,10 @@
 .cr-ui-pane-foot {
 	flex-shrink: 0;
 	border-top: var(--cr-line) solid var(--color-base-300);
+}
+/* A foot that asks something of the reader (footAsks): apart from the pane, on the page's plainest ground */
+.cr-ui-pane-foot-asking {
+	background-color: var(--color-base-100);
 }
 /*
  * A pane that stands by itself (Pane), where whoever draws it places it: no

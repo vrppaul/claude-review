@@ -44,8 +44,10 @@
 		/** The control that opens it, drawn by whoever uses the popover, carrying the props it is handed. */
 		trigger: Snippet<[TriggerProps]>;
 		children: Snippet;
-		/** What stays at its foot while what it holds scrolls: the act it leads to. */
+		/** What stays at its foot while what it holds scrolls: the act it leads to, or what it asks of the reader. */
 		foot?: Snippet | undefined;
+		/** Whether its foot asks something of the reader, standing apart from the pane on the page's plainest ground. */
+		footAsks?: boolean;
 	}
 
 	let {
@@ -60,7 +62,8 @@
 		onkeydown,
 		trigger,
 		children,
-		foot
+		foot,
+		footAsks = false
 	}: Props = $props();
 
 	const paneId = $props.id();
@@ -192,6 +195,7 @@
 			{testId}
 			{onkeydown}
 			{foot}
+			{footAsks}
 		>
 			{@render children()}
 		</PopoverPanel>

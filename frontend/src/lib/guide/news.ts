@@ -6,6 +6,8 @@
  * fixes things stays quiet.
  */
 
+import { REPOSITORY_URL } from '$lib/guide/repository';
+
 /** The drawings an entry can ask for, by name; `NewsIllustration` draws them. */
 export type DrawingName = 'pasted-screenshot' | 'story-sketch';
 
@@ -27,7 +29,7 @@ export interface ReleaseNews {
 	introducesStory?: true;
 }
 
-const RELEASES_URL = 'https://github.com/vrppaul/claude-review/releases/tag';
+const RELEASES_URL = `${REPOSITORY_URL}/releases/tag`;
 
 /** The GitHub release a news entry points to for everything else in it. */
 export function releaseUrl(release: string): string {

@@ -22,6 +22,10 @@
   card, and Help says so. A reader is told of it once, under Help, in a
   review that does not introduce Story: Don't show again, with Undo, or
   opening it, keeps it from coming back in any review.
+- **A star for claude-review, asked at Help's foot.** Help ends with the
+  repository, vrppaul/claude-review, a link to it on GitHub, and a Star
+  button whose count shows the +1 a star adds. It stays in sight while the
+  keys scroll, and never comes to the reader: Help is opened on purpose.
 
 ## [1.6.1] - 2026-10-26
 
