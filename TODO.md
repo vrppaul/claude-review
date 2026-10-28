@@ -503,7 +503,6 @@ The owner put it after the rest of the work.
 - For some reason all agents see --no-open, it should not be the default
 - CHanging the base must not mean restarting
 - keeping the loop running is the boilerplate - from one of the agents
-- add a way to report a bug/suggest an improvement
 
 ## Known limits
 

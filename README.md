@@ -162,6 +162,9 @@ Shows messages newest-first with timestamps, merges consecutive same-role entrie
 - A first review offers a short tour from a card in the bottom left: what you
   are reading, where comments go and how the agent answers them
 - After an update, the same card says what is new; both are in the `?` list
+- Send feedback from the `?` list: point at the part of the page you mean, read
+  the issue to the letter — none of your code goes — then open it on GitHub or
+  hand it to your agent
 
 **Keyboard**
 

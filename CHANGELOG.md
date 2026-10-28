@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-10-28
+
 ### Added
 - **Feedback on claude-review, from the review itself.** Help has a third
   way, Send feedback: a card in the guide's corner takes a bug or an idea,
