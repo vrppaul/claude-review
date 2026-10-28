@@ -3,6 +3,7 @@
 	import { reveal, TargetWatcher } from '$lib/guide/spotlight';
 	import { TOUR_TARGETS } from '$lib/guide/tour';
 	import { useReview } from '$lib/review/context';
+	import PointedRing from '$lib/ui/PointedRing.svelte';
 	import { stopsTogether } from '$lib/utils/stops';
 	import GuideCard from './GuideCard.svelte';
 	import TourSpotlight from './TourSpotlight.svelte';
@@ -42,5 +43,9 @@
 	the review, and the card's Skip is one click -->
 {#if step}
 	<TourSpotlight targets={step.targets} />
+{/if}
+<!-- The part the reader points at for their feedback, ringed beside the card they point from, never over it -->
+{#if review.feedback.over}
+	<PointedRing part={review.feedback.over} testId="feedback-pointed" />
 {/if}
 <GuideCard />

@@ -1,11 +1,17 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import { CHIP_NAMES, CHIP_VOICES, type ChipReach } from './chip';
+	import { CHIP_NAMES, CHIP_VOICES, type ChipReach, type PartChipReach } from './chip';
 	import Icon from './Icon.svelte';
 	import type { Voice } from './voice';
 
-	/** What it names, and what it does: a thread's place or a file, in any reach; a chapter, only as a way to it. */
-	type Naming = ({ names: 'place' } & ChipReach) | { names: 'chapter'; onclick: () => void };
+	/**
+	 * What it names, and what it does: a thread's place or a file, in any reach; a chapter, only as a way to it; a
+	 * part of the page, taken out by its cross or only named.
+	 */
+	type Naming =
+		| ({ names: 'place' } & ChipReach)
+		| { names: 'chapter'; onclick: () => void }
+		| ({ names: 'part' } & PartChipReach);
 
 	type Props = Naming & {
 		/** Whose words named it. */

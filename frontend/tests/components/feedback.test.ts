@@ -96,6 +96,57 @@ describe('feedback on the review itself', () => {
 		expect(screen.getByTestId<HTMLTextAreaElement>('feedback-words').value).toBe(WORDS);
 	});
 
+	it('takes the part pressed while pointing, named by its test ids, and the page never hears the press', async () => {
+		const server = serving();
+		const user = userEvent.setup();
+		await writtenFeedback(user);
+
+		await user.click(screen.getByTestId('feedback-point'));
+		await user.click(screen.getByTestId('open-help'));
+		expect(screen.queryByTestId('shortcuts-list')).toBeNull();
+		await user.click(screen.getByTestId('feedback-preview'));
+		await settled();
+
+		const [sent] = server.bodiesSentTo('POST /api/feedback') as FeedbackRequest[];
+		expect(sent.part?.name).toMatch(/ › open-help$/);
+	});
+
+	it('takes the part the keyboard is on at Enter, and stops pointing at Escape', async () => {
+		serving();
+		const user = userEvent.setup();
+		await writtenFeedback(user);
+
+		await user.click(screen.getByTestId('feedback-point'));
+		screen.getByTestId('open-help').focus();
+		await user.keyboard('{Enter}');
+		expect(said(screen.getByTestId('feedback-part'))).toMatch(/ › open-help$/);
+		await user.click(screen.getByTestId('feedback-point-again'));
+		await user.keyboard('{Escape}');
+		await user.click(screen.getByTestId('open-help'));
+
+		expect(screen.getByTestId('shortcuts-list')).toBeTruthy();
+	});
+
+	it('answers its own toggle while pointing, and gives the keyboard to it once a part is left out', async () => {
+		serving();
+		const user = userEvent.setup();
+		await writtenFeedback(user);
+		await user.click(screen.getByTestId('feedback-point'));
+		await user.click(screen.getByTestId('feedback-point'));
+		await user.click(screen.getByTestId('open-help'));
+		expect(screen.getByTestId('shortcuts-list')).toBeTruthy();
+		await user.keyboard('{Escape}');
+
+		await user.click(screen.getByTestId('feedback-point'));
+		screen.getByTestId('open-help').focus();
+		await user.keyboard('{Enter}');
+		screen.getByTestId('feedback-part-remove').focus();
+		await user.keyboard('{Enter}');
+		await settled();
+
+		expect(document.activeElement).toBe(screen.getByTestId('feedback-point'));
+	});
+
 	it('shows the issue the review wrote, to the letter, and writes it again without a row the reader unticks', async () => {
 		const server = serving();
 		const user = userEvent.setup();

@@ -1,12 +1,14 @@
 <script lang="ts">
 	import { onDestroy } from 'svelte';
 	import { focusWhatCarries, focusWhatRemainsInItsCard } from '$lib/dom/keyboard';
+	import { PartPicker, type PointedPart } from '$lib/dom/part-picking';
 	import { useReview } from '$lib/review/context';
 	import type { FeedbackKind, FeedbackIssue, GoesWithIt } from '$lib/types';
 	import Actions from '$lib/ui/Actions.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import Callout from '$lib/ui/Callout.svelte';
 	import Checkbox from '$lib/ui/Checkbox.svelte';
+	import Chip from '$lib/ui/Chip.svelte';
 	import CodeBox from '$lib/ui/CodeBox.svelte';
 	import Failure from '$lib/ui/Failure.svelte';
 	import Field from '$lib/ui/Field.svelte';
@@ -28,10 +30,11 @@
 		bug: { label: 'Bug', asks: 'What happened, and what did you expect?' },
 		idea: { label: 'Idea', asks: 'What would make reviewing better?' }
 	};
-	// What each row that may go with the words is called
-	const ROWS: { row: Exclude<GoesWithIt, 'part'>; label: string }[] = [
+	// What each row that may go with the words is called; the part's only once one is pointed at
+	const ROWS: { row: GoesWithIt; label: string }[] = [
 		{ row: 'machine', label: 'The version and your system' },
-		{ row: 'reading', label: 'What you were reading' }
+		{ row: 'reading', label: 'What you were reading' },
+		{ row: 'part', label: 'The part you pointed at' }
 	];
 	// The review's promise over what goes, and where anyone can read the code that keeps it
 	const PROMISE = 'None of your code goes, and nothing of your review.';
@@ -46,9 +49,30 @@
 	const feedback = $derived(review.feedback);
 	const stage = $derived(feedback.stage);
 
+	let card = $state<HTMLElement>();
 	let field = $state<HTMLTextAreaElement>();
 	let toGitHub = $state<HTMLAnchorElement>();
 	let done = $state<HTMLButtonElement>();
+	let pointToggle = $state<HTMLButtonElement>();
+	let pointAgain = $state<HTMLButtonElement>();
+
+	// Pointing begun, stopped, a part taken or left out: the button that pressed it may have gone, and what
+	// stands in its place takes the keyboard — Point again beside a part, else the toggle
+	$effect(() => {
+		if (feedback.part && !feedback.pointing) focusWhatRemainsInItsCard(() => pointAgain);
+		else focusWhatRemainsInItsCard(() => pointToggle);
+	});
+
+	// While the reader points, the page is pointed at from everywhere but this card, which goes on answering
+	$effect(() => {
+		if (!feedback.pointing || !card) return;
+		const picker = new PartPicker(card, {
+			over: (part: PointedPart) => feedback.pointAt(part),
+			take: (part: PointedPart) => feedback.take(part),
+			stop: () => feedback.setPointing(false)
+		});
+		return () => picker.stop();
+	});
 
 	// The card opens with the keyboard in the field, and Edit brings it back there: the words are what it is for
 	$effect(() => {
@@ -81,6 +105,7 @@
 <!-- The reader's feedback on claude-review, in the guide's corner: written, then shown to the letter before it
 	goes, then where it went. The page stays uncovered while it is written -->
 <Pane
+	bind:element={card}
 	width="wide"
 	testId="feedback"
 	role="complementary"
@@ -112,6 +137,45 @@
 				maxlength={review.limits.max_feedback_length}
 				aria-label="Your feedback"
 			/>
+			{#if feedback.part && !feedback.pointing}
+				<div class="flex min-w-0 items-center gap-2">
+					<Chip
+						voice="reader"
+						names="part"
+						removing="Leave the part out"
+						onRemove={() => feedback.leavePartOut()}
+						title={feedback.part.name}
+						testId="feedback-part">{feedback.part.name}</Chip
+					>
+					<Button
+						bind:element={pointAgain}
+						tone="quiet"
+						size="xs"
+						testId="feedback-point-again"
+						onclick={() => feedback.setPointing(true)}
+					>
+						<Icon name="point" size="sm" />
+						Point again
+					</Button>
+				</div>
+			{:else}
+				<div class="flex flex-wrap items-center gap-2">
+					<Button
+						bind:element={pointToggle}
+						tone="secondary"
+						size="xs"
+						aria-pressed={feedback.pointing}
+						testId="feedback-point"
+						onclick={() => feedback.setPointing(!feedback.pointing)}
+					>
+						<Icon name="point" size="sm" />
+						Point at a part
+					</Button>
+					{#if feedback.pointing}
+						<span class="cr-faint text-xs">Click the part you mean. Esc stops.</span>
+					{/if}
+				</div>
+			{/if}
 			<p class="cr-faint text-xs">You see everything that goes before it is sent.</p>
 			<Actions testId="feedback-writing-actions">
 				{#snippet aside()}
@@ -143,15 +207,18 @@
 			</Callout>
 			<div class="flex flex-col gap-2 text-xs">
 				{#each ROWS as each (each.row)}
-					<Checkbox
-						drawn="box"
-						note={issue.with_it[each.row]}
-						checked={feedback.isGoing(each.row)}
-						testId="feedback-goes-{each.row}"
-						onToggle={(checked: boolean) => feedback.setGoing(each.row, checked)}
-					>
-						{each.label}
-					</Checkbox>
+					{@const sends = issue.with_it[each.row]}
+					{#if sends !== null}
+						<Checkbox
+							drawn="box"
+							note={sends}
+							checked={feedback.isGoing(each.row)}
+							testId="feedback-goes-{each.row}"
+							onToggle={(checked: boolean) => feedback.setGoing(each.row, checked)}
+						>
+							{each.label}
+						</Checkbox>
+					{/if}
 				{/each}
 			</div>
 			<div class="flex flex-col gap-2">

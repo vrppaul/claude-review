@@ -9,7 +9,12 @@
   its promise that none of the reader's code goes and nothing of their
   review, with a link to the code that writes it. The version and system,
   and what the reader was reading, each go as a row they can untick, and
-  the text shown is always what goes. Open on GitHub opens the issue filled
+  the text shown is always what goes. Point at a part rings the part of
+  the page under the pointer or the keyboard with its name, and a click,
+  a tap or Enter takes it without the page hearing the press; Escape
+  stops. A part is named by the page's test ids, never by the words it
+  shows, so a path, a branch or a line of code goes as what it is and
+  never as what it says. Open on GitHub opens the issue filled
   in, in a tab of its own; one too long for GitHub to take opens with its
   title alone, its text copied to paste there. Hand to the agent gives it
   to the reader's agent in its panel, to look for an issue like it and file

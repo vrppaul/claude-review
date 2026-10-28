@@ -1,7 +1,7 @@
 """The issue the review writes of a reader's feedback, to the letter, for GitHub or for the agent.
 
 Every word the issue says is written here, out of what the reader wrote and what they left ticked to go with it,
-but the name of a part of the page they pointed at, which the page gives in its own words. The page shows the issue
+but the name of a part of the page they pointed at, which the page gives by its own test ids. The page shows the issue
 as written before anything leaves, so a reader can see that none of their code and nothing of their review is in
 it; and this module is where anyone can read how it is written. It is opened on GitHub by an address that carries
 it filled in, which the reader sends from there themselves; or handed to the reader's agent, to look for an issue

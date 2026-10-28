@@ -144,6 +144,12 @@ export const ICONS = {
 	conversation: { viewBox: '0 0 16 16', paths: [SPEECH_BUBBLE], drawn: TRACED },
 	// A speech bubble with a mark in it: a word to whoever makes claude-review, a bug or an idea
 	feedback: { viewBox: '0 0 16 16', paths: [SPEECH_BUBBLE, 'M8 6.4v2.2', 'M8 10.1v.1'], drawn: TRACED },
+	// A frame open at its corner, a pointer over it: pointing at a part of the page
+	point: {
+		viewBox: '0 0 16 16',
+		paths: ['M7 13.5H3.5a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1V7', 'M9 9l5 1.8-2.1.9-.9 2.1z'],
+		drawn: TRACED
+	},
 	// A shield with a check on it: what the review keeps to, as what goes with feedback is all it shows
 	kept: {
 		viewBox: '0 0 16 16',

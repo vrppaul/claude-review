@@ -27,11 +27,25 @@ export const CHIP_VOICES: Record<Voice, string> = { reader: 'cr-ui-chip-reader',
  * What a chip names, which sets its face and its size:
  * - place: a thread's place or a file, in the code's face, in a tag's box
  * - chapter: a chapter of the story, in the page's face, a step larger, with room round its words
+ * - part: a part of the page the reader pointed at, by its test ids, drawn as a chapter is
  */
-type ChipNames = 'place' | 'chapter';
+type ChipNames = 'place' | 'chapter' | 'part';
 
 // The class of each in the library's stylesheet
-export const CHIP_NAMES: Record<ChipNames, string> = { place: 'cr-ui-chip-place', chapter: 'cr-ui-chip-chapter' };
+export const CHIP_NAMES: Record<ChipNames, string> = {
+	place: 'cr-ui-chip-place',
+	chapter: 'cr-ui-chip-chapter',
+	part: 'cr-ui-chip-part'
+};
+
+/** What a chip naming a part of the page does: is taken out of the feedback by its cross, or only names it. */
+export type PartChipReach =
+	| {
+			/** What its cross does, said to whoever cannot see it and under the pointer. */
+			removing: string;
+			onRemove: () => void;
+	  }
+	| { onlyNames: true };
 
 /**
  * What a chip does: takes the reader to what it names; is taken out of a message by its cross; names what is out of

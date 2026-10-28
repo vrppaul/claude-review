@@ -11,12 +11,13 @@
  */
 
 import { writeFeedbackIssue } from '$lib/api/review-api';
+import type { PointedPart } from '$lib/dom/part-picking';
 import type { FeedbackIssue, FeedbackKind, FeedbackReading, GoesWithIt } from '$lib/types';
 import { messageOf } from '$lib/utils/errors';
 
 /**
- * Where the feedback went: opened on GitHub filled in, opened there empty with its text copied as too long to
- * fill in, or handed to the agent.
+ * Where the feedback went: opened on GitHub filled in, opened there with its title alone and its text copied as
+ * too long to fill in, or handed to the agent.
  */
 export type FeedbackWent = 'opened' | 'too-long' | 'handed';
 
@@ -55,6 +56,12 @@ export class Feedback {
 	#words = $state('');
 	#going = $state.raw<ReadonlySet<GoesWithIt>>(EVERY_ROW);
 	#stage = $state.raw<FeedbackStage>(WRITING);
+	// Whether the reader is pointing at the page for the part they mean
+	#pointing = $state(false);
+	// The part under the pointer or the keyboard while they point
+	#over = $state.raw<PointedPart | null>(null);
+	// The part they pointed at, which goes as a row of its own; none until they point
+	#part = $state.raw<PointedPart | null>(null);
 	// How many times the issue was asked for: only the answer to the last is shown
 	#asked = 0;
 	// The issue on its way to the agent, so a second press does not hand it twice
@@ -95,6 +102,39 @@ export class Feedback {
 		return this.#going.has(row);
 	}
 
+	get pointing(): boolean {
+		return this.#pointing;
+	}
+
+	/** Point at the page for the part meant, or stop. */
+	setPointing(pointing: boolean): void {
+		this.#pointing = pointing;
+		this.#over = null;
+	}
+
+	/** The part under the pointer or the keyboard, while the reader points. */
+	get over(): PointedPart | null {
+		return this.#over;
+	}
+
+	pointAt(part: PointedPart): void {
+		this.#over = part;
+	}
+
+	get part(): PointedPart | null {
+		return this.#part;
+	}
+
+	/** The part the reader pointed at: pointing ends with it. */
+	take(part: PointedPart): void {
+		this.#part = part;
+		this.setPointing(false);
+	}
+
+	leavePartOut(): void {
+		this.#part = null;
+	}
+
 	get failed(): string | null {
 		return this.#failed;
 	}
@@ -112,7 +152,7 @@ export class Feedback {
 				kind: this.#kind,
 				words: this.#words,
 				reading: this.#surroundings.reading(),
-				part: null,
+				part: this.#part,
 				going: [...this.#going]
 			});
 			if (asked === this.#asked) this.#stage = { step: 'preview', issue };
@@ -171,6 +211,7 @@ export class Feedback {
 	/** The card is put away: what is written stays for the next time it opens, and where it went is forgotten. */
 	putAway(): void {
 		this.#stage = WRITING;
+		this.setPointing(false);
 		this.#failed = null;
 	}
 
@@ -179,6 +220,7 @@ export class Feedback {
 		this.#stage = { step: 'went', went, issue };
 		this.#kind = FIRST_KIND;
 		this.#words = '';
+		this.#part = null;
 		this.#going = EVERY_ROW;
 	}
 }

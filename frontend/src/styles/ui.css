@@ -1978,9 +1978,11 @@
 }
 /*
  * A chapter, in the page's own face, a step larger than a place, with room
- * round its words and no edge, as the story's boards draw a way to one
+ * round its words and no edge, as the story's boards draw a way to one; and
+ * a part of the page pointed at, as the feedback's board draws one
  */
-.cr-ui-chip-chapter {
+.cr-ui-chip-chapter,
+.cr-ui-chip-part {
 	padding: --spacing(0.5) --spacing(2);
 	font-family: var(--font-sans);
 	font-size: var(--text-xs);
@@ -2023,6 +2025,34 @@
 	align-self: stretch;
 	padding-inline: --spacing(0.5);
 	border-radius: calc(var(--radius-field) - var(--cr-line));
+}
+
+/*
+ * The part of the page the reader points at (PointedRing), wherever it
+ * stands in the window: ringed in the reader's colour as strong as a mark,
+ * a line off it, nothing dimmed, over every pane but the card it is pointed
+ * from, and in the way of no pointer; its name on their chip, where
+ * lib/ui/pointed.ts places it in the window
+ */
+.cr-ui-pointed,
+.cr-ui-pointed-name {
+	position: fixed;
+	z-index: var(--cr-layer-pointed);
+	pointer-events: none;
+}
+.cr-ui-pointed {
+	left: var(--cr-pointed-left);
+	top: var(--cr-pointed-top);
+	width: var(--cr-pointed-width);
+	height: var(--cr-pointed-height);
+	border-radius: var(--radius-field);
+	outline: var(--cr-line-strong) solid var(--cr-mark);
+	outline-offset: var(--cr-line);
+}
+.cr-ui-pointed-name {
+	left: var(--cr-pointed-name-left);
+	top: var(--cr-pointed-name-top);
+	display: flex;
 }
 
 /*

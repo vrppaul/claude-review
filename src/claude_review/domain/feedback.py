@@ -2,7 +2,7 @@
 
 What the reader wrote and chose to send with it, and the issue the review writes of that. Nothing of the review
 they were reading is held here — no file, line, comment or story — so nothing of it can go: the part of the page
-they point at comes named in the page's own words, by the page, and the rest is the reader's to tick.
+they point at comes named by the page's test ids, never by its words, and the rest is the reader's to tick.
 """
 
 from enum import StrEnum, auto
@@ -50,7 +50,7 @@ class PartBox(BaseModel):
 
 
 class PointedPart(BaseModel):
-    """A part of the page the reader pointed at: named in the page's own words, and where it stood."""
+    """A part of the page the reader pointed at: named by the page's test ids, and where it stood."""
 
     name: str
     box: PartBox

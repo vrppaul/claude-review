@@ -1448,7 +1448,7 @@ export interface components {
         };
         /**
          * PartSent
-         * @description A part of the page the reader pointed at, named in the page's own words, and where it stood in the window.
+         * @description A part of the page the reader pointed at, named by the page's test ids, and where it stood in the window.
          */
         PartSent: {
             /** Name */

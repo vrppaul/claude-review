@@ -106,12 +106,14 @@ const NAMES_AN_ID = '/#|\\[id\\b/';
 // The attribute an element's markup cannot give it, named where code gives it or takes it away: an element a
 // library draws, as mermaid draws a diagram's nodes, gets its test id so and is found by none
 const SETS_AN_ATTRIBUTE = 'CallExpression[callee.property.name=/^(setAttribute|removeAttribute)$/]';
-const NO_PAGE_LOOKUPS = [
+const NO_TEST_ID_LOOKUPS = [
 	{
 		selector: `Literal[value=/data-testid/]:not(${SETS_AN_ATTRIBUTE} > Literal.arguments:first-child)`,
 		message: BY_TEST_ID
 	},
-	{ selector: 'TemplateElement[value.raw=/data-testid/]', message: BY_TEST_ID },
+	{ selector: 'TemplateElement[value.raw=/data-testid/]', message: BY_TEST_ID }
+];
+const NO_PAGE_WIDE_ID_LOOKUPS = [
 	{ selector: "CallExpression[callee.property.name='getElementById']", message: BY_PAGE_WIDE_ID },
 	{ selector: `${SELECTOR_CALL} > Literal[value=${NAMES_AN_ID}]`, message: BY_PAGE_WIDE_ID },
 	{
@@ -119,6 +121,7 @@ const NO_PAGE_LOOKUPS = [
 		message: BY_PAGE_WIDE_ID
 	}
 ];
+const NO_PAGE_LOOKUPS = [...NO_TEST_ID_LOOKUPS, ...NO_PAGE_WIDE_ID_LOOKUPS];
 
 // How the reader chose to read is written only where they ask to read a way:
 // the switch in the header, and Try Story where Story is introduced, through
@@ -960,6 +963,20 @@ export default tseslint.config(
 		rules: {
 			'no-restricted-syntax': refusedSyntax(
 				NO_PAGE_LOOKUPS,
+				NO_CHOOSING,
+				DRAWN_BY_THE_LIBRARY_ALONE,
+				NO_ELEMENTS_HANDED_THEIR_KIND,
+				NO_UNCHECKED_TOUR_NAMES
+			)
+		}
+	},
+	{
+		// Pointing at a part names it by its test ids: it finds no element by one, but reads the ids of what the
+		// reader pointed at and of what that stands in, names the page wrote and the reader's review never does
+		files: ['src/lib/dom/part-picking.ts'],
+		rules: {
+			'no-restricted-syntax': refusedSyntax(
+				NO_PAGE_WIDE_ID_LOOKUPS,
 				NO_CHOOSING,
 				DRAWN_BY_THE_LIBRARY_ALONE,
 				NO_ELEMENTS_HANDED_THEIR_KIND,

@@ -9,16 +9,23 @@
 		/** What heads it, as every pane with a head is headed; none for one whose way out stands in what it holds. */
 		head?: Head | undefined;
 		testId: string;
+		/** The pane itself, for whoever must tell what stands in it from what does not. */
+		element?: HTMLElement | undefined;
 		children: Snippet;
 	}
 
-	let { width, head, testId, children, ...attributes }: Props = $props();
+	let { width, head, testId, element = $bindable(), children, ...attributes }: Props = $props();
 </script>
 
 <!-- A pane that stands by itself, where whoever draws it places it: the look of every pane, with nothing of a
 	control's or a modal's, headed as every pane is where it has a head, and kept inside the window, what it holds
 	scrolling under its head -->
-<section {...attributes} data-testid={testId} class={['cr-ui-pane cr-ui-pane-standing', PANE_WIDTHS[width]]}>
+<section
+	bind:this={element}
+	{...attributes}
+	data-testid={testId}
+	class={['cr-ui-pane cr-ui-pane-standing', PANE_WIDTHS[width]]}
+>
 	{#if head}
 		<PaneHead {head} {testId} />
 	{/if}

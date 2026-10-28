@@ -253,8 +253,9 @@
 	 * column's grip over what scrolls under them, a chapter's bar over the
 	 * headers that slide away under it, the side column or the panel lying
 	 * over the diff on a narrow screen, the tour's light over the review,
-	 * what the reader opens over the light (so it is never dimmed), and the
-	 * guide's card over everything it talks about.
+	 * what the reader opens over the light (so it is never dimmed), the ring
+	 * round a part pointed at over that, and the guide's card over everything
+	 * it talks about.
 	 */
 	--cr-layer-behind: -1;
 	--cr-layer-over-content: 10;
@@ -262,6 +263,7 @@
 	--cr-layer-column: 20;
 	--cr-layer-spotlight: 25;
 	--cr-layer-popover: 30;
+	--cr-layer-pointed: 50;
 	--cr-layer-guide: 60;
 
 	/* Every shadow the page is drawn with. What lifts a pane off the page it lies over: */

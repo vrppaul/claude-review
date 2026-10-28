@@ -1,6 +1,6 @@
 """What the page sends of a reader's feedback on the review, and the issue the review writes of it.
 
-The page names the part of itself the reader pointed at, in its own words; everything else the issue says is
+The page names the part of itself the reader pointed at, by its own test ids; everything else the issue says is
 written by the review (`services/feedback.py`).
 """
 
@@ -23,7 +23,7 @@ from claude_review.domain.feedback import (
 from claude_review.presentation.schemas.base import MAX_TEXT_LENGTH, SaidWords, Schema, made_or_none
 from claude_review.services.feedback import ROOM_AROUND_THE_WORDS
 
-# The longest name of a part of the page: its own words, from its pane down to the part, a line or two
+# The longest name of a part of the page: a few of its test ids, from what it stands in down to the part
 MAX_PART_NAME_LENGTH = 200
 # A part's name, on the one line of the issue it stands in, saying something
 ONE_LINE_SAYING_SOMETHING = r"^[^\r\n]*\S[^\r\n]*$"
@@ -58,7 +58,7 @@ class ReadingSent(Schema):
 
 
 class PartSent(Schema):
-    """A part of the page the reader pointed at, named in the page's own words, and where it stood in the window."""
+    """A part of the page the reader pointed at, named by the page's test ids, and where it stood in the window."""
 
     model_config = ConfigDict(extra="forbid")
 
