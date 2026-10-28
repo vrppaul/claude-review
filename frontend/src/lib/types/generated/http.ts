@@ -1141,6 +1141,8 @@ export interface components {
             seen_release?: string | null;
             /** Story Introduced */
             story_introduced?: boolean | null;
+            /** Feedback Introduced */
+            feedback_introduced?: boolean | null;
         };
         /**
          * GuideState
@@ -1151,6 +1153,8 @@ export interface components {
             seen_release: string | null;
             /** Story Introduced */
             story_introduced: boolean;
+            /** Feedback Introduced */
+            feedback_introduced: boolean;
         };
         /**
          * ImageResponse

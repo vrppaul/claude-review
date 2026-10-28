@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import type { HTMLButtonAttributes } from 'svelte/elements';
-	import { buttonLook, type ButtonSize, type ButtonTone } from './button';
+	import { buttonLook, type ButtonCalling, type ButtonSize, type ButtonTone } from './button';
 
 	interface Props extends Omit<HTMLButtonAttributes, 'class' | 'style' | 'type' | 'children'> {
 		/** What it is to the reader beside its neighbours. */
@@ -15,6 +15,7 @@
 		listed?: boolean;
 		/** What a way a pane lists says of itself at its end, quieter than its words: "7 stops", "draft kept". */
 		note?: string | undefined;
+		calling?: ButtonCalling | undefined;
 		/** The button itself, for whoever hands the keyboard to it. */
 		element?: HTMLButtonElement | undefined;
 		/** What it says: its words, an icon before them; or its icon alone, where its words may give way to it. */
@@ -33,6 +34,7 @@
 		testId,
 		listed = false,
 		note,
+		calling,
 		element = $bindable(),
 		children,
 		wordsGivingWay,
@@ -40,9 +42,17 @@
 	}: Props = $props();
 </script>
 
-<!-- A button of the page, drawn as its tone and size say: what it is handed besides lands on the element, and
-	its test id and look are the library's alone, written after it -->
-<button bind:this={element} type="button" {...attributes} data-testid={testId} class={buttonLook(tone, size, listed)}>
+<!-- A button of the page, drawn as its tone and size say, and what draws the reader to it, which the stylesheet
+	edges it by: what it is handed besides lands on the element, and its test id and look are the library's alone,
+	written after it -->
+<button
+	bind:this={element}
+	type="button"
+	{...attributes}
+	data-calling={calling}
+	data-testid={testId}
+	class={buttonLook(tone, size, listed)}
+>
 	{@render children()}{#if wordsGivingWay}<span class="cr-ui-button-words-giving-way @max-cr-narrow/button-room:sr-only"
 			>{wordsGivingWay}</span
 		>{/if}{#if note}<span class="cr-ui-button-note">{note}</span>{/if}

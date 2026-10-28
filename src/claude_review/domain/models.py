@@ -1050,3 +1050,5 @@ class GuideState(BaseModel):
     seen_release: str | None = None
     # Whether Story has been introduced to the reader: by its release news, at the switch, or by their trying it
     story_introduced: bool = False
+    # Whether Send feedback has been introduced to the reader: under Help, or by their opening it
+    feedback_introduced: bool = False

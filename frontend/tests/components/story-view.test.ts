@@ -65,7 +65,7 @@ const MOVED_ON = storyHeld(TOLD.story, { moved_on: codeMovedOn() });
 /** A server that takes every story asked for or stopped, and keeps that Story was introduced to the reader. */
 function takingAskings(): FakeServer {
 	const server = takingStoryAskings();
-	server.answer('PUT /api/guide', { seen_release: null, story_introduced: true });
+	server.answer('PUT /api/guide', { seen_release: null, story_introduced: true, feedback_introduced: false });
 	return server;
 }
 

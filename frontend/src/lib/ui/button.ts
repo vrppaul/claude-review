@@ -34,6 +34,12 @@ export type ButtonTone = 'primary' | 'quiet' | 'secondary' | 'asking' | 'danger'
 /** xs among words and small controls, 24 pixels; sm in a row of acts and where it ends a bar, 32 pixels. */
 export type ButtonSize = 'xs' | 'sm';
 
+/**
+ * What draws the reader to a button, as a segment says what draws them to it: the way of their own word the page
+ * introduces at it, ringed in the reader's colour while the introduction points at it (Help, for Send feedback).
+ */
+export type ButtonCalling = 'introduced';
+
 // The classes of each tone; a filled one (primary, danger) is drawn over its own way under the pointer and open
 export const BUTTON_TONES: Record<ButtonTone, string> = {
 	primary: 'cr-ui-primary cr-ui-filled',

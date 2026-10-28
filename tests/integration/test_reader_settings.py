@@ -90,8 +90,14 @@ async def test_the_release_a_reader_was_shown_is_remembered(reviews: ReviewFacto
         await client.put("/api/guide", json={"seen_release": "1.5.0"})
         after = (await client.get("/api/guide")).json()
 
-    assert before == {"record": {"seen_release": None, "story_introduced": False}, "stored": False}
-    assert after == {"record": {"seen_release": "1.5.0", "story_introduced": False}, "stored": True}
+    assert before == {
+        "record": {"seen_release": None, "story_introduced": False, "feedback_introduced": False},
+        "stored": False,
+    }
+    assert after == {
+        "record": {"seen_release": "1.5.0", "story_introduced": False, "feedback_introduced": False},
+        "stored": True,
+    }
 
 
 async def test_a_reader_shown_around_before_stories_is_introduced_to_story_and_keeps_their_release(
@@ -105,8 +111,8 @@ async def test_a_reader_shown_around_before_stories_is_introduced_to_story_and_k
         await client.put("/api/guide", json={"story_introduced": True})
         after = (await client.get("/api/guide")).json()
 
-    assert before["record"] == {"seen_release": "1.5.0", "story_introduced": False}
-    assert after["record"] == {"seen_release": "1.5.0", "story_introduced": True}
+    assert before["record"] == {"seen_release": "1.5.0", "story_introduced": False, "feedback_introduced": False}
+    assert after["record"] == {"seen_release": "1.5.0", "story_introduced": True, "feedback_introduced": False}
 
 
 async def test_settings_and_what_was_shown_are_kept_apart(reviews: ReviewFactory, reader_files: ReaderFiles) -> None:

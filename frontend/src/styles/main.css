@@ -812,7 +812,8 @@
  * their axis, and on the right the page — the overview's three cards, a
  * chapter's head, a step's code in a frame headed by its reason. Each part
  * is painted by what it is, in the colour it has in a story told, as board
- * StoryOptIn draws it.
+ * StoryOptIn draws it. Send feedback sketched (FeedbackSketch.svelte) the
+ * same way, as board Feedback draws it: Help's ways, and the card it opens.
  */
 .cr-sketch {
 	--cr-sketch-ground: var(--cr-ground-reading);
@@ -843,9 +844,13 @@
 	--cr-sketch-number: var(--cr-agent);
 	--cr-sketch-agent-chip: var(--cr-agent-chip);
 	--cr-sketch-frame: var(--cr-pane-edge);
-	/* The chapter being read, ringed */
+	/* The chapter being read, ringed; and Help's way lit, the part pointed at on the reader's chip */
 	--cr-sketch-current-edge: var(--cr-mark);
 	--cr-sketch-current-ring: var(--cr-mark-chip);
+	/* The feedback card's promise of what goes, in ink, and its acts: one edged in the reader's colour, the main filled */
+	--cr-sketch-promise: var(--cr-ink-tint);
+	--cr-sketch-act-edge: var(--cr-mark-border);
+	--cr-sketch-main-act: var(--cr-control-fill);
 	/* A file's status, its letter shrunk to a dot */
 	--cr-sketch-added-dot: var(--cr-add-text);
 	--cr-sketch-modified-dot: var(--cr-status-modified);

@@ -43,10 +43,16 @@ class GuideState(Schema):
     seen_release: str | None
     # Whether Story has been introduced to the reader: by its release news, at the switch, or by their trying it
     story_introduced: StrictBool
+    # Whether Send feedback has been introduced to the reader: under Help, or by their opening it
+    feedback_introduced: StrictBool
 
     @classmethod
     def from_domain(cls, guide: models.GuideState) -> Self:
-        return cls(seen_release=guide.seen_release, story_introduced=guide.story_introduced)
+        return cls(
+            seen_release=guide.seen_release,
+            story_introduced=guide.story_introduced,
+            feedback_introduced=guide.feedback_introduced,
+        )
 
 
 class KeptRecord[Record: Schema](Schema):
@@ -99,6 +105,7 @@ class GuideChange(Schema, RecordChange[models.GuideState]):
 
     seen_release: str | None = Field(default=None, min_length=1, max_length=MAX_RELEASE_LENGTH)
     story_introduced: StrictBool | None = None
+    feedback_introduced: StrictBool | None = None
 
     @override
     def applied_to(self, record: models.GuideState) -> models.GuideState:
@@ -106,6 +113,7 @@ class GuideChange(Schema, RecordChange[models.GuideState]):
         return models.GuideState(
             seen_release=_sent_or_kept(self.seen_release, record.seen_release),
             story_introduced=_sent_or_kept(self.story_introduced, record.story_introduced),
+            feedback_introduced=_sent_or_kept(self.feedback_introduced, record.feedback_introduced),
         )
 
 

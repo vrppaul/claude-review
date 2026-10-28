@@ -120,7 +120,7 @@ SETTINGS = ReaderSettings(
     sound_on_replies=True,
     story_writing=StoryWriting.AS_THE_REVIEW_OPENS,
 )
-GUIDE = GuideState(seen_release="1.5.0", story_introduced=True)
+GUIDE = GuideState(seen_release="1.5.0", story_introduced=True, feedback_introduced=True)
 # A field the review refused, named under the part of the request it came in
 FIELD = FieldRefusal(loc=("body", "chapters", 0, "title"), msg="says nothing")
 LEFT_OUT = LeftOut(piece=FILE, changed_lines=2)
@@ -202,6 +202,12 @@ MADE = [
         source=GUIDE,
         made=GuideChange(story_introduced=False).applied_to(GUIDE),
         replaced={"story_introduced"},
+    ),
+    MadeFrom(
+        what="what a reader was shown, with Send feedback to be introduced again",
+        source=GUIDE,
+        made=GuideChange(feedback_introduced=False).applied_to(GUIDE),
+        replaced={"feedback_introduced"},
     ),
     MadeFrom(what="a step told", source=STEP, made=TOLD_STEP, replaced={"piece"}),
     MadeFrom(

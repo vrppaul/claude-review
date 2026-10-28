@@ -6,6 +6,7 @@
  */
 
 import { anchorShortPlace } from '$lib/anchors/views';
+import type { IntroducedWay } from '$lib/guide/guide.svelte';
 import { followWords, PHRASE_BREAK } from '$lib/review/follow-words';
 import type { Anchor, FollowOutcome } from '$lib/types';
 import { messageOf } from '$lib/utils/errors';
@@ -15,6 +16,8 @@ import { counted, FILES } from '$lib/utils/words';
 const CONNECTION_LOST = 'connection lost for a while — anything said meanwhile may be missing';
 // The threads a draft brought back, followed onto the diff the review opened on
 const KEPT_THREADS = 'threads picked up from the draft';
+// Each way the guide introduces, by the name the page gives it: Story in the header, Send feedback in Help
+const INTRODUCED_WAYS: Record<IntroducedWay, string> = { story: 'Story', feedback: 'Send feedback' };
 
 /** The diff taken again: how many files the review holds now, and what following the threads did. */
 export function retakenNote(fileCount: number, moved: FollowOutcome): string {
@@ -41,8 +44,8 @@ export function storyNotStoppedNote(error: unknown): string {
 	return `the story could not be stopped — ${messageOf(error)}`;
 }
 
-export function storyIntroductionNotKeptNote(error: unknown): string {
-	return `whether Story is introduced again could not be kept — ${messageOf(error)}`;
+export function introductionNotKeptNote(way: IntroducedWay, error: unknown): string {
+	return `whether ${INTRODUCED_WAYS[way]} is introduced again could not be kept — ${messageOf(error)}`;
 }
 
 /** A thread the agent raised, by where it hangs. */

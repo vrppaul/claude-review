@@ -14,11 +14,17 @@
  * the reader said at the switch not to show it again, or once they tried
  * it, by pressing it or with the story on screen; that is kept for every
  * review on the machine, as the release seen is.
+ *
+ * Send feedback is introduced once too, under Help, in a review that is not
+ * Story's to introduce: a reader meets one new way of working at a time,
+ * Story's first. It counts as introduced once the reader said there not to
+ * show it again, or opened it.
  */
 
 import { keepGuide, readGuide } from '$lib/api/review-api';
 import type { CommentRoute, TourStep, TourTarget } from '$lib/guide/tour';
 import type { CommentFieldEvent, GuideState } from '$lib/types';
+import { Introduction } from '$lib/guide/introduction.svelte';
 import { DRAWN_BY_THE_READER, TOUR_STEPS, stepsFor } from '$lib/guide/tour';
 import { RELEASE_NEWS, type ReleaseNews } from '$lib/guide/news';
 import { isNewer, latestNews, unseenNews } from '$lib/guide/news-choice';
@@ -27,8 +33,8 @@ import { handOverLegacyRelease, legacySeenRelease, writeSeenRelease } from '$lib
 /** The card in the guide's corner: the welcome, what is new, or the reader's feedback, opened from Help. */
 export type GuideCard = 'welcome' | 'news' | 'feedback';
 
-/** Whether Story has been introduced to the reader, as far as this page knows: before the server says, it does not. */
-type StoryIntroduced = 'unknown' | 'introduced' | 'not';
+/** A way of working the guide introduces to the reader once. */
+export type IntroducedWay = 'story' | 'feedback';
 
 /** Whoever answers the review, as far as the tour cares: whether anyone is there to send a round to. */
 export interface AnswererPresence {
@@ -42,6 +48,20 @@ export interface AnswererPresence {
  */
 export interface OpenComments {
 	readonly openOnLines: number;
+}
+
+/** What the guide is opened with: what the tour and the introductions follow, and how it says what it could not keep. */
+export interface GuideOpening {
+	answerer: AnswererPresence;
+	comments: OpenComments;
+	/** Which release serves this review. */
+	release: string;
+	/** Whether the review can tell a story: where it cannot, Story is introduced nowhere in it. */
+	takesAStory: boolean;
+	/** Whether the note of a story that arrived stands under the header now, where no introduction stands with it. */
+	storyOffered: () => boolean;
+	/** Say that whether a way is introduced again could not be kept, as the page says what a request came to. */
+	notKept: (way: IntroducedWay, error: unknown) => void;
 }
 
 /**
@@ -75,8 +95,11 @@ export class Guide {
 	readonly #comments: OpenComments;
 	// Which release serves this review
 	readonly #release: string;
-	// Say that whether Story is introduced again could not be kept, as the page says what a request came to
-	readonly #notKept: (error: unknown) => void;
+	readonly #takesAStory: boolean;
+	readonly #storyOffered: () => boolean;
+	// Story and Send feedback, each introduced to the reader once
+	readonly #story: Introduction;
+	readonly #feedback: Introduction;
 	#card = $state<GuideCard | null>(null);
 	// The card the feedback's took the corner from, which it gives back as it goes
 	#behindFeedback: Exclude<GuideCard, 'feedback'> | null = null;
@@ -85,9 +108,9 @@ export class Guide {
 	#helpOpen = $state(false);
 	#news = $state.raw<ReleaseNews | undefined>(undefined);
 	#touring = $state(false);
-	// Whether Story has been introduced to the reader: unknown until the server
-	// says, and where it cannot
-	#storyIntroduced = $state<StoryIntroduced>('unknown');
+	// Whether this review is Story's to introduce: it can tell a story, and Story
+	// was not introduced before it opened. Send feedback's waits for one of its own
+	#storyTurn = $state(false);
 	// The introduction put away by its cross: for this page alone, kept nowhere
 	#introductionPutAway = $state(false);
 	// The step on screen, by name: the tour's steps change when an agent joins
@@ -108,11 +131,20 @@ export class Guide {
 	// ? list's and the tour's own
 	readonly #stops: TourStep[];
 
-	constructor(answerer: AnswererPresence, comments: OpenComments, release: string, notKept: (error: unknown) => void) {
+	constructor({ answerer, comments, release, takesAStory, storyOffered, notKept }: GuideOpening) {
 		this.#answerer = answerer;
 		this.#comments = comments;
 		this.#release = release;
-		this.#notKept = notKept;
+		this.#takesAStory = takesAStory;
+		this.#storyOffered = storyOffered;
+		this.#story = new Introduction(
+			(introduced) => keepGuide({ story_introduced: introduced }),
+			(error) => notKept('story', error)
+		);
+		this.#feedback = new Introduction(
+			(introduced) => keepGuide({ feedback_introduced: introduced }),
+			(error) => notKept('feedback', error)
+		);
 		this.#steps = $derived(stepsFor({ attached: this.#answerer.attached, route: this.#route }));
 		this.#stepIndex = $derived(indexOfStep(this.#steps, this.#stepId));
 		this.#stops = $derived(this.#steps.filter((step) => this.#isStop(step)));
@@ -139,30 +171,44 @@ export class Guide {
 	}
 
 	/**
-	 * Whether Story is introduced at the switch now: to a reader it was never
-	 * introduced to, who has not put it away on this page. It waits while the
-	 * card or the tour stands, so the two never stand together; and while the
-	 * server has not said, as when it cannot, it is not introduced: better not
-	 * introduced than introduced twice.
+	 * Whether Story is introduced at the switch now: in a review that can tell
+	 * a story, to a reader it was never introduced to, who has not put it away
+	 * on this page. It waits while the card, the tour or the note of a story
+	 * that arrived stands, so no two stand together; and while the server has
+	 * not said, as when it cannot, it is not introduced: better not introduced
+	 * than introduced twice.
 	 */
 	get introducesStory(): boolean {
-		return this.#storyIntroduced === 'not' && !this.#introductionPutAway && this.#card === null && !this.#touring;
+		return this.#storyTurn && this.#story.due && this.#introductionMayStand();
 	}
 
-	/**
-	 * Story has been introduced to the reader, or tried by them: kept, for every review, and never introduced again.
-	 * Kept also before the server has said whether it was before, which then changes nothing.
-	 */
+	/** Story has been introduced to the reader, or tried by them: kept, for every review, and never introduced again. */
 	noteStoryIntroduced(): void {
-		if (this.#storyIntroduced === 'introduced') return;
-		this.#storyIntroduced = 'introduced';
-		this.#keepStoryIntroduced(true);
+		this.#story.note();
 	}
 
 	/** The reader undid "Don't show again": Story is introduced again, here and in every review. */
 	introduceStoryAgain(): void {
-		this.#storyIntroduced = 'not';
-		this.#keepStoryIntroduced(false);
+		this.#story.again();
+	}
+
+	/**
+	 * Whether Send feedback is introduced under Help now: to a reader it was
+	 * never introduced to, in a review that is not Story's to introduce. It
+	 * waits as Story's does, and while Help's own pane stands where it would.
+	 */
+	get introducesFeedback(): boolean {
+		return this.#feedback.due && !this.#storyTurn && !this.#helpOpen && this.#introductionMayStand();
+	}
+
+	/** Send feedback has been introduced to the reader, or opened by them: kept, for every review, and never introduced again. */
+	noteFeedbackIntroduced(): void {
+		this.#feedback.note();
+	}
+
+	/** The reader undid "Don't show again": Send feedback is introduced again, here and in every review. */
+	introduceFeedbackAgain(): void {
+		this.#feedback.again();
 	}
 
 	/** Put the introduction away for this page alone: it comes back in the next review. */
@@ -251,8 +297,9 @@ export class Guide {
 		} catch {
 			return;
 		}
-		// A reader who tried Story while the server was asked has been introduced to it, whatever it kept
-		if (this.#storyIntroduced === 'unknown') this.#storyIntroduced = kept.story_introduced ? 'introduced' : 'not';
+		this.#story.learn(kept.story_introduced);
+		this.#feedback.learn(kept.feedback_introduced);
+		this.#storyTurn = this.#takesAStory && !kept.story_introduced;
 		if (seen === null) {
 			this.#card = 'welcome';
 			return;
@@ -278,8 +325,10 @@ export class Guide {
 	/**
 	 * Open the card the reader writes their feedback in, in the corner's one
 	 * place: the tour stops for it, and the welcome or the news waits behind it.
+	 * The reader has found Send feedback, so it is never introduced again.
 	 */
 	showFeedback(): void {
+		this.noteFeedbackIntroduced();
 		this.endTour();
 		if (this.#card !== 'feedback') this.#behindFeedback = this.#card;
 		this.#card = 'feedback';
@@ -372,12 +421,12 @@ export class Guide {
 	}
 
 	/**
-	 * Keep whether Story has been introduced, for every review. Not kept, it
-	 * is said: the reader chose, and the next review would introduce Story
-	 * again without a word why.
+	 * Whether an introduction may stand now: none was put away on this page,
+	 * the card and the tour are done, and no note of a story that arrived
+	 * stands under the header, where it would cover or be covered.
 	 */
-	#keepStoryIntroduced(introduced: boolean): void {
-		keepGuide({ story_introduced: introduced }).catch(this.#notKept);
+	#introductionMayStand(): boolean {
+		return !this.#introductionPutAway && this.#card === null && !this.#touring && !this.#storyOffered();
 	}
 
 	/**

@@ -117,11 +117,15 @@ export const PANE_WIDTHS: Record<PaneWidth, string> = {
 	along: 'cr-ui-pane-along'
 };
 
-/** What a pane says by its edge: that it speaks for the agent, of what it brought that is not read yet, or of what failed. */
-export type PaneEdge = 'agent' | 'unread' | 'failure';
+/**
+ * What a pane says by its edge: that it speaks for the agent, invites the reader's own word, speaks of what the agent
+ * brought that is not read yet, or of what failed.
+ */
+export type PaneEdge = 'agent' | 'reader' | 'unread' | 'failure';
 
 export const PANE_EDGES: Record<PaneEdge, string> = {
 	agent: 'cr-ui-pane-agent',
+	reader: 'cr-ui-pane-reader',
 	unread: 'cr-ui-pane-unread',
 	failure: 'cr-ui-pane-failure'
 };

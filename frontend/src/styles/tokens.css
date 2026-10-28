@@ -279,7 +279,9 @@
 	/* A line inside the edge of a control that leads to what the agent brought and the reader has not read */
 	--cr-shadow-unread-edge: inset 0 0 0 var(--cr-line) var(--cr-unread);
 	/* A line inside the edge of the control the page introduces the agent's way of reading at: Story, while it does */
-	--cr-shadow-introduced-edge: inset 0 0 0 var(--cr-line) var(--cr-agent);
+	--cr-shadow-introduced-agent-edge: inset 0 0 0 var(--cr-line) var(--cr-agent);
+	/* The same, at the control the page introduces a way of the reader's own word at: Help, for Send feedback */
+	--cr-shadow-introduced-reader-edge: inset 0 0 0 var(--cr-line) var(--cr-mark);
 	/* What lifts a card off what it hangs under: a thread's, or a comment being written */
 	--cr-shadow-hanging: 0 4px 12px rgb(0 0 0 / 0.125);
 	/* A hanging card the keyboard was brought to: lifted as ever, its edge as a field's the keyboard is in */

@@ -710,13 +710,17 @@ const AVATAR_OF_A_TURN = {
 };
 
 // Every drawing is drawn in its one component: an icon as a row of ICONS that
-// Icon draws by name, the sketch of a story by StorySketch. A review found a
-// speech bubble written into another component with numbers of its own,
-// beside the same bubble in ICONS
+// Icon draws by name, the sketch of a story by StorySketch, of Send feedback by
+// FeedbackSketch. A review found a speech bubble written into another
+// component with numbers of its own, beside the same bubble in ICONS
 const DRAWN_IN_ITS_COMPONENT =
-	'Draw an icon with <Icon name="…">, its drawing a row of ICONS in ui/icons.ts; a story sketched is <StorySketch>.';
-// The components that write a drawing: the library's Icon, every icon; StorySketch, the sketch of a story
-const DRAWING_COMPONENTS = ['src/lib/ui/Icon.svelte', 'src/lib/components/StorySketch.svelte'];
+	'Draw an icon with <Icon name="…">, its drawing a row of ICONS in ui/icons.ts; a story sketched is <StorySketch>, Send feedback <FeedbackSketch>.';
+// The components that write a drawing: the library's Icon, every icon; each sketch, of a story and of Send feedback
+const DRAWING_COMPONENTS = [
+	'src/lib/ui/Icon.svelte',
+	'src/lib/components/StorySketch.svelte',
+	'src/lib/components/FeedbackSketch.svelte'
+];
 const SVG_IN_ITS_COMPONENT = { elements: ['svg'], message: DRAWN_IN_ITS_COMPONENT };
 // A key of the keyboard is drawn by the library's Key alone, the one component that writes a `kbd`
 const KEY_COMPONENTS = ['src/lib/ui/Key.svelte'];

@@ -3,7 +3,10 @@
 import type { GuideChange, GuideState } from '$lib/types';
 import { fakeServer, type FakeServer, type ReceivedRequest } from './fake-server';
 
-/** What `/api/guide` keeps for this reader: the release they were last shown, and whether Story was introduced. */
+/**
+ * What `/api/guide` keeps for this reader: the release they were last shown, and whether Story and Send feedback were
+ * introduced.
+ */
 class GuideMemory {
 	private record: GuideState;
 	private stored: boolean;
@@ -37,18 +40,31 @@ function servingFrom(memory: GuideMemory, server: FakeServer = fakeServer()): Fa
  * for a test where the page notes Story tried, as a press of Story does, and nothing more of the guide matters.
  */
 export function keepingTheGuide(server: FakeServer, seen: string): void {
-	servingFrom(new GuideMemory({ seen_release: seen, story_introduced: false }, true), server);
+	servingFrom(
+		new GuideMemory({ seen_release: seen, story_introduced: false, feedback_introduced: false }, true),
+		server
+	);
 }
 
 /**
  * A server remembering which release this reader was shown, as `/api/guide`
- * does, Story not yet introduced to them; nothing kept for a newcomer.
+ * does, Story and Send feedback not yet introduced to them; nothing kept for a newcomer.
  */
 export function guideServer(seen: string | null): FakeServer {
-	return servingFrom(new GuideMemory({ seen_release: seen, story_introduced: false }, seen !== null));
+	return servingFrom(
+		new GuideMemory({ seen_release: seen, story_introduced: false, feedback_introduced: false }, seen !== null)
+	);
 }
 
-/** A server remembering a reader shown this release, Story introduced to them already. */
+/** A server remembering a reader shown this release, Story and Send feedback introduced to them already. */
 export function guideServerIntroduced(seen: string): FakeServer {
-	return servingFrom(new GuideMemory({ seen_release: seen, story_introduced: true }, true));
+	return servingFrom(new GuideMemory({ seen_release: seen, story_introduced: true, feedback_introduced: true }, true));
+}
+
+/**
+ * A server remembering a reader shown this release, Story introduced to them already and Send feedback not: the
+ * review they arrive at is Send feedback's to introduce.
+ */
+export function guideServerIntroducingFeedback(seen: string): FakeServer {
+	return servingFrom(new GuideMemory({ seen_release: seen, story_introduced: true, feedback_introduced: false }, true));
 }

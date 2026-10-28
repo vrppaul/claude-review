@@ -19,7 +19,9 @@
   title alone, its text copied to paste there. Hand to the agent gives it
   to the reader's agent in its panel, to look for an issue like it and file
   it once the reader says so. What was written and put away waits in the
-  card, and Help says so.
+  card, and Help says so. A reader is told of it once, under Help, in a
+  review that does not introduce Story: Don't show again, with Undo, or
+  opening it, keeps it from coming back in any review.
 
 ## [1.6.1] - 2026-10-26
 

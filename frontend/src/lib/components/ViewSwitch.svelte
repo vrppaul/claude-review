@@ -35,11 +35,11 @@
 		if (review.story.wait?.kind === 'writing') return 'writing';
 		return review.story.arrival === 'none' ? null : 'unread';
 	});
-	// What stands under the switch, pointing at Story: the note of a story that arrived, while the files are
-	// read until the reader reads it or puts it away; else Story's introduction, which waits while the note
-	// stands, its ring on Story with it
-	const storyOffered = $derived(readingFiles && review.story.arrival === 'offered');
-	const introducingStory = $derived(!storyOffered && review.guide.introducesStory);
+	// What stands under the switch, pointing at Story: the note of a story that arrived, while the review says
+	// it stands; else Story's introduction, which the guide holds back while the note stands, its ring on Story
+	// with it
+	const storyOffered = $derived(review.storyOffered);
+	const introducingStory = $derived(review.guide.introducesStory);
 	// What draws the reader to Story's segment: its introduction while the page introduces it, else a story unread
 	const storyCalling = $derived.by(() => {
 		if (introducingStory) return 'introduced';

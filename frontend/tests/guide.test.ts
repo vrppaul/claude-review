@@ -11,7 +11,7 @@ import { writeSeenRelease } from '$lib/guide/seen-release';
 import { contextLine, diffFile, hunk } from './diff';
 import { said } from './elements';
 import { fakeServer, SERVER_ERROR } from './fake-server';
-import { guideServer, guideServerIntroduced } from './guide-server';
+import { guideServer, guideServerIntroduced, guideServerIntroducingFeedback } from './guide-server';
 import type { Review } from '$lib/review/review.svelte';
 import { inReview, openReview } from './review';
 
@@ -310,17 +310,19 @@ describe('Story introduced at the switch', () => {
 		expect(review.guide.introducesStory).toBe(false);
 	});
 
-	it('says in the panel that it could not be kept, where the server refuses to keep it', async () => {
+	it('says in the panel which introduction could not be kept, where the server refuses to keep it', async () => {
 		const server = guideServer('1.5.0');
 		await arriveAt('1.5.0');
 		server.refuse('PUT /api/guide', SERVER_ERROR, 'the review fell over');
 
 		review.guide.noteStoryIntroduced();
+		review.guide.noteFeedbackIntroduced();
 
 		await vi.waitFor(() =>
-			expect(review.conversation.turns.at(-1)?.body).toBe(
-				'whether Story is introduced again could not be kept — the review fell over'
-			)
+			expect(review.conversation.turns.slice(-2).map((turn) => turn.body)).toEqual([
+				'whether Story is introduced again could not be kept — the review fell over',
+				'whether Send feedback is introduced again could not be kept — the review fell over'
+			])
 		);
 	});
 
@@ -343,6 +345,61 @@ describe('Story introduced at the switch', () => {
 		review.guide.noteStoryIntroduced();
 
 		await vi.waitFor(() => expect(server.bodiesSentTo('PUT /api/guide')).toEqual([{ story_introduced: true }]));
+	});
+});
+
+describe('Send feedback introduced under Help', () => {
+	it('is introduced to a returning reader Story was introduced to before', async () => {
+		guideServerIntroducingFeedback('1.5.0');
+
+		await arriveAt('1.5.0');
+
+		expect(review.guide.introducesFeedback).toBe(true);
+	});
+
+	it('waits for a review of its own where Story is introduced, even once Story is put away for good', async () => {
+		guideServer('1.5.0');
+		await arriveAt('1.5.0');
+		const whileStoryIs = review.guide.introducesFeedback;
+
+		review.guide.noteStoryIntroduced();
+
+		expect([whileStoryIs, review.guide.introducesFeedback]).toEqual([false, false]);
+	});
+
+	it('waits while the news, the tour or Help stands over the review', async () => {
+		guideServerIntroducingFeedback('1.5.0');
+		await arriveAt('1.5.0');
+
+		review.guide.showNews();
+		const underTheNews = review.guide.introducesFeedback;
+		review.guide.startTour();
+		const underTheTour = review.guide.introducesFeedback;
+		review.guide.endTour();
+		review.guide.setHelpOpen(true);
+		const underHelp = review.guide.introducesFeedback;
+
+		expect([underTheNews, underTheTour, underHelp]).toEqual([false, false, false]);
+	});
+
+	it('is kept as done once the reader opens Send feedback, and is not introduced again', async () => {
+		const server = guideServerIntroducingFeedback('1.5.0');
+		await arriveAt('1.5.0');
+
+		review.guide.showFeedback();
+		review.guide.closeFeedback();
+
+		expect(review.guide.introducesFeedback).toBe(false);
+		await vi.waitFor(() => expect(server.bodiesSentTo('PUT /api/guide')).toEqual([{ feedback_introduced: true }]));
+	});
+
+	it('is introduced in a review that tells no story, where Story is not, though it was never introduced', async () => {
+		guideServer('1.5.0');
+		review = openReview({ facts: { release: '1.5.0', takes_a_story: false } });
+
+		await review.guide.open();
+
+		expect([review.guide.introducesStory, review.guide.introducesFeedback]).toEqual([false, true]);
 	});
 });
 

@@ -23,7 +23,7 @@ import { FileSections } from '$lib/dom/file-sections';
 import { Jumps } from '$lib/dom/jump';
 import { ReadingParts } from '$lib/dom/reading-parts';
 import { LastRetake } from '$lib/review/last-retake.svelte';
-import { diffNotTakenNote, storyIntroductionNotKeptNote } from '$lib/review/panel-notes';
+import { diffNotTakenNote, introductionNotKeptNote } from '$lib/review/panel-notes';
 import { ReadingProgress } from '$lib/review/reading-progress.svelte';
 import { FilesReading } from '$lib/review/reading-view';
 import { ReadingViews } from '$lib/review/reading-views.svelte';
@@ -188,9 +188,14 @@ export class Review {
 			agentAttached: () => this.answerer.attached,
 			sayInPanel: (words) => this.conversation.note(words)
 		});
-		this.guide = new Guide(this.answerer, this.threads.writing, facts.release, (error) =>
-			this.conversation.note(storyIntroductionNotKeptNote(error))
-		);
+		this.guide = new Guide({
+			answerer: this.answerer,
+			comments: this.threads.writing,
+			release: facts.release,
+			takesAStory: facts.takes_a_story,
+			storyOffered: () => this.storyOffered,
+			notKept: (way, error) => this.conversation.note(introductionNotKeptNote(way, error))
+		});
 		this.views = new ReadingViews(
 			{
 				files: new FilesReading(this.diff, this.threads, this.reading),
@@ -360,6 +365,15 @@ export class Review {
 	 */
 	get storyViewOpens(): boolean {
 		return this.story.held !== null || isAskedFor(this.story.wait);
+	}
+
+	/**
+	 * Whether the note of a story that arrived stands under the header: while
+	 * the files are read, until the reader reads the story or puts the note
+	 * away. The guide's introductions wait while it does.
+	 */
+	get storyOffered(): boolean {
+		return this.views.onScreen.name === 'files' && this.story.arrival === 'offered';
 	}
 
 	/**
