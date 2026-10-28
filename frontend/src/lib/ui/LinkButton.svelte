@@ -11,7 +11,7 @@
 		/** What the page does as the reader follows it. */
 		onfollow: () => void;
 		testId: string;
-		/** What following it adds, in a cell of its own at its end, where GitHub's Star button keeps its count: "+1". */
+		/** What following it adds, on a chip at its end, where GitHub's Star button keeps its count: "+1". */
 		adds?: string | undefined;
 		/** The link itself, for whoever hands the keyboard to it: the act a pane leads to, as the pane appears. */
 		element?: HTMLAnchorElement | undefined;
@@ -28,7 +28,7 @@
 <a
 	bind:this={element}
 	data-testid={testId}
-	class={[buttonLook(tone, size, false), adds !== undefined && 'cr-ui-button-adding']}
+	class={buttonLook(tone, size, false)}
 	{href}
 	target="_blank"
 	rel="noopener noreferrer"

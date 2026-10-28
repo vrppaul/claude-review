@@ -24,8 +24,17 @@
   opening it, keeps it from coming back in any review.
 - **A star for claude-review, asked at Help's foot.** Help ends with the
   repository, vrppaul/claude-review, a link to it on GitHub, and a Star
-  button whose count shows the +1 a star adds. It stays in sight while the
-  keys scroll, and never comes to the reader: Help is opened on purpose.
+  button drawn as GitHub draws its own, its count the +1 a star adds. It
+  stays in sight while the keys scroll, and never comes to the reader: Help
+  is opened on purpose. Following Star opens GitHub and leaves thanks with a
+  heart in the ask's place, until Help opens again: whether the reader
+  starred it, the page cannot know.
+
+### Changed
+- **A pane that scrolls shows that it does.** Where more of what a pane
+  holds stands past its head or its foot, a soft shade lies at that edge,
+  gone once it is scrolled to: Help's keys no longer look cut off under its
+  foot.
 
 ## [1.6.1] - 2026-10-26
 

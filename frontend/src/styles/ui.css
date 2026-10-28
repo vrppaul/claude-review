@@ -122,23 +122,14 @@
 }
 /*
  * What following a link drawn as a button adds (LinkButton's adds), where
- * GitHub's Star button keeps its count: a cell of its own at its end, as tall
- * as the button, set off from its words on the page's plainest ground, in the
- * code's face; what it adds in the colour of what is added
+ * GitHub's Star button keeps its count: on an ink chip after its words, as
+ * GitHub draws the count, a step apart from them
  */
-.cr-ui-button-adding {
-	overflow: hidden;
-	padding-inline-end: 0;
-}
 .cr-ui-button-adds {
-	display: flex;
-	align-items: center;
-	align-self: stretch;
-	margin-inline-start: --spacing(1.5);
-	padding-inline: --spacing(2);
-	background-color: var(--color-base-100);
-	color: var(--cr-add-text);
-	font-family: var(--font-mono);
+	margin-inline-start: --spacing(0.5);
+	padding: 0 --spacing(1.5);
+	border-radius: var(--radius-field);
+	background-color: var(--cr-ink-tint);
 }
 /* What a listed way says of itself at its end (Button's note): quieter than its words, as what explains a part */
 .cr-ui-button-note {
@@ -235,12 +226,6 @@
 	gap: --spacing(2);
 	margin-inline-end: auto;
 }
-/* An aside whose words wrap beside the acts (Actions' asideWraps): it takes the room the acts leave, and no more */
-.cr-ui-actions-aside-wrapping {
-	flex: 1 1 0;
-	min-width: 0;
-}
-
 /*
  * Words that lead somewhere or do something (Link), and a link of words
  * written in Markdown (Prose): in the colour of the reader's controls as
@@ -758,9 +743,23 @@
 	min-width: 0;
 }
 /* What a pane holds, scrolling inside it once it is as tall as the window leaves it room for */
+/*
+ * What a pane holds scrolls between its head and its foot. Where more of it
+ * stands past either, out of sight, a shade lies at that edge, so a list cut
+ * by the foot reads as going on under it; scrolled to its end, the pane's own
+ * ground, carried with what it holds, covers the shade there
+ */
 .cr-ui-pane-body {
 	flex: 1 1 auto;
 	min-height: 0;
+	background:
+		linear-gradient(var(--color-base-200) 30%, transparent) top / 100% var(--cr-scrolled-under-cover) no-repeat local,
+		linear-gradient(transparent, var(--color-base-200) 70%) bottom / 100% var(--cr-scrolled-under-cover) no-repeat local,
+		radial-gradient(farthest-side at 50% 0, var(--cr-shadow-scrolled-under), transparent) top / 100%
+			var(--cr-scrolled-under-depth) no-repeat scroll,
+		radial-gradient(farthest-side at 50% 100%, var(--cr-shadow-scrolled-under), transparent) bottom / 100%
+			var(--cr-scrolled-under-depth) no-repeat scroll,
+		var(--color-base-200);
 }
 /* What stays at a pane's foot while what it holds scrolls, ruled off from that */
 .cr-ui-pane-foot {

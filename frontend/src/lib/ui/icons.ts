@@ -184,6 +184,14 @@ export const ICONS = {
 		paths: ['M8 1.8l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11.6l-3.8 2 .7-4.3-3.1-3 4.3-.6z'],
 		drawn: TRACED
 	},
+	// A heart filled in: the thanks of whoever makes claude-review, once the reader went to star it
+	heart: {
+		viewBox: '0 0 16 16',
+		paths: [
+			'M8 13.7S1.8 9.9 1.8 5.9C1.8 4 3.3 2.5 5.1 2.5c1.2 0 2.3.6 2.9 1.6.6-1 1.7-1.6 2.9-1.6 1.8 0 3.3 1.5 3.3 3.4 0 4-6.2 7.8-6.2 7.8z'
+		],
+		drawn: FILLED
+	},
 	// GitHub's mark, where claude-review lives (Octicons' mark-github)
 	github: {
 		viewBox: '0 0 16 16',

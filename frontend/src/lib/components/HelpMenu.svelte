@@ -70,7 +70,7 @@
 		<!-- The ask for a star stays in sight at the foot while the keys scroll: Help is opened on purpose, so it is
 			always there and never comes to the reader -->
 		{#snippet foot()}
-			<StarOnGitHub onfollow={() => review.guide.setHelpOpen(false)} />
+			<StarOnGitHub />
 		{/snippet}
 		{#snippet trigger(control)}
 			<Button

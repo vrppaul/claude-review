@@ -268,6 +268,13 @@
 
 	/* Every shadow the page is drawn with. What lifts a pane off the page it lies over: */
 	--cr-shadow-raised: 0 18px 48px rgb(0 0 0 / 0.45);
+	/*
+	 * Where more of what a pane holds stands past its head or its foot, out of sight: a soft shade at that edge,
+	 * this deep, and the room the pane's own ground carried with what it holds takes to cover it at its end
+	 */
+	--cr-shadow-scrolled-under: rgb(0 0 0 / 0.22);
+	--cr-scrolled-under-depth: 0.625rem;
+	--cr-scrolled-under-cover: 2rem;
 	/* The edge of a field the keyboard is in, twice as strong: a line inside it, over its own, nothing outside */
 	--cr-shadow-focused-edge: inset 0 0 0 var(--cr-line) var(--cr-focus-ring);
 	/* The tour's light: a ring round the control it points at, in a shade spread over any screen */
@@ -605,6 +612,8 @@
 	--cr-mark-text: #90b2f4;
 	/* What the tour lays over everything it is not pointing at */
 	--cr-shade: rgb(6 9 14 / 0.6);
+	/* The shade where more of what a pane holds stands out of sight: deeper, as a dark ground swallows a light one */
+	--cr-shadow-scrolled-under: rgb(0 0 0 / 0.55);
 	/* The agent's colour, for its words, its edges and its fills alike */
 	--cr-agent: #bca6ea;
 	/* The edge of a pane, and of a button that acts on what is read: a step above the lines between surfaces */

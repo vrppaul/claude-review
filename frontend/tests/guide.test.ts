@@ -14,6 +14,7 @@ import { fakeServer, SERVER_ERROR } from './fake-server';
 import { guideServer, guideServerIntroduced, guideServerIntroducingFeedback } from './guide-server';
 import type { Review } from '$lib/review/review.svelte';
 import { inReview, openReview } from './review';
+import { settled } from './settled';
 
 let review: Review;
 
@@ -551,19 +552,33 @@ describe('the ? list', () => {
 		expect(getByTestId('shortcuts-list')).toBeTruthy();
 	});
 
-	it('is put away as the reader follows the repository or Star to GitHub, as every way out of it is', async () => {
+	it('thanks the reader in place of the ask once they follow Star, with the keyboard on the thanks', async () => {
 		const opened = openReview({ files: [diffFile({ path: 'a.py', hunks: [hunk([contextLine(1, 1, 'x')])] })] });
 		const { getByTestId, queryByTestId } = render(ReviewScreen, { props: { review: opened } });
-		const stillOpen: boolean[] = [];
+		getByTestId('open-help').click();
+		await tick();
+		getByTestId('star-on-github').focus();
 
-		for (const wayOut of ['star-repository', 'star-on-github']) {
-			getByTestId('open-help').click();
-			await tick();
-			getByTestId(wayOut).click();
-			await tick();
-			stillOpen.push(queryByTestId('shortcuts-list') !== null);
-		}
+		getByTestId('star-on-github').click();
+		await settled();
 
-		expect(stillOpen).toEqual([false, false]);
+		expect(queryByTestId('star-on-github')).toBeNull();
+		expect(document.activeElement).toBe(getByTestId('star-on-github-thanks'));
+	});
+
+	it('asks again the next time Help opens: whether the reader starred it, the page cannot know', async () => {
+		const opened = openReview({ files: [diffFile({ path: 'a.py', hunks: [hunk([contextLine(1, 1, 'x')])] })] });
+		const { getByTestId, queryByTestId } = render(ReviewScreen, { props: { review: opened } });
+		getByTestId('open-help').click();
+		await tick();
+		getByTestId('star-on-github').click();
+		await tick();
+
+		getByTestId('open-help').click();
+		await tick();
+		getByTestId('open-help').click();
+		await tick();
+
+		expect([queryByTestId('star-on-github-thanks'), getByTestId('star-on-github')]).toEqual([null, expect.anything()]);
 	});
 });

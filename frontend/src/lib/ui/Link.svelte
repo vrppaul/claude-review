@@ -1,11 +1,8 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 
-	/**
-	 * Where a link leads: out of the review, to an address, with what the page does as the reader follows it, where
-	 * it does anything; or nowhere, doing something in place, as a button does.
-	 */
-	type Goes = { href: string; onfollow?: (() => void) | undefined } | { onclick: () => void };
+	/** Where a link leads: out of the review, to an address; or nowhere, doing something in place, as a button does. */
+	type Goes = { href: string } | { onclick: () => void };
 
 	type Props = Goes & {
 		testId: string;
@@ -20,14 +17,7 @@
 	out of the review opens in a tab of its own, so the review stays open, and tells the page it opens nothing of
 	where it came from -->
 {#if 'href' in goes}
-	<a
-		data-testid={testId}
-		class="cr-ui-link"
-		href={goes.href}
-		target="_blank"
-		rel="noopener noreferrer"
-		onclick={goes.onfollow}
-	>
+	<a data-testid={testId} class="cr-ui-link" href={goes.href} target="_blank" rel="noopener noreferrer">
 		{@render children()}
 	</a>
 {:else}
