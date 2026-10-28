@@ -12,6 +12,7 @@ export const SEND_LIMITS: SendLimits = {
 	max_quoted_lines: 200,
 	max_window_lines: 2000,
 	max_text_length: 50_000,
+	max_feedback_length: 49_000,
 	largest_file_shown_bytes: 4 * BYTES_PER_MEGABYTE
 };
 

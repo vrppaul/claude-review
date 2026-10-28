@@ -186,6 +186,21 @@ export function focusWhatCarries(role: string): void {
 }
 
 /**
+ * As `focusWhatRemains`, where what remains stands in a card whose body
+ * scrolls, past what a short window shows of it: the card's body is scrolled
+ * to it, and nothing else, as nothing else holds it.
+ */
+export function focusWhatRemainsInItsCard(find: FindWhatRemains): void {
+	void tick().then(() => giveIfOnNothing(find, focusInSight));
+}
+
+/** Put the keyboard on an element, scrolling what holds it as little as brings it into sight. */
+function focusInSight(element: HTMLElement): void {
+	element.focus({ preventScroll: true });
+	element.scrollIntoView({ block: 'nearest' });
+}
+
+/**
  * As `focusWhatRemains`, where what remains is words and no control: the
  * head of the part of a story the reader was taken to. The words hold the
  * keyboard until it leaves them, and can take it no more after.

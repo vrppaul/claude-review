@@ -13,6 +13,8 @@ import type {
 	CancelRequest,
 	ConversationResponse,
 	DiffResponse,
+	FeedbackIssue,
+	FeedbackRequest,
 	FileWindowResponse,
 	FollowRequest,
 	FollowResponse,
@@ -164,4 +166,9 @@ export function readGuide(): Promise<KeptGuide> {
 /** Keep how far the reader has been shown around, and say what is now kept. */
 export function keepGuide(change: GuideChange): Promise<GuideState> {
 	return read('put', '/api/guide', { body: change, doing: 'Could not remember what was shown' });
+}
+
+/** The issue the review writes of the reader's feedback, to the letter: nothing is sent anywhere by it. */
+export function writeFeedbackIssue(feedback: FeedbackRequest): Promise<FeedbackIssue> {
+	return read('post', '/api/feedback', { body: feedback, doing: 'Could not write the issue' });
 }

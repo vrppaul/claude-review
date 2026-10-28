@@ -664,8 +664,8 @@
 /* The guide: one card bottom left, a pane over everything it talks about, and a light over that */
 .cr-guide-place {
 	position: fixed;
-	left: --spacing(4);
-	bottom: --spacing(4);
+	left: var(--cr-window-room);
+	bottom: var(--cr-window-room);
 	z-index: var(--cr-layer-guide);
 }
 /* What the card holds, one part under another, as far in from its edge as a pane's head stands its heading */

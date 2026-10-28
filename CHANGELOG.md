@@ -1,5 +1,21 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- **Feedback on claude-review, from the review itself.** Help has a third
+  way, Send feedback: a card in the guide's corner takes a bug or an idea,
+  and Preview shows the issue the review writes of it, to the letter, under
+  its promise that none of the reader's code goes and nothing of their
+  review, with a link to the code that writes it. The version and system,
+  and what the reader was reading, each go as a row they can untick, and
+  the text shown is always what goes. Open on GitHub opens the issue filled
+  in, in a tab of its own; one too long for GitHub to take opens with its
+  title alone, its text copied to paste there. Hand to the agent gives it
+  to the reader's agent in its panel, to look for an issue like it and file
+  it once the reader says so. What was written and put away waits in the
+  card, and Help says so.
+
 ## [1.6.1] - 2026-10-26
 
 ### Fixed

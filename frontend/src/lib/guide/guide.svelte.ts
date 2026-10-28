@@ -4,7 +4,8 @@
  * One card, bottom left. Somebody who has never opened a review is
  * welcomed; somebody whose last review was an older release is told what
  * changed, when there is anything to tell; everybody else sees nothing.
- * The tour narrates from that same card while a light moves over the review.
+ * The tour narrates from that same card while a light moves over the review,
+ * and the reader's feedback, opened from Help, is written in it.
  *
  * Story, a way of reading the reader may never have tried, is introduced
  * once: by the news of the release that brought it, by the tour's stop at
@@ -23,7 +24,8 @@ import { RELEASE_NEWS, type ReleaseNews } from '$lib/guide/news';
 import { isNewer, latestNews, unseenNews } from '$lib/guide/news-choice';
 import { handOverLegacyRelease, legacySeenRelease, writeSeenRelease } from '$lib/guide/seen-release';
 
-export type GuideCard = 'welcome' | 'news';
+/** The card in the guide's corner: the welcome, what is new, or the reader's feedback, opened from Help. */
+export type GuideCard = 'welcome' | 'news' | 'feedback';
 
 /** Whether Story has been introduced to the reader, as far as this page knows: before the server says, it does not. */
 type StoryIntroduced = 'unknown' | 'introduced' | 'not';
@@ -76,6 +78,8 @@ export class Guide {
 	// Say that whether Story is introduced again could not be kept, as the page says what a request came to
 	readonly #notKept: (error: unknown) => void;
 	#card = $state<GuideCard | null>(null);
+	// The card the feedback's took the corner from, which it gives back as it goes
+	#behindFeedback: Exclude<GuideCard, 'feedback'> | null = null;
 	// The ? list: the tour, the news and the keys. Opened by the key or by the
 	// button in the header — a browser extension may have the key for itself.
 	#helpOpen = $state(false);
@@ -269,6 +273,22 @@ export class Guide {
 	showNews(): void {
 		const latest = this.latestNews;
 		if (latest) this.#show(latest);
+	}
+
+	/**
+	 * Open the card the reader writes their feedback in, in the corner's one
+	 * place: the tour stops for it, and the welcome or the news waits behind it.
+	 */
+	showFeedback(): void {
+		this.endTour();
+		if (this.#card !== 'feedback') this.#behindFeedback = this.#card;
+		this.#card = 'feedback';
+	}
+
+	/** Put the feedback's card away, giving the corner back to the card it took it from. */
+	closeFeedback(): void {
+		this.#card = this.#behindFeedback;
+		this.#behindFeedback = null;
 	}
 
 	startTour(): void {

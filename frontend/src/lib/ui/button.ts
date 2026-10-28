@@ -47,6 +47,19 @@ export const BUTTON_TONES: Record<ButtonTone, string> = {
 export const BUTTON_SIZES: Record<ButtonSize, string> = { xs: 'cr-ui-xs', sm: 'cr-ui-sm' };
 
 /**
+ * The classes a button is drawn with, whatever element it is: a button, or a link that leads out of the review
+ * as its act (LinkButton); and, for one of the ways a pane lists, the list's look.
+ */
+export function buttonLook(tone: ButtonTone, size: ButtonSize, listed: boolean): string[] {
+	return [
+		'cr-ui-button cr-pressable',
+		BUTTON_TONES[tone],
+		BUTTON_SIZES[size],
+		...(listed ? ['cr-ui-button-listed'] : [])
+	];
+}
+
+/**
  * - square: an icon alone, as tall as it is wide.
  * - notification: a mark with a figure on its corner, how many of what it
  *   opens wait: a button's room either side of its icon, so the figure

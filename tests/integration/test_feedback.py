@@ -16,7 +16,6 @@ LONGEST_USER_AGENT = f"Chrome/{'9' * 3_000}"
 LONGEST = {
     "kind": "idea",
     "words": "w" * MAX_FEEDBACK_WORDS,
-    "with_machine": True,
     "reading": {"view": "story", "theme": "dark", "window_width": MAX_PIXELS, "window_height": MAX_PIXELS},
     "part": {
         "name": "p" * MAX_PART_NAME_LENGTH,
@@ -25,13 +24,20 @@ LONGEST = {
         "width": MAX_PIXELS,
         "height": MAX_PIXELS,
     },
+    "going": ["machine", "reading", "part"],
 }
 
 
 async def test_the_issue_says_the_release_serving_the_review_and_the_browser_the_page_was_read_in(
     reviews: ReviewFactory,
 ) -> None:
-    sent = {"kind": "bug", "words": WORDS, "with_machine": True, "reading": None, "part": None}
+    sent = {
+        "kind": "bug",
+        "words": WORDS,
+        "reading": {"view": "files", "theme": "light", "window_width": 1440, "window_height": 900},
+        "part": None,
+        "going": ["machine"],
+    }
     async with http_client(reviews.app_of_change([])) as client:
         answered = (await client.post("/api/feedback", json=sent, headers={"user-agent": CHROME})).json()
 

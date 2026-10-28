@@ -18,6 +18,7 @@ from claude_review.domain.models import (
 )
 from claude_review.presentation.schemas.agent import AgentStatus, AgentWork
 from claude_review.presentation.schemas.base import MAX_TEXT_LENGTH, Schema
+from claude_review.presentation.schemas.feedback import MAX_FEEDBACK_WORDS
 from claude_review.services.file_window_service import MAX_WINDOW_LINES, FileWindow
 from claude_review.services.image_service import MAX_IMAGE_BYTES, MAX_IMAGES_PER_MESSAGE
 
@@ -108,6 +109,8 @@ class SendLimits(Schema):
     # The longest anything the reader writes may be: a comment, a reply, a
     # panel message, the summary of a round
     max_text_length: int
+    # The longest the reader's feedback on the review itself may be: less than a text, so the agent can be handed it
+    max_feedback_length: int
     # The largest file whose lines the diff shows, in bytes
     largest_file_shown_bytes: int
 
@@ -119,6 +122,7 @@ SEND_LIMITS = SendLimits(
     max_quoted_lines=MAX_QUOTE_LINES,
     max_window_lines=MAX_WINDOW_LINES,
     max_text_length=MAX_TEXT_LENGTH,
+    max_feedback_length=MAX_FEEDBACK_WORDS,
     largest_file_shown_bytes=LARGEST_FILE_SHOWN_BYTES,
 )
 

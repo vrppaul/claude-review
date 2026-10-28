@@ -277,6 +277,16 @@ export type SettingsChange = Schemas['SettingsChange'];
 /** How far the reader has been shown around, and whether that was kept yet: `KeptRecord[GuideState]`. */
 export type KeptGuide = Schemas['KeptRecord_GuideState_'];
 export type GuideChange = Schemas['GuideChange'];
+/** What a reader's feedback is: something wrong with claude-review, or something wanted of it. */
+export type FeedbackKind = Schemas['FeedbackKind'];
+/** What may go with the feedback's words, each a row the reader ticks or not. */
+export type GoesWithIt = Schemas['GoesWithIt'];
+/** What the reader wrote, what else may go with it, and what of that they left ticked to go. */
+export type FeedbackRequest = Schemas['FeedbackRequest'];
+/** What the reader was reading in as they wrote it: the view, the theme they saw and the window's size. */
+export type FeedbackReading = Schemas['ReadingSent'];
+/** The issue the review writes of it, to the letter, what each row sends, and the ways it can go. */
+export type FeedbackIssue = Schemas['FeedbackIssueResponse'];
 /** What the review says over its socket, on connecting and whenever its threads change. */
 export type SessionHello = SocketSchemas['SessionHello'];
 /** Where a page coming back had got to, named in the socket's address as it opens it. */

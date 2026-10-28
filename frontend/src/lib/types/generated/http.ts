@@ -1015,6 +1015,7 @@ export interface components {
             title: string;
             /** Body */
             body: string;
+            with_it: components["schemas"]["WithItSaidResponse"];
             /** Address */
             address: string;
             /** Filled */
@@ -1030,16 +1031,17 @@ export interface components {
         FeedbackKind: "bug" | "idea";
         /**
          * FeedbackRequest
-         * @description Request body for POST /api/feedback — what the reader wrote, and what they left ticked to go with it.
+         * @description Request body for POST /api/feedback — what the reader wrote, what else may go with it, and what of that they
+         *     left ticked to go.
          */
         FeedbackRequest: {
             kind: components["schemas"]["FeedbackKind"];
             /** Words */
             words: string;
-            /** With Machine */
-            with_machine: boolean;
-            reading: components["schemas"]["ReadingSent"] | null;
+            reading: components["schemas"]["ReadingSent"];
             part: components["schemas"]["PartSent"] | null;
+            /** Going */
+            going: components["schemas"]["GoesWithIt"][];
         };
         /**
          * FieldRefusal
@@ -1121,6 +1123,12 @@ export interface components {
             /** Commentable */
             commentable: boolean;
         };
+        /**
+         * GoesWithIt
+         * @description What may go with the words, each a row the reader ticks or not.
+         * @enum {string}
+         */
+        GoesWithIt: "machine" | "reading" | "part";
         /**
          * GuideChange
          * @description Request body for PUT /api/guide — what the reader has now been shown, and only that.
@@ -1763,6 +1771,8 @@ export interface components {
             max_window_lines: number;
             /** Max Text Length */
             max_text_length: number;
+            /** Max Feedback Length */
+            max_feedback_length: number;
             /** Largest File Shown Bytes */
             largest_file_shown_bytes: number;
         };
@@ -2322,6 +2332,18 @@ export interface components {
             versions: components["schemas"]["ReviewVersion"][];
         };
         WhereTheChangeIs: components["schemas"]["InRepository"] | components["schemas"]["OfFiles"] | components["schemas"]["OfConversation"];
+        /**
+         * WithItSaidResponse
+         * @description What each row that may go with the words says it sends, ticked or not, in the words the issue says it in.
+         */
+        WithItSaidResponse: {
+            /** Machine */
+            machine: string;
+            /** Reading */
+            reading: string;
+            /** Part */
+            part: string | null;
+        };
     };
     responses: never;
     parameters: never;

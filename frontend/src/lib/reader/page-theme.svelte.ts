@@ -39,6 +39,11 @@ export class PageTheme {
 		this.#settings = settings;
 	}
 
+	/** The theme the page is drawn in, the system's choice made one of the two. */
+	get resolved(): ResolvedTheme {
+		return this.#resolved;
+	}
+
 	/** The theme the page carries now, once one is applied: what to read the page's colours again by. */
 	get applied(): ResolvedTheme | null {
 		return this.#applied;

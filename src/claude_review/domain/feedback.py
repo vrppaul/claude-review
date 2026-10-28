@@ -56,15 +56,26 @@ class PointedPart(BaseModel):
     box: PartBox
 
 
+class GoesWithIt(StrEnum):
+    """What may go with the words, each a row the reader ticks or not."""
+
+    # Where the review runs: its release, the operating system and the browser
+    MACHINE = auto()
+    # What the reader was reading in
+    READING = auto()
+    # The part of the page they pointed at
+    PART = auto()
+
+
 class FeedbackDraft(BaseModel):
-    """What the reader wrote, and what of the rest they left ticked to go with it."""
+    """What the reader wrote, what else may go with it, and what of that they left ticked to go."""
 
     kind: FeedbackKind
     words: str
-    # Whether where the review runs goes with it: its release, the operating system and the browser
-    with_machine: bool
-    reading: Reading | None
+    reading: Reading
+    # None until the reader points at a part
     part: PointedPart | None
+    going: frozenset[GoesWithIt]
 
 
 class Machine(BaseModel):
@@ -75,11 +86,21 @@ class Machine(BaseModel):
     browser: str | None
 
 
+class WithItSaid(BaseModel):
+    """What each row that may go with the words says it sends, ticked or not, in the words the issue says it in."""
+
+    machine: str
+    reading: str
+    # None while no part is pointed at
+    part: str | None
+
+
 class FeedbackIssue(BaseModel):
     """The issue written of the feedback, to the letter, and the ways it can go: to GitHub, or to the agent."""
 
     title: str
     body: str
+    with_it: WithItSaid
     # The address that opens the issue on GitHub, filled in where it fits
     address: str
     # Whether the address carries the body too: one too long for GitHub to take carries the title alone

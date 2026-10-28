@@ -452,14 +452,15 @@ const BUTTON_IN_THE_LIBRARY = { elements: ['button'], message: PRESSED_IN_THE_LI
 // own that holds a primary or danger button among other acts, as its child or as a child of an {#if} or its
 // {:else}, is such a row laid out by hand. What these read past: a size or a tone handed in by an expression, a
 // button a snippet rendered into the row draws, an act under an {:else if}, an {#each} or a {#key}; and a button
-// in a pane opened from inside a row would be held as the row's own, though none stands there
+// in a pane opened from inside a row would be held as the row's own, though none stands there. A link that leads
+// out of the review as its act (LinkButton) is a button here as everywhere it is drawn
 const IN_A_ROW_OF_ACTIONS = "SvelteElement[kind='component'][name.name='Actions']";
-const A_BUTTON_OF_THE_LIBRARY = "SvelteElement[kind='component'][name.name=/^(Button|IconButton)$/]";
+const A_BUTTON_OF_THE_LIBRARY = "SvelteElement[kind='component'][name.name=/^(Button|IconButton|LinkButton)$/]";
 // A start tag naming the tone of a main act: the act a row leads to, or one that loses what was written
 const OF_A_MAIN_TONE =
 	"SvelteStartTag:has(> SvelteAttribute[key.name='tone']:has(> SvelteLiteral[value=/^(primary|danger)$/]))";
-const A_MAIN_ACT = `SvelteElement[kind='component'][name.name='Button']:has(> ${OF_A_MAIN_TONE})`;
-const AN_ACT = "SvelteElement[kind='component'][name.name=/^(Button|IconButton|ConfirmPopover)$/]";
+const A_MAIN_ACT = `SvelteElement[kind='component'][name.name=/^(Button|LinkButton)$/]:has(> ${OF_A_MAIN_TONE})`;
+const AN_ACT = "SvelteElement[kind='component'][name.name=/^(Button|IconButton|LinkButton|ConfirmPopover)$/]";
 const ANOTHER_ACT = `${AN_ACT}:not(:has(> ${OF_A_MAIN_TONE}))`;
 const THE_MAIN_ACT = `${IN_A_ROW_OF_ACTIONS} > SvelteSnippetBlock[id.name='main']`;
 const BESIDE_THE_MAIN_ACT = `${IN_A_ROW_OF_ACTIONS} > SvelteSnippetBlock[id.name!='main']`;

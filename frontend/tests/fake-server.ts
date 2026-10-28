@@ -65,7 +65,8 @@ const ROUTES = [
 	'POST /api/anchors/follow',
 	'POST /api/submit',
 	'POST /api/retake',
-	'POST /api/end'
+	'POST /api/end',
+	'POST /api/feedback'
 ] as const;
 
 export type Route = (typeof ROUTES)[number];

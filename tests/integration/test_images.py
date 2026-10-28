@@ -18,6 +18,7 @@ from structlog.typing import EventDict
 from claude_review.domain.models import LARGEST_FILE_SHOWN_BYTES, MAX_QUOTE_LINES, TurnAuthor
 from claude_review.hosting.workspace import ReviewWorkspace
 from claude_review.presentation.schemas.base import MAX_TEXT_LENGTH
+from claude_review.presentation.schemas.feedback import MAX_FEEDBACK_WORDS
 from claude_review.services.file_window_service import MAX_WINDOW_LINES
 from claude_review.services.image_service import MAX_IMAGE_BYTES, MAX_IMAGES_PER_MESSAGE, MAX_REVIEW_BYTES
 from tests.helpers import (
@@ -250,6 +251,7 @@ async def test_the_browser_is_told_the_limits(client: AsyncClient) -> None:
         "max_quoted_lines": MAX_QUOTE_LINES,
         "max_window_lines": MAX_WINDOW_LINES,
         "max_text_length": MAX_TEXT_LENGTH,
+        "max_feedback_length": MAX_FEEDBACK_WORDS,
         "largest_file_shown_bytes": LARGEST_FILE_SHOWN_BYTES,
     }
 

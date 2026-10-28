@@ -13,6 +13,8 @@
 	const HEADING = 'Help';
 	// The list's own key, and every open pane's: not one the review answers, so listed after those it does
 	const CLOSING_KEY = { keys: ['Esc'], does: 'Close it' };
+	// What Send feedback says at its end while words written in the card wait there
+	const DRAFT_KEPT = 'draft kept';
 
 	const review = useReview();
 
@@ -27,6 +29,12 @@
 		review.guide.showNews();
 	}
 
+	/** Leave the list for the card the reader writes their feedback in, in the guide's corner. */
+	function writeFeedback() {
+		review.guide.setHelpOpen(false);
+		review.guide.showFeedback();
+	}
+
 	/**
 	 * ? opened the list, and closes it again — answered here, so the review
 	 * does not open it once more; the pane gives the keyboard back to where
@@ -39,7 +47,8 @@
 	}
 </script>
 
-<!-- The way back to the tour and the news, and the keys: a pane under Help, as Settings is under its control.
+<!-- The way back to the tour and the news, the way to send feedback, and the keys: a pane under Help, as Settings is
+	under its control.
 	? opens it from anywhere, and the ? key may belong to a browser extension, so it has a button too -->
 <Popover
 	bind:open={() => review.guide.helpOpen, (open: boolean) => review.guide.setHelpOpen(open)}
@@ -57,7 +66,7 @@
 			size="sm"
 			testId="open-help"
 			data-role={HELP_BUTTON_ROLE}
-			title="The tour, what is new, and the keys (?)"
+			title="The tour, what is new, feedback, and the keys (?)"
 		>
 			<!-- Its key alone once the window narrows, its name kept for a screen reader and on the pointer -->
 			<Key keys="?" stands="inline" testId="help-key" />
@@ -66,12 +75,18 @@
 	{/snippet}
 
 	<div class="flex flex-col p-3">
-		<!-- The ways back to the tour and the news, a button each, one under the other -->
+		<!-- The ways back to the tour and the news, and the way to send feedback, a button each, one under the other -->
 		<div class="mb-4 flex flex-col gap-1.5">
-			<Button tone="secondary" size="sm" listed testId="take-tour" onclick={takeTour}>
+			<Button
+				tone="secondary"
+				size="sm"
+				listed
+				note="{review.guide.stepCount} stops"
+				testId="take-tour"
+				onclick={takeTour}
+			>
 				<Icon name="compass" size="sm" tone="reader" />
 				Take the tour again
-				<span class="cr-faint ms-auto font-normal">{review.guide.stepCount} stops</span>
 			</Button>
 			{#if review.guide.latestNews}
 				<Button tone="secondary" size="sm" listed testId="read-news" onclick={readNews}>
@@ -79,6 +94,18 @@
 					What's new in {review.guide.latestNews.release}
 				</Button>
 			{/if}
+			<!-- What was written and put away waits in the card, which says so at its way in -->
+			<Button
+				tone="secondary"
+				size="sm"
+				listed
+				note={review.feedback.written ? DRAFT_KEPT : undefined}
+				testId="send-feedback"
+				onclick={writeFeedback}
+			>
+				<Icon name="feedback" size="sm" tone="reader" />
+				Send feedback
+			</Button>
 		</div>
 		<section class="flex flex-col gap-3">
 			<Heading tag="h3" heads="list">Keyboard</Heading>

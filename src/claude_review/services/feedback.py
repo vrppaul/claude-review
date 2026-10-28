@@ -16,11 +16,13 @@ from claude_review.domain.feedback import (
     FeedbackDraft,
     FeedbackIssue,
     FeedbackKind,
+    GoesWithIt,
     Machine,
     PointedPart,
     Reading,
     ReadingView,
     ShownTheme,
+    WithItSaid,
 )
 
 # Where the issue goes, the address that opens a new one there, and the fields of its form that address fills
@@ -36,6 +38,9 @@ TITLE_LONGEST = 80
 # What a title cut short ends with, and what stands between a size's width and height
 ELLIPSIS = "…"
 TIMES = "\N{MULTIPLICATION SIGN}"
+# How the issue begins the line of what the reader was reading in, and the line of the part they pointed at
+READING_LEAD = "Reading"
+PART_LEAD = "Pointed at"
 # What the agent is handed besides the words: its lead-in, the title and the rows, each at the longest the API
 # takes, fit in this many characters; the test that hands the longest feedback to the agent holds it
 ROOM_AROUND_THE_WORDS = 1_000
@@ -69,12 +74,14 @@ BROWSER_MARKS = (
 def issue_of(draft: FeedbackDraft, machine: Machine) -> FeedbackIssue:
     """The issue written of the feedback, and the address that opens it on GitHub, filled in where that fits."""
     title = _title(draft)
-    body = _body(draft, machine)
+    with_it = _with_it_said(draft, machine)
+    body = _body(draft, with_it)
     filled_address = _address(title=title, body=body)
     filled = len(filled_address) <= FILLED_ADDRESS_LONGEST
     return FeedbackIssue(
         title=title,
         body=body,
+        with_it=with_it,
         address=filled_address if filled else _address(title=title),
         filled=filled,
         for_agent=_for_agent(draft.kind, title, body),
@@ -117,36 +124,45 @@ def _title(draft: FeedbackDraft) -> str:
     return heading + kept + ELLIPSIS
 
 
-def _body(draft: FeedbackDraft, machine: Machine) -> str:
+def _with_it_said(draft: FeedbackDraft, machine: Machine) -> WithItSaid:
+    """What each row that may go with the words sends, ticked or not, so the reader sees it before they choose."""
+    return WithItSaid(
+        machine=_machine_words(machine),
+        reading=_reading_words(draft.reading),
+        part=None if draft.part is None else _part_words(draft.part),
+    )
+
+
+def _body(draft: FeedbackDraft, said: WithItSaid) -> str:
     """What was written, then a line for each thing the reader left ticked to go with it."""
     words = draft.words.strip()
     with_it: list[str] = []
-    if draft.with_machine:
-        with_it.append(_machine_line(machine))
-    if draft.reading is not None:
-        with_it.append(_reading_line(draft.reading))
-    if draft.part is not None:
-        with_it.append(_part_line(draft.part))
+    if GoesWithIt.MACHINE in draft.going:
+        with_it.append(said.machine)
+    if GoesWithIt.READING in draft.going:
+        with_it.append(f"{READING_LEAD} {said.reading}")
+    if GoesWithIt.PART in draft.going and said.part is not None:
+        with_it.append(f"{PART_LEAD} {said.part}")
     if not with_it:
         return words
     return f"{words}\n\n" + "\n".join(with_it)
 
 
-def _machine_line(machine: Machine) -> str:
+def _machine_words(machine: Machine) -> str:
     browser = "" if machine.browser is None else f", {machine.browser}"
     return f"claude-review {machine.release}, {machine.operating_system}{browser}"
 
 
-def _reading_line(reading: Reading) -> str:
+def _reading_words(reading: Reading) -> str:
     return (
-        f"Reading {VIEW_NAMES[reading.view]}, the {THEME_NAMES[reading.theme]} theme, "
+        f"{VIEW_NAMES[reading.view]}, the {THEME_NAMES[reading.theme]} theme, "
         f"a window {reading.window_width} {TIMES} {reading.window_height}"
     )
 
 
-def _part_line(part: PointedPart) -> str:
+def _part_words(part: PointedPart) -> str:
     box = part.box
-    return f"Pointed at {part.name}, {box.width} {TIMES} {box.height} at {box.left}, {box.top}"
+    return f"{part.name}, {box.width} {TIMES} {box.height} at {box.left}, {box.top}"
 
 
 def _address(*, title: str, body: str | None = None) -> str:

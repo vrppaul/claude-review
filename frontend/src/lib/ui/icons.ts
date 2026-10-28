@@ -30,6 +30,8 @@ const WINDOW = 'M3.5 3h9a1.5 1.5 0 0 1 1.5 1.5v7a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.
 const RING = 'M2 8a6 6 0 1 0 12 0a6 6 0 1 0 -12 0';
 // A page with its top corner cut off, which a file and a change suggested to one are drawn on
 const PAGE = 'M4 2.5h5l3 3v8H4z';
+// A speech bubble, its tail at the bottom left, which a word said and a word sent are drawn in
+const SPEECH_BUBBLE = 'M2.5 4.5h11v7h-6l-3 2.5v-2.5h-2z';
 
 export const ICONS = {
 	// An arrow coming round to where it began: a round of the review, and the one a story was told in
@@ -139,7 +141,15 @@ export const ICONS = {
 	},
 	reply: { viewBox: '0 0 16 16', paths: ['M4 3v5.5a2 2 0 0 0 2 2h6', 'M9.5 8l3 2.5-3 2.5'], drawn: TRACED },
 	// A speech bubble: a word with the agent, in its panel or about a block of the story
-	conversation: { viewBox: '0 0 16 16', paths: ['M2.5 4.5h11v7h-6l-3 2.5v-2.5h-2z'], drawn: TRACED },
+	conversation: { viewBox: '0 0 16 16', paths: [SPEECH_BUBBLE], drawn: TRACED },
+	// A speech bubble with a mark in it: a word to whoever makes claude-review, a bug or an idea
+	feedback: { viewBox: '0 0 16 16', paths: [SPEECH_BUBBLE, 'M8 6.4v2.2', 'M8 10.1v.1'], drawn: TRACED },
+	// A shield with a check on it: what the review keeps to, as what goes with feedback is all it shows
+	kept: {
+		viewBox: '0 0 16 16',
+		paths: ['M8 2l5 2v4c0 3-2.2 5.2-5 6-2.8-.8-5-3-5-6V4z', 'M5.8 8.2l1.6 1.6 3-3.2'],
+		drawn: TRACED
+	},
 	// Two rings, one inside the other: what was asked, the task a story begins with
 	target: {
 		viewBox: '0 0 16 16',

@@ -12,11 +12,13 @@ from claude_review.domain.feedback import (
     FeedbackDraft,
     FeedbackIssue,
     FeedbackKind,
+    GoesWithIt,
     PartBox,
     PointedPart,
     Reading,
     ReadingView,
     ShownTheme,
+    WithItSaid,
 )
 from claude_review.presentation.schemas.base import MAX_TEXT_LENGTH, SaidWords, Schema, made_or_none
 from claude_review.services.feedback import ROOM_AROUND_THE_WORDS
@@ -73,25 +75,40 @@ class PartSent(Schema):
 
 
 class FeedbackRequest(Schema):
-    """Request body for POST /api/feedback — what the reader wrote, and what they left ticked to go with it."""
+    """Request body for POST /api/feedback — what the reader wrote, what else may go with it, and what of that they
+    left ticked to go."""
 
     model_config = ConfigDict(extra="forbid")
 
     kind: FeedbackKind
     words: FeedbackWords
-    # Whether where the review runs goes with it: its release, the operating system and the browser
-    with_machine: StrictBool
-    reading: ReadingSent | None
+    reading: ReadingSent
+    # None until the reader points at a part
     part: PartSent | None
+    # The rows left ticked: one named twice goes once
+    going: list[GoesWithIt]
 
     def to_domain(self) -> FeedbackDraft:
         return FeedbackDraft(
             kind=self.kind,
             words=self.words,
-            with_machine=self.with_machine,
-            reading=made_or_none(ReadingSent.to_domain, self.reading),
+            reading=self.reading.to_domain(),
             part=made_or_none(PartSent.to_domain, self.part),
+            going=frozenset(self.going),
         )
+
+
+class WithItSaidResponse(Schema):
+    """What each row that may go with the words says it sends, ticked or not, in the words the issue says it in."""
+
+    machine: str
+    reading: str
+    # None while no part is pointed at
+    part: str | None
+
+    @classmethod
+    def from_domain(cls, said: WithItSaid) -> Self:
+        return cls(machine=said.machine, reading=said.reading, part=said.part)
 
 
 class FeedbackIssueResponse(Schema):
@@ -99,6 +116,7 @@ class FeedbackIssueResponse(Schema):
 
     title: str
     body: str
+    with_it: WithItSaidResponse
     # The address that opens the issue on GitHub, filled in where it fits
     address: str
     # Whether the address carries the body too: one too long for GitHub to take carries the title alone
@@ -109,5 +127,10 @@ class FeedbackIssueResponse(Schema):
     @classmethod
     def from_domain(cls, issue: FeedbackIssue) -> Self:
         return cls(
-            title=issue.title, body=issue.body, address=issue.address, filled=issue.filled, for_agent=issue.for_agent
+            title=issue.title,
+            body=issue.body,
+            with_it=WithItSaidResponse.from_domain(issue.with_it),
+            address=issue.address,
+            filled=issue.filled,
+            for_agent=issue.for_agent,
         )

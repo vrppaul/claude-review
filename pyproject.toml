@@ -235,6 +235,7 @@ ignore_names = [
     "max_quoted_lines",
     "max_window_lines",
     "max_text_length",
+    "max_feedback_length",
     "largest_file_shown_bytes",
     "ended",
     # A schema's parts, taken apart by TypeAdapter.json_schemas

@@ -189,6 +189,14 @@
 	 */
 	--cr-pane-medium: 20rem;
 	--cr-pane-wide: 24rem;
+	/*
+	 * How far a pane that stands by itself (lib/ui Pane) stands from the
+	 * window's edges: the guide's card in its corner, and no nearer on a
+	 * window narrower or shorter than the pane
+	 */
+	--cr-window-room: --spacing(4);
+	--cr-pane-standing-widest: calc(100vw - 2 * var(--cr-window-room));
+	--cr-pane-standing-tallest: calc(100dvh - 2 * var(--cr-window-room));
 	/* The tallest the list of threads to mention stands over the field, before it scrolls itself */
 	--cr-mention-list-tallest: 15rem;
 	/*

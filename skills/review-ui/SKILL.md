@@ -162,6 +162,11 @@ somebody who is waiting.
      the text may be empty when an image is the whole question: open each
      with your file reader before answering. They outlive the review in
      the system's temporary directory, so the last round's are still there.
+     A message that begins `Feedback on claude-review` is the user's
+     feedback on this tool, not on the change: do as it says. Look for an
+     issue like it (`gh issue list --repo vrppaul/claude-review --search
+     ...`), answer with the title and body you will file and any issue you
+     found, and run `gh issue create` only once they say so.
    - `{"type":"round","round":{"number":1,"markdown":"..."}}` — the
      user has sent a round. Say so first, with `progress` (step 8): they
      wait on it. The markdown is the review itself; address it as

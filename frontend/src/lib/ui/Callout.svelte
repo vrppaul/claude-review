@@ -15,9 +15,11 @@
 		testId: string;
 		/** What it says after them. */
 		children: Snippet;
+		/** Where what it says can be checked, a link: "Read the code that writes it". */
+		check?: Snippet | undefined;
 	}
 
-	let { tone, lead, underWay, testId, children }: Props = $props();
+	let { tone, lead, underWay, testId, children, check }: Props = $props();
 
 	const drawn = $derived(CALLOUT_LOOKS[tone]);
 </script>
@@ -33,6 +35,9 @@
 					><BreathingDots tone="quiet" testId="{testId}-under-way-dots" />{underWay}</Standing
 				>
 			</p>
+		{/if}
+		{#if check}
+			<p class="cr-ui-callout-check">{@render check()}</p>
 		{/if}
 	</div>
 </div>

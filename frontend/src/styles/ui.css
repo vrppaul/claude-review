@@ -120,6 +120,12 @@
 	justify-content: flex-start;
 	gap: --spacing(2);
 }
+/* What a listed way says of itself at its end (Button's note): quieter than its words, as what explains a part */
+.cr-ui-button-note {
+	margin-inline-start: auto;
+	color: var(--cr-faint);
+	font-weight: var(--font-weight-normal);
+}
 /*
  * Where the room a button stands in grows narrow (button-room: a card of
  * lists, a frame of code), one whose words give way
@@ -728,6 +734,18 @@
 .cr-ui-pane-foot {
 	flex-shrink: 0;
 	border-top: var(--cr-line) solid var(--color-base-300);
+}
+/*
+ * A pane that stands by itself (Pane), where whoever draws it places it: no
+ * wider and no taller than the window leaves it, its room kept from the
+ * window's edges, so a phone narrows it and what it holds scrolls under
+ * its head
+ */
+.cr-ui-pane-standing {
+	display: flex;
+	flex-direction: column;
+	max-width: var(--cr-pane-standing-widest);
+	max-height: var(--cr-pane-standing-tallest);
 }
 /*
  * A pane that stands by a control (PopoverPanel), over what is under it,
@@ -1666,6 +1684,16 @@
 	font-size: var(--cr-code-size);
 	line-height: var(--cr-code-leading);
 }
+/*
+ * A text read to the letter: its lines broken again where the box ends, so
+ * no word hides past its edge, in plain ink, as what matters most where it
+ * stands
+ */
+.cr-ui-code-box-wrapped {
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+	color: var(--color-base-content);
+}
 
 /*
  * An icon (Icon), in the colour of the words it stands in, never squeezed
@@ -1838,7 +1866,8 @@
 .cr-ui-callout-lead {
 	font-weight: var(--font-weight-semibold);
 }
-.cr-ui-callout-under-way {
+.cr-ui-callout-under-way,
+.cr-ui-callout-check {
 	margin-top: --spacing(1);
 }
 .cr-ui-callout-agent {
@@ -1852,6 +1881,13 @@
 }
 .cr-ui-callout-warning .cr-ui-callout-lead {
 	color: var(--color-warning);
+}
+/* What the review promises: its own word, so in ink, on the ink's tint */
+.cr-ui-callout-kept {
+	background-color: var(--cr-ink-tint);
+}
+.cr-ui-callout-kept .cr-ui-callout-lead {
+	color: var(--color-base-content);
 }
 
 /*

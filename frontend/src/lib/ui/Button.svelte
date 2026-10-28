@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import type { HTMLButtonAttributes } from 'svelte/elements';
-	import { BUTTON_SIZES, BUTTON_TONES, type ButtonSize, type ButtonTone } from './button';
+	import { buttonLook, type ButtonSize, type ButtonTone } from './button';
 
 	interface Props extends Omit<HTMLButtonAttributes, 'class' | 'style' | 'type' | 'children'> {
 		/** What it is to the reader beside its neighbours. */
@@ -13,6 +13,8 @@
 		 * so the ways read down as a list; none for a button among others in a line.
 		 */
 		listed?: boolean;
+		/** What a way a pane lists says of itself at its end, quieter than its words: "7 stops", "draft kept". */
+		note?: string | undefined;
 		/** The button itself, for whoever hands the keyboard to it. */
 		element?: HTMLButtonElement | undefined;
 		/** What it says: its words, an icon before them; or its icon alone, where its words may give way to it. */
@@ -30,6 +32,7 @@
 		size,
 		testId,
 		listed = false,
+		note,
 		element = $bindable(),
 		children,
 		wordsGivingWay,
@@ -39,14 +42,8 @@
 
 <!-- A button of the page, drawn as its tone and size say: what it is handed besides lands on the element, and
 	its test id and look are the library's alone, written after it -->
-<button
-	bind:this={element}
-	type="button"
-	{...attributes}
-	data-testid={testId}
-	class={['cr-ui-button cr-pressable', BUTTON_TONES[tone], BUTTON_SIZES[size], listed && 'cr-ui-button-listed']}
->
+<button bind:this={element} type="button" {...attributes} data-testid={testId} class={buttonLook(tone, size, listed)}>
 	{@render children()}{#if wordsGivingWay}<span class="cr-ui-button-words-giving-way @max-cr-narrow/button-room:sr-only"
 			>{wordsGivingWay}</span
-		>{/if}
+		>{/if}{#if note}<span class="cr-ui-button-note">{note}</span>{/if}
 </button>

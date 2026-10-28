@@ -16,10 +16,13 @@
 </script>
 
 <!-- A pane that stands by itself, where whoever draws it places it: the look of every pane, with nothing of a
-	control's or a modal's, headed as every pane is where it has a head -->
-<section {...attributes} data-testid={testId} class={['cr-ui-pane', PANE_WIDTHS[width]]}>
+	control's or a modal's, headed as every pane is where it has a head, and kept inside the window, what it holds
+	scrolling under its head -->
+<section {...attributes} data-testid={testId} class={['cr-ui-pane cr-ui-pane-standing', PANE_WIDTHS[width]]}>
 	{#if head}
 		<PaneHead {head} {testId} />
 	{/if}
-	{@render children()}
+	<div class="cr-scroller cr-ui-pane-body">
+		{@render children()}
+	</div>
 </section>

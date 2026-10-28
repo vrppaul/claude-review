@@ -18,6 +18,7 @@ import { Answerer } from '$lib/review/answerer.svelte';
 import { Clock } from '$lib/review/clock.svelte';
 import { CommentFields } from '$lib/review/comment-fields';
 import { Conversation } from '$lib/review/conversation.svelte';
+import { Feedback } from '$lib/review/feedback.svelte';
 import { FileSections } from '$lib/dom/file-sections';
 import { Jumps } from '$lib/dom/jump';
 import { ReadingParts } from '$lib/dom/reading-parts';
@@ -117,6 +118,8 @@ export class Review {
 	/** The story the agent told of the change, if it told one. */
 	readonly story: ReviewStory;
 	readonly guide: Guide;
+	/** The reader's feedback on claude-review itself, written in the guide's corner. */
+	readonly feedback: Feedback;
 	// Where the page is taking the reader: one jump at a time, whether to a section or to a part of the story
 	readonly #jumps = new Jumps();
 	readonly sections = new FileSections(this.#jumps);
@@ -197,6 +200,15 @@ export class Review {
 			this.story.canBeTold && this.storyViewOpens,
 			this.diff
 		);
+		this.feedback = new Feedback({
+			reading: () => ({
+				view: this.views.onScreen.name,
+				theme: this.theme.resolved,
+				window_width: window.innerWidth,
+				window_height: window.innerHeight
+			}),
+			handToAgent: (words) => this.conversation.hand(words)
+		});
 		this.wayIntoStory = new WayIntoStory(this.views, this.guide, {
 			viewOpens: () => this.storyViewOpens,
 			askedFirst: () => !writesWithoutAsking(this.settings.current.story_writing),

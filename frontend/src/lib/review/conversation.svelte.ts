@@ -19,6 +19,9 @@ import { threadOnTheWire } from '$lib/api/thread-wire';
 import { messageOf } from '$lib/utils/errors';
 import { AGENT, READER, THE_REVIEW } from '$lib/utils/speakers';
 
+// Why a message handed over while another is on its way does not go
+const ONE_AT_A_TIME = 'Another message is on its way to the agent: try again once it has gone.';
+
 /** What the agent said, as it is pushed and as the review holds it: under its id, answering a message or not. */
 type AgentWords = Pick<ChatPush, 'said_id' | 'message_id' | 'body' | 'files'>;
 
@@ -142,38 +145,53 @@ export class Conversation {
 	 */
 	async send(threads: Thread[]): Promise<boolean> {
 		if (this.#sending) return false;
-		this.#sending = true;
 		this.#failed = null;
 		const written = this.composer.text;
-		const text = written.trim();
 		const images = [...this.composer.attachments.images];
+		try {
+			await this.#deliver(written.trim(), threads, images);
+		} catch (error) {
+			this.#failed = messageOf(error);
+			return false;
+		}
+		this.composer.takeSent(written, images);
+		return true;
+	}
+
+	/**
+	 * Hand the agent words written elsewhere than the panel's field — a
+	 * reader's feedback on the review itself — as a message of theirs, said
+	 * in the panel and answered there. It throws where they did not go, for
+	 * whoever handed them to say why.
+	 */
+	async hand(words: string): Promise<void> {
+		await this.#deliver(words, [], []);
+	}
+
+	/**
+	 * Say a message of the reader's in the panel and send it, one at a time; one that never reached the agent is
+	 * taken off.
+	 */
+	async #deliver(body: string, threads: Thread[], images: string[]): Promise<void> {
+		if (this.#sending) throw new Error(ONE_AT_A_TIME);
+		this.#sending = true;
 		const id = this.#messageIds.next();
 		this.#say({
 			id,
 			author: READER,
-			body: text,
+			body,
 			at: Date.now(),
 			threads: threads.map((thread) => thread.id),
 			images
 		});
-
 		try {
-			await sendMessage({
-				message_id: id,
-				body: text,
-				threads: threads.map(threadOnTheWire),
-				images
-			});
+			await sendMessage({ message_id: id, body, threads: threads.map(threadOnTheWire), images });
 		} catch (error) {
-			// Never reached the agent, so it is taken off the conversation
 			this.#turns = this.#turns.filter((turn) => turn.id !== id);
-			this.#failed = messageOf(error);
-			return false;
+			throw error;
 		} finally {
 			this.#sending = false;
 		}
-		this.composer.takeSent(written, images);
-		return true;
 	}
 
 	/**

@@ -7,6 +7,7 @@ import pytest
 from claude_review.domain.feedback import (
     FeedbackDraft,
     FeedbackKind,
+    GoesWithIt,
     Machine,
     PartBox,
     PointedPart,
@@ -39,11 +40,10 @@ def _draft(
     words: str = WORDS,
     *,
     kind: FeedbackKind = FeedbackKind.BUG,
-    with_machine: bool = False,
-    reading: Reading | None = None,
-    part: PointedPart | None = None,
+    part: PointedPart | None = PART,
+    going: frozenset[GoesWithIt] = frozenset(),
 ) -> FeedbackDraft:
-    return FeedbackDraft(kind=kind, words=words, with_machine=with_machine, reading=reading, part=part)
+    return FeedbackDraft(kind=kind, words=words, reading=READING, part=part, going=going)
 
 
 def _query(address: str) -> dict[str, list[str]]:
@@ -73,13 +73,11 @@ def test_an_issue_is_titled_by_its_kind_and_the_first_line_written_cut_at_a_word
     ("draft", "body"),
     [
         (_draft(), WORDS),
-        (_draft(with_machine=True), f"{WORDS}\n\n{MACHINE_LINE}"),
-        (_draft(reading=READING), f"{WORDS}\n\n{READING_LINE}"),
-        (_draft(part=PART), f"{WORDS}\n\n{PART_LINE}"),
-        (
-            _draft(with_machine=True, reading=READING, part=PART),
-            f"{WORDS}\n\n{MACHINE_LINE}\n{READING_LINE}\n{PART_LINE}",
-        ),
+        (_draft(going=frozenset({GoesWithIt.MACHINE})), f"{WORDS}\n\n{MACHINE_LINE}"),
+        (_draft(going=frozenset({GoesWithIt.READING})), f"{WORDS}\n\n{READING_LINE}"),
+        (_draft(going=frozenset({GoesWithIt.PART})), f"{WORDS}\n\n{PART_LINE}"),
+        (_draft(part=None, going=frozenset({GoesWithIt.PART})), WORDS),
+        (_draft(going=frozenset(GoesWithIt)), f"{WORDS}\n\n{MACHINE_LINE}\n{READING_LINE}\n{PART_LINE}"),
     ],
 )
 def test_an_issue_carries_what_was_written_and_only_what_the_reader_left_ticked(
@@ -88,8 +86,18 @@ def test_an_issue_carries_what_was_written_and_only_what_the_reader_left_ticked(
     assert issue_of(draft, MACHINE).body == body
 
 
+def test_each_row_says_what_it_sends_ticked_or_not() -> None:
+    said = issue_of(_draft(), MACHINE).with_it
+
+    assert (said.machine, said.reading, said.part) == (
+        MACHINE_LINE,
+        "Files, the light theme, a window 1440 × 900",
+        "the header's view switch › Story, 74 × 32 at 196, 8",
+    )
+
+
 def test_the_issue_opens_on_github_filled_in_to_the_letter() -> None:
-    issue = issue_of(_draft(with_machine=True), MACHINE)
+    issue = issue_of(_draft(going=frozenset({GoesWithIt.MACHINE})), MACHINE)
 
     assert (issue.filled, _query(issue.address)) == (True, {"title": [issue.title], "body": [issue.body]})
 
@@ -101,7 +109,7 @@ def test_an_issue_too_long_to_fill_in_opens_with_its_title_alone() -> None:
 
 
 def test_the_agent_is_handed_the_issue_to_file_as_written_once_the_reader_has_seen_it() -> None:
-    issue = issue_of(_draft(with_machine=True), MACHINE)
+    issue = issue_of(_draft(going=frozenset({GoesWithIt.MACHINE})), MACHINE)
 
     assert issue.for_agent == (
         "Feedback on claude-review, a bug, for vrppaul/claude-review. Look for an issue like it first, then show me "

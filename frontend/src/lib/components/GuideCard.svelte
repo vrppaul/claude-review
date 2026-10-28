@@ -11,6 +11,7 @@
 	import Link from '$lib/ui/Link.svelte';
 	import Pane from '$lib/ui/Pane.svelte';
 	import Tag from '$lib/ui/Tag.svelte';
+	import FeedbackCard from './FeedbackCard.svelte';
 	import NewsIllustration from './NewsIllustration.svelte';
 	import { HELP_BUTTON_ROLE } from './keymap';
 
@@ -78,7 +79,7 @@
 	}
 </script>
 
-<!-- One card, bottom left: the welcome, what is new, or the tour talking -->
+<!-- One card, bottom left: the welcome, what is new, the tour talking, or the reader's feedback -->
 {#if review.guide.touring && step}
 	<div class="cr-guide-place">
 		<Pane width="medium" testId="guide-tour" aria-label="Tour of the review">
@@ -173,6 +174,10 @@
 				</p>
 			</div>
 		</Pane>
+	</div>
+{:else if review.guide.card === 'feedback'}
+	<div class="cr-guide-place">
+		<FeedbackCard />
 	</div>
 {:else if review.guide.card === 'news' && news}
 	<div class="cr-guide-place">
