@@ -50,15 +50,19 @@ THEME_NAMES = {ShownTheme.LIGHT: "light", ShownTheme.DARK: "dark"}
 # The operating systems by the names their makers give them, where Python's differs
 OPERATING_SYSTEM_NAMES = {"Darwin": "macOS"}
 
+# The most digits a browser's release is read with: a user agent is whatever the request says, and no browser
+# numbers a release past this
+RELEASE_DIGITS_MOST = 5
+RELEASE = rf"(?P<release>\d{{1,{RELEASE_DIGITS_MOST}}})"
 # A browser by the mark its user agent carries, and the number of its release after it. In this order: Edge and
 # Opera carry Chrome's mark as well, and Chrome carries Safari's, so the more particular mark is read first;
 # Safari numbers its release after `Version/`
 BROWSER_MARKS = (
-    ("Edge", re.compile(r"Edg/(?P<release>\d+)")),
-    ("Opera", re.compile(r"OPR/(?P<release>\d+)")),
-    ("Firefox", re.compile(r"Firefox/(?P<release>\d+)")),
-    ("Chrome", re.compile(r"Chrome/(?P<release>\d+)")),
-    ("Safari", re.compile(r"Version/(?P<release>\d+)[^ ]* Safari/")),
+    ("Edge", re.compile(rf"Edg/{RELEASE}")),
+    ("Opera", re.compile(rf"OPR/{RELEASE}")),
+    ("Firefox", re.compile(rf"Firefox/{RELEASE}")),
+    ("Chrome", re.compile(rf"Chrome/{RELEASE}")),
+    ("Safari", re.compile(rf"Version/{RELEASE}[^ ]* Safari/")),
 )
 
 

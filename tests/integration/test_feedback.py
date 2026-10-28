@@ -10,6 +10,8 @@ from tests.helpers import ReviewFactory, http_client
 WORDS = "The tree forgets a folder I folded."
 # The browser a reader on Linux reads the page in, as it names itself
 CHROME = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
+# A user agent naming a browser by a release as long as anyone may write one: the request says what it likes
+LONGEST_USER_AGENT = f"Chrome/{'9' * 3_000}"
 # Feedback as long as the API takes it, with everything that may go with it, each at the longest it may be written
 LONGEST = {
     "kind": "idea",
@@ -42,7 +44,7 @@ async def test_the_longest_feedback_is_handed_to_the_agent_as_a_message_the_pane
     reviews: ReviewFactory,
 ) -> None:
     async with http_client(reviews.app_of_change([])) as client:
-        issue = (await client.post("/api/feedback", json=LONGEST, headers={"user-agent": CHROME})).json()
+        issue = (await client.post("/api/feedback", json=LONGEST, headers={"user-agent": LONGEST_USER_AGENT})).json()
         handed = await client.post(
             "/api/message", json={"message_id": "m1", "body": issue["for_agent"], "threads": [], "images": []}
         )
