@@ -3,7 +3,7 @@ import { fireEvent, render, screen, within } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import { flushSync } from 'svelte';
 import ReviewScreen from '$lib/components/ReviewScreen.svelte';
-import { FIELD_KEYS } from '$lib/components/keymap';
+import { ASK_KEYS, FIELD_KEYS } from '$lib/components/keymap';
 import type { Review } from '$lib/review/review.svelte';
 import { contextLine, diffFile, hunk } from '../diff';
 import { broughtIntoView } from '../elements';
@@ -196,6 +196,7 @@ describe('the keys the review answers', () => {
 			'j / k: Down / up a line',
 			'Enter: Comment on this line',
 			'Ctrl+Enter: Add the comment, or send the message, being written',
+			'Alt+Enter: Ask the agent now about the comment being written',
 			'] / [: Next / previous file',
 			'n / p: Next / previous comment',
 			'a: Next unread reply',
@@ -232,6 +233,7 @@ describe('the keys the review answers', () => {
 
 		expect(listedInTheHelp()).toEqual([
 			'Ctrl+Enter: Add the comment, or send the message, being written',
+			'Alt+Enter: Ask the agent now about the comment being written',
 			'a: Next unread reply',
 			'c: Talk to the agent',
 			'f: Show or hide the file tree',
@@ -251,6 +253,7 @@ describe('the keys the review answers', () => {
 
 		expect(listedInTheHelp()).toEqual([
 			'Ctrl+Enter: Add the comment, or send the message, being written',
+			'Alt+Enter: Ask the agent now about the comment being written',
 			'n / p: Next / previous comment',
 			'a: Next unread reply',
 			'c: Talk to the agent',
@@ -286,6 +289,15 @@ describe('the keys the review answers', () => {
 		await user.keyboard('?');
 
 		expect(screen.getByTestId('shortcuts-list').textContent).toContain(FIELD_KEYS);
+	});
+
+	it('lists in the help the chord a comment is handed to the agent with at once', async () => {
+		const user = userEvent.setup();
+		render(ReviewScreen, { props: { review } });
+
+		await user.keyboard('?');
+
+		expect(listedInTheHelp()).toContain(`${ASK_KEYS}: Ask the agent now about the comment being written`);
 	});
 
 	it('leaves a key pressed with Ctrl alone, or with Alt, to the browser', async () => {
@@ -421,6 +433,7 @@ describe('the keys of a review read as its story', () => {
 			'j / k: Down / up a line',
 			'Enter: Comment on this line',
 			'Ctrl+Enter: Add the comment, or send the message, being written',
+			'Alt+Enter: Ask the agent now about the comment being written',
 			'] / [: Next / previous piece of the story',
 			'n / p: Next / previous comment',
 			'a: Next unread reply',
@@ -442,6 +455,7 @@ describe('the keys of a review read as its story', () => {
 
 		expect(listedInTheHelp()).toEqual([
 			'Ctrl+Enter: Add the comment, or send the message, being written',
+			'Alt+Enter: Ask the agent now about the comment being written',
 			'a: Next unread reply',
 			'c: Talk to the agent',
 			'Ctrl+Shift+Enter: Finish the review',

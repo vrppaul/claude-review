@@ -41,6 +41,9 @@ export const FINISH_KEYS = 'Ctrl+Shift+Enter';
  */
 export const FIELD_KEYS = 'Ctrl+Enter';
 
+/** The chord that hands a comment being written to the agent at once, as the help and the hint beside the field write it. */
+export const ASK_KEYS = 'Alt+Enter';
+
 /** What is held with a key: nothing, Ctrl (Cmd on a Mac), or Ctrl and Shift together. */
 type Held = 'nothing' | 'command' | 'command-and-shift';
 
@@ -85,6 +88,8 @@ const THE_STORY: readonly ReadingViewName[] = ['story'];
 const ALWAYS: Live = () => true;
 const WHILE_LINES_ARE_DRAWN: Live = (review) => review.views.onScreen.drawn().lines;
 const WHILE_THREADS_ARE_DRAWN: Live = (review) => review.views.onScreen.drawn().threads;
+// While an agent can be asked: the field offers Ask agent now only then
+const WHILE_AN_AGENT_CAN_BE_ASKED: Live = (review) => review.canAsk;
 
 /** A key pressed on its own. */
 function alone(key: string, run: (review: Review) => void): Press {
@@ -148,6 +153,14 @@ const KEYMAP: readonly KeyRow[] = [
 		presses: [],
 		views: EVERY_VIEW,
 		live: ALWAYS
+	},
+	// The ask chord is the comment field's own too, as is its Ask agent now
+	{
+		keys: [ASK_KEYS],
+		does: 'Ask the agent now about the comment being written',
+		presses: [],
+		views: EVERY_VIEW,
+		live: WHILE_AN_AGENT_CAN_BE_ASKED
 	},
 	{
 		keys: [']', '['],
@@ -244,7 +257,7 @@ export function keysOf(review: Review): KeyRow[] {
 	return KEYMAP.filter((row) => row.views.includes(onScreen) && row.live(review));
 }
 
-/** What is held with a press, if it is anything the review answers; Alt is never the review's. */
+/** What is held with a press, if it is anything the review answers; Alt is never the review's, only a comment field's ask chord. */
 function heldWith(event: KeyboardEvent): Held | null {
 	if (event.altKey) return null;
 	if (event.metaKey || event.ctrlKey) return event.shiftKey ? 'command-and-shift' : 'command';
@@ -254,6 +267,11 @@ function heldWith(event: KeyboardEvent): Held | null {
 /** Whether a keystroke in a field is the field's chord: Enter with Ctrl, never with Shift — that finishes the review. */
 export function isFieldChord(event: KeyboardEvent): boolean {
 	return event.key === 'Enter' && heldWith(event) === 'command';
+}
+
+/** Whether a keystroke in a comment field is its ask chord: Enter with Alt alone. */
+export function isAskChord(event: KeyboardEvent): boolean {
+	return event.key === 'Enter' && event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey;
 }
 
 /** The press this keystroke is among the keys that do something as the review stands, if any. */

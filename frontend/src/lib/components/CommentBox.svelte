@@ -20,7 +20,7 @@
 	import { hasSuggestion, withSuggestion } from '$lib/utils/suggestion';
 	import { ASK_AGENT_NOW, HANDED_WHILE_REWRITTEN } from './agent-waits';
 	import AttachedImages from './AttachedImages.svelte';
-	import { FIELD_KEYS, isFieldChord } from './keymap';
+	import { ASK_KEYS, FIELD_KEYS, isAskChord, isFieldChord } from './keymap';
 	import { PLACEHOLDERS } from './placeholders';
 
 	// What is asked before words written in the field are dropped, and its two answers
@@ -43,6 +43,8 @@
 		{ value: 'blocker', label: 'Blocker' }
 	];
 	const SUGGEST_A_CHANGE = 'Suggest a change';
+	// What the ask chord is said as beside the main act's, where the field offers Ask agent now
+	const ASK_HINT = `${ASK_KEYS} asks`;
 
 	/** What the field's chord and its main button do, by what is being written: said at the start of its acts. */
 	interface MainAct {
@@ -109,6 +111,8 @@
 	// A screenshot can be the whole comment, so words are not required; an
 	// image still on its way is waited for
 	const sayable = $derived(field.sayable && !handedSince);
+	// The keys the field takes, said at the start of its acts: the ask chord only where Ask agent now is offered
+	const keysSaid = $derived(onAsk ? `${MAIN_ACTS[field.at.kind].keys}, ${ASK_HINT}` : MAIN_ACTS[field.at.kind].keys);
 
 	// The cursor goes to the field when it is opened, or asked for again — not
 	// whenever it is drawn: one drawn again, a file unfolded or the page
@@ -173,6 +177,10 @@
 		if (isFieldChord(event)) {
 			event.preventDefault();
 			save();
+		}
+		if (isAskChord(event)) {
+			event.preventDefault();
+			ask();
 		}
 		if (event.key === 'Escape') {
 			// Answered here, the same key is not the question's to close itself with as it opens
@@ -274,7 +282,7 @@
 			{#if handedSince}
 				<span data-testid="comment-unsayable" class="cr-muted text-xs">{HANDED_WHILE_REWRITTEN}</span>
 			{:else}
-				<span data-testid="comment-keys" class="cr-faint text-xs">{MAIN_ACTS[field.at.kind].keys}</span>
+				<span data-testid="comment-keys" class="cr-faint text-xs">{keysSaid}</span>
 			{/if}
 			{#if severityPicker && hangs === 'in-its-thread'}
 				{@render severities()}

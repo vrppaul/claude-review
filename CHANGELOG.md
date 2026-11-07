@@ -5,6 +5,9 @@
 ### Added
 - **PHP is highlighted.** A `.php` file in a diff or in Files shows its code
   in colour, as the other known languages do.
+- **Alt+Enter asks the agent now.** In a comment or a reply being written,
+  Alt+Enter (Option+Enter on a Mac) does what Ask agent now does. The hint
+  under the field and the help list the chord while an agent can be asked.
 
 ## [1.7.0] - 2026-10-28
 
