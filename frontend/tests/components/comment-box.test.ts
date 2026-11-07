@@ -2,7 +2,7 @@ import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { fireEvent, render, within } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import CommentBox from '$lib/components/CommentBox.svelte';
-import { FIELD_KEYS } from '$lib/components/keymap';
+import { ASK_KEYS, FIELD_KEYS } from '$lib/components/keymap';
 import { KEPT_AS, keepingImages, paste, screenshot, SEND_LIMITS } from '../pasted-images';
 import { newComment } from '../new-comment';
 import type { CommentField } from '$lib/review/comment-field.svelte';
@@ -39,6 +39,21 @@ function drawnSaving(field: CommentField, label = 'Line 5') {
 			onSave: () => review.threads.say(field),
 			onCancel: vi.fn(),
 			label,
+			hangs: UNDER_ITS_LINE
+		})
+	);
+}
+
+/** A field drawn where an agent can be asked, handing what was written to `onAsk`. */
+function drawnAsking(field: CommentField, onAsk: () => void) {
+	return render(
+		CommentBox,
+		inReview(review, {
+			field,
+			onSave: () => review.threads.say(field),
+			onAsk,
+			onCancel: vi.fn(),
+			label: 'Line 5',
 			hangs: UNDER_ITS_LINE
 		})
 	);
@@ -149,6 +164,29 @@ describe('the chord a field answers', () => {
 		await user.keyboard('{Control>}{Shift>}{Enter}{/Shift}{/Control}');
 
 		expect(review.threads.count).toBe(0);
+	});
+
+	it('asks the agent now on the chord the help lists for it, and says so beside it', async () => {
+		const user = userEvent.setup();
+		const onAsk = vi.fn();
+		const { getByTestId, getByText } = drawnAsking(newField(), onAsk);
+
+		await user.type(getByTestId('comment-input'), 'Why this?');
+		await user.keyboard('{Alt>}{Enter}{/Alt}');
+
+		expect(onAsk).toHaveBeenCalledOnce();
+		expect(getByText((said) => said.includes(ASK_KEYS))).toBeTruthy();
+	});
+
+	it('neither asks nor adds on the ask chord where nobody can be asked, and offers it nowhere', async () => {
+		const user = userEvent.setup();
+		const { getByTestId } = drawnSaving(newField());
+
+		await user.type(getByTestId('comment-input'), 'Why this?');
+		await user.keyboard('{Alt>}{Enter}{/Alt}');
+
+		expect(review.threads.count).toBe(0);
+		expect(getByTestId('comment-actions').textContent).not.toContain(ASK_KEYS);
 	});
 });
 
