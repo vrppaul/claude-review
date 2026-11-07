@@ -18,6 +18,7 @@ import markdown from 'highlight.js/lib/languages/markdown';
 import rust from 'highlight.js/lib/languages/rust';
 import golang from 'highlight.js/lib/languages/go';
 import sql from 'highlight.js/lib/languages/sql';
+import php from 'highlight.js/lib/languages/php';
 
 hljs.registerLanguage('javascript', javascript);
 hljs.registerLanguage('typescript', typescript);
@@ -32,6 +33,7 @@ hljs.registerLanguage('markdown', markdown);
 hljs.registerLanguage('rust', rust);
 hljs.registerLanguage('go', golang);
 hljs.registerLanguage('sql', sql);
+hljs.registerLanguage('php', php);
 
 // What a file is highlighted as, by the extension its name ends in
 const LANGUAGE_BY_EXTENSION: Record<string, string> = {
@@ -57,6 +59,7 @@ const LANGUAGE_BY_EXTENSION: Record<string, string> = {
 	'.rs': 'rust',
 	'.go': 'go',
 	'.sql': 'sql',
+	'.php': 'php',
 	'.svelte': 'html'
 };
 
