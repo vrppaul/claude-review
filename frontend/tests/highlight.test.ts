@@ -129,6 +129,7 @@ describe('which language a file is read as', () => {
 	it("is told by the file's extension", () => {
 		expect(languageOf('diff', 'src/a.py')).toBe('python');
 		expect(languageOf('files', 'src/a.rs')).toBe('rust');
+		expect(languageOf('diff', 'src/Controller.php')).toBe('php');
 	});
 
 	it('is none for an extension nobody knows', () => {
