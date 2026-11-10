@@ -1,7 +1,7 @@
 # Claude Review
 
 [![PyPI](https://img.shields.io/pypi/v/claude-review)](https://pypi.org/project/claude-review/)
-[![Python](https://img.shields.io/pypi/pyversions/claude-review)](https://pypi.org/project/claude-review/)
+[![Python](https://img.shields.io/python/required-version-toml?tomlFilePath=https://raw.githubusercontent.com/vrppaul/claude-review/master/pyproject.toml&label=python)](https://pypi.org/project/claude-review/)
 [![CI](https://github.com/vrppaul/claude-review/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/vrppaul/claude-review/actions/workflows/ci.yml)
 [![Downloads](https://img.shields.io/pypi/dm/claude-review)](https://pypistats.org/packages/claude-review)
 [![License](https://img.shields.io/pypi/l/claude-review)](https://github.com/vrppaul/claude-review/blob/master/LICENSE)
