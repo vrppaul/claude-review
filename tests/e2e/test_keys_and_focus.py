@@ -114,16 +114,22 @@ async def test_v_after_a_jump_from_the_tree_marks_the_file_jumped_to(several_fil
 async def test_a_line_key_after_a_file_picked_in_the_tree_lands_on_its_first_line_and_takes_the_reader_nowhere_back(
     several_files: RunningReview, page: Page
 ) -> None:
-    """The pick leaves the keyboard on the tree's row, outside what is read: the key starts where the reader reads."""
+    """The pick leaves the keyboard on the tree's row, outside what is read: the key starts where the reader reads.
+
+    The key is pressed once the file's first line is seen, as a reader presses it: the rows a pick brings near are
+    built a frame after it.
+    """
     await _open_review(page, several_files)
     files = page.get_by_test_id("diff-view")
     picked = page.locator(f'[data-testid="file-section"][data-path="{PICKED_FILE}"]')
+    first_line = picked.get_by_role("button", name=FIRST_LINE, exact=True)
     await page.get_by_test_id("file-item").filter(has_text=PICKED_FILE).click()
+    await expect(first_line).to_be_in_viewport()
     scrolled_to = await files.evaluate(SCROLLED)
 
     await page.keyboard.press("j")
 
-    await expect(picked.get_by_role("button", name=FIRST_LINE, exact=True)).to_be_focused()
+    await expect(first_line).to_be_focused()
     assert await files.evaluate(SCROLLED) >= scrolled_to > 0
 
 

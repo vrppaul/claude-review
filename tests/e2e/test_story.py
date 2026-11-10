@@ -195,19 +195,27 @@ async def test_a_chapter_picked_in_the_contents_of_a_story_comes_into_view_under
 async def test_a_line_key_after_a_chapter_picked_in_the_contents_lands_on_its_first_line_and_takes_the_reader_nowhere_back(
     review_of_a_long_file_in_two_chapters: RunningReview, page: Page
 ) -> None:
-    """The pick leaves the keyboard on the contents' entry, outside what is read: the key starts where the reader reads."""
+    """The pick leaves the keyboard on the contents' entry, outside what is read: the key starts where the reader reads.
+
+    The key is pressed once the chapter's first line is seen, as a reader presses it: the rows a pick brings near
+    are built a frame after it.
+    """
     await page.set_viewport_size(WIDE_SCREEN)
     await _read_as_story(page, review_of_a_long_file_in_two_chapters)
     story = page.get_by_test_id("story-view")
-    the_second = page.get_by_test_id("story-chapter").nth(1)
+    first_line = (
+        page.get_by_test_id("story-chapter")
+        .nth(1)
+        .get_by_role("button", name=FIRST_LINE_OF_THE_SECOND_CHAPTER, exact=True)
+    )
     # The overview's entry, the first chapter's, then the second's
     await page.get_by_test_id("go-to-part").nth(2).click()
-    await expect(page.get_by_test_id("go-to-part").nth(2)).to_have_attribute("aria-current", "location")
+    await expect(first_line).to_be_in_viewport()
     scrolled_to = await story.evaluate(SCROLLED)
 
     await page.keyboard.press("j")
 
-    await expect(the_second.get_by_role("button", name=FIRST_LINE_OF_THE_SECOND_CHAPTER, exact=True)).to_be_focused()
+    await expect(first_line).to_be_focused()
     assert await story.evaluate(SCROLLED) >= scrolled_to > 0
 
 
