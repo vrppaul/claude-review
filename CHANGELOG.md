@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+## [1.7.2] - 2026-11-10
+
+### Security
+- **The page is built on patched releases.** It ships marked 18.2, which
+  closes an advisory in 18.0, with Svelte 5.57, mermaid 12.3 and
+  highlight.js 11.12; the tools that build and test it are patched too.
+
+### Changed
+- **PyPI says more of the package.** Its page links the repository, the
+  changelog and the issues, and names the Python it runs on.
+
 ## [1.7.1] - 2026-11-10
 
 ### Added
