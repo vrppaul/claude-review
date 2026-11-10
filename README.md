@@ -170,6 +170,8 @@ Shows messages newest-first with timestamps, merges consecutive same-role entrie
 
 - `j` / `k` between lines, `Enter` to comment, `]` / `[` between files
 - `n` / `p` between comments, `a` to the next unread reply
+- `Ctrl+Enter` adds the comment being written, `Alt+Enter` asks the agent
+  about it now
 - `v` viewed, `u` fold, `?` for the list
 
 ## CLI Reference

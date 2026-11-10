@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [1.7.1] - 2026-11-10
+
 ### Added
 - **PHP is highlighted.** A `.php` file in a diff or in Files shows its code
   in colour, as the other known languages do.
