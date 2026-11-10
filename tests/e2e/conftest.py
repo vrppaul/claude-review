@@ -70,9 +70,35 @@ PROBE_SCRIPT = """(() => {
             scrollTop.set.call(this, value);
         }
     });
+    // What stands flush with the area's top or foot once it scrolls: what the browser brought into view
+    const flush = (area) => {
+        const box = area.getBoundingClientRect();
+        const found = [];
+        for (const element of area.querySelectorAll('*')) {
+            const own = element.getBoundingClientRect();
+            if (own.height === 0) continue;
+            const atTop = Math.abs(own.top - box.top) < 2;
+            const atFoot = Math.abs(own.bottom - box.bottom) < 2;
+            if (atTop || atFoot) found.push(`${atTop ? 'top' : 'foot'}:${element.dataset.testid ?? element.tagName}${element.dataset.place ? '@' + element.dataset.place : ''}`);
+        }
+        return found.slice(0, 12).join(' ');
+    };
     document.addEventListener('scroll', (event) => {
-        if (named(event.target) === 'diff-view') say(`scrolled ${event.target.scrollTop} focus ${named(document.activeElement)}`);
+        if (named(event.target) === 'diff-view') say(`scrolled ${event.target.scrollTop} focus ${named(document.activeElement)} flush ${flush(event.target)}`);
     }, true);
+    // Frame by frame after a click: where the keyboard is, and whether the question's pane is still drawn
+    document.addEventListener('click', () => {
+        let frame = 0;
+        const look = () => {
+            const area = document.querySelector('[data-testid="diff-view"]');
+            say(`frame ${frame} focus ${named(document.activeElement)} pane ${Boolean(document.querySelector('[data-testid="discard-dialog"]'))} scroll ${area?.scrollTop}`);
+            if (++frame < 4) requestAnimationFrame(look);
+        };
+        requestAnimationFrame(look);
+    }, true);
+    new MutationObserver((changes) => {
+        for (const change of changes) for (const node of change.removedNodes) if (node.dataset?.testid) say(`removed ${node.dataset.testid}`);
+    }).observe(document, { childList: true, subtree: true });
     for (const kind of ['pointerdown', 'click', 'keydown', 'focusin']) {
         document.addEventListener(kind, (event) => say(`${kind} ${named(event.target)}`), true);
     }
