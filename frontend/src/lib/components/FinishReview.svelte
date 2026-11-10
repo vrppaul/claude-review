@@ -20,9 +20,12 @@
 	import { splitSuggestions } from '$lib/utils/suggestion';
 	import { COMMENTS, counted, type CountedWords } from '$lib/utils/words';
 	import { finishingTitle } from './finishing';
-	import { FINISH_KEYS } from './keymap';
+	import { chordName, FINISH_CHORD } from './keymap';
 	import { severityTone } from './severity-tone';
 	import SuggestionDiff from './SuggestionDiff.svelte';
+
+	// The chord that sends the review, as its hint and the button's title name it
+	const FINISH_CHORD_NAME = chordName(FINISH_CHORD);
 
 	// What the comments still open in their fields are said to do, counted
 	const OPEN_COMMENTS_GOING: CountedWords = { one: 'comment still open goes', many: 'comments still open go' };
@@ -105,7 +108,7 @@
 		<div class="mt-2">
 			<Actions testId="finish-actions">
 				{#snippet aside()}
-					<span class="cr-faint hidden text-xs lg:inline">{FINISH_KEYS} sends</span>
+					<span class="cr-faint hidden text-xs lg:inline">{FINISH_CHORD_NAME} sends</span>
 				{/snippet}
 				{#snippet others()}
 					{#if inRounds}
@@ -165,7 +168,7 @@
 				testId="quick-submit"
 				data-tour={tourStop('send')}
 				disabled={submission.sending}
-				title={FINISH_KEYS}
+				title={FINISH_CHORD_NAME}
 			>
 				{#if submission.sending}
 					<BreathingDots tone="inherited" testId="sending-dots" />

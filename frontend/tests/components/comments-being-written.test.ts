@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import DiffView from '$lib/components/DiffView.svelte';
-import { FIELD_KEYS } from '$lib/components/keymap';
+import { chordName, FIELD_CHORD } from '$lib/components/keymap';
 import { flushSync } from 'svelte';
 import { said } from '../elements';
 import { addedLine, contextLine, diffFile, diffResponse, hunk, removedLine, sinceRound } from '../diff';
@@ -226,7 +226,10 @@ describe('a reply or an edit being written in a thread', () => {
 		await user.click(screen.getByTestId('turn-menu'));
 		await user.click(screen.getByTestId('edit-turn'));
 
-		expect([replying, said(screen.getByTestId('comment-keys'))]).toEqual([`${FIELD_KEYS} adds`, `${FIELD_KEYS} saves`]);
+		expect([replying, said(screen.getByTestId('comment-keys'))]).toEqual([
+			`${chordName(FIELD_CHORD)} adds`,
+			`${chordName(FIELD_CHORD)} saves`
+		]);
 		expect(said(screen.getByTestId('save-comment'))).toBe('Save');
 	});
 

@@ -5,7 +5,7 @@ import { flushSync, tick } from 'svelte';
 import { userEvent } from '@testing-library/user-event';
 import AgentPanel from '$lib/components/AgentPanel.svelte';
 import { AGENT_STOPPED_LISTENING, TAKE_BACK } from '$lib/components/agent-waits';
-import { FIELD_KEYS } from '$lib/components/keymap';
+import { chordName, FIELD_CHORD } from '$lib/components/keymap';
 import type { HeldThread, Thread, ReviewResponse } from '$lib/types';
 import { addedLine, diffFile, diffResponse, hunk, REVIEW_BASE, sinceRound } from '../diff';
 import { fakeServer, listeningToThePanel, SERVER_ERROR, UNPROCESSABLE } from '../fake-server';
@@ -242,7 +242,7 @@ describe('the agent panel', () => {
 		await user.keyboard('{Control>}{Enter}{/Control}');
 
 		expect(server.bodiesSentTo('POST /api/message')).toMatchObject([{ body: 'Run the tests' }]);
-		expect(getByText((said) => said.includes(FIELD_KEYS))).toBeTruthy();
+		expect(getByText((said) => said.includes(chordName(FIELD_CHORD)))).toBeTruthy();
 	});
 
 	it('sends the thread the message points at', async () => {

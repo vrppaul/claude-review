@@ -12,7 +12,7 @@
 	import Failure from '$lib/ui/Failure.svelte';
 	import Field from '$lib/ui/Field.svelte';
 	import AttachedImages from './AttachedImages.svelte';
-	import { FIELD_KEYS, isFieldChord } from './keymap';
+	import { chordName, FIELD_CHORD, isPressed } from './keymap';
 	import MentionPicker from './MentionPicker.svelte';
 	import { Mentions, optionIdOf, tokenOf, type Mentionable } from './mentions.svelte';
 
@@ -103,7 +103,7 @@
 		if (isComposingText(event)) return;
 		if (pickerKey(event)) {
 			event.preventDefault();
-		} else if (isFieldChord(event)) {
+		} else if (isPressed(FIELD_CHORD, event)) {
 			event.preventDefault();
 			void send();
 		}
@@ -172,7 +172,7 @@
 		<Actions testId="message-actions">
 			{#snippet aside()}
 				<Button tone="quiet" size="sm" testId="mention-thread" onclick={mention}>@ thread or file</Button>
-				<span class="cr-faint hidden text-xs lg:inline">{FIELD_KEYS} sends</span>
+				<span class="cr-faint hidden text-xs lg:inline">{chordName(FIELD_CHORD)} sends</span>
 			{/snippet}
 			{#snippet others()}
 				{#if whatWentWrong}

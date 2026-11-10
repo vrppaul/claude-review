@@ -3,7 +3,7 @@ import { fireEvent, render, screen, within } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import { flushSync } from 'svelte';
 import ReviewScreen from '$lib/components/ReviewScreen.svelte';
-import { ASK_KEYS } from '$lib/components/keymap';
+import { ASK_CHORD, chordName } from '$lib/components/keymap';
 import type { Review } from '$lib/review/review.svelte';
 import { contextLine, diffFile, hunk } from '../diff';
 import { broughtIntoView } from '../elements';
@@ -263,6 +263,14 @@ describe('the keys the review answers', () => {
 		]);
 	});
 
+	it('opens the help on ? typed with Shift, as most keyboards type it', async () => {
+		render(ReviewScreen, { props: { review } });
+
+		await fireEvent.keyDown(window, { key: '?', shiftKey: true });
+
+		expect(review.guide.helpOpen).toBe(true);
+	});
+
 	it('closes the help on ? as it opened it', async () => {
 		const user = userEvent.setup();
 		render(ReviewScreen, { props: { review } });
@@ -288,7 +296,7 @@ describe('the keys the review answers', () => {
 
 		await user.keyboard('?');
 
-		expect(screen.getByTestId('shortcuts-list').textContent).not.toContain(ASK_KEYS);
+		expect(screen.getByTestId('shortcuts-list').textContent).not.toContain(chordName(ASK_CHORD));
 	});
 
 	it('leaves a key pressed with Ctrl alone, or with Alt, to the browser', async () => {

@@ -8,7 +8,7 @@
 	import Popover from '$lib/ui/Popover.svelte';
 	import FeedbackIntroduction from './FeedbackIntroduction.svelte';
 	import StarOnGitHub from './StarOnGitHub.svelte';
-	import { HELP_BUTTON_ROLE, keysOf } from './keymap';
+	import { HELP_BUTTON_ROLE, keysListed } from './keymap';
 
 	// What the pane is called, said to whoever cannot see it, and what heads it
 	const CALLED = 'Getting around, and the keyboard';
@@ -124,7 +124,7 @@
 			</div>
 			<section class="flex flex-col gap-3">
 				<Heading tag="h3" heads="list">Keyboard</Heading>
-				<KeyList rows={[...keysOf(review), CLOSING_KEY]} testId="shortcuts-list" keyTestId="shortcut-key" />
+				<KeyList rows={[...keysListed(review), CLOSING_KEY]} testId="shortcuts-list" keyTestId="shortcut-key" />
 			</section>
 		</div>
 	</Popover>
