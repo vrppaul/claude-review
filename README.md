@@ -1,8 +1,15 @@
 # Claude Review
 
+[![PyPI](https://img.shields.io/pypi/v/claude-review)](https://pypi.org/project/claude-review/)
+[![Python](https://img.shields.io/pypi/pyversions/claude-review)](https://pypi.org/project/claude-review/)
+[![CI](https://github.com/vrppaul/claude-review/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/vrppaul/claude-review/actions/workflows/ci.yml)
+[![Downloads](https://img.shields.io/pypi/dm/claude-review)](https://pypistats.org/packages/claude-review)
+[![License](https://img.shields.io/pypi/l/claude-review)](https://github.com/vrppaul/claude-review/blob/master/LICENSE)
+
 Browser-based review tool for Claude Code. Add inline comments on code changes, text files, or conversation transcripts, and send structured feedback back to Claude.
 
-![claude-review screenshot](docs/screenshot.png)
+<!-- An address, not a path: PyPI shows this README too, and a path from the repository finds nothing there -->
+![claude-review screenshot](https://raw.githubusercontent.com/vrppaul/claude-review/master/docs/screenshot.png)
 
 ## Quick Start
 
@@ -34,7 +41,7 @@ Shows all uncommitted changes (tracked, staged, and untracked) with two-column l
 
 The header says what the working tree is being compared against, and that is a control. Read the same working tree against the base the review opened with, against an earlier round of it, or against any branch or tag; each says how many files it would show.
 
-![choosing what the working tree is read against](docs/base-picker.png)
+![choosing what the working tree is read against](https://raw.githubusercontent.com/vrppaul/claude-review/master/docs/base-picker.png)
 
 Nothing about the review changes with it: a thread stays anchored where it was written, and one a narrower base cannot draw is counted, listed, and one click away.
 
@@ -48,7 +55,7 @@ Nothing is left out: every changed line is in a step, in a file the agent named 
 
 A story spends the agent's tokens, so Story asks before it has one written for a review, and says what this one would cost. "Write stories without asking" there, or under Stories in Settings, the gear in the header, stops the asking from now on, in every review; under it, "Write as soon as the review opens" has each story ready by the time you open Story. A story asked for is told again after a round moves its code on, until you stop it, and a review stopped and opened again keeps its story until you finish the review. A story is told by the agent attached to the review, and you can read the files while it writes.
 
-How the agent is advised to tell one, and why: [docs/stories.md](docs/stories.md).
+How the agent is advised to tell one, and why: [docs/stories.md](https://github.com/vrppaul/claude-review/blob/master/docs/stories.md).
 
 ### Files mode
 

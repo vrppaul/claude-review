@@ -1,0 +1,36 @@
+name: Bug report
+description: Something in a review does not work as it should
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Inside a review, **Send feedback** under Help (`?`) writes this issue for you, with the part of the page you point at.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what you saw instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: How to make it happen again
+      placeholder: |
+        1. `claude-review diff` in a repository with …
+        2. …
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: What `claude-review --version` prints.
+      placeholder: claude-review, version 1.7.1
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Where it runs
+      description: Operating system, browser, and the agent you review with.
+      placeholder: macOS 26, Chrome 142, Claude Code

@@ -12,8 +12,11 @@ cd claude-review
 # Python (requires Python 3.14+)
 uv sync
 
-# Frontend
+# Frontend (Node and pnpm)
 cd frontend && pnpm install
+
+# The browser the end-to-end tests drive
+uv run playwright install chromium
 
 # Install pre-commit hooks
 uv run pre-commit install --hook-type commit-msg --hook-type pre-commit
@@ -30,7 +33,11 @@ uv run claude-review files some-file.md
 
 # Run tests
 uv run pytest tests -n 4             # the Python tests; -m schema: the API's fuzzing
+uv run pytest tests/e2e -n 4         # the page in a browser: build it first (below)
 cd frontend && pnpm test             # frontend tests
+
+# Every gate a commit runs, over every file
+uv run pre-commit run --all-files
 
 # Lint & type check
 uv run ruff check src/               # Python lint (the tests are formatted, never linted)
@@ -51,6 +58,14 @@ cd frontend && pnpm build            # outputs to src/claude_review/static/dist/
 - **Tests**: only for a behavior someone can name — what the CLI prints, what a route answers, what the reader sees, where the keyboard lands — written before its code, at the cheapest level that sees it. Never for a look (a color, a size, a pixel, a position): tokens, the linters and your own eyes in the browser hold it. Run the tests of the part you changed, and everything before a release or a merge to master. The full rules: `.claude/rules/tests.md`.
 - **Dependencies**: `uv add` for Python, `pnpm add` for JS — never specify versions
 - **No meaningless defaults**: required parameters should be explicit, not silently defaulted
+
+## Pull requests
+
+- Branch from `master`, one logical change per pull request.
+- A change a user would notice gets a line in `CHANGELOG.md` under `[Unreleased]`.
+- Leave **Allow edits by maintainers** on, so a small fix can land on your branch instead of in a review round.
+- The CI of a first pull request waits for a maintainer to start it.
+- Working with an agent? `AGENTS.md` (also read as `CLAUDE.md`) gives it every rule above, and the files under `.claude/rules/` the rules of each area.
 
 ## Architecture
 

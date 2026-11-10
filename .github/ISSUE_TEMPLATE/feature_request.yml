@@ -1,0 +1,16 @@
+name: Idea
+description: Something a review should let you do
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: What you want to do
+      description: The task you are in the middle of, and where the review gets in the way or falls short.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: How it could work
+      description: Optional. A sketch, a screenshot, or a tool that does it well.
