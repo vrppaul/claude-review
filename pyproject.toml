@@ -57,6 +57,8 @@ dev = [
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+# An async fixture's loop is its test's, unless it names another (the browser tests' shared one)
+asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
 # The API's schema fuzzed, the longest part of a run, is left out unless asked for: `-m schema` runs it
 addopts = "-m 'not schema'"
