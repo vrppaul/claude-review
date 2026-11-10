@@ -2,7 +2,7 @@ import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { fireEvent, render, within } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import CommentBox from '$lib/components/CommentBox.svelte';
-import { ASK_KEYS, FIELD_KEYS } from '$lib/components/keymap';
+import { ASK_CHORD, chordName, FIELD_CHORD } from '$lib/components/keymap';
 import { KEPT_AS, keepingImages, paste, screenshot, SEND_LIMITS } from '../pasted-images';
 import { newComment } from '../new-comment';
 import type { CommentField } from '$lib/review/comment-field.svelte';
@@ -153,7 +153,7 @@ describe('the chord a field answers', () => {
 		await user.keyboard('{Control>}{Enter}{/Control}');
 
 		expect(saved().body).toBe('Fix this');
-		expect(getByText((said) => said.includes(FIELD_KEYS))).toBeTruthy();
+		expect(getByText((said) => said.includes(chordName(FIELD_CHORD)))).toBeTruthy();
 	});
 
 	it('leaves the chord with Shift to the review, which it finishes', async () => {
@@ -175,7 +175,7 @@ describe('the chord a field answers', () => {
 		await user.keyboard('{Alt>}{Enter}{/Alt}');
 
 		expect(onAsk).toHaveBeenCalledOnce();
-		expect(getByTestId('comment-keys').textContent).toContain(ASK_KEYS);
+		expect(getByTestId('comment-keys').textContent).toContain(chordName(ASK_CHORD));
 	});
 
 	it('leaves the ask chord to the field and the browser where nobody can be asked', async () => {

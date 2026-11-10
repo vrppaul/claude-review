@@ -20,7 +20,7 @@
 	import { hasSuggestion, withSuggestion } from '$lib/utils/suggestion';
 	import { ASK_AGENT_NOW, HANDED_WHILE_REWRITTEN } from './agent-waits';
 	import AttachedImages from './AttachedImages.svelte';
-	import { ASK_KEYS, FIELD_KEYS, isAskChord, isFieldChord } from './keymap';
+	import { ASK_CHORD, chordName, FIELD_CHORD, isPressed } from './keymap';
 	import { PLACEHOLDERS } from './placeholders';
 
 	// What is asked before words written in the field are dropped, and its two answers
@@ -43,20 +43,24 @@
 		{ value: 'blocker', label: 'Blocker' }
 	];
 	const SUGGEST_A_CHANGE = 'Suggest a change';
-	// What the ask chord is said as beside the main act's, where the field offers Ask agent now
-	const ASK_HINT = `${ASK_KEYS} asks`;
+	// The chord the field adds or saves with, by name, and the ask chord as it is said beside it where the field
+	// offers Ask agent now
+	const FIELD_CHORD_NAME = chordName(FIELD_CHORD);
+	const ASK_SAID = `${chordName(ASK_CHORD)} asks`;
+	// What stands between the chords said at the start of the field's acts
+	const CHORDS_SAID_APART = ', ';
 
-	/** What the field's chord and its main button do, by what is being written: said at the start of its acts. */
+	/** What the field's chord and its main button do, by what is being written: the chord said at the start of its acts. */
 	interface MainAct {
-		keys: string;
+		said: string;
 		act: string;
 	}
 
 	const MAIN_ACTS: Record<WrittenAt['kind'], MainAct> = {
-		new: { keys: `${FIELD_KEYS} adds`, act: 'Add to review' },
-		story: { keys: `${FIELD_KEYS} adds`, act: 'Add to review' },
-		reply: { keys: `${FIELD_KEYS} adds`, act: 'Add to review' },
-		edit: { keys: `${FIELD_KEYS} saves`, act: 'Save' }
+		new: { said: `${FIELD_CHORD_NAME} adds`, act: 'Add to review' },
+		story: { said: `${FIELD_CHORD_NAME} adds`, act: 'Add to review' },
+		reply: { said: `${FIELD_CHORD_NAME} adds`, act: 'Add to review' },
+		edit: { said: `${FIELD_CHORD_NAME} saves`, act: 'Save' }
 	};
 
 	/**
@@ -111,8 +115,9 @@
 	// A screenshot can be the whole comment, so words are not required; an
 	// image still on its way is waited for
 	const sayable = $derived(field.sayable && !handedSince);
-	// The keys the field takes, said at the start of its acts: the ask chord only where Ask agent now is offered
-	const keysSaid = $derived(onAsk ? `${MAIN_ACTS[field.at.kind].keys}, ${ASK_HINT}` : MAIN_ACTS[field.at.kind].keys);
+	const mainAct = $derived(MAIN_ACTS[field.at.kind]);
+	// The chords the field takes, said at the start of its acts: the ask chord only where Ask agent now is offered
+	const chordsSaid = $derived(onAsk ? [mainAct.said, ASK_SAID] : [mainAct.said]);
 
 	// The cursor goes to the field when it is opened, or asked for again — not
 	// whenever it is drawn: one drawn again, a file unfolded or the page
@@ -174,12 +179,12 @@
 
 	function handleKeydown(event: KeyboardEvent) {
 		if (isComposingText(event)) return;
-		if (isFieldChord(event)) {
+		if (isPressed(FIELD_CHORD, event)) {
 			event.preventDefault();
 			save();
 		}
 		// The ask chord is the field's only where it offers Ask agent now; elsewhere the browser keeps it
-		if (onAsk && isAskChord(event)) {
+		if (onAsk && isPressed(ASK_CHORD, event)) {
 			event.preventDefault();
 			ask();
 		}
@@ -283,7 +288,7 @@
 			{#if handedSince}
 				<span data-testid="comment-unsayable" class="cr-muted text-xs">{HANDED_WHILE_REWRITTEN}</span>
 			{:else}
-				<span data-testid="comment-keys" class="cr-faint text-xs">{keysSaid}</span>
+				<span data-testid="comment-keys" class="cr-faint text-xs">{chordsSaid.join(CHORDS_SAID_APART)}</span>
 			{/if}
 			{#if severityPicker && hangs === 'in-its-thread'}
 				{@render severities()}
@@ -311,7 +316,7 @@
 		{/snippet}
 		{#snippet main()}
 			<Button tone="primary" size="sm" testId="save-comment" disabled={!sayable} onclick={save}>
-				{MAIN_ACTS[field.at.kind].act}
+				{mainAct.act}
 			</Button>
 		{/snippet}
 	</Actions>
