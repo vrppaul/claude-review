@@ -1,14 +1,9 @@
 <script lang="ts">
 	import Key from './Key.svelte';
+	import type { ListedKeys } from './key-list';
 
 	// What stands between two keys that do opposite things: a slash, as what they do is written
 	const OPPOSITES_APART = ' / ';
-
-	/** A row of the list: one key, or two that do opposite things in the order `does` names them; and what they do. */
-	interface ListedKeys {
-		keys: readonly string[];
-		does: string;
-	}
 
 	interface Props {
 		/** The keys and what each does, a row to each thing done. */

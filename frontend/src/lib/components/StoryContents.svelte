@@ -18,7 +18,7 @@
 	import ChangedLines from './ChangedLines.svelte';
 	import ContentsEntry from './ContentsEntry.svelte';
 	import FileRow from './FileRow.svelte';
-	import { COLUMN_KEY } from './keymap';
+	import { chordName, COLUMN_CHORD } from './keymap';
 	import {
 		alsoInShort,
 		chapterAmong,
@@ -61,7 +61,7 @@
 		label="Story contents"
 		called="the contents"
 		resizing="Resize the contents"
-		key={COLUMN_KEY}
+		key={chordName(COLUMN_CHORD)}
 		holds="list"
 		testIds={{
 			column: 'contents',

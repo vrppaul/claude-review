@@ -3,7 +3,7 @@
 	import { tourStop, type TourTarget } from '$lib/guide/tour';
 	import { useReview } from '$lib/review/context';
 	import SideColumn from '$lib/ui/SideColumn.svelte';
-	import { TALK_KEY } from './keymap';
+	import { chordName, TALK_CHORD } from './keymap';
 
 	interface Props {
 		/** What the tests know the column by: the panel's, or what stands in its place where it could not be drawn. */
@@ -30,7 +30,7 @@
 	label="The agent"
 	called="the agent"
 	resizing="Resize the panel"
-	key={TALK_KEY}
+	key={chordName(TALK_CHORD)}
 	holds="parts"
 	data-tour={tour && tourStop(tour)}
 	testIds={{

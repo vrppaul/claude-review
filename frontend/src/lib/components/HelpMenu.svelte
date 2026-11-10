@@ -8,11 +8,14 @@
 	import Popover from '$lib/ui/Popover.svelte';
 	import FeedbackIntroduction from './FeedbackIntroduction.svelte';
 	import StarOnGitHub from './StarOnGitHub.svelte';
-	import { HELP_BUTTON_ROLE, keysListed } from './keymap';
+	import { chordName, HELP_BUTTON_ROLE, HELP_CHORD, isPressed, keysListed } from './keymap';
 
 	// What the pane is called, said to whoever cannot see it, and what heads it
 	const CALLED = 'Getting around, and the keyboard';
 	const HEADING = 'Help';
+	// The key that opens the pane, drawn on its button, and what the button says on the pointer
+	const HELP_CHORD_NAME = chordName(HELP_CHORD);
+	const HELP_BUTTON_TITLE = `The tour, what is new, feedback, and the keys (${HELP_CHORD_NAME})`;
 	// The list's own key, and every open pane's: not one the review answers, so listed after those it does
 	const CLOSING_KEY = { keys: ['Esc'], does: 'Close it' };
 	// What Send feedback says at its end while words written in the card wait there
@@ -42,12 +45,12 @@
 	}
 
 	/**
-	 * ? opened the list, and closes it again — answered here, so the review
-	 * does not open it once more; the pane gives the keyboard back to where
-	 * it was, as Escape does.
+	 * The help's key opened the list, and closes it again — answered here, so
+	 * the review does not open it once more; the pane gives the keyboard back
+	 * to where it was, as Escape does.
 	 */
-	function closeOnQuestionMark(event: KeyboardEvent) {
-		if (event.key !== '?') return;
+	function closeOnHelpChord(event: KeyboardEvent) {
+		if (!isPressed(HELP_CHORD, event)) return;
 		event.preventDefault();
 		review.guide.setHelpOpen(false);
 	}
@@ -64,7 +67,7 @@
 		placement="below-start"
 		width="medium"
 		testId="help-menu"
-		onkeydown={closeOnQuestionMark}
+		onkeydown={closeOnHelpChord}
 		footAsks
 	>
 		<!-- The ask for a star stays in sight at the foot while the keys scroll: Help is opened on purpose, so it is
@@ -81,10 +84,10 @@
 				calling={introducingFeedback ? 'introduced' : undefined}
 				testId="open-help"
 				data-role={HELP_BUTTON_ROLE}
-				title="The tour, what is new, feedback, and the keys (?)"
+				title={HELP_BUTTON_TITLE}
 			>
 				<!-- Its key alone once the window narrows, its name kept for a screen reader and on the pointer -->
-				<Key keys="?" stands="inline" testId="help-key" />
+				<Key keys={HELP_CHORD_NAME} stands="inline" testId="help-key" />
 				<span class="max-cr-header-narrow:sr-only">Help</span>
 			</Button>
 		{/snippet}
