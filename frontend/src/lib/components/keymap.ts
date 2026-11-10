@@ -44,8 +44,11 @@ export const FIELD_KEYS = 'Ctrl+Enter';
 /** The chord that hands a comment being written to the agent at once, as the help and the hint beside the field write it. */
 export const ASK_KEYS = 'Alt+Enter';
 
-/** What is held with a key: nothing, Ctrl (Cmd on a Mac), or Ctrl and Shift together. */
-type Held = 'nothing' | 'command' | 'command-and-shift';
+/**
+ * What is held with a key: nothing, Alt (Option on a Mac), Ctrl (Cmd on a Mac), or Ctrl and Shift together.
+ * Alt is a comment field's alone, for its ask chord: no press of the review is held with it.
+ */
+type Held = 'nothing' | 'alt' | 'command' | 'command-and-shift';
 
 /** A key as it is pressed, and what it does. */
 interface Press {
@@ -257,10 +260,11 @@ export function keysOf(review: Review): KeyRow[] {
 	return KEYMAP.filter((row) => row.views.includes(onScreen) && row.live(review));
 }
 
-/** What is held with a press, if it is anything the review answers; Alt is never the review's, only a comment field's ask chord. */
+/** What is held with a press, if it is anything the page answers: Alt counts only held alone. */
 function heldWith(event: KeyboardEvent): Held | null {
-	if (event.altKey) return null;
-	if (event.metaKey || event.ctrlKey) return event.shiftKey ? 'command-and-shift' : 'command';
+	const commandHeld = event.metaKey || event.ctrlKey;
+	if (event.altKey) return commandHeld || event.shiftKey ? null : 'alt';
+	if (commandHeld) return event.shiftKey ? 'command-and-shift' : 'command';
 	return 'nothing';
 }
 
@@ -271,7 +275,7 @@ export function isFieldChord(event: KeyboardEvent): boolean {
 
 /** Whether a keystroke in a comment field is its ask chord: Enter with Alt alone. */
 export function isAskChord(event: KeyboardEvent): boolean {
-	return event.key === 'Enter' && event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey;
+	return event.key === 'Enter' && heldWith(event) === 'alt';
 }
 
 /** The press this keystroke is among the keys that do something as the review stands, if any. */
