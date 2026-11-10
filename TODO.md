@@ -132,6 +132,17 @@ tests. Remove items when done — don't check them off.
 - [ ] `fix(ui)`: "Not now" on the tour's offer leaves the keyboard on Help
       (`open-help`), one stop before the control the reader pressed. Seen by
       the review of chunk 7 part 1; why, not traced.
+- [ ] `fix(ui)`: on a Mac the page names the keys of a PC: the hints and
+      the help write `Ctrl+Enter`, `Ctrl+Shift+Enter` and `Alt+Enter`, where
+      the reader presses Cmd and Option. `keymap.ts` reads Cmd as Ctrl, so
+      the chords work; only their names are wrong. Every name comes from
+      `chordName`, by `MODIFIER_NAMES` (`keymap.ts`): that table is the one
+      place to name them for each platform.
+- [ ] `fix(ui)`: with the comment field's hint at `Ctrl+Enter adds,
+      Alt+Enter asks`, its row of acts wraps at 461–500 px (a 615–655 px
+      window with both columns as rails), and Add to review drops alone to a
+      second line; the shorter hint wrapped below 460 px. The owner's call,
+      2026-11-10: left as is until the page is made for small screens.
 
 ## The story, from the reviews of its server side
 
@@ -503,6 +514,14 @@ The owner put it after the rest of the work.
 - For some reason all agents see --no-open, it should not be the default
 - CHanging the base must not mean restarting
 - keeping the loop running is the boilerplate - from one of the agents
+- send status update to the thread
+- mention in the skill that git review is the default, some agent tried to open the transcript
+- it would be good to try to open in the browser of choice (somebody might want to open in cursor)
+- don't make the agent restart the window if the window was closed manually (maybe detect the close event? or do the modal if really close?)
+- the thread of the code that was already resolved should be present somewhere. it would be good to see the overall threads (like summary)
+- QOL: keep the scroll position when switching between the story and the files, so going back lands where the reader was
+- switch the app's language
+- native share of the story
 
 ## Known limits
 
