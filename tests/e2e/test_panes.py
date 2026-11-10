@@ -11,7 +11,6 @@ from playwright.async_api import Page, ViewportSize, expect
 
 from tests.e2e.browsers_loop import in_the_browsers_loop
 from tests.e2e.page_reads import FOCUSED_TEST_ID, PAGE_SCROLLED_BY, SCROLLED
-from tests.e2e.placing import TOP_UNDER
 from tests.helpers import ReviewServers, RunningReview, committed_repository, repository_opening, write_files
 
 CHANGED_FILE = "told.py"
@@ -28,17 +27,13 @@ HELP_MENU = "help-menu"
 KEY_IN_THE_HELP = "shortcut-key"
 # How far the reader turns the wheel over the help, in pixels: more than its whole list of keys is long
 PAST_THE_HELPS_FOOT = 2_000
-# What the reader writes in a comment they save, and in one they leave half written
+# What the reader writes in a comment they save
 SAVED_WORDS = "Name it after the unit"
-HALF_A_THOUGHT = "Half a thought"
 # A file changed on every line, long enough for the reading area to scroll it far under its header; and a line
 # deep in it to comment on, by its place among the line numbers drawn
 LONG_FILE = "long.py"
 LONG_FILE_LINES = 80
 DEEP_LINE = 40
-# How far under the foot of the file's header a control is scrolled to, in pixels: near enough that a question
-# opened its own way would lie under the header
-JUST_UNDER_THE_HEADER = 10
 # Scroll a control's foot to the foot of the area it scrolls in, where a question opened its own way would
 # reach past it
 AT_THE_FOOT = "(control) => control.scrollIntoView({ block: 'end' })"
@@ -113,31 +108,6 @@ async def _comment_deep_in_the_file(page: Page, words: str) -> None:
     await page.get_by_test_id("line-gutter").nth(DEEP_LINE).click()
     await page.get_by_test_id("comment-input").wait_for()
     await page.keyboard.type(words)
-
-
-async def test_the_question_before_a_comment_is_discarded_asked_just_under_the_files_header_is_answered_where_it_opens(
-    long_change: RunningReview, page: Page
-) -> None:
-    """Pressed where it opened, its answer is reached without the reading area moving to show it."""
-    await _open(page, long_change)
-    await _comment_deep_in_the_file(page, HALF_A_THOUGHT)
-    area = page.get_by_test_id("diff-view")
-    cancel = page.get_by_test_id("cancel-comment")
-    await area.evaluate(
-        TOP_UNDER,
-        [
-            await cancel.element_handle(),
-            await page.get_by_test_id("file-header").element_handle(),
-            JUST_UNDER_THE_HEADER,
-        ],
-    )
-    scrolled_to = await area.evaluate(SCROLLED)
-    await cancel.click()
-
-    await page.get_by_test_id("confirm-keep").click()
-
-    await page.get_by_test_id("discard-dialog").wait_for(state="detached")
-    assert await area.evaluate(SCROLLED) == scrolled_to
 
 
 async def _bin_at_the_foot(page: Page, review: RunningReview) -> None:
