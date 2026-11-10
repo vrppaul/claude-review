@@ -45,11 +45,23 @@ async def nothing_left_running() -> AsyncIterator[None]:
     assert not left_running, f"left running in the loop the browser tests share: {left_running}"
 
 
+# PROBE, never merged: when each font face finishes loading, and every scroll of the files, by time
+PROBE_SCRIPT = """(() => {
+    const started = performance.now();
+    const say = (what) => console.log(`PROBE ${Math.round(performance.now() - started)} ${what}`);
+    document.fonts.addEventListener('loadingdone', (event) => say(`fonts ${event.fontfaces.map((face) => `${face.family} ${face.weight} ${face.style}`).join(', ')}`));
+    document.addEventListener('scroll', (event) => { if (event.target.dataset?.testid === 'diff-view') say(`scrolled ${event.target.scrollTop} height ${event.target.scrollHeight} client ${event.target.clientHeight}`); }, true);
+    for (const kind of ['click']) document.addEventListener(kind, (event) => say(`${kind} ${event.target.dataset?.testid ?? event.target.tagName}`), true);
+})()"""
+
+
 @in_the_browsers_loop
 async def page(browser: Browser) -> AsyncIterator[Page]:
     """A fresh page with the suite's timeout, in a context of its own: no test sees another's storage."""
     context = await browser.new_context()
+    await context.add_init_script(PROBE_SCRIPT)
     opened = await context.new_page()
+    opened.on("console", lambda message: print(message.text))
     opened.set_default_timeout(E2E_TIMEOUT_MS)
     yield opened
     await context.close()
