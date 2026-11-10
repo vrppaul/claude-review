@@ -140,6 +140,30 @@ async def test_the_question_before_a_comment_is_discarded_asked_just_under_the_f
     assert await area.evaluate(SCROLLED) == scrolled_to
 
 
+async def test_probe_unanchored_question_just_under_the_header(long_change: RunningReview, page: Page) -> None:
+    """PROBE, never merged: the same, with the browser's scroll anchoring off in the reading area."""
+    await _open(page, long_change)
+    await _comment_deep_in_the_file(page, HALF_A_THOUGHT)
+    area = page.get_by_test_id("diff-view")
+    await area.evaluate("(area) => { area.style.overflowAnchor = 'none'; }")
+    cancel = page.get_by_test_id("cancel-comment")
+    await area.evaluate(
+        TOP_UNDER,
+        [
+            await cancel.element_handle(),
+            await page.get_by_test_id("file-header").element_handle(),
+            JUST_UNDER_THE_HEADER,
+        ],
+    )
+    scrolled_to = await area.evaluate(SCROLLED)
+    await cancel.click()
+
+    await page.get_by_test_id("confirm-keep").click()
+
+    await page.get_by_test_id("discard-dialog").wait_for(state="detached")
+    assert await area.evaluate(SCROLLED) == scrolled_to
+
+
 async def _bin_at_the_foot(page: Page, review: RunningReview) -> None:
     """A comment saved deep in the long file, its menu scrolled to stand at the foot of the reading area."""
     await _open(page, review)

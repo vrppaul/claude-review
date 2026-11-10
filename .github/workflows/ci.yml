@@ -89,8 +89,13 @@ jobs:
       - run: pnpm --dir frontend build
       - run: uv sync
       - run: uv run playwright install chromium
-      # PROBE, never merged: the e2e suite three times over, to catch the flaky test once
-      - run: for attempt in 1 2 3; do uv run pytest tests/e2e/ -q -p no:cacheprovider || failed=1; done; exit ${failed:-0}
+      # PROBE, never merged: the question's test and its unanchored twin, each 25 times, counted
+      - run: |
+          for attempt in $(seq 25); do
+            uv run pytest tests/e2e/test_panes.py -q -p no:cacheprovider -k "just_under_the_files_header or unanchored" 2>&1 | grep -E "^FAILED|passed|failed" | sed 's/ - .*//'
+          done | tee probe-tally.txt
+          echo "TALLY anchored failed: $(grep -c 'FAILED.*answered_where_it_opens' probe-tally.txt)"
+          echo "TALLY unanchored failed: $(grep -c 'FAILED.*unanchored' probe-tally.txt)"
 
   build:
     runs-on: ubuntu-latest
