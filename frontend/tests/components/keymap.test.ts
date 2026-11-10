@@ -291,13 +291,14 @@ describe('the keys the review answers', () => {
 		expect(screen.getByTestId('shortcuts-list').textContent).toContain(FIELD_KEYS);
 	});
 
-	it('lists in the help the chord a comment is handed to the agent with at once', async () => {
+	it('lists in the help no chord to ask the agent with while no agent can be asked', async () => {
 		const user = userEvent.setup();
+		review = openReview({ files, facts: { answerer_attached: false } });
 		render(ReviewScreen, { props: { review } });
 
 		await user.keyboard('?');
 
-		expect(listedInTheHelp()).toContain(`${ASK_KEYS}: Ask the agent now about the comment being written`);
+		expect(screen.getByTestId('shortcuts-list').textContent).not.toContain(ASK_KEYS);
 	});
 
 	it('leaves a key pressed with Ctrl alone, or with Alt, to the browser', async () => {

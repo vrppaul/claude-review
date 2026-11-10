@@ -169,13 +169,13 @@ describe('the chord a field answers', () => {
 	it('asks the agent now on the chord the help lists for it, and says so beside it', async () => {
 		const user = userEvent.setup();
 		const onAsk = vi.fn();
-		const { getByTestId, getByText } = drawnAsking(newField(), onAsk);
+		const { getByTestId } = drawnAsking(newField(), onAsk);
 
 		await user.type(getByTestId('comment-input'), 'Why this?');
 		await user.keyboard('{Alt>}{Enter}{/Alt}');
 
 		expect(onAsk).toHaveBeenCalledOnce();
-		expect(getByText((said) => said.includes(ASK_KEYS))).toBeTruthy();
+		expect(getByTestId('comment-keys').textContent).toContain(ASK_KEYS);
 	});
 
 	it('neither asks nor adds on the ask chord where nobody can be asked, and offers it nowhere', async () => {
