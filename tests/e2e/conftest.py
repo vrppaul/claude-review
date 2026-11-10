@@ -45,63 +45,11 @@ async def nothing_left_running() -> AsyncIterator[None]:
     assert not left_running, f"left running in the loop the browser tests share: {left_running}"
 
 
-# PROBE, never merged: every scroll of the files' area, and every call that can scroll or focus, with who made it
-PROBE_SCRIPT = """(() => {
-    const started = performance.now();
-    const named = (element) => element?.dataset?.testid ?? element?.tagName ?? String(element);
-    const stack = () => new Error().stack.split('\\n').slice(2, 9).map((frame) => frame.trim()).join(' < ');
-    const say = (what) => console.log(`PROBE ${Math.round(performance.now() - started)} ${what}`);
-    const wrap = (owner, name) => {
-        const original = owner[name];
-        owner[name] = function (...args) {
-            say(`${name} on ${named(this)} ${JSON.stringify(args[0] ?? null)} from ${stack()}`);
-            return original.apply(this, args);
-        };
-    };
-    wrap(Element.prototype, 'scrollIntoView');
-    wrap(Element.prototype, 'scrollTo');
-    wrap(Element.prototype, 'scrollBy');
-    wrap(HTMLElement.prototype, 'focus');
-    const scrollTop = Object.getOwnPropertyDescriptor(Element.prototype, 'scrollTop');
-    Object.defineProperty(Element.prototype, 'scrollTop', {
-        get() { return scrollTop.get.call(this); },
-        set(value) {
-            say(`scrollTop= on ${named(this)} ${value} from ${stack()}`);
-            scrollTop.set.call(this, value);
-        }
-    });
-    // What stands flush with the area's top or foot once it scrolls: what the browser brought into view
-    const flush = (area) => {
-        const box = area.getBoundingClientRect();
-        const found = [];
-        for (const element of area.querySelectorAll('*')) {
-            const own = element.getBoundingClientRect();
-            if (own.height === 0) continue;
-            const atTop = Math.abs(own.top - box.top) < 2;
-            const atFoot = Math.abs(own.bottom - box.bottom) < 2;
-            if (atTop || atFoot) found.push(`${atTop ? 'top' : 'foot'}:${element.dataset.testid ?? element.tagName}${element.dataset.place ? '@' + element.dataset.place : ''}`);
-        }
-        return found.slice(0, 12).join(' ');
-    };
-    document.addEventListener('scroll', (event) => {
-        const area = event.target;
-        if (named(area) !== 'diff-view') return;
-        const lines = area.querySelector('[data-testid="file-lines"]');
-        say(`scrolled ${area.scrollTop} height ${area.scrollHeight} client ${area.clientHeight} deepest ${area.scrollHeight - area.clientHeight} lines ${Math.round(lines?.getBoundingClientRect().height ?? -1)} focus ${named(document.activeElement)} flush ${flush(area)}`);
-    }, true);
-    for (const kind of ['pointerdown', 'click', 'keydown', 'focusin']) {
-        document.addEventListener(kind, (event) => say(`${kind} ${named(event.target)}`), true);
-    }
-})()"""
-
-
 @in_the_browsers_loop
 async def page(browser: Browser) -> AsyncIterator[Page]:
     """A fresh page with the suite's timeout, in a context of its own: no test sees another's storage."""
     context = await browser.new_context()
-    await context.add_init_script(PROBE_SCRIPT)
     opened = await context.new_page()
-    opened.on("console", lambda message: print(message.text))
     opened.set_default_timeout(E2E_TIMEOUT_MS)
     yield opened
     await context.close()

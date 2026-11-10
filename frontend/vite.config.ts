@@ -25,7 +25,6 @@ export default defineConfig({
 		outDir: resolve(__dirname, '../src/claude_review/static/dist'),
 		emptyOutDir: true,
 		sourcemap: false, // maps ship in the PyPI wheel and would triple its size
-		minify: false, // PROBE, never merged: names readable in a stack
 		// elkjs, the 1.4 MB of mermaid's elk layout, never loads: a story's diagram is laid out by dagre, a
 		// setting no source may change (lib/dom/diagram.ts). So it is not built, and does not ship
 		rolldownOptions: { external: ['elkjs/lib/elk.bundled.js'] }
