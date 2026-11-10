@@ -3,6 +3,7 @@ import { drawnHunks } from '$lib/utils/drawn-file';
 import { languageOf } from '$lib/utils/highlight';
 import type { DiffFile, DiffLine } from '$lib/types';
 import { addedLine, contextLine, diffFile, hunk, removedLine } from './diff';
+import { textShownBy } from './elements';
 
 /** A line the change left alone, at the same number in both versions. */
 function context(lineNumber: number, content: string): DiffLine {
@@ -82,13 +83,7 @@ describe("the colours of a file's code", () => {
 
 		const [highlighted] = highlightFile(file, 'python');
 
-		expect(highlighted.map((markup) => markup.replace(/<[^>]+>/g, ''))).toEqual([
-			'first = 1',
-			'gone = 2',
-			'also_gone = 3',
-			'came = 4',
-			'last = 5'
-		]);
+		expect(highlighted.map(textShownBy)).toEqual(['first = 1', 'gone = 2', 'also_gone = 3', 'came = 4', 'last = 5']);
 	});
 
 	it('escapes markup when there is no language', () => {

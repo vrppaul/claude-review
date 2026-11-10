@@ -6,6 +6,7 @@ import { splitSuggestions } from '$lib/utils/suggestion';
 import type { DiffLine } from '$lib/types';
 import { drawnHunks } from '$lib/utils/drawn-file';
 import { addedLine, contextLine, diffFile, hunk, removedLine } from './diff';
+import { textShownBy } from './elements';
 
 describe('the words a changed line marks', () => {
 	it('marks only the part of the line that actually changed', () => {
@@ -147,9 +148,7 @@ describe('word marks across a hunk', () => {
 			removedLine(4, 'y = 1')
 		];
 
-		const markup = marked(lines).map((text) => text.replace(/<[^>]+>/g, ''));
-
-		expect(markup).toEqual(['first = 1', 'x = 1', 'x = 2', 'kept', 'y = 1']);
+		expect(marked(lines).map(textShownBy)).toEqual(['first = 1', 'x = 1', 'x = 2', 'kept', 'y = 1']);
 		expect(marked(lines)[1]).toContain('<span class="cr-word">1</span>');
 	});
 

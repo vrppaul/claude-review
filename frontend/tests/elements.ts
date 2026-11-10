@@ -6,6 +6,13 @@ export function said(element: HTMLElement): string {
 	return element.textContent.replace(/\s+/g, ' ').trim();
 }
 
+/** The words a piece of markup shows, read as the browser reads it: its tags gone, its entities turned to what they stand for. */
+export function textShownBy(markup: string): string {
+	const holder = document.createElement('div');
+	holder.innerHTML = markup;
+	return holder.textContent;
+}
+
 /**
  * What records an element being brought into view: its own, given to it
  * here, never the one every element shares, which is called by whatever was
