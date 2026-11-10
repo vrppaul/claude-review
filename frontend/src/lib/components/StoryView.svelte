@@ -70,7 +70,8 @@
 		<div bind:this={waitingRoom} class="cr-story-waiting-room">
 			<StoryWaiting wait={drawn.wait} />
 		</div>
-	{:else if drawn.kind === 'story'}
+	{:else}
+		<!-- A story told -->
 		{@const held = drawn.held}
 		{@const story = held.story}
 		<ChapterBar />

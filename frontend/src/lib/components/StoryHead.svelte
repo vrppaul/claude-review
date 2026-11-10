@@ -100,8 +100,8 @@
 				<p class="cr-muted text-xs">
 					No agent is attached to write it. Attach one with <InlineCode code={ATTACH_COMMAND} kind="command" />.
 				</p>
-			{:else if wait.kind === 'stopped'}
-				<!-- What the reader did, in the same quiet words, and the way to have it written after all -->
+			{:else}
+				<!-- Stopped: what the reader did, in the same quiet words, and the way to have it written after all -->
 				<p class="cr-muted text-xs">You stopped it.</p>
 				{@render writeItAgain()}
 			{/if}

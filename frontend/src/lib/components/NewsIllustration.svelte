@@ -20,7 +20,8 @@
 
 {#if illustration.kind === 'image'}
 	<Picture src={illustration.src} alt={illustration.alt} testId="news-image" />
-{:else if illustration.kind === 'drawing'}
+{:else}
+	<!-- A drawing of the page's own -->
 	{@const Drawing = DRAWINGS[illustration.name]}
 	<Drawing />
 {/if}

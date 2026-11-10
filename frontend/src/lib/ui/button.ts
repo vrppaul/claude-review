@@ -74,8 +74,7 @@ export function buttonLook(tone: ButtonTone, size: ButtonSize, listed: boolean):
  *   A square has no corner to hold one, so it is handed none.
  */
 export type IconButtonShaped =
-	| { shape: 'square'; corner?: never }
-	| { shape: 'notification'; corner: Snippet | undefined };
+	{ shape: 'square'; corner?: never } | { shape: 'notification'; corner: Snippet | undefined };
 export type IconButtonShape = IconButtonShaped['shape'];
 
 export const ICON_BUTTON_SHAPES: Record<IconButtonShape, string> = {

@@ -258,7 +258,7 @@
 					</LinkButton>
 				{/snippet}
 			</Actions>
-		{:else if stage.step === 'went' && stage.went === 'opened'}
+		{:else if stage.went === 'opened'}
 			{@const issue = stage.issue}
 			<div class="flex items-start gap-3">
 				<Icon name="decided" size="sm" tone="done" />
@@ -274,7 +274,7 @@
 					<Button bind:element={done} tone="primary" size="sm" testId="feedback-done" onclick={putAway}>Done</Button>
 				{/snippet}
 			</Actions>
-		{:else if stage.step === 'went' && stage.went === 'too-long'}
+		{:else if stage.went === 'too-long'}
 			{@const issue = stage.issue}
 			<Callout tone="warning" lead={TOO_LONG} testId="feedback-too-long">
 				The issue opened with its title alone, and the text is copied: paste it there.
@@ -289,7 +289,8 @@
 					<Button bind:element={done} tone="primary" size="sm" testId="feedback-done" onclick={putAway}>Done</Button>
 				{/snippet}
 			</Actions>
-		{:else if stage.step === 'went'}
+		{:else}
+			<!-- Handed to the agent: the last way the feedback goes -->
 			<div class="flex items-start gap-3">
 				<Icon name="conversation" size="sm" tone="agent" />
 				<p class="cr-guide-body">Handed to the agent. It answers in its panel.</p>

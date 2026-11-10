@@ -1028,6 +1028,21 @@ export default tseslint.config(
 		}
 	},
 	{
+		// The components whose effects read a value only so Svelte runs them again when it changes, written
+		// `void value`: Svelte's own docs write that read bare, which no-unused-expressions refuses, and the
+		// typescript-eslint rule takes it for a meaningless void. Each one named, so everywhere else the rule
+		// still refuses `void` on a call that returns nothing
+		files: [
+			'src/lib/components/DiffView.svelte',
+			'src/lib/components/ReviewScreen.svelte',
+			'src/lib/components/StoryHead.svelte',
+			'src/lib/components/StoryWaiting.svelte',
+			'src/lib/components/TourSpotlight.svelte',
+			'src/lib/ui/Field.svelte'
+		],
+		rules: { '@typescript-eslint/no-meaningless-void-operator': 'off' }
+	},
+	{
 		ignores: ['node_modules/', 'dist/']
 	}
 );

@@ -9,9 +9,7 @@
 	 * part of the page, taken out by its cross or only named.
 	 */
 	type Naming =
-		| ({ names: 'place' } & ChipReach)
-		| { names: 'chapter'; onclick: () => void }
-		| ({ names: 'part' } & PartChipReach);
+		({ names: 'place' } & ChipReach) | { names: 'chapter'; onclick: () => void } | ({ names: 'part' } & PartChipReach);
 
 	type Props = Naming & {
 		/** Whose words named it. */

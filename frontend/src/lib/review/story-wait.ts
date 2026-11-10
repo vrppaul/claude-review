@@ -25,10 +25,7 @@ import type { StoryAsking } from '$lib/types';
  * `stopped`: the reader stopped the one they asked for.
  */
 export type StoryWait =
-	| { kind: 'unasked' }
-	| { kind: 'writing'; asking: StoryAsking }
-	| { kind: 'nobody-attached' }
-	| { kind: 'stopped' };
+	{ kind: 'unasked' } | { kind: 'writing'; asking: StoryAsking } | { kind: 'nobody-attached' } | { kind: 'stopped' };
 
 const UNASKED: StoryWait = { kind: 'unasked' };
 const NOBODY_ATTACHED: StoryWait = { kind: 'nobody-attached' };
