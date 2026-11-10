@@ -84,21 +84,11 @@ PROBE_SCRIPT = """(() => {
         return found.slice(0, 12).join(' ');
     };
     document.addEventListener('scroll', (event) => {
-        if (named(event.target) === 'diff-view') say(`scrolled ${event.target.scrollTop} focus ${named(document.activeElement)} flush ${flush(event.target)}`);
+        const area = event.target;
+        if (named(area) !== 'diff-view') return;
+        const lines = area.querySelector('[data-testid="file-lines"]');
+        say(`scrolled ${area.scrollTop} height ${area.scrollHeight} client ${area.clientHeight} deepest ${area.scrollHeight - area.clientHeight} lines ${Math.round(lines?.getBoundingClientRect().height ?? -1)} focus ${named(document.activeElement)} flush ${flush(area)}`);
     }, true);
-    // Frame by frame after a click: where the keyboard is, and whether the question's pane is still drawn
-    document.addEventListener('click', () => {
-        let frame = 0;
-        const look = () => {
-            const area = document.querySelector('[data-testid="diff-view"]');
-            say(`frame ${frame} focus ${named(document.activeElement)} pane ${Boolean(document.querySelector('[data-testid="discard-dialog"]'))} scroll ${area?.scrollTop}`);
-            if (++frame < 4) requestAnimationFrame(look);
-        };
-        requestAnimationFrame(look);
-    }, true);
-    new MutationObserver((changes) => {
-        for (const change of changes) for (const node of change.removedNodes) if (node.dataset?.testid) say(`removed ${node.dataset.testid}`);
-    }).observe(document, { childList: true, subtree: true });
     for (const kind of ['pointerdown', 'click', 'keydown', 'focusin']) {
         document.addEventListener(kind, (event) => say(`${kind} ${named(event.target)}`), true);
     }
