@@ -17,7 +17,7 @@
 	import ChangedLines from './ChangedLines.svelte';
 	import FileRow from './FileRow.svelte';
 	import FileTreeFolder from './FileTreeFolder.svelte';
-	import { COLUMN_KEY } from './keymap';
+	import { chordName, COLUMN_CHORD } from './keymap';
 
 	/** What the tree lists, in words: counted in its heading, looked for in its filter. */
 	interface Listed extends CountedWords {
@@ -134,7 +134,7 @@
 	label="Files"
 	called="the file tree"
 	resizing="Resize the file tree"
-	key={COLUMN_KEY}
+	key={chordName(COLUMN_CHORD)}
 	holds="list"
 	data-tour={tourStop('file-tree')}
 	testIds={{

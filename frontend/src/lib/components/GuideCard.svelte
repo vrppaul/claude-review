@@ -13,7 +13,7 @@
 	import Tag from '$lib/ui/Tag.svelte';
 	import FeedbackCard from './FeedbackCard.svelte';
 	import NewsIllustration from './NewsIllustration.svelte';
-	import { HELP_BUTTON_ROLE } from './keymap';
+	import { chordName, HELP_BUTTON_ROLE, HELP_CHORD } from './keymap';
 
 	// What the welcome asks a newcomer, which heads it; and what each card's cross says it does
 	const WELCOME = 'First time here?';
@@ -170,7 +170,7 @@
 					{/snippet}
 				</Actions>
 				<p class="cr-faint text-xs">
-					You can take it later from the <Key keys="?" stands="inline" testId="guide-help-key" /> list.
+					You can take it later from the <Key keys={chordName(HELP_CHORD)} stands="inline" testId="guide-help-key" /> list.
 				</p>
 			</div>
 		</Pane>
