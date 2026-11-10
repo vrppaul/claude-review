@@ -74,6 +74,14 @@ jobs:
 
   test-e2e:
     runs-on: ubuntu-latest
+    # PROBE, never merged: which files before it make the question's test fail
+    strategy:
+      fail-fast: false
+      matrix:
+        before:
+          - "tests/e2e/test_asking_about_the_story.py tests/e2e/test_base_picker.py tests/e2e/test_jumps.py tests/e2e/test_keys_and_focus.py"
+          - "tests/e2e/test_narrowed_lines.py tests/e2e/test_page_policy.py tests/e2e/test_page_stays_put.py"
+          - "tests/e2e/test_asking_about_the_story.py tests/e2e/test_base_picker.py tests/e2e/test_jumps.py tests/e2e/test_keys_and_focus.py tests/e2e/test_narrowed_lines.py tests/e2e/test_page_policy.py tests/e2e/test_page_stays_put.py"
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
       - uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8
@@ -89,14 +97,13 @@ jobs:
       - run: pnpm --dir frontend build
       - run: uv sync
       - run: uv run playwright install chromium
-      # PROBE, never merged: the question's test and its unanchored twin, each 25 times, counted
       - run: |
           failures=0
-          for attempt in $(seq 30); do
-            uv run pytest tests/e2e/test_panes.py -q -p no:cacheprovider > file.txt 2>&1 || true
-            grep -q "FAILED.*discarded_asked_just_under" file.txt && failures=$((failures + 1))
+          for attempt in $(seq 8); do
+            uv run pytest ${{ matrix.before }} tests/e2e/test_panes.py -q -p no:cacheprovider > run.txt 2>&1 || true
+            grep -q "FAILED.*discarded_asked_just_under" run.txt && failures=$((failures + 1))
           done
-          echo "TALLY the file alone: the question's test failed $failures of 30"
+          echo "TALLY failed $failures of 8 after: ${{ matrix.before }}"
 
   build:
     runs-on: ubuntu-latest
