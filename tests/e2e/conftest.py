@@ -45,11 +45,47 @@ async def nothing_left_running() -> AsyncIterator[None]:
     assert not left_running, f"left running in the loop the browser tests share: {left_running}"
 
 
+# PROBE, never merged: every scroll of the files' area, and every call that can scroll or focus, with who made it
+PROBE_SCRIPT = """(() => {
+    const started = performance.now();
+    const named = (element) => element?.dataset?.testid ?? element?.tagName ?? String(element);
+    const stack = () => new Error().stack.split('\\n').slice(2, 9).map((frame) => frame.trim()).join(' < ');
+    const say = (what) => console.log(`PROBE ${Math.round(performance.now() - started)} ${what}`);
+    const wrap = (owner, name) => {
+        const original = owner[name];
+        owner[name] = function (...args) {
+            say(`${name} on ${named(this)} ${JSON.stringify(args[0] ?? null)} from ${stack()}`);
+            return original.apply(this, args);
+        };
+    };
+    wrap(Element.prototype, 'scrollIntoView');
+    wrap(Element.prototype, 'scrollTo');
+    wrap(Element.prototype, 'scrollBy');
+    wrap(HTMLElement.prototype, 'focus');
+    const scrollTop = Object.getOwnPropertyDescriptor(Element.prototype, 'scrollTop');
+    Object.defineProperty(Element.prototype, 'scrollTop', {
+        get() { return scrollTop.get.call(this); },
+        set(value) {
+            say(`scrollTop= on ${named(this)} ${value} from ${stack()}`);
+            scrollTop.set.call(this, value);
+        }
+    });
+    document.addEventListener('scroll', (event) => {
+        if (named(event.target) === 'diff-view') say(`scrolled ${event.target.scrollTop} focus ${named(document.activeElement)}`);
+    }, true);
+    for (const kind of ['pointerdown', 'click', 'keydown', 'focusin']) {
+        document.addEventListener(kind, (event) => say(`${kind} ${named(event.target)}`), true);
+    }
+})()"""
+
+
 @in_the_browsers_loop
 async def page(browser: Browser) -> AsyncIterator[Page]:
     """A fresh page with the suite's timeout, in a context of its own: no test sees another's storage."""
     context = await browser.new_context()
+    await context.add_init_script(PROBE_SCRIPT)
     opened = await context.new_page()
+    opened.on("console", lambda message: print(message.text))
     opened.set_default_timeout(E2E_TIMEOUT_MS)
     yield opened
     await context.close()

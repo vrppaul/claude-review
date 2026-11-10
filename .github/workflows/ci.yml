@@ -89,7 +89,8 @@ jobs:
       - run: pnpm --dir frontend build
       - run: uv sync
       - run: uv run playwright install chromium
-      - run: uv run pytest tests/e2e/ tests/scripts/ -v
+      # PROBE, never merged: the e2e suite three times over, to catch the flaky test once
+      - run: for attempt in 1 2 3; do uv run pytest tests/e2e/ -q -p no:cacheprovider || failed=1; done; exit ${failed:-0}
 
   build:
     runs-on: ubuntu-latest
