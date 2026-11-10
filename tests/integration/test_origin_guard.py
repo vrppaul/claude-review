@@ -14,7 +14,7 @@ from http import HTTPStatus
 import pytest
 from fastapi import WebSocketDisconnect
 from fastapi.testclient import TestClient
-from httpx import AsyncClient
+from httpx2 import AsyncClient
 
 from claude_review.presentation.schemas.pushes import ShowPush
 from claude_review.presentation.schemas.refusal import Refusal

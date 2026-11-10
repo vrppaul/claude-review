@@ -24,7 +24,7 @@
     "@testing-library/svelte": "^5.3.1",
     "@testing-library/user-event": "^14.6.1",
     "@types/node": "^25.6.0",
-    "esbuild": "^0.28.0",
+    "esbuild": "^0.28.2",
     "eslint": "^10.2.0",
     "eslint-plugin-svelte": "^3.17.0",
     "fast-check": "^4.10.2",
@@ -34,13 +34,13 @@
     "prettier": "^3.8.2",
     "prettier-plugin-svelte": "^3.5.1",
     "stylelint": "^17.16.0",
-    "svelte": "^5.55.3",
+    "svelte": "^5.57.3",
     "svelte-check": "^4.4.6",
     "tailwindcss": "^4.2.2",
     "typescript": "^6.0.2",
     "typescript-eslint": "^8.58.1",
-    "vite": "^8.0.8",
-    "vitest": "^4.1.4"
+    "vite": "^8.3.7",
+    "vitest": "^4.1.12"
   },
   "dependencies": {
     "highlight.js": "^11.11.1",

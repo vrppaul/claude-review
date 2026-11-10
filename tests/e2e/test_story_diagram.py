@@ -9,7 +9,7 @@ the agent linked to a chapter takes the reader there.
 from pathlib import Path
 
 import pytest
-from httpx import AsyncClient
+from httpx2 import AsyncClient
 from playwright.async_api import Page, ViewportSize, expect
 
 from claude_review.domain.story import Step, Story

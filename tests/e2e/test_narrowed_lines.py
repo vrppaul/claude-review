@@ -9,7 +9,7 @@ one, or j stops in front of it for good.
 from pathlib import Path
 
 import pytest
-from httpx import AsyncClient
+from httpx2 import AsyncClient
 from playwright.async_api import Page
 
 from tests.e2e.browsers_loop import in_the_browsers_loop

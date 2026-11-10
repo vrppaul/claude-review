@@ -20,7 +20,7 @@ from typing import override
 
 import pytest
 from fastapi.testclient import TestClient
-from httpx import AsyncClient
+from httpx2 import AsyncClient
 from pydantic import TypeAdapter
 from starlette.testclient import WebSocketTestSession
 

@@ -10,7 +10,7 @@ from http import HTTPStatus
 from pathlib import Path
 
 import pytest
-from httpx import AsyncClient
+from httpx2 import AsyncClient
 
 from claude_review.hosting.workspace import ReaderFiles
 from tests.helpers import ReviewFactory, http_client

@@ -13,7 +13,7 @@ from http import HTTPStatus
 
 import pytest
 from fastapi import FastAPI
-from httpx import AsyncClient
+from httpx2 import AsyncClient
 from pydantic import BaseModel, Field
 from structlog.typing import EventDict
 

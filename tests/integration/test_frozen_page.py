@@ -11,7 +11,7 @@ import asyncio
 import contextlib
 from http import HTTPStatus
 
-from httpx import AsyncClient
+from httpx2 import AsyncClient
 from structlog.typing import EventDict
 
 from claude_review.presentation.broadcast import PAGE_BACKLOG

@@ -6,7 +6,7 @@ are told of the end must reach them before their sockets close under them.
 
 import asyncio
 
-from httpx import AsyncClient
+from httpx2 import AsyncClient
 
 from claude_review.presentation.schemas.pushes import EndedPush
 from claude_review.presentation.schemas.session import Delivery, Welcome

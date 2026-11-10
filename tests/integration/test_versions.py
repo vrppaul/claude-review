@@ -12,7 +12,7 @@ from http import HTTPStatus
 from pathlib import Path
 
 import pytest
-from httpx import AsyncClient
+from httpx2 import AsyncClient
 
 from claude_review.repositories.git_repository import GitRepository
 from claude_review.services.review_opening import open_diff

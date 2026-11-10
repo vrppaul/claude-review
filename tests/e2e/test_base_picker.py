@@ -8,7 +8,7 @@ this test watches both halves: the diff narrows, and the way back is there.
 from pathlib import Path
 
 import pytest
-from httpx import AsyncClient
+from httpx2 import AsyncClient
 from playwright.async_api import Page
 
 from tests.e2e.browsers_loop import in_the_browsers_loop

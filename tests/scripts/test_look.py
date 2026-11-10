@@ -13,7 +13,7 @@ from collections.abc import AsyncIterator
 from pathlib import Path
 
 import pytest
-from httpx import URL, AsyncClient
+from httpx2 import URL, AsyncClient
 from pydantic import BaseModel, ConfigDict
 
 from claude_review.presentation.schemas.content import DiffResponse

@@ -9,7 +9,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import override
 
 import pytest
-from httpx import AsyncClient
+from httpx2 import AsyncClient
 
 from claude_review.cli.review_client import ReviewCallError, ReviewClient
 from claude_review.hosting.address import LOOPBACK

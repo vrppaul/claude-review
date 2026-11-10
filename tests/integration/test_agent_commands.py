@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pytest
 from click.testing import CliRunner, Result
-from httpx import AsyncClient, Client
+from httpx2 import AsyncClient, Client
 
 from claude_review.cli.main import main
 from claude_review.domain.models import CommentSeverity, LineSide

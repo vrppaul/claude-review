@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import override
 
 import pytest
-from httpx import URL, AsyncClient
+from httpx2 import URL, AsyncClient
 from structlog.typing import EventDict
 
 from claude_review.hosting.announcer import ReviewAnnouncer

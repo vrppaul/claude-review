@@ -11,7 +11,7 @@ a browser lays a page out, so only here can that be seen.
 
 from pathlib import Path
 
-from httpx import AsyncClient
+from httpx2 import AsyncClient
 from playwright.async_api import Page, expect
 
 from tests.e2e.browsers_loop import in_the_browsers_loop

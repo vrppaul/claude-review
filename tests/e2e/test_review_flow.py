@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 import pytest
-from httpx import AsyncClient, TransportError
+from httpx2 import AsyncClient, TransportError
 from playwright.async_api import Locator, Page, expect
 
 from claude_review.services.text_files import read_text_files

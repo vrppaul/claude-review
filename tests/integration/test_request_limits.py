@@ -9,7 +9,7 @@ from collections.abc import AsyncIterator
 from http import HTTPStatus
 
 import pytest
-from httpx import AsyncClient
+from httpx2 import AsyncClient
 
 from claude_review.domain.models import CommentSeverity
 from claude_review.presentation.body_limit import MAX_REQUEST_BYTES

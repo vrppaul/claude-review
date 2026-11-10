@@ -10,7 +10,7 @@ from http import HTTPMethod, HTTPStatus
 from pathlib import Path
 
 import pytest
-from httpx import AsyncClient
+from httpx2 import AsyncClient
 from pydantic import JsonValue
 
 from tests.helpers import (

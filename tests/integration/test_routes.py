@@ -8,7 +8,7 @@ from importlib.metadata import version
 from pathlib import Path
 
 import pytest
-from httpx import AsyncClient
+from httpx2 import AsyncClient
 
 from claude_review.domain.models import MAX_PATH_LENGTH, DiffFile, FileStatus, Unshown
 from claude_review.presentation.schemas.refusal import Refusal

@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 import structlog
 from fastapi.testclient import TestClient
-from httpx import AsyncClient
+from httpx2 import AsyncClient
 from structlog.testing import capture_logs
 from structlog.typing import EventDict
 

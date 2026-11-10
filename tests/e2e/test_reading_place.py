@@ -11,7 +11,7 @@ alone: jsdom lays nothing out.
 from pathlib import Path
 
 import pytest
-from httpx import AsyncClient
+from httpx2 import AsyncClient
 from playwright.async_api import Locator, Page, ViewportSize, expect
 
 from tests.e2e.browsers_loop import in_the_browsers_loop

@@ -12,7 +12,7 @@ from http import HTTPStatus
 from pathlib import Path
 
 import pytest
-from httpx import AsyncClient
+from httpx2 import AsyncClient
 from structlog.typing import EventDict
 
 from claude_review.domain.models import LARGEST_FILE_SHOWN_BYTES, MAX_QUOTE_LINES, TurnAuthor

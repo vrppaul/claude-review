@@ -12,7 +12,7 @@ import time
 from pathlib import Path
 
 import pytest
-from httpx import AsyncClient
+from httpx2 import AsyncClient
 from playwright.async_api import Locator, Page, expect
 
 from claude_review.domain.models import CommentSeverity

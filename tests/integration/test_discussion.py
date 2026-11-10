@@ -8,7 +8,7 @@ separate processes, which is why a queue sits between them.
 from http import HTTPStatus
 
 from fastapi.testclient import TestClient
-from httpx import AsyncClient
+from httpx2 import AsyncClient
 
 from claude_review.domain.models import CommentSeverity, TurnAuthor
 from claude_review.presentation.schemas.pushes import HandedPush, ReplyPush

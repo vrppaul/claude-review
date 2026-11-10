@@ -14,7 +14,7 @@ browser.
 from pathlib import Path
 
 import pytest
-from httpx import AsyncClient
+from httpx2 import AsyncClient
 from playwright.async_api import Page, ViewportSize, expect
 from pydantic import BaseModel, ConfigDict
 

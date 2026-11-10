@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from httpx import AsyncClient
+from httpx2 import AsyncClient
 from starlette.websockets import WebSocketDisconnect
 
 from claude_review.presentation.app import ASSETS_NAME, PAGE_NAME, serve_the_page
