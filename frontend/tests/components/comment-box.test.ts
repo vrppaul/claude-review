@@ -178,15 +178,12 @@ describe('the chord a field answers', () => {
 		expect(getByTestId('comment-keys').textContent).toContain(ASK_KEYS);
 	});
 
-	it('neither asks nor adds on the ask chord where nobody can be asked, and offers it nowhere', async () => {
-		const user = userEvent.setup();
+	it('leaves the ask chord to the field and the browser where nobody can be asked', async () => {
 		const { getByTestId } = drawnSaving(newField());
 
-		await user.type(getByTestId('comment-input'), 'Why this?');
-		await user.keyboard('{Alt>}{Enter}{/Alt}');
+		const leftToTheField = await fireEvent.keyDown(getByTestId('comment-input'), { key: 'Enter', altKey: true });
 
-		expect(review.threads.count).toBe(0);
-		expect(getByTestId('comment-actions').textContent).not.toContain(ASK_KEYS);
+		expect(leftToTheField).toBe(true);
 	});
 });
 

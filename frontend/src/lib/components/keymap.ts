@@ -91,8 +91,9 @@ const THE_STORY: readonly ReadingViewName[] = ['story'];
 const ALWAYS: Live = () => true;
 const WHILE_LINES_ARE_DRAWN: Live = (review) => review.views.onScreen.drawn().lines;
 const WHILE_THREADS_ARE_DRAWN: Live = (review) => review.views.onScreen.drawn().threads;
-// While an agent can be asked: the field offers Ask agent now only then
-const WHILE_AN_AGENT_CAN_BE_ASKED: Live = (review) => review.canAsk;
+// While a comment can be written and asked about: an agent can be asked, which is when a field offers Ask agent
+// now, and threads are drawn, there being lines to comment on or a thread to reply in
+const WHILE_A_COMMENT_CAN_BE_ASKED: Live = (review) => review.canAsk && review.views.onScreen.drawn().threads;
 
 /** A key pressed on its own. */
 function alone(key: string, run: (review: Review) => void): Press {
@@ -163,7 +164,7 @@ const KEYMAP: readonly KeyRow[] = [
 		does: 'Ask the agent now about the comment being written',
 		presses: [],
 		views: EVERY_VIEW,
-		live: WHILE_AN_AGENT_CAN_BE_ASKED
+		live: WHILE_A_COMMENT_CAN_BE_ASKED
 	},
 	{
 		keys: [']', '['],

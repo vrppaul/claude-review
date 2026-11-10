@@ -178,7 +178,8 @@
 			event.preventDefault();
 			save();
 		}
-		if (isAskChord(event)) {
+		// The ask chord is the field's only where it offers Ask agent now; elsewhere the browser keeps it
+		if (onAsk && isAskChord(event)) {
 			event.preventDefault();
 			ask();
 		}

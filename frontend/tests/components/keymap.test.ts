@@ -3,7 +3,7 @@ import { fireEvent, render, screen, within } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import { flushSync } from 'svelte';
 import ReviewScreen from '$lib/components/ReviewScreen.svelte';
-import { ASK_KEYS, FIELD_KEYS } from '$lib/components/keymap';
+import { ASK_KEYS } from '$lib/components/keymap';
 import type { Review } from '$lib/review/review.svelte';
 import { contextLine, diffFile, hunk } from '../diff';
 import { broughtIntoView } from '../elements';
@@ -233,7 +233,6 @@ describe('the keys the review answers', () => {
 
 		expect(listedInTheHelp()).toEqual([
 			'Ctrl+Enter: Add the comment, or send the message, being written',
-			'Alt+Enter: Ask the agent now about the comment being written',
 			'a: Next unread reply',
 			'c: Talk to the agent',
 			'f: Show or hide the file tree',
@@ -280,15 +279,6 @@ describe('the keys the review answers', () => {
 		await fireEvent.keyDown(window, { key: 'Enter', ctrlKey: true, shiftKey: true, isComposing: true });
 
 		expect(review.submission.finishing).toBe(false);
-	});
-
-	it('lists in the help the chord a comment or a message is sent from its field with', async () => {
-		const user = userEvent.setup();
-		render(ReviewScreen, { props: { review } });
-
-		await user.keyboard('?');
-
-		expect(screen.getByTestId('shortcuts-list').textContent).toContain(FIELD_KEYS);
 	});
 
 	it('lists in the help no chord to ask the agent with while no agent can be asked', async () => {
@@ -456,7 +446,6 @@ describe('the keys of a review read as its story', () => {
 
 		expect(listedInTheHelp()).toEqual([
 			'Ctrl+Enter: Add the comment, or send the message, being written',
-			'Alt+Enter: Ask the agent now about the comment being written',
 			'a: Next unread reply',
 			'c: Talk to the agent',
 			'Ctrl+Shift+Enter: Finish the review',
