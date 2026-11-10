@@ -91,11 +91,11 @@ jobs:
       - run: uv run playwright install chromium
       # PROBE, never merged: the question's test and its unanchored twin, each 25 times, counted
       - run: |
+          failures=0
           for attempt in $(seq 40); do
-            if ! uv run pytest tests/e2e/test_panes.py -q -p no:cacheprovider -k "just_under_the_files_header" > probe-run.txt 2>&1; then
-              echo "FAILED on attempt $attempt"; grep -E "PROBE|assert" probe-run.txt; break
-            fi
+            uv run pytest tests/e2e/test_panes.py -q -p no:cacheprovider -k "just_under_the_files_header" > probe-run.txt 2>&1 || failures=$((failures + 1))
           done
+          echo "TALLY control failed: $failures of 40"
 
   build:
     runs-on: ubuntu-latest

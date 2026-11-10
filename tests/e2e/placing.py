@@ -9,5 +9,4 @@ reads a box (`.pre-commit-config.yaml`) leaves this module alone for that.
 # over it
 TOP_UNDER = """(area, [control, header, under]) => {
     area.scrollTop += control.getBoundingClientRect().top - (header.getBoundingClientRect().bottom + under);
-    return new Promise((drawn) => requestAnimationFrame(() => requestAnimationFrame(drawn)));
 }"""
