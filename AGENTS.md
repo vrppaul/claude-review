@@ -36,20 +36,6 @@ cd frontend && pnpm format           # Prettier; the hook only checks
 - A commit follows Conventional Commits, `type(scope): description`.
 - Planned work is tracked in `TODO.md`, where an item done is removed, not ticked off; what changed, in `CHANGELOG.md`.
 
-## Layers
-
-- `cli` → `hosting` → `presentation` → `services` | `repositories` → `domain`, the parts of `src/claude_review/`: each builds only on those after it, and the services and the repositories never import each other.
-
-## Rules for all code
-
-- A function does one thing, as `src/claude_review/services/unified_diff.py` is split (`_path`, `_status`, `_hunks`, `_hunk`); no method does everything.
-- A name says what it holds.
-- Dependencies are explicit — FastAPI's `Depends()`, a constructor's parameters — so a service or a component is tested by itself, and nothing couples two layers out of sight.
-- A parameter every caller must give has no default, which would hide a missing value. One whose absence is a valid state may have one.
-- A new review mode is added code, not a changed conditional: opt in to a mode (`isDiffMode`), never out of one (`!isFilesMode`), and look up what depends on the mode in a table (`COUNTED_AS`).
-- Shared code comes with its second user, not before; once there are two, it is written once.
-- No function only passes its call on, fixed arguments or none, unless it names a notion its call lacks or hides real work; shorter to write is no reason.
-
 ## Only better
 
 Every change leaves the repository better than it found it: cleaner, easier to read, more modular, its architecture more fitting. In every part it touches, not on balance. A change that only works is not done.
@@ -66,7 +52,8 @@ Every change leaves the repository better than it found it: cleaner, easier to r
 
 Before you change or review code in an area, read its file whole; a brief to another agent names the files.
 
-- `.claude/rules/server.md` — anything under `src/`: Python, the package's parts, models, errors, time, the command line.
+- `.claude/rules/code.md` — any code, Python or the page's: functions, names, values, state, how it grows.
+- `.claude/rules/server.md` — anything under `src/`: Python, the package's layers and parts, models, errors, time, the command line.
 - `.claude/rules/api.md` — a schema, a route, the API's contract, the page's generated types and its requests.
 - `.claude/rules/page.md` — anything under `frontend/`: types, state, parts, styling, panes and keys, moving the reader.
 - `.claude/rules/design.md`, `.claude/rules/design-behaviour.md`, `.claude/rules/design-process.md` — how the page looks and answers the reader, and how a design is made.

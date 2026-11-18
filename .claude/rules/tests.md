@@ -35,6 +35,7 @@ paths:
 
 ## How a test is written
 
+- Of `.claude/rules/code.md` a test keeps "Functions and names"; its values are written out where they are checked.
 - A test and its helpers hold no branch: no `if`, no conditional expression, no `or`, no filter in a comprehension. A helper that depends on a kind is a lookup table.
 - Cases of one rule are one test that names every case that fails. A property test (hypothesis, fast-check) replaces the example tests of its rule, one example kept at most.
 - Data with a shape is a typed model, never a raw `dict` or `Mapping`, in tests too.

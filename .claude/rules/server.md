@@ -20,6 +20,7 @@ The API has its own rules, `.claude/rules/api.md`.
 
 ## The parts
 
+- `cli` → `hosting` → `presentation` → `services` | `repositories` → `domain`: each part of `src/claude_review/` builds only on those after it, and the services and the repositories never import each other.
 - The domain, the services and the repositories import no web server and no command-line framework; an agent's command, with all it imports, no web server and no web framework.
 - `uv run lint-imports` refuses an import against these; `pyproject.toml` holds the contracts and their reasons.
 - A review weighs a part from more than one side, against how the framework's docs and template do it.

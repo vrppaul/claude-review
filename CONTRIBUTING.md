@@ -82,15 +82,15 @@ domain/        → Pydantic models, the interfaces the services build on, enums
 
 Each part builds only on those below it — cli → hosting → presentation →
 services | repositories → domain — and the services and the repositories
-never import each other. `uv run lint-imports` holds it. AGENTS.md says the
-rest.
+never import each other. `uv run lint-imports` holds it.
+`.claude/rules/server.md` says the rest.
 
 The frontend uses a `ReviewMode` that flows from the backend API to control rendering:
 - `diff` — two-column line numbers, add/delete styling, file tree sidebar
 - `files` — single line numbers, no diff decoration, flat file list sidebar
 - `transcript` — conversation messages as reviewable entries, markdown highlighting
 
-See [AGENTS.md](AGENTS.md) for the rules that bind all code, and the files under `.claude/rules/` it names for the rules of each area.
+See [AGENTS.md](AGENTS.md) for how the work is done, and the files under `.claude/rules/` it names for the rules of each area: `.claude/rules/code.md` holds those of any code.
 
 ## Releasing
 

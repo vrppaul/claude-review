@@ -354,6 +354,11 @@ of it is built yet.
 ## Infrastructure
 
 - [ ] Submit to the official Claude Code plugin marketplace
+- [ ] `refactor`: names that abbreviate, against `.claude/rules/code.md`:
+      `msg` for a refusal's words, 153 places under `src/` and `scripts/`
+      (the name ruff's `EM` rule is answered with), and `tmp` in 3; in the
+      page's tests, 99 names of one or two letters. No gate here reads a
+      name of three letters or more.
 - [ ] `line_span(start, end)` takes two numbers where `lines_named` gives
       back a `LineSpan`, so two callers take a `LineSpan` apart to say it:
       one shape, written twice.
