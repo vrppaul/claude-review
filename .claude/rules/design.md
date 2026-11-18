@@ -30,6 +30,7 @@ A part is held to these once it is moved to them, or once a change touches its l
 - Every part wears the page's current look: one left in a look the page has dropped is redrawn.
 - One thing has one look wherever it stands: a file's code in a story's step as in Files; a way to a chapter in a list as on a file's bar.
 - Two kinds of one thing are one element, of one room, type and height.
+- No variant of a part repeats another or differs from it by a pixel.
 - A thing not there yet is drawn as what it will become, on a dashed edge: a comment being written is the card it becomes.
 
 ## Sizes and room

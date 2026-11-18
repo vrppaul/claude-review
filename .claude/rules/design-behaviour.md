@@ -45,6 +45,12 @@ From the owner's design canvas of 2026-10-20. How the page looks: `.claude/rules
 - Nothing moves that can be huge, such as a file in the diff, nor what the keys move faster than, such as the row the reader is at.
 - With less motion asked for, nothing moves.
 
+## The whole page
+
+- The page itself never scrolls, and every pane stays inside the window.
+- There is one way to close a pane.
+- Headings stand in order: no smaller heading above a larger one.
+
 ## Narrow windows
 
 - The header never wraps. As the window narrows, words give way to their icons, the name kept on the pointer; then what is drawn rather than said goes; the main act keeps its word and its figure to the last.
