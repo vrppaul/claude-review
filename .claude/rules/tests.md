@@ -21,7 +21,7 @@ paths:
 - No test written to a change: that a line was edited, or that what the code did before it no longer does. A test holds what the code does.
 - "No test holds X" is no finding and no TODO item unless X is a behaviour someone can name.
 - A rule about how code is written is a gate in pre-commit, never a test.
-- A test deleted leaves no debt: nothing is written in its place, neither a test nor a gate. A gate of our own code, a plugin or a script, is built only on the owner's word.
+- A test deleted leaves no debt: nothing is written in its place, neither a test nor a gate.
 
 ## At which level
 
