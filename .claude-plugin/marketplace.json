@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "claude-review-marketplace",
-  "description": "Browser-based code review tools for Claude Code",
+  "description": "A local tool to understand what your coding agent changed and iterate on it fast. Like a pull request in your browser, where the agent answers instantly.",
   "owner": {
     "name": "vrppaul",
     "email": "vrppaul@github.com"
@@ -9,7 +9,7 @@
   "plugins": [
     {
       "name": "claude-review",
-      "description": "Browser-based code review tool. Shows git diffs in a GitHub-style UI with syntax highlighting, inline comments, and sends formatted feedback back to Claude.",
+      "description": "A local tool to understand what your coding agent changed and iterate on it fast. Like a pull request in your browser, where the agent answers instantly.",
       "author": {
         "name": "vrppaul"
       },

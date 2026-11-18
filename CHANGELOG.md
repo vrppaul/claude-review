@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Changed
+- **One description everywhere.** PyPI, the plugin's listing and
+  `claude-review --help` say what the README opens with: a local tool to
+  understand what your coding agent changed and iterate on it fast.
+- **PyPI's page shows a picture for each clip of the README.** PyPI plays
+  no video, so each clip stands there as a still that leads to the README
+  on GitHub, where it plays.
+
 ## [1.7.2] - 2026-11-10
 
 ### Security

@@ -90,7 +90,10 @@ class ReviewCommands(click.Group):
 @click.version_option(package_name="claude-review")
 @click.option("--verbose", is_flag=True, help="Enable diagnostic logging to stderr.")
 def main(*, verbose: bool) -> None:
-    """Browser-based code review tool for Claude Code."""
+    """A local tool to understand what your coding agent changed and iterate on it fast.
+
+    Like a pull request in your browser, where the agent answers instantly.
+    """
     _configure_logging(verbose=verbose)
 
 
