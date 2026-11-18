@@ -195,9 +195,6 @@ tests. Remove items when done — don't check them off.
       and 821 in Story: the header wraps a third row in Files, for the base
       picker, so a switch between the views moves the reading area 32
       pixels. Measured by an independent review, in a look.
-- [ ] `feat(ui)`: each view opens at its top when the reader switches back
-      to it. `FileSections.readingPlace` / `returnTo` name a section by
-      its key and can carry the place.
 - [ ] `fix(ui)`: a node of the story's diagram takes the reader to its
       chapter and leaves the keyboard on the node, out of sight, so the
       next Tab scrolls back (`StoryDiagram.svelte`, `parts.goTo`); a way
@@ -245,6 +242,19 @@ tests. Remove items when done — don't check them off.
 - [ ] `refactor(ui)`: a failed request for a diff is said three ways: an
       `Attempt` in two notices, `changedSinceFailed` in `FileSection`, and
       what the diff itself keeps of the whole review not put back.
+
+## Quality of life
+
+The owner's list of 2026-11-16.
+
+- [ ] `feat(ui)`: a long thread shows its last three or four answers and
+      folds the ones before them behind one line that opens them.
+- [ ] `feat(ui)`: switching from Story to Files and back returns each view
+      to where the reader left it; today each opens at its top.
+      `FileSections.readingPlace` / `returnTo` name a section by its key
+      and can carry the place.
+- [ ] `feat(ui)`: from a step of the story, a quick look at that step's
+      whole file, and one press back to the same place in the story.
 
 ## The page's look, for later
 
