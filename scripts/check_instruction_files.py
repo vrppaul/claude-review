@@ -5,8 +5,8 @@ of an area under `.claude/rules/` into every session that opens a file of
 that area. A rule is cheap to add and nothing asks one to leave, so a file
 left alone grows until it is read in part and followed less. Each is held
 to its bytes, its lines and its longest line, and what no longer fits goes
-where it belongs: a rule for one area to that area's file, how a thing is
-built to its module's docstring, what a tool can hold to a gate.
+where it belongs: a rule for one area to that area's file, what a tool can
+hold to a gate. How a thing is built is read in its code.
 
 Every path the files name is held to being in the repository. A path is a
 word of code — of what stands between two backticks on one line — that
@@ -86,8 +86,8 @@ FIRST_PATTERN_LINE = 3
 
 # What is said of a file that holds more than it may, and of a line that does
 WHERE_IT_GOES = (
-    "move a rule for one area to that area's file, how a thing is built to its module's docstring, "
-    "what a tool can hold to a gate"
+    "move a rule for one area to that area's file and what a tool can hold to a gate; "
+    "how a thing is built is read in its code"
 )
 OVER_BYTES = "holds {size} bytes, {over} over its {most}: " + WHERE_IT_GOES
 OVER_LINES = "holds {size} lines, {over} over its {most}: " + WHERE_IT_GOES

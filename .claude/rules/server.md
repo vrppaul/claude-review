@@ -5,7 +5,7 @@ paths:
 
 # The server and the command line
 
-How a module is built is said in its docstring. The API has its own rules, `.claude/rules/api.md`.
+The API has its own rules, `.claude/rules/api.md`.
 
 ## Python
 
@@ -20,6 +20,9 @@ How a module is built is said in its docstring. The API has its own rules, `.cla
 
 ## The parts
 
+- The domain, the services and the repositories import no web server and no command-line framework; an agent's command, with all it imports, no web server and no web framework.
+- `uv run lint-imports` refuses an import against these; `pyproject.toml` holds the contracts and their reasons.
+- A review weighs a part from more than one side, against how the framework's docs and template do it.
 - The domain does no I/O.
 - A service is a class where there is a dependency or state to hold, a function where there is not.
 - A service builds on the domain and the interfaces it holds (`src/claude_review/domain/interfaces.py`), never on what implements them; a test puts a fake in an implementation's place.

@@ -16,7 +16,7 @@ sections in `~/.claude/CLAUDE.md` ("Код и комментарии — тол�
 exist; `frontend/eslint.config.js` and `frontend/stylelint.config.js`. Then the range your brief names, commit by
 commit, each message's claims checked against the code.
 
-Before the diff, step back, as AGENTS.md's "A review steps back" asks: look at the whole construction the change
+Before the diff, step back, as AGENTS.md's "Step back first" asks: look at the whole construction the change
 lives in, ask of each part why it exists at all, compare it with how Svelte's and Tailwind's docs and their official
 templates do the same, and weigh it from more than one side. A construction with no reason that holds is a finding,
 however old it is and whoever wrote it.

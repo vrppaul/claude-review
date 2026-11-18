@@ -5,7 +5,7 @@ paths:
 
 # The page
 
-How a part of the page is built is said at the top of its module; what eslint and stylelint refuse, and why, in `frontend/eslint.config.js` and `frontend/stylelint.config.js`.
+What eslint and stylelint refuse, and why, is in `frontend/eslint.config.js` and `frontend/stylelint.config.js`.
 
 ## Types and state
 

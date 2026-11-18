@@ -7,7 +7,7 @@ paths:
 
 # The API
 
-What passes between the server, its page and its agent. How a module does its part is said in its docstring; the rules for all of `src/` are in `.claude/rules/server.md`.
+What passes between the server, its page and its agent. The rules for all of `src/` are in `.claude/rules/server.md`.
 
 ## Schemas and routes
 

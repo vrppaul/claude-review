@@ -25,8 +25,8 @@ LONGEST_LINE = 240
 
 # What a file that outgrew its bytes or its lines is told, and a line that outgrew its characters
 WHERE_IT_GOES = (
-    "move a rule for one area to that area's file, how a thing is built to its module's docstring, "
-    "what a tool can hold to a gate"
+    "move a rule for one area to that area's file and what a tool can hold to a gate; "
+    "how a thing is built is read in its code"
 )
 A_SHORTER_LINE = f"1 over the {LONGEST_LINE} a line may hold: a rule is a short imperative, so cut it or make it two"
 # What a path that is not there is told, a file of rules the general file leaves out, and one that names no paths
