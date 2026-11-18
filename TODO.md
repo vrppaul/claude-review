@@ -256,6 +256,50 @@ The owner's list of 2026-11-16.
 - [ ] `feat(ui)`: from a step of the story, a quick look at that step's
       whole file, and one press back to the same place in the story.
 
+## Finding your way in a review
+
+The owner's idea of 2026-11-18, a language server built in to find a name
+and where it is used, and what came of thinking it through: what a reader
+asks of a change, and what the review cannot answer yet. None is designed.
+The order proposed is the first two, the whole-file look under Quality of
+life, then the uses of a name, each ready for the next; the rest in any
+order.
+
+Where a thing is:
+
+- [ ] `feat`: the functions a change touches, under each file in the tree.
+      Git names the function in a hunk's heading (`@@ … @@ def handler():`),
+      and `services/unified_diff.py` reads past it.
+- [ ] `feat(ui)`: a way back after any jump: one key returns the reader to
+      where they stood before going to a file, a line, a thread or a
+      chapter. Whatever follows here jumps, so it comes first.
+- [ ] `feat(ui)`: one key to open a thing by its name: a file of the
+      change, a function it touches, a chapter, a thread.
+
+What a thing is:
+
+- [ ] `feat`: where a name is defined and where it is used, from the name
+      in the code, shown in the pane of the whole-file look. Its uses stand
+      apart: those in this change, and those the change did not touch,
+      which are what the agent may have forgotten. First by the name alone
+      (`git grep -w`): at once and in any language, but two things of one
+      name run together, so it is marked as found by name.
+- [ ] `feat`: a language server behind the same pane where the reader has
+      one installed, its answers marked exact. One for each language, and
+      slow to start on a large repository: never the only way.
+
+What matters:
+
+- [ ] `feat`: what is noise folded, with a count: lock files, generated
+      files, a file only moved, a hunk only reformatted.
+
+How far along:
+
+- [ ] `feat(ui)`: find words across the whole change, folded files too. The
+      page has only the tree's filter by path.
+- [ ] `feat(ui)`: a ruler along the scroll that marks the threads, the
+      unread replies and what was found, and a count of files read.
+
 ## The page's look, for later
 
 The owner's list of 2026-10-15, after the story's UI round ("потом"): none
