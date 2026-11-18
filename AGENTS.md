@@ -1,6 +1,6 @@
 # Claude Review
 
-A code review in the browser for Claude Code: a git diff, files or a transcript, commented line by line and sent back to the agent.
+What the project is: `README.md`. This file says how the work is done and which rules to read for what.
 
 ## Commands
 
@@ -18,7 +18,8 @@ cd frontend && pnpm format           # Prettier; the hook only checks
 ```
 
 - The gates are one list, `.pre-commit-config.yaml`, each with its command. A hook that cannot run fails: leave one out only on purpose, by naming it in `SKIP`.
-- Python runs through `uv`, the page through `pnpm`. Add a dependency with `uv add`, `pnpm add` or `pnpm add -D` and no version: never pip, an activated virtualenv, or a hand edit of a dependency list.
+- Python runs through `uv`, the page through `pnpm`. Add a dependency with `uv add`, `pnpm add` or `pnpm add -D` and no version: never pip or an activated virtualenv.
+- What a command makes — a dependency list, a lock file, a file moved (`git mv`) — a command makes: never written by hand in its place.
 
 ## How we work
 
@@ -31,9 +32,9 @@ cd frontend && pnpm format           # Prettier; the hook only checks
 - **Tests hold behaviour.** A behaviour someone can name gets a test first, at the cheapest level; a look, a refactor or a declaration gets none.
 - **Review before presenting.** Read every changed file: the right layer? redundant work? the non-obvious commented? every line needed?
 - **Speed is measured.** Say with each piece how long it took and what its slowest step was.
-- **Weigh, then decide** a dependency, the architecture or a domain model; ask where no way is best.
+- **Weigh, then decide** a dependency, the architecture or a domain model: name the ways weighed; ask where none is clearly best.
 - Never commit secrets or credentials.
-- A commit follows Conventional Commits, `type(scope): description`.
+- Code, comments and documents are in English.
 - Planned work is tracked in `TODO.md`, where an item done is removed, not ticked off; what changed, in `CHANGELOG.md`.
 
 ## Only better
@@ -44,7 +45,7 @@ Every change leaves the repository better than it found it: cleaner, easier to r
 - **Simplest first.** Build the simplest thing that works. A new state, listener, table, gate or module says why nothing simpler does; a reviewer's fix is a proposal. Unsure how? Ask the owner, never build it complicated.
 - **Root cause first.** Before a fix, say why the fault can happen and change that construction. A flag, guard or filter hiding a wrong value is a symptom fix: it needs a reason.
 - **Show it with facts, not adjectives.** Say what a reader can check, and as plainly what did not get better.
-- **The verdict is somebody else's.** A chunk is done when an independent reviewer has measured its whole diff against this rule and listed every place that got worse. Its author never calls it better.
+- **The verdict is somebody else's.** A chunk, not each small fix, is done when an independent reviewer (`.claude/agents/`) has measured its whole diff by this rule and listed every place that got worse. Its author never calls it better.
 - **A regression found becomes a gate** a tool here enforces at the commit, not a test; a gate of our own is built only on the owner's word. A form a checker refused is never answered with a form it cannot see.
 - **What you can name as worse is not committed.** Fix it, or stop and ask.
 
@@ -60,5 +61,5 @@ Before you change or review code in an area, read its file whole; a brief to ano
 - `.claude/rules/tests.md` — any test, under `tests/` or `frontend/tests/`, and when each runs.
 - `.claude/rules/scripts.md` — anything under `scripts/`: what a script is, how it runs a command, how it is tested.
 - `.claude/rules/prose.md` — comments, docstrings, documents, commit messages, reports.
-- `.claude/rules/instructions.md` — this file and the rules of each area.
+- `.claude/rules/instructions.md` — this file, the rules of each area and the agents: where a line belongs.
 - `CONTRIBUTING.md`, under Releasing — a release.
