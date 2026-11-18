@@ -48,7 +48,6 @@ export const RELEASE_NEWS: ReleaseNews[] = [
 		illustration: { kind: 'drawing', name: 'pasted-screenshot' }
 	},
 	{
-		// Seen by no reader until the release brings pyproject to its number
 		release: '1.6.0',
 		title: 'Read a change as a story',
 		body: "The agent can walk you through what it changed: a short overview, then chapters, with its reason above each piece of code. Story asks first, since a story spends the agent's tokens, until you tell it not to.",
@@ -60,5 +59,11 @@ export const RELEASE_NEWS: ReleaseNews[] = [
 		],
 		illustration: { kind: 'drawing', name: 'story-sketch' },
 		introducesStory: true
+	},
+	{
+		release: '1.7.1',
+		title: 'Alt+Enter asks the agent now',
+		body: 'In a comment or a reply you are writing, Alt+Enter (Option+Enter on a Mac) sends your question at once, as Ask agent now does, and the answer comes in its thread.',
+		also: ['PHP is highlighted, in a diff and in Files.']
 	}
 ];

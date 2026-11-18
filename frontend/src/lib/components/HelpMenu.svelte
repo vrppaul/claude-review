@@ -109,7 +109,7 @@
 				{#if review.guide.latestNews}
 					<Button tone="secondary" size="sm" listed testId="read-news" onclick={readNews}>
 						<Icon name="plus" size="sm" tone="reader" />
-						What's new in {review.guide.latestNews.release}
+						What's new
 					</Button>
 				{/if}
 				<!-- What was written and put away waits in the card, which says so at its way in -->

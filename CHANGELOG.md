@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+### Changed
+- **Help's "What's new" names no release.** The news it opens is of the
+  last release worth telling about, often an older one than the review
+  runs, so the number read as a fault; the card still says which release
+  it is of. The news is now 1.7.1's: Alt+Enter asks the agent, and PHP is
+  highlighted.
+
 ## [1.7.3] - 2026-11-18
 
 ### Changed
