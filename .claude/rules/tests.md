@@ -31,7 +31,7 @@ paths:
 - `tests/e2e/` holds what only a real browser does: its own focus (a dialog, Tab, a disabled control), scrolling, CSP, mermaid, one round trip per agent command.
 - Focus the page moves, what a key does and what is drawn are vitest.
 - No browser test runs once per theme; once per width only where its claim is about that width.
-- `tests/scripts/` runs a gate as it is run. A script that only serves or looks has a smoke test at most.
+- No test of a gate, a script or any tool of our own: a test holds what the review does.
 
 ## How a test is written
 
@@ -54,6 +54,6 @@ paths:
 - Iterating: the tests of the code in hand. A commit runs the gates alone.
 - At a chunk's end each part changed runs once, by whoever commits; a reviewer reads that run and does not repeat it.
 - The page: vitest, and `tests/e2e` where the change touches what it holds.
-- The server: `tests/unit` and `tests/integration`, and `tests/e2e` and the schema's fuzzing (`-m schema`) where a route or a schema changes. `scripts/`: that script's tests.
+- The server: `tests/unit` and `tests/integration`, and `tests/e2e` and the schema's fuzzing (`-m schema`) where a route or a schema changes.
 - A release, or a merge to master, runs everything, `-m schema` with it.
 - A review's findings about tests are two: a test to delete (a look, a twin, internals, one that cannot fail) and a behaviour no test holds.
