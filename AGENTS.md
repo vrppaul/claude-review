@@ -31,7 +31,7 @@ cd frontend && pnpm format           # Prettier; the hook only checks
 - **Tests hold behaviour.** A behaviour someone can name gets a test first, at the cheapest level; a look, a refactor or a declaration gets none.
 - **Review before presenting.** Read every changed file: the right layer? redundant work? the non-obvious commented? every line needed?
 - **Speed is measured.** Say with each piece how long it took and what its slowest step was.
-- **Ask first** before adding a dependency, changing the architecture, or changing a domain model.
+- **Weigh, then decide** a dependency, the architecture or a domain model; ask where no way is best.
 - Never commit secrets or credentials.
 - A commit follows Conventional Commits, `type(scope): description`.
 - Planned work is tracked in `TODO.md`, where an item done is removed, not ticked off; what changed, in `CHANGELOG.md`.
