@@ -347,6 +347,14 @@ of it is built yet.
 
 ## The page's library, what its steps left
 
+- [ ] `refactor(ui)`: the welcome, the tour and the feedback card keep
+      their row of acts in what scrolls, where the news card keeps its in
+      the pane's foot: in a short window their acts scroll out of sight.
+- [ ] `refactor(ui)`: a button that is off has two looks: muted words by
+      `disabled`, faint words by `aria-disabled`, and a filled one so
+      marked would keep its ground under faint words. `design.md` says off
+      is faint. One rule for both changes every disabled button: the
+      owner sees it first.
 - [ ] `refactor(ui)`: RawView and SplitView size each column twice, on its
       `<col>` and again on every `<td>` in it; under a fixed table layout
       the `<col>` decides. Drop the cells' widths once a browser shows the
