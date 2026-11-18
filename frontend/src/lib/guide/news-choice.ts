@@ -2,7 +2,8 @@
  * Which entry of the release news a reader is shown.
  *
  * Only ever one, the newest that applies: a card that lists three releases
- * is a changelog, and the changelog is a link away.
+ * is a changelog, and the changelog is a link away. From it the reader goes
+ * to the one before or after, one at a time.
  */
 
 import type { ReleaseNews } from '$lib/guide/news';
@@ -18,19 +19,50 @@ const RELEASE_NUMBERS = /^\d+(?:\.\d+)*/;
  * newest one they skipped over speaks instead of silence.
  */
 export function unseenNews(entries: ReleaseNews[], seen: string, serving: string): ReleaseNews | undefined {
-	return newest(entries.filter((entry) => isNewer(entry.release, seen) && !isNewer(entry.release, serving)));
+	return furthest(
+		entries.filter((entry) => isNewer(entry.release, seen) && !isNewer(entry.release, serving)),
+		isNewer
+	);
 }
 
 /** The newest entry up to the serving release, to read again from the ? list. */
 export function latestNews(entries: ReleaseNews[], serving: string): ReleaseNews | undefined {
-	return newest(entries.filter((entry) => !isNewer(entry.release, serving)));
+	return furthest(
+		entries.filter((entry) => !isNewer(entry.release, serving)),
+		isNewer
+	);
 }
 
-function newest(entries: ReleaseNews[]): ReleaseNews | undefined {
+/** The news of the release before the one shown: where the card's arrow back leads. */
+export function newsBefore(entries: ReleaseNews[], shown: string): ReleaseNews | undefined {
+	return furthest(
+		entries.filter((entry) => isOlder(entry.release, shown)),
+		isNewer
+	);
+}
+
+/** The news of the release after the one shown, up to the serving release: where the card's arrow forward leads. */
+export function newsAfter(entries: ReleaseNews[], shown: string, serving: string): ReleaseNews | undefined {
+	return furthest(
+		entries.filter((entry) => isNewer(entry.release, shown) && !isNewer(entry.release, serving)),
+		isOlder
+	);
+}
+
+/** The entry whose release is the furthest one way: the newest by `isNewer`, the oldest by `isOlder`. */
+function furthest(
+	entries: ReleaseNews[],
+	further: (candidate: string, than: string) => boolean
+): ReleaseNews | undefined {
 	return entries.reduce<ReleaseNews | undefined>(
-		(found, entry) => (!found || isNewer(entry.release, found.release) ? entry : found),
+		(found, entry) => (!found || further(entry.release, found.release) ? entry : found),
 		undefined
 	);
+}
+
+/** Whether one release came out before another. */
+function isOlder(candidate: string, than: string): boolean {
+	return isNewer(than, candidate);
 }
 
 /**

@@ -27,7 +27,7 @@ import type { CommentFieldEvent, GuideState } from '$lib/types';
 import { Introduction } from '$lib/guide/introduction.svelte';
 import { DRAWN_BY_THE_READER, TOUR_STEPS, stepsFor } from '$lib/guide/tour';
 import { RELEASE_NEWS, type ReleaseNews } from '$lib/guide/news';
-import { isNewer, latestNews, unseenNews } from '$lib/guide/news-choice';
+import { isNewer, latestNews, newsAfter, newsBefore, unseenNews } from '$lib/guide/news-choice';
 import { handOverLegacyRelease, legacySeenRelease, writeSeenRelease } from '$lib/guide/seen-release';
 
 /** The card in the guide's corner: the welcome, what is new, or the reader's feedback, opened from Help. */
@@ -256,6 +256,16 @@ export class Guide {
 		return latestNews(RELEASE_NEWS, this.#release);
 	}
 
+	/** The news of the release before the one on the card, where there is one: where the card's arrow back leads. */
+	get olderNews(): ReleaseNews | undefined {
+		return this.#news && newsBefore(RELEASE_NEWS, this.#news.release);
+	}
+
+	/** The news of the release after the one on the card, where this release has one: where the arrow forward leads. */
+	get newerNews(): ReleaseNews | undefined {
+		return this.#news && newsAfter(RELEASE_NEWS, this.#news.release, this.#release);
+	}
+
 	/**
 	 * The page says which of the tour's places it has drawn, each time it has
 	 * drawn anything. What the reader did that the step waited for moves the
@@ -320,6 +330,18 @@ export class Guide {
 	showNews(): void {
 		const latest = this.latestNews;
 		if (latest) this.#show(latest);
+	}
+
+	/** Go back from the news on the card to the news of the release before; nowhere, from the oldest. */
+	readOlderNews(): void {
+		const older = this.olderNews;
+		if (older) this.#show(older);
+	}
+
+	/** Go forward from the news on the card to the news of the release after; nowhere, from the newest this release has. */
+	readNewerNews(): void {
+		const newer = this.newerNews;
+		if (newer) this.#show(newer);
 	}
 
 	/**

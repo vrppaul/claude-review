@@ -6,7 +6,7 @@ import Guide from '$lib/components/Guide.svelte';
 import ReviewScreen from '$lib/components/ReviewScreen.svelte';
 import NewsIllustration from '$lib/components/NewsIllustration.svelte';
 import { RELEASE_NEWS, type ReleaseNews } from '$lib/guide/news';
-import { isNewer, latestNews, unseenNews } from '$lib/guide/news-choice';
+import { isNewer, latestNews, newsAfter, newsBefore, unseenNews } from '$lib/guide/news-choice';
 import { writeSeenRelease } from '$lib/guide/seen-release';
 import { contextLine, diffFile, hunk } from './diff';
 import { said } from './elements';
@@ -92,6 +92,13 @@ describe('which release a reader has seen', () => {
 
 describe('which news a returning reader is shown', () => {
 	const entries = [entry('1.3.0'), entry('1.4.0'), entry('1.5.0')];
+	// The news shown and the release serving, and the news the card's arrows lead back and forward to from it
+	const NEIGHBOURS = [
+		{ shown: '1.5.0', serving: '1.5.0', before: '1.4.0', after: undefined },
+		{ shown: '1.4.0', serving: '1.5.0', before: '1.3.0', after: '1.5.0' },
+		{ shown: '1.3.0', serving: '1.5.0', before: undefined, after: '1.4.0' },
+		{ shown: '1.4.0', serving: '1.4.9', before: '1.3.0', after: undefined }
+	];
 
 	it('is only the newest one they have not seen', () => {
 		expect(unseenNews(entries, '1.2.0', '1.5.0')?.release).toBe('1.5.0');
@@ -107,6 +114,17 @@ describe('which news a returning reader is shown', () => {
 
 	it('never runs ahead of the release that is serving', () => {
 		expect(latestNews(entries, '1.4.9')?.release).toBe('1.4.0');
+	});
+
+	it('leads back from the news shown to the newest older one, and forward to the oldest newer one the serving release has', () => {
+		const led = NEIGHBOURS.map(({ shown, serving }) => ({
+			shown,
+			serving,
+			before: newsBefore(entries, shown)?.release,
+			after: newsAfter(entries, shown, serving)?.release
+		}));
+
+		expect(led).toEqual(NEIGHBOURS);
 	});
 
 	it('is written for releases in order, each once', () => {
@@ -425,6 +443,59 @@ describe('the news card', () => {
 		await tick();
 
 		expect(getByTestId('guide-release').textContent).toBe('1.5.0');
+	});
+
+	it('goes back to the news of the release before, and forward again, by its arrows', async () => {
+		guideServer('1.5.0');
+		await arriveAt(STORY_RELEASE);
+		const { getByTestId } = render(Guide, inReview(review));
+		await tick();
+		const shown = [];
+
+		getByTestId('guide-older-news').click();
+		await tick();
+		shown.push(getByTestId('guide-release').textContent);
+		getByTestId('guide-newer-news').click();
+		await tick();
+		shown.push(getByTestId('guide-release').textContent);
+
+		expect(shown).toEqual(['1.5.0', STORY_RELEASE]);
+	});
+
+	it('stays on the news it shows where an arrow leads nowhere, and the arrow says so', async () => {
+		guideServer('1.5.0');
+		await arriveAt(STORY_RELEASE);
+		const { getByTestId } = render(Guide, inReview(review));
+		await tick();
+		const forward = getByTestId('guide-newer-news');
+
+		forward.click();
+		await tick();
+
+		expect(getByTestId('guide-release').textContent).toBe(STORY_RELEASE);
+		expect(forward.getAttribute('aria-label')).toBe('No newer news');
+	});
+
+	it('keeps the keyboard on the act the news leads to, as an arrow makes it another act', async () => {
+		guideServer('1.5.0');
+		await arriveAt(STORY_RELEASE);
+		const { getByTestId } = render(Guide, inReview(review));
+		await tick();
+
+		getByTestId('guide-older-news').click();
+		await tick();
+
+		expect(document.activeElement?.getAttribute('data-testid')).toBe('guide-got-it');
+	});
+
+	it('draws no arrows where one release alone has news', async () => {
+		guideServer('1.4.2');
+		await arriveAt('1.5.0');
+
+		const { queryByTestId } = render(Guide, inReview(review));
+		await tick();
+
+		expect(queryByTestId('guide-older-news')).toBeNull();
 	});
 
 	it('shows a picture from a file, described for whoever cannot see it', () => {

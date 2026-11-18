@@ -7,6 +7,7 @@
 	import Dot from '$lib/ui/Dot.svelte';
 	import Heading from '$lib/ui/Heading.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
+	import IconButton from '$lib/ui/IconButton.svelte';
 	import Key from '$lib/ui/Key.svelte';
 	import Link from '$lib/ui/Link.svelte';
 	import Pane from '$lib/ui/Pane.svelte';
@@ -19,6 +20,14 @@
 	const WELCOME = 'First time here?';
 	const CLOSE_THE_WELCOME = 'Close the welcome';
 	const CLOSE_THE_NEWS = 'Close the news';
+	// What the news leads to, in its button's words: Story, for the news that introduces it, or putting the card away
+	const TRY_STORY = 'Try Story';
+	const GOT_IT = 'Got it';
+	// What each arrow of the news says: where it leads, before the release it leads to, and that it leads nowhere
+	const OLDER_NEWS = 'Older news';
+	const NEWER_NEWS = 'Newer news';
+	const NO_OLDER_NEWS = 'No older news';
+	const NO_NEWER_NEWS = 'No newer news';
 
 	const review = useReview();
 
@@ -31,6 +40,33 @@
 	// Whether the news offers to try Story: it is Story's introduction, in a review a story can be told of. In
 	// any other it says Got it, and has introduced Story all the same
 	const offersStory = $derived(news?.introducesStory === true && review.story.canBeTold);
+	// The act the news leads to. One button whichever it is, so the keyboard stays on it as an arrow changes the news
+	const newsMainAct = $derived(
+		offersStory
+			? { testId: 'guide-try-story', says: TRY_STORY, does: tryStory }
+			: { testId: 'guide-got-it', says: GOT_IT, does: putAway }
+	);
+	// The news card's two arrows, back before forward: the news each leads to, what it says, and how it goes there
+	const newsArrows = $derived([
+		{
+			testId: 'guide-older-news',
+			pointing: 'left' as const,
+			leadsTo: review.guide.olderNews,
+			named: OLDER_NEWS,
+			nowhere: NO_OLDER_NEWS,
+			go: () => review.guide.readOlderNews()
+		},
+		{
+			testId: 'guide-newer-news',
+			pointing: 'right' as const,
+			leadsTo: review.guide.newerNews,
+			named: NEWER_NEWS,
+			nowhere: NO_NEWER_NEWS,
+			go: () => review.guide.readNewerNews()
+		}
+	]);
+	// With one release to tell of neither arrow leads anywhere, and none is drawn
+	const hasOtherNews = $derived(newsArrows.some((arrow) => arrow.leadsTo !== undefined));
 
 	let title = $state<HTMLElement>();
 	let mainAction = $state<HTMLButtonElement>();
@@ -186,6 +222,23 @@
 			<span class="cr-faint text-xs">New in</span>
 			<Tag tone="quiet" testId="guide-release">{news.release}</Tag>
 		{/snippet}
+		<!-- The ways to the news of the releases either side. One that leads nowhere keeps its place and the keyboard:
+			it is off, not gone, so the other never moves under the pointer -->
+		{#snippet otherNews()}
+			{#each newsArrows as arrow (arrow.testId)}
+				<IconButton
+					tone="quiet"
+					size="sm"
+					shape="square"
+					label={arrow.leadsTo ? `${arrow.named}: ${arrow.leadsTo.release}` : arrow.nowhere}
+					testId={arrow.testId}
+					aria-disabled={arrow.leadsTo ? undefined : true}
+					onclick={arrow.go}
+				>
+					<Icon name="chevron" size="xs" pointing={arrow.pointing} />
+				</IconButton>
+			{/each}
+		{/snippet}
 		<Pane
 			width="medium"
 			testId="guide-news"
@@ -193,7 +246,8 @@
 			aria-label={news.title}
 			head={{ heading: news.title, close: putAway, closing: CLOSE_THE_NEWS, aside: newIn }}
 		>
-			<div class="cr-guide-card">
+			<!-- What a screen reader is told as an arrow changes the news: its words, not the controls -->
+			<div class="cr-guide-card" aria-live="polite">
 				{#if news.illustration}
 					<NewsIllustration illustration={news.illustration} />
 				{/if}
@@ -211,25 +265,29 @@
 						>Everything in {news.release}, on GitHub</Link
 					>
 				</p>
-				<Actions testId="guide-news-actions">
+			</div>
+			<!-- What the card leads to stands at its foot, which stays where it is as the card grows and shrinks with
+				the news it shows: an arrow pressed is still under the pointer, and no act scrolls out of sight -->
+			{#snippet foot()}
+				<Actions testId="guide-news-actions" aside={hasOtherNews ? otherNews : undefined}>
 					{#snippet others()}
 						<Button tone="quiet" size="sm" testId="guide-take-tour" onclick={() => review.guide.startTour()}>
 							Take the tour
 						</Button>
 					{/snippet}
 					{#snippet main()}
-						{#if offersStory}
-							<Button bind:element={mainAction} tone="primary" size="sm" testId="guide-try-story" onclick={tryStory}>
-								Try Story
-							</Button>
-						{:else}
-							<Button bind:element={mainAction} tone="primary" size="sm" testId="guide-got-it" onclick={putAway}>
-								Got it
-							</Button>
-						{/if}
+						<Button
+							bind:element={mainAction}
+							tone="primary"
+							size="sm"
+							testId={newsMainAct.testId}
+							onclick={newsMainAct.does}
+						>
+							{newsMainAct.says}
+						</Button>
 					{/snippet}
 				</Actions>
-			</div>
+			{/snippet}
 		</Pane>
 	</div>
 {/if}

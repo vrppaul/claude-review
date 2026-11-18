@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Added
+- **The news goes back to older releases.** Two arrows on the What's new
+  card lead to the news of the release before and of the one after, as
+  far back as news was written. The card's buttons stay in sight where a
+  short window scrolls a long piece of news.
+
 ### Changed
 - **Help's "What's new" names no release.** The news it opens is of the
   last release worth telling about, often an older one than the review

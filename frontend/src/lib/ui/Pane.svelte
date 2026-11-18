@@ -11,15 +11,17 @@
 		testId: string;
 		/** The pane itself, for whoever must tell what stands in it from what does not. */
 		element?: HTMLElement | undefined;
+		/** What stays at its foot while what it holds scrolls: the acts it leads to. */
+		foot?: Snippet | undefined;
 		children: Snippet;
 	}
 
-	let { width, head, testId, element = $bindable(), children, ...attributes }: Props = $props();
+	let { width, head, testId, element = $bindable(), foot, children, ...attributes }: Props = $props();
 </script>
 
 <!-- A pane that stands by itself, where whoever draws it places it: the look of every pane, with nothing of a
 	control's or a modal's, headed as every pane is where it has a head, and kept inside the window, what it holds
-	scrolling under its head -->
+	scrolling under its head and over its foot -->
 <section
 	bind:this={element}
 	{...attributes}
@@ -32,4 +34,7 @@
 	<div class="cr-scroller cr-ui-pane-body">
 		{@render children()}
 	</div>
+	{#if foot}
+		<div class="cr-ui-pane-foot">{@render foot()}</div>
+	{/if}
 </section>

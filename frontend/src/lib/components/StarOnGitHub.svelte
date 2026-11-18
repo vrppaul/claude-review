@@ -29,7 +29,7 @@
 	beside a Star button drawn as GitHub draws its own, which adds the reader's star. Once they follow it, thanks with
 	a heart in its place, said to a screen reader as they come -->
 {#if thanked}
-	<div bind:this={thanks} data-testid="star-on-github-thanks" role="status" class="flex items-center gap-3 p-3">
+	<div bind:this={thanks} data-testid="star-on-github-thanks" role="status" class="flex items-center gap-3">
 		<Icon name="heart" size="xl" tone="reader" />
 		<div class="flex min-w-0 flex-col gap-0.5">
 			<Heading tag="p" heads="pane">{THANKS}</Heading>
@@ -37,7 +37,7 @@
 		</div>
 	</div>
 {:else}
-	<div data-testid="star-on-github-ask" class="flex flex-col gap-1.5 p-3">
+	<div data-testid="star-on-github-ask" class="flex flex-col gap-1.5">
 		<Heading tag="p" heads="pane">
 			<span class="flex items-center gap-2">
 				<Icon name="github" size="base" />

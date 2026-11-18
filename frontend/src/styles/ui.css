@@ -202,6 +202,10 @@
 .cr-ui-button:disabled {
 	color: var(--cr-muted);
 }
+/* One that leads nowhere for now and keeps the keyboard (aria-disabled) is off: faint, as a fold held open is */
+.cr-ui-button[aria-disabled='true'] {
+	color: var(--cr-faint);
+}
 .cr-ui-filled:disabled {
 	background-color: var(--color-base-300);
 }
@@ -761,9 +765,10 @@
 			var(--cr-scrolled-under-depth) no-repeat scroll,
 		var(--color-base-200);
 }
-/* What stays at a pane's foot while what it holds scrolls, ruled off from that */
+/* What stays at a pane's foot while what it holds scrolls: ruled off from that, in room of its own */
 .cr-ui-pane-foot {
 	flex-shrink: 0;
+	padding: --spacing(3);
 	border-top: var(--cr-line) solid var(--color-base-300);
 }
 /* A foot that asks something of the reader (footAsks): apart from the pane, on the page's plainest ground */
