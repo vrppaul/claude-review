@@ -1,6 +1,6 @@
 [project]
 name = "claude-review"
-version = "1.7.2"
+version = "1.7.3"
 description = "A local tool to understand what your coding agent changed and iterate on it fast. Like a pull request in your browser, where the agent answers instantly."
 dynamic = ["readme"]
 license = "MIT"

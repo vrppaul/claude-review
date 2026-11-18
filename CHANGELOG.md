@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [1.7.3] - 2026-11-18
+
 ### Changed
 - **One description everywhere.** PyPI, the plugin's listing and
   `claude-review --help` say what the README opens with: a local tool to
