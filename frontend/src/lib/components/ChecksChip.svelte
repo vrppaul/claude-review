@@ -129,7 +129,8 @@
 		<CheckList testId="checks-list">
 			{#each failing as check (check.name)}
 				{#snippet failures()}
-					{#each check.failures as failure (`${failure.path}:${failure.line}:${failure.what}`)}
+					<!-- Known by place: replaced whole with each report, and a tool may say the same of one line twice -->
+					{#each check.failures as failure, place (place)}
 						<CheckFailure
 							what={failure.what}
 							where="{fileName(failure.path)}:{failure.line}"

@@ -87,6 +87,15 @@ describe('the checks the agent ran, in the header', () => {
 		expect(read(within(pane).getByTestId('check-failure'))).toBe('F401 a.py:12 `os` imported but unused');
 	});
 
+	it('lists every place a check failed, though two say the same of one line', async () => {
+		const twice = failure({ path: 'src/a.py', line: 1, what: 'F401' });
+		chipOver([failedCheck([twice, { ...twice, why: '`sys` imported but unused' }])]);
+
+		const pane = await openPane();
+
+		expect(within(pane).getAllByTestId('check-failure')).toHaveLength(2);
+	});
+
 	it('folds where a failed check failed by its line, and opens it again', async () => {
 		const user = userEvent.setup({ delay: null });
 		chipOver([failedCheck([failure({ what: 'test_rename' })], { name: 'pytest' })]);
