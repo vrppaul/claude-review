@@ -1,5 +1,7 @@
-# Every hook runs once, before the commit; only the message check runs on the message
+# Every hook runs once, before the commit; the two message checks run on the message
 default_stages: [pre-commit]
+# `pre-commit install` sets up both
+default_install_hook_types: [pre-commit, commit-msg]
 
 repos:
   # Ruff — the project's own, the one `uv run` and CI use: a mirror pins a
@@ -243,6 +245,16 @@ repos:
         language: system
         always_run: true
         pass_filenames: false
+
+  # A commit's subject is short, its body a few lines of why, and neither
+  # tells what the code was (.claude/rules/prose.md)
+  - repo: local
+    hooks:
+      - id: commit-message
+        name: commit message (a short subject, a few lines of why, no history)
+        entry: uv run python scripts/check_commit_message.py
+        language: system
+        stages: [commit-msg]
 
   # Conventional commits enforcement
   - repo: https://github.com/compilerla/conventional-pre-commit
