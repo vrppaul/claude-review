@@ -209,6 +209,15 @@ async def test_a_check_the_agent_ran_reaches_the_review_on_screen_as_it_ended(re
     assert (await _facts(review)).checks == pushed.checks
 
 
+async def test_an_agent_catching_up_reads_how_each_check_it_reported_ended(review: RunningReview) -> None:
+    await _run(review, "check", "--name", "pytest", "--status", "passed")
+
+    result = await _run(review, "catch-up")
+
+    assert result.exit_code == 0, result.output
+    assert "checks: pytest passed" in result.output.splitlines()
+
+
 async def test_a_check_reported_to_a_review_of_files_is_refused(servers: ReviewServers) -> None:
     """Files read once have no tree for a check to have run on."""
     review = await servers.start(files_opening_of([one_line_file()]))

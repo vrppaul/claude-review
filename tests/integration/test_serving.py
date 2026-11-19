@@ -47,6 +47,9 @@ MESSAGE_ROUTE = "/api/message"
 # Where the agent reports a check it ran, and one it reports
 CHECK_ROUTE = "/api/check"
 A_CHECK = {"name": "pytest", "status": "passed"}
+RETAKE_ROUTE = "/api/retake"
+# A file the repository does not hold until a test makes it
+SCRATCH_FILE = "scratch.txt"
 THE_ROUND = "Rename the helper."
 # A round sent with the review kept open for the next, and the last round, sent and ending the review
 A_ROUND = {"threads": [], "body": THE_ROUND, "end": False}
@@ -244,6 +247,51 @@ async def test_a_check_a_file_changes_under_is_said_out_of_date_to_the_review_on
 
     assert [check.out_of_date for check in reported.checks] == [False]
     assert [check.changed_since for check in measured.checks] == [[INITIAL_FILE]]
+
+
+async def test_a_check_the_tree_moved_from_before_any_page_opened_is_said_out_of_date_as_one_opens(
+    reviews: ReviewFactory, announcer: RecordingAnnouncer, tmp_path_factory: pytest.TempPathFactory
+) -> None:
+    """Nothing watched the tree until then, and it stands again as the diff was taken: only the check's tree differs."""
+    repository = committed_repository(tmp_path_factory.mktemp("apart"), INITIAL_FILES)
+    (repository / INITIAL_FILE).write_text("changed\n")
+    opened = await open_diff(repository, None, GitRepository(objects=None))
+    serving = asyncio.ensure_future(_served(reviews.hosted(opened), announcer))
+    address = await asyncio.wait_for(announcer.address, SETTLE_SECONDS)
+    made_for_the_check = repository / SCRATCH_FILE
+
+    async with AsyncClient(base_url=address) as agent:
+        made_for_the_check.write_text("there while the check ran\n")
+        await agent.post(CHECK_ROUTE, json=A_CHECK)
+        made_for_the_check.unlink()
+        async with page_socket_held(_port_of(address)) as page:
+            measured = await asyncio.to_thread(next_push, page, ChecksPush)
+            await agent.post(SUBMIT_ROUTE, json=LAST_ROUND)
+    await asyncio.wait_for(serving, timeout=SETTLE_SECONDS)
+
+    assert [check.changed_since for check in measured.checks] == [[SCRATCH_FILE]]
+
+
+async def test_after_the_diff_is_taken_again_the_tree_is_said_to_move_from_the_new_take(
+    reviews: ReviewFactory, announcer: RecordingAnnouncer, tmp_path_factory: pytest.TempPathFactory
+) -> None:
+    """The file changed before the retake is in the diff on screen now: only the one changed after it has moved."""
+    repository = committed_repository(tmp_path_factory.mktemp("apart"), INITIAL_FILES)
+    (repository / INITIAL_FILE).write_text("changed\n")
+    opened = await open_diff(repository, None, GitRepository(objects=None))
+    serving = asyncio.ensure_future(_served(reviews.hosted(opened), announcer))
+    address = await asyncio.wait_for(announcer.address, SETTLE_SECONDS)
+
+    async with page_socket_held(_port_of(address)) as page, AsyncClient(base_url=address) as agent:
+        (repository / INITIAL_FILE).write_text("changed again, before the retake\n")
+        await asyncio.to_thread(next_push, page, ChangedPush)
+        await agent.post(RETAKE_ROUTE)
+        (repository / SCRATCH_FILE).write_text("made after the retake\n")
+        moved = await asyncio.to_thread(next_push, page, ChangedPush)
+        await agent.post(SUBMIT_ROUTE, json=LAST_ROUND)
+    await asyncio.wait_for(serving, timeout=SETTLE_SECONDS)
+
+    assert moved == ChangedPush(moved_count=1)
 
 
 async def test_a_watch_on_the_tree_that_fails_leaves_the_review_running_and_its_round_handed_back(

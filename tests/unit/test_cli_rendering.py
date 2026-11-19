@@ -50,7 +50,7 @@ SEEN = CatchUpResponse(
     checks=[],
 )
 
-# A check the code has not moved on from, and one a file changed under since it ran
+# A check the code has not moved on from, and one nobody can say it has not: git could not read its tree
 TESTS_CURRENT = Check(
     name="pytest",
     status=CheckStatus.PASSED,
@@ -68,7 +68,7 @@ LINT_OUT_OF_DATE = Check(
     failures=[],
     round=3,
     at=SAID_AT,
-    changed_since=["src/app.py"],
+    changed_since=None,
     out_of_date=True,
 )
 
