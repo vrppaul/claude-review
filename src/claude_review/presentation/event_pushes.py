@@ -11,6 +11,7 @@ from typing import assert_never
 from claude_review.domain.page_events import (
     AgentSaid,
     AnswererChanged,
+    ChecksChanged,
     DiffRetaken,
     FileShown,
     PageEvent,
@@ -27,11 +28,13 @@ from claude_review.domain.page_events import (
 )
 from claude_review.presentation.schemas.agent import AgentStatus, AgentWork
 from claude_review.presentation.schemas.base import made_or_none
+from claude_review.presentation.schemas.checks import Check
 from claude_review.presentation.schemas.content import StoryAsking
 from claude_review.presentation.schemas.pushes import (
     AnswererPush,
     ChangedPush,
     ChatPush,
+    ChecksPush,
     DiffPush,
     EndedPush,
     HandedPush,
@@ -85,6 +88,8 @@ def push_of(event: PageEvent) -> ServerPush:
             return StoryPush()
         case StoryAskingChanged():
             return StoryAskingPush(asking=made_or_none(StoryAsking.from_domain, event.asking))
+        case ChecksChanged():
+            return ChecksPush(checks=[Check.from_domain(check) for check in event.checks])
         case ReviewEnded():
             return EndedPush(finished=event.finished)
         case _:

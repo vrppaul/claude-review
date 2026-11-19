@@ -18,6 +18,7 @@ from claude_review.domain.models import (
 )
 from claude_review.presentation.schemas.agent import AgentStatus, AgentWork
 from claude_review.presentation.schemas.base import MAX_TEXT_LENGTH, Schema
+from claude_review.presentation.schemas.checks import Check
 from claude_review.presentation.schemas.feedback import MAX_FEEDBACK_WORDS
 from claude_review.services.file_window_service import MAX_WINDOW_LINES, FileWindow
 from claude_review.services.image_service import MAX_IMAGE_BYTES, MAX_IMAGES_PER_MESSAGE
@@ -303,6 +304,9 @@ class ReviewResponse(Schema):
     # one, and once a story is told. Read here, a page orders it against the
     # pushes that change it, by the sequence below, as it does every fact here
     story_asking: StoryAsking | None
+    # The checks the agent reported, each as it now stands against the
+    # working tree; a push says them whole each time they change
+    checks: list[Check]
     # What the browser checks before uploading an image or quoting lines
     limits: SendLimits
     # How far the review's telling had got when this was read, in which run of

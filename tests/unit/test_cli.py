@@ -11,6 +11,7 @@ import pytest
 from click.testing import CliRunner, Result
 
 from claude_review.cli.main import main
+from claude_review.cli.parameters import FAILURE_EXAMPLE
 from claude_review.cli.story_help import GOOD_STORY
 from claude_review.domain.models import MAX_ID_LENGTH, MAX_QUOTE_LINES
 from claude_review.domain.story import TEXT_LIMITS, StoryText, TextLimit
@@ -18,6 +19,7 @@ from claude_review.hosting.address import LOOPBACK
 from claude_review.hosting.ports import ANY_FREE_PORT
 from claude_review.presentation.schemas.agent import MAX_PROGRESS_STEPS
 from claude_review.presentation.schemas.base import MAX_FILES_NAMED, MAX_WAIT_SECONDS
+from claude_review.presentation.schemas.checks import MAX_CHECK_FAILURES
 from claude_review.presentation.schemas.story import StoryRequest
 from claude_review.services.place_words import NOT_LINES
 from claude_review.services.story_checks import document_faults
@@ -33,7 +35,25 @@ FAILED = 1
 COMMANDS_HEADING = "Commands:"
 COMMAND_LINE = re.compile(r"^  (\S+)  ")
 LAUNCH_COMMANDS = ("diff", "files", "transcript")
-AGENT_COMMANDS = ("wait", "reply", "catch-up", "say", "progress", "show", "point", "status", "retake", "story")
+AGENT_COMMANDS = (
+    "wait",
+    "reply",
+    "catch-up",
+    "say",
+    "progress",
+    "show",
+    "point",
+    "status",
+    "retake",
+    "check",
+    "story",
+)
+# A check as the agent reports one that failed, before it says where
+A_FAILED_CHECK = ("check", "--name", "pytest", "--status", "failed")
+# One more place a check failed than the review takes, each a line of its own
+TOO_MANY_FAILURES = [
+    word for line in range(1, MAX_CHECK_FAILURES + 2) for word in ("--failure", f"tests/test_a.py:{line}: test_x")
+]
 LONGER_THAN_ANY_ID = "x" * (MAX_ID_LENGTH + 1)
 # Words that say nothing
 BLANK = "   "
@@ -138,8 +158,25 @@ def test_a_call_to_a_review_that_is_not_there_explains_itself(unused_port: str) 
         (["say", BLANK], "BODY"),
         (["progress", "--did", "", "reading the handler"], "--did"),
         (["point", "--file", "", "--lines", "1", "Kept on purpose"], "--file"),
+        (["check", "--name", BLANK, "--status", "passed"], "--name"),
+        ([*A_FAILED_CHECK, "--summary", BLANK], "--summary"),
+        ([*A_FAILED_CHECK, "--failure", "tests/test_a.py:0: test_x"], "--failure"),
+        ([*A_FAILED_CHECK, "--failure", "/home/me/repo/tests/test_a.py:3: test_x"], "--failure"),
+        ([*A_FAILED_CHECK, "--failure", "tests/test_a.py:3: "], "--failure"),
     ],
-    ids=["an-overlong-thread-id", "an-id-with-spaces", "an-empty-body", "a-blank-body", "an-empty-step", "no-file"],
+    ids=[
+        "an-overlong-thread-id",
+        "an-id-with-spaces",
+        "an-empty-body",
+        "a-blank-body",
+        "an-empty-step",
+        "no-file",
+        "a-blank-check",
+        "a-blank-summary",
+        "a-failure-on-no-line",
+        "a-failure-from-the-file-systems-root",
+        "a-failure-saying-nothing",
+    ],
 )
 def test_a_value_the_review_would_refuse_is_refused_naming_where_it_was_typed(
     unused_port: str, arguments: list[str], typed_in: str
@@ -161,6 +198,23 @@ def test_putting_the_work_line_out_takes_nothing_with_it(unused_port: str) -> No
     assert "--done" in result.output
 
 
+def test_a_check_that_passed_and_names_where_it_failed_is_refused_rather_than_sent(unused_port: str) -> None:
+    """One of the two is wrong, and only the typist knows which."""
+    result = _run(
+        "check", "--port", unused_port, "--name", "pytest", "--status", "passed", "--failure", "a.py:3: test_x"
+    )
+
+    assert _failed_in_a_line(result, USAGE_ERROR)
+    assert "--status" in result.output
+
+
+def test_a_failure_not_written_as_a_compiler_writes_one_is_refused_showing_how(unused_port: str) -> None:
+    result = _run(*A_FAILED_CHECK, "--port", unused_port, "--failure", "test_rename failed")
+
+    assert _failed_in_a_line(result, USAGE_ERROR)
+    assert FAILURE_EXAMPLE in result.output
+
+
 def test_an_agents_command_does_not_load_the_server_or_its_framework() -> None:
     """It runs many times a minute, and whatever serves the review is in another process."""
     loaded = subprocess.run(
@@ -177,8 +231,9 @@ def test_an_agents_command_does_not_load_the_server_or_its_framework() -> None:
         (["progress", *_repeated("--file", MAX_FILES_NAMED + 1), "renaming"], "--file"),
         (["progress", *_repeated("--step", MAX_PROGRESS_STEPS + 1), "checking"], "--step"),
         (["progress", *_repeated("--did", MAX_PROGRESS_STEPS + 1), "checking"], "--did"),
+        ([*A_FAILED_CHECK, *TOO_MANY_FAILURES], "--failure"),
     ],
-    ids=["files-said-about", "files-worked-on", "steps-under-way", "steps-done"],
+    ids=["files-said-about", "files-worked-on", "steps-under-way", "steps-done", "places-a-check-failed"],
 )
 def test_more_than_the_review_takes_is_refused_naming_the_option(
     unused_port: str, arguments: list[str], typed_in: str

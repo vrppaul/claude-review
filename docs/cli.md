@@ -53,6 +53,7 @@ claude-review progress --port 8765 --done                             # the work
 claude-review show --port 8765 --file a.py                            # take the reader to a file
 claude-review catch-up --port 8765                                    # catch up on a review under way
 claude-review retake --port 8765                                      # take the diff again after a round
+claude-review check --port 8765 --name pytest --status passed         # a check the agent ran, as it ended
 claude-review story --port 8765 --file story.json                     # tell the change as a story
 ```
 

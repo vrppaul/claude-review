@@ -97,6 +97,9 @@ function learnFrom(review: Review, push: FactPush): void {
 		case 'story_asking':
 			review.story.learnAsking(push.asking);
 			return;
+		case 'checks':
+			// No part of this page draws the checks the agent ran
+			return;
 		default:
 			unknown(push);
 	}

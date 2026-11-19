@@ -28,6 +28,7 @@ from claude_review.presentation.schemas.agent import (
     StatusRequest,
 )
 from claude_review.presentation.schemas.base import JSON_MEDIA_TYPE
+from claude_review.presentation.schemas.checks import CheckRequest
 from claude_review.presentation.schemas.content import RetakeResponse
 from claude_review.presentation.schemas.refusal import FieldRefusal, Refusal
 from claude_review.presentation.schemas.story import StoryRequest, StoryTakenResponse
@@ -35,9 +36,11 @@ from claude_review.presentation.schemas.threads import PointRequest, PointRespon
 
 # How long an ordinary call may take: the review answers at once
 CALL_SECONDS = 10.0
-# Taking the diff again runs git over the whole tree, and a call given up on
-# too early is made again by whoever made it, writing a second tree
-RETAKE_SECONDS = 120.0
+# How long a call that stages the whole tree may take: taking the diff again,
+# or stamping a check with the tree it ran on. Git reads every file, and a
+# call given up on too early is made again by whoever made it, writing a
+# second tree
+STAGING_SECONDS = 120.0
 # How much longer than its own wait a poll for events may take to answer
 WAIT_MARGIN_SECONDS = 10.0
 
@@ -58,6 +61,7 @@ SHOW_ROUTE = "/api/show"
 POINT_ROUTE = "/api/point"
 RETAKE_ROUTE = "/api/retake"
 STORY_ROUTE = "/api/story"
+CHECK_ROUTE = "/api/check"
 # What the poll for events calls how long it may wait
 WAIT_SECONDS_PARAMETER = "wait_seconds"
 
@@ -120,7 +124,11 @@ class ReviewClient:
 
     def retake(self) -> RetakeResponse:
         """Take the diff again, which the reviews on screen then reload."""
-        return self._read(RETAKE_ANSWER, self._call(HTTPMethod.POST, RETAKE_ROUTE, timeout=RETAKE_SECONDS))
+        return self._read(RETAKE_ANSWER, self._call(HTTPMethod.POST, RETAKE_ROUTE, timeout=STAGING_SECONDS))
+
+    def report_check(self, request: CheckRequest) -> None:
+        """Report a check the agent ran, which the review stamps with the tree as it stands."""
+        self._call(HTTPMethod.POST, CHECK_ROUTE, request, timeout=STAGING_SECONDS)
 
     def tell_story(self, request: StoryRequest) -> StoryTakenResponse:
         """Tell the change as a story, in place of any told before, and read what the review made of it."""

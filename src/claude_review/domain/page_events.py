@@ -8,6 +8,7 @@ afterwards.
 
 from pydantic import BaseModel, ConfigDict
 
+from claude_review.domain.checks import Check
 from claude_review.domain.models import (
     AgentStatus,
     AgentWork,
@@ -128,6 +129,12 @@ class StoryAskingChanged(PageEventBase):
     asking: StoryAsking | None
 
 
+class ChecksChanged(PageEventBase):
+    """The checks the agent reported, all of them as they now stand: one reported, or the code moved on under one."""
+
+    checks: list[Check]
+
+
 class ReviewEnded(PageEventBase):
     """The review is over, and nothing more will be told.
 
@@ -155,5 +162,6 @@ type PageEvent = (
     | DiffRetaken
     | StoryTold
     | StoryAskingChanged
+    | ChecksChanged
     | ReviewEnded
 )

@@ -10,6 +10,7 @@ longer says — a piece of a file that became a link, not saying so.
 import pytest
 from pydantic import BaseModel, ConfigDict
 
+from claude_review.domain.checks import CheckFailure, CheckReport, CheckStatus
 from claude_review.domain.models import (
     ChapterBlock,
     ChapterText,
@@ -140,6 +141,13 @@ ASKING = StoryAsking(asked_at=ASKED_AT, taken_at=None, stopped=False)
 TAKEN_ASKING = StoryAsking(asked_at=ASKED_AT, taken_at=TAKEN_AT, stopped=False)
 # A story kept as it was told, in the first round, and a round's work that moved the code on under it
 KEPT_STORY = KeptStory(told=TOLD_STORY, told_on="a tree written down", round=1, moved_on=None)
+# A check with everything a report may say: a summary, and a place it failed, with why
+CHECK_REPORTED = CheckReport(
+    name="pytest",
+    status=CheckStatus.FAILED,
+    summary="1 failed",
+    failures=[CheckFailure(path="tests/test_a.py", line=3, what="test_rename", why="AssertionError")],
+)
 MOVED_ON = CodeMovedOn(round=2, left_out=None)
 
 MADE = [
@@ -239,6 +247,12 @@ MADE = [
         source=KEPT_STORY,
         made=KEPT_STORY.as_found(MOVED_ON),
         replaced={"moved_on"},
+    ),
+    MadeFrom(
+        what="a check reported, stamped",
+        source=CHECK_REPORTED,
+        made=CHECK_REPORTED.stamped(round_number=2, at=TAKEN_AT, tree="a-tree"),
+        replaced={"round", "at", "tree", "changed_since"},
     ),
 ]
 EACH_MADE = pytest.mark.parametrize("model", MADE, ids=[model.what for model in MADE])

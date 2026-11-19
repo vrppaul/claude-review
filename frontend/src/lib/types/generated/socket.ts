@@ -112,6 +112,67 @@ export interface components {
             files: string[];
         };
         /**
+         * Check
+         * @description A check the agent ran, as the review holds it: as it ended, when, and whether the code moved on since.
+         */
+        Check: {
+            /** Name */
+            name: string;
+            status: components["schemas"]["CheckStatus"];
+            /** Summary */
+            summary: string | null;
+            /** Failures */
+            failures: components["schemas"]["CheckFailure"][];
+            /** Round */
+            round: number;
+            /** At */
+            at: number;
+            /** Changed Since */
+            changed_since: string[] | null;
+            /** Out Of Date */
+            out_of_date: boolean;
+        };
+        /**
+         * CheckFailure
+         * @description One place a check failed, and whether its file changed since the check ran.
+         */
+        CheckFailure: {
+            /** Path */
+            path: string;
+            /** Line */
+            line: number;
+            /** What */
+            what: string;
+            /** Why */
+            why: string | null;
+            /** Out Of Date */
+            out_of_date: boolean;
+        };
+        /**
+         * CheckStatus
+         * @description How a check ended.
+         *
+         *     PASSED — it found nothing wrong.
+         *     FAILED — it found something wrong, or could not run.
+         * @enum {string}
+         */
+        CheckStatus: "passed" | "failed";
+        /**
+         * ChecksPush
+         * @description The checks the agent ran, every one as it now stands: one was reported, or the code moved on under one.
+         *
+         *     Pushed whole, as the review's facts carry them: a page takes the list in place of its own.
+         */
+        ChecksPush: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "checks";
+            /** Checks */
+            checks: components["schemas"]["Check"][];
+        };
+        /**
          * CommentSeverity
          * @description How the reader means a comment to be taken.
          *
@@ -374,7 +435,7 @@ export interface components {
             /** Images */
             images: string[];
         };
-        ServerPush: components["schemas"]["ReplyPush"] | components["schemas"]["HandedPush"] | components["schemas"]["AnswererPush"] | components["schemas"]["ChatPush"] | components["schemas"]["ProgressPush"] | components["schemas"]["ShowPush"] | components["schemas"]["StatusPush"] | components["schemas"]["PointPush"] | components["schemas"]["ChangedPush"] | components["schemas"]["RoundPush"] | components["schemas"]["DiffPush"] | components["schemas"]["StoryPush"] | components["schemas"]["StoryAskingPush"] | components["schemas"]["EndedPush"];
+        ServerPush: components["schemas"]["ReplyPush"] | components["schemas"]["HandedPush"] | components["schemas"]["AnswererPush"] | components["schemas"]["ChatPush"] | components["schemas"]["ProgressPush"] | components["schemas"]["ShowPush"] | components["schemas"]["StatusPush"] | components["schemas"]["PointPush"] | components["schemas"]["ChangedPush"] | components["schemas"]["RoundPush"] | components["schemas"]["DiffPush"] | components["schemas"]["StoryPush"] | components["schemas"]["StoryAskingPush"] | components["schemas"]["ChecksPush"] | components["schemas"]["EndedPush"];
         /**
          * SessionHello
          * @description What the browser says on connecting, and whenever its threads change.

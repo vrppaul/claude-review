@@ -658,6 +658,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Report A Check
+         * @description Take a check the agent ran, stamped with the tree it ran on, in place of any reported under its name.
+         *
+         *     The reader cannot see that the tests ran, nor on which code: this says
+         *     both. A review of files or of a conversation has no tree to stamp it
+         *     with, and refuses it.
+         */
+        post: operations["report_a_check_api_check_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/settings": {
         parameters: {
             query?: never;
@@ -864,6 +888,65 @@ export interface components {
          * @enum {string}
          */
         ChapterText: "why" | "doubt";
+        /**
+         * Check
+         * @description A check the agent ran, as the review holds it: as it ended, when, and whether the code moved on since.
+         */
+        Check: {
+            /** Name */
+            name: string;
+            status: components["schemas"]["CheckStatus"];
+            /** Summary */
+            summary: string | null;
+            /** Failures */
+            failures: components["schemas"]["CheckFailure"][];
+            /** Round */
+            round: number;
+            /** At */
+            at: number;
+            /** Changed Since */
+            changed_since: string[] | null;
+            /** Out Of Date */
+            out_of_date: boolean;
+        };
+        /**
+         * CheckFailure
+         * @description One place a check failed, and whether its file changed since the check ran.
+         */
+        CheckFailure: {
+            /** Path */
+            path: string;
+            /** Line */
+            line: number;
+            /** What */
+            what: string;
+            /** Why */
+            why: string | null;
+            /** Out Of Date */
+            out_of_date: boolean;
+        };
+        /**
+         * CheckRequest
+         * @description Request body for POST /api/check — a check the agent ran, as it ended.
+         */
+        CheckRequest: {
+            /** Name */
+            name: string;
+            status: components["schemas"]["CheckStatus"];
+            /** Summary */
+            summary?: string | null;
+            /** Failures */
+            failures?: components["schemas"]["FailureReported"][];
+        };
+        /**
+         * CheckStatus
+         * @description How a check ended.
+         *
+         *     PASSED — it found nothing wrong.
+         *     FAILED — it found something wrong, or could not run.
+         * @enum {string}
+         */
+        CheckStatus: "passed" | "failed";
         Checkout: components["schemas"]["OnBranch"] | components["schemas"]["OnCommit"];
         /** ClosedEvent */
         ClosedEvent: {
@@ -1005,6 +1088,20 @@ export interface components {
             take: number;
         };
         EventResponse: components["schemas"]["QuestionEvent"] | components["schemas"]["RoundEvent"] | components["schemas"]["MessageEvent"] | components["schemas"]["CancelEvent"] | components["schemas"]["StoryRequestEvent"] | components["schemas"]["StoryCancelEvent"] | components["schemas"]["TimeoutEvent"] | components["schemas"]["ClosedEvent"];
+        /**
+         * FailureReported
+         * @description One place a check failed, as the agent reports it: a line of a file, what failed there, and why.
+         */
+        FailureReported: {
+            /** Path */
+            path: string;
+            /** Line */
+            line: number;
+            /** What */
+            what: string;
+            /** Why */
+            why?: string | null;
+        };
         /**
          * FeedbackIssueResponse
          * @description The issue written of the feedback, to the letter, and the ways it can go: to GitHub, or to the agent.
@@ -1655,6 +1752,8 @@ export interface components {
             /** Takes A Story */
             takes_a_story: boolean;
             story_asking: components["schemas"]["StoryAsking"] | null;
+            /** Checks */
+            checks: components["schemas"]["Check"][];
             limits: components["schemas"]["SendLimits"];
             /** Instance */
             instance: string;
@@ -3777,6 +3876,73 @@ export interface operations {
             };
             /** @description Forbidden */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Refusal"];
+                };
+            };
+            /** @description Content Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Refusal"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Refusal"];
+                };
+            };
+        };
+    };
+    report_a_check_api_check_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CheckRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Refusal"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Refusal"];
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

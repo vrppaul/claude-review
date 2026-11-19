@@ -37,6 +37,7 @@ from claude_review.presentation.schemas.agent import (
     SaidInPanel,
 )
 from claude_review.presentation.schemas.base import SafeId, made_or_none
+from claude_review.presentation.schemas.checks import Check
 from claude_review.presentation.schemas.content import (
     SEND_LIMITS,
     DiffFile,
@@ -87,6 +88,7 @@ async def get_the_review(review: ReviewDep, release: ReleaseDep, broadcast: Broa
         work=made_or_none(AgentWork.from_domain, work),
         takes_a_story=standing.takes_a_story,
         story_asking=made_or_none(StoryAsking.from_domain, standing.story_asking),
+        checks=[Check.from_domain(check) for check in standing.checks],
         limits=SEND_LIMITS,
         release=release,
         instance=told.instance,

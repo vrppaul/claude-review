@@ -5,6 +5,7 @@ the typist's to fix, said naming the option or argument it was typed in,
 and no request the review would refuse is ever built.
 """
 
+import re
 from typing import Self, override
 
 import click
@@ -14,6 +15,7 @@ from claude_review.cli.review_client import REASON_SEPARATOR, fields_said_wrong
 from claude_review.domain.models import FIRST_LINE, MAX_QUOTE_LINES, FilePath, StepText, runs_backwards
 from claude_review.presentation.schemas.agent import MAX_PROGRESS_STEPS, ProgressText, StatusText
 from claude_review.presentation.schemas.base import MAX_FILES_NAMED, SafeId, SaidWords
+from claude_review.presentation.schemas.checks import MAX_CHECK_FAILURES, CheckName, FailureReported
 from claude_review.presentation.schemas.refusal import FieldRefusal
 from claude_review.presentation.schemas.story import StoryRequest
 from claude_review.services.place_words import lines_named
@@ -28,6 +30,20 @@ STDIN_ENCODING = "utf-8"
 # How a file is opened to be read as the bytes it holds
 BINARY_READ = "rb"
 TRAILING_LINE_BREAK = "\n"
+
+# A place a check failed, as a compiler prints one: the path from the
+# repository's root, the line, the column where the tool gives one — and
+# drops, since a line is what the review marks — then what failed, and why
+# after the next ": " where the tool says
+PATH_PART = "path"
+LINE_PART = "line"
+WHAT_PART = "what"
+WHY_PART = "why"
+FAILURE_WRITTEN = re.compile(
+    rf"(?P<{PATH_PART}>.+?):(?P<{LINE_PART}>[0-9]+)(?::[0-9]+)?: (?P<{WHAT_PART}>.*?)(?:: (?P<{WHY_PART}>.*))?",
+    re.DOTALL,
+)
+FAILURE_EXAMPLE = "tests/test_names.py:42: test_rename: AssertionError"
 
 
 class CheckedParameter(click.ParamType):
@@ -75,20 +91,25 @@ WORK = TextParameter("text", TypeAdapter[str](ProgressText))
 STEP = CheckedParameter("text", TypeAdapter[str](StepText))
 # What the agent says about itself
 STATUS = CheckedParameter("text", TypeAdapter[str](StatusText))
+# The tool a check ran
+CHECK_NAME = CheckedParameter("text", TypeAdapter[str](CheckName))
 
 
-class EachOnce:
+class EachOnce[Value]:
     """What a repeatable option was typed with, read as the review reads its list: each once, and no more than it takes.
 
     A value typed twice was meant once, and goes once, where it was first
-    typed: the review refuses a list that names one twice. More values than
-    the review takes are the typist's to fix, said naming the option.
+    typed: the review refuses a list that names one twice, or would hold the
+    same thing twice. More values than the review takes are the typist's to
+    fix, said naming the option.
     """
 
     def __init__(self, bound: int) -> None:
         self._bound = bound
 
-    def __call__(self, context: click.Context, parameter: click.Parameter, values: tuple[str, ...]) -> tuple[str, ...]:
+    def __call__(
+        self, context: click.Context, parameter: click.Parameter, values: tuple[Value, ...]
+    ) -> tuple[Value, ...]:
         distinct = tuple(dict.fromkeys(values))
         if len(distinct) > self._bound:
             msg = f"the review takes at most {self._bound}, not {len(distinct)}"
@@ -97,9 +118,11 @@ class EachOnce:
 
 
 # The files hung off what the agent says, or off what it is doing
-NAMED_FILES = EachOnce(MAX_FILES_NAMED)
+NAMED_FILES = EachOnce[str](MAX_FILES_NAMED)
 # The branches of the work, done or under way
-BRANCHES = EachOnce(MAX_PROGRESS_STEPS)
+BRANCHES = EachOnce[str](MAX_PROGRESS_STEPS)
+# The places a check failed
+FAILURES = EachOnce[FailureReported](MAX_CHECK_FAILURES)
 
 
 class ThreadLines(BaseModel):
@@ -175,6 +198,29 @@ class StoryParameter(click.ParamType):
 
 
 STORY = StoryParameter()
+
+
+class FailureParameter(click.ParamType):
+    """Reads "path:line: what failed: why" as a place a check failed, as a compiler prints one."""
+
+    name = "failure"
+
+    @override
+    def convert(self, value: object, param: click.Parameter | None, ctx: click.Context | None) -> FailureReported:
+        if isinstance(value, FailureReported):
+            return value
+        written = FAILURE_WRITTEN.fullmatch(str(value))
+        if written is None:
+            self.fail(f'"{value}" is not written "path:line: what failed", like "{FAILURE_EXAMPLE}"', param, ctx)
+        try:
+            return FailureReported(
+                path=written[PATH_PART], line=int(written[LINE_PART]), what=written[WHAT_PART], why=written[WHY_PART]
+            )
+        except ValidationError as invalid:
+            self.fail(f'the review would refuse "{value}": {_reasons(invalid)}', param, ctx)
+
+
+FAILURE = FailureParameter()
 
 
 def _reasons(invalid: ValidationError) -> str:

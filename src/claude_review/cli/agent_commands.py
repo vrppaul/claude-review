@@ -8,6 +8,10 @@ import click
 
 from claude_review.cli.parameters import (
     BRANCHES,
+    CHECK_NAME,
+    FAILURE,
+    FAILURE_EXAMPLE,
+    FAILURES,
     FILE,
     ID,
     NAMED_FILES,
@@ -23,6 +27,7 @@ from claude_review.cli.rendering import render_catch_up, render_story_taken, ren
 from claude_review.cli.review_client import EVENTS, ReviewClient
 from claude_review.cli.story_help import story_document_help
 from claude_review.cli.terminal_text import terminal_text
+from claude_review.domain.checks import CheckStatus, passed_with_failures
 from claude_review.domain.models import CommentSeverity, LineSide, says_nothing
 from claude_review.hosting.ports import HIGHEST_PORT, LOWEST_PORT
 from claude_review.presentation.schemas.agent import (
@@ -36,6 +41,7 @@ from claude_review.presentation.schemas.agent import (
     TimeoutEvent,
 )
 from claude_review.presentation.schemas.base import DEFAULT_WAIT_SECONDS, MAX_WAIT_SECONDS
+from claude_review.presentation.schemas.checks import CheckRequest, FailureReported
 from claude_review.presentation.schemas.story import StoryRequest
 from claude_review.presentation.schemas.threads import PointedLines, PointRequest
 from claude_review.services.place_words import LINES_EXAMPLE
@@ -333,6 +339,40 @@ def retake_command(*, client: ReviewClient) -> None:
     click.echo(terminal_text(client.retake().model_dump_json()))
 
 
+@click.command("check")
+@review_port
+@click.option("--name", required=True, type=CHECK_NAME, help="The tool that ran: pytest, ruff, ty, vitest, eslint…")
+@click.option("--status", required=True, type=click.Choice(CheckStatus, case_sensitive=False), help="How it ended.")
+@click.option("--summary", type=SAID, default=None, help='What it said in short, e.g. "412 passed". "-" reads stdin.')
+@click.option(
+    "--failure",
+    "failures",
+    type=FAILURE,
+    multiple=True,
+    callback=FAILURES,
+    help=f'Where it failed, as compilers print it, from the repository\'s root: "{FAILURE_EXAMPLE}". Repeatable.',
+)
+def check_command(
+    *,
+    client: ReviewClient,
+    name: str,
+    status: CheckStatus,
+    summary: str | None,
+    failures: tuple[FailureReported, ...],
+) -> None:
+    """Report a check you ran — the tests, a linter, a type checker — as it ended.
+
+    The reader cannot see that it ran, nor on which code. The review stamps
+    it with the tree as it stands now, and says it is out of date once a
+    file changes after it. Reported again under its name, it replaces the
+    one before. A diff review only: files and a conversation have no tree.
+    """
+    if passed_with_failures(status, failures):
+        msg = "--failure names where a check failed, and --status says it passed: one of the two is wrong"
+        raise click.UsageError(msg)
+    client.report_check(CheckRequest(name=name, status=status, summary=summary, failures=list(failures)))
+
+
 @click.command("story", epilog=story_document_help())
 @review_port
 @click.option(
@@ -366,6 +406,7 @@ COMMANDS = {
         point_command,
         status_command,
         retake_command,
+        check_command,
         story_command,
     )
 }

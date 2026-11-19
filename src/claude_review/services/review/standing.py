@@ -2,6 +2,7 @@
 
 from pydantic import BaseModel, ConfigDict
 
+from claude_review.domain.checks import Check
 from claude_review.domain.models import AgentStatus, PanelEntry, ThreadDraft, WhereTheChangeIs
 from claude_review.domain.story import StoryAsking
 
@@ -32,6 +33,8 @@ class ReviewStanding(BaseModel):
     # How the asking for a story stands: None while nothing is asked, and
     # once a story is held
     story_asking: StoryAsking | None
+    # The checks the agent reported, each as it now stands against the working tree
+    checks: list[Check]
 
 
 class CatchUp(BaseModel):

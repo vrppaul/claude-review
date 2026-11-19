@@ -34,7 +34,7 @@ AGENT_COMMANDS_MODULE = "claude_review.cli.agent_commands"
 COMMAND_MODULES = {
     **dict.fromkeys(("diff", "files", "transcript"), LAUNCH_COMMANDS_MODULE),
     **dict.fromkeys(
-        ("wait", "reply", "catch-up", "say", "progress", "show", "point", "status", "retake", "story"),
+        ("wait", "reply", "catch-up", "say", "progress", "show", "point", "status", "retake", "check", "story"),
         AGENT_COMMANDS_MODULE,
     ),
 }

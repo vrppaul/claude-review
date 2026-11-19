@@ -37,6 +37,7 @@ from claude_review.domain.models import (
 )
 from claude_review.services.diff_reading import read_diff
 from claude_review.services.file_window_service import FileWindow, FileWindowService
+from claude_review.services.review.review_checks import TreesWritten
 from claude_review.services.review.review_content import ReviewContent, TakesCompared
 from claude_review.services.review.review_lifetime import ReviewLifetime
 from claude_review.services.review.review_versions import ReviewVersions
@@ -70,8 +71,8 @@ class Retaken(BaseModel):
     changes: ChangedSinceRound | None
 
 
-class ContentSource(TakesCompared):
-    """What a review asks of where its content comes from: its takes, and what changed between two of them.
+class ContentSource(TakesCompared, TreesWritten):
+    """What a review asks of where its content comes from: its takes, what changed between two, the tree written.
 
     It carries too the opening it was made from, which the review reads its
     name and kind from: made from one opening, it cannot be paired with another.
@@ -238,6 +239,16 @@ class RepositorySource(ContentSource):
         return len(files)
 
     @override
+    async def tree_as_it_stands(self) -> str | None:
+        """Written from a staging of its own, as the review's marks are: the tree a check ran on."""
+        try:
+            async with self._repository.staged(self._root) as staged:
+                return await staged.write_tree()
+        except GitError as refusal:
+            log.warning("tree_not_written", reason=str(refusal))
+            return None
+
+    @override
     async def file_window(self, path: str, start: int, end: int) -> FileWindow:
         return await self._windows.read_window(self._root, path, start, end, in_review=self._content.paths)
 
@@ -303,6 +314,12 @@ class FixedSource(ContentSource):
     async def changed_between(self, earlier: str, later: str) -> list[DiffFile]:
         """Raises: NoRepositoryError, always: what was read once has no trees."""
         msg = "No repository to compare takes in"
+        raise NoRepositoryError(msg)
+
+    @override
+    async def tree_as_it_stands(self) -> str | None:
+        """Raises: NoRepositoryError, always: what was read once has no tree."""
+        msg = "No repository: no tree for a check to have run on"
         raise NoRepositoryError(msg)
 
     @override

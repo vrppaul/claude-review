@@ -13,9 +13,10 @@ whether it is on the reader's screen, `Answerer` of the agent answering it,
 `AgentInbox` of what the reader handed over for the agent, `RoundTracker`
 of which round is being written, `Conversation` of what was said in the
 panel, `ReaderThreads` of the threads the page holds, `ReviewStory` of the
-story told of its change and of the reader's asking for one, the
-`ReviewRecord` of what it keeps of itself to go on from if it is opened
-again, and the `ContentSource` of where its content comes from. Those two
+story told of its change and of the reader's asking for one,
+`ReviewChecks` of the checks the agent ran, the `ReviewRecord` of what it
+keeps of itself to go on from if it is opened again, and the
+`ContentSource` of where its content comes from. Those two
 are handed in: its host says where the record is kept, and picks the
 source by what was opened, so a review of files is never handed git, and
 the review reads what it was opened on from it. `ThreadHandover`
@@ -30,6 +31,7 @@ from contextlib import AbstractContextManager
 
 import structlog
 
+from claude_review.domain.checks import CheckReport
 from claude_review.domain.exceptions import ReviewEndedError, UnknownFileError
 from claude_review.domain.interfaces import Clock, PageChannel
 from claude_review.domain.kept_review import KeptReview
@@ -84,6 +86,7 @@ from claude_review.services.review.browser_presence import (
 from claude_review.services.review.content_sources import ContentSource, DiffView, Retaken
 from claude_review.services.review.conversation import Conversation
 from claude_review.services.review.reader_threads import ReaderThreads
+from claude_review.services.review.review_checks import ReviewChecks
 from claude_review.services.review.review_lifetime import EndReason, ReviewLifetime
 from claude_review.services.review.review_record import ReviewRecord
 from claude_review.services.review.review_story import ReviewStory
@@ -127,6 +130,7 @@ class Review:
         self._source = source
         self._story = ReviewStory(clock, takes=source, takes_a_story=source.is_a_change)
         self._inbox = AgentInbox(self._lifetime, standing=self._story)
+        self._checks = ReviewChecks(source, clock, page)
         self._record = record
         # Chosen once: a review of a conversation quotes what each comment is
         # on, since the agent will not have the conversation in front of it
@@ -149,6 +153,7 @@ class Review:
             agent=self._answerer.status,
             takes_a_story=self._story.takes_a_story,
             story_asking=self._story.asking,
+            checks=self._checks.held,
         )
 
     def catch_up(self) -> CatchUp:
@@ -206,6 +211,14 @@ class Review:
     def report_status(self, *, model: str | None, context: str | None) -> None:
         """Take what the agent says about itself."""
         self._answerer.report_status(model=model, context=context)
+
+    async def report_check(self, report: CheckReport) -> None:
+        """Take a check the agent ran, in the round being written, in place of any reported under its name.
+
+        Raises:
+            NoRepositoryError: if the review's content did not come from a repository: no tree for it to run on.
+        """
+        await self._checks.report(report, round_number=self._rounds.current)
 
     async def keep_image(self, content: bytes) -> StoredImage:
         """Keep an image the reader is about to send."""

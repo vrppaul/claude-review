@@ -8,6 +8,7 @@ from pydantic import ConfigDict, Field, StrictBool
 from claude_review.domain.models import CommentSeverity, FilePath
 from claude_review.presentation.schemas.agent import AgentStatus, AgentWork
 from claude_review.presentation.schemas.base import Schema
+from claude_review.presentation.schemas.checks import Check
 from claude_review.presentation.schemas.content import ChangesSince, StoryAsking
 from claude_review.presentation.schemas.threads import Anchor, ThreadAsHanded
 
@@ -28,6 +29,7 @@ class PushKind(StrEnum):
     DIFF — the diff was taken again.
     STORY — a story was told of the change.
     STORY_ASKING — how the reader's asking for a story now stands.
+    CHECKS — the checks the agent ran, as they now stand.
     ENDED — the review is over.
     """
 
@@ -44,6 +46,7 @@ class PushKind(StrEnum):
     DIFF = auto()
     STORY = auto()
     STORY_ASKING = auto()
+    CHECKS = auto()
     ENDED = auto()
 
 
@@ -162,6 +165,16 @@ class StoryAskingPush(Push):
     asking: StoryAsking | None
 
 
+class ChecksPush(Push):
+    """The checks the agent ran, every one as it now stands: one was reported, or the code moved on under one.
+
+    Pushed whole, as the review's facts carry them: a page takes the list in place of its own.
+    """
+
+    type: Literal[PushKind.CHECKS] = PushKind.CHECKS
+    checks: list[Check]
+
+
 class EndedPush(Push):
     """The review is over, and this is the last thing told: the page lets go of it rather than reach for it again.
 
@@ -190,6 +203,7 @@ type ServerPush = Annotated[
     | DiffPush
     | StoryPush
     | StoryAskingPush
+    | ChecksPush
     | EndedPush,
     Field(discriminator="type"),
 ]

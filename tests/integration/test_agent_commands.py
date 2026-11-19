@@ -19,7 +19,15 @@ from claude_review.cli.main import main
 from claude_review.domain.models import CommentSeverity, LineSide
 from claude_review.presentation.schemas.agent import CatchUpResponse, ProgressStep
 from claude_review.presentation.schemas.content import ReviewResponse
-from claude_review.presentation.schemas.pushes import ChatPush, PointPush, ProgressPush, ReplyPush, StatusPush
+from claude_review.domain.checks import CheckStatus
+from claude_review.presentation.schemas.pushes import (
+    ChatPush,
+    ChecksPush,
+    PointPush,
+    ProgressPush,
+    ReplyPush,
+    StatusPush,
+)
 from claude_review.presentation.schemas.story import StoryResponse
 from tests.helpers import (
     CATCH_UP_ROUTE,
@@ -32,6 +40,7 @@ from tests.helpers import (
     RunningReview,
     added_line,
     diff_file,
+    files_opening_of,
     line_json,
     message_json,
     next_push,
@@ -170,6 +179,42 @@ async def test_the_agent_reports_what_the_review_cannot_measure(review: RunningR
 
     assert result.exit_code == 0, result.output
     assert (pushed.agent.model, pushed.agent.context) == ("opus-5", "53% of 1M")
+
+
+async def test_a_check_the_agent_ran_reaches_the_review_on_screen_as_it_ended(review: RunningReview) -> None:
+    """Where it failed is read as a compiler prints it, the column a linter adds left out: a line is what is marked."""
+    async with page_socket_held(review.port) as page:
+        result = await _run(
+            review,
+            "check",
+            *("--name", "ruff", "--status", "failed", "--summary", "1 error"),
+            *("--failure", "src/a.py:12:5: F401: `os` imported but unused"),
+        )
+        pushed = await asyncio.to_thread(next_push, page, ChecksPush)
+
+    assert result.exit_code == 0, result.output
+    [check] = pushed.checks
+    assert (check.name, check.status, check.summary, check.out_of_date) == (
+        "ruff",
+        CheckStatus.FAILED,
+        "1 error",
+        False,
+    )
+    assert [(failure.path, failure.line, failure.what, failure.why) for failure in check.failures] == [
+        ("src/a.py", 12, "F401", "`os` imported but unused")
+    ]
+    # And a page opening only now reads it as it was pushed
+    assert (await _facts(review)).checks == pushed.checks
+
+
+async def test_a_check_reported_to_a_review_of_files_is_refused(servers: ReviewServers) -> None:
+    """Files read once have no tree for a check to have run on."""
+    review = await servers.start(files_opening_of([one_line_file()]))
+
+    result = await _run(review, "check", "--name", "pytest", "--status", "passed")
+
+    assert result.exit_code == FAILED
+    assert "no tree" in result.output
 
 
 async def test_a_thread_named_is_read_in_full(review: RunningReview) -> None:

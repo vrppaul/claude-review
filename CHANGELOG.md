@@ -7,6 +7,13 @@
   card lead to the news of the release before and of the one after, as
   far back as news was written. The card's buttons stay in sight where a
   short window scrolls a long piece of news.
+- **The agent reports the checks it ran.** `claude-review check --name
+  pytest --status failed --failure "tests/test_a.py:42: test_rename"`
+  says a test run, a linter or a type checker ended, and where it failed,
+  in the form compilers print. The review stamps each with the tree git
+  writes down as it arrives and hands the checks to the page, in its facts
+  and pushed whole as they change; one reported again under its name
+  takes its place. A review of files or a conversation refuses them.
 
 ### Changed
 - **Help's "What's new" names no release.** The news it opens is of the

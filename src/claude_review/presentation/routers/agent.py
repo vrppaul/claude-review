@@ -42,6 +42,7 @@ from claude_review.presentation.schemas.agent import (
     TimeoutEvent,
 )
 from claude_review.presentation.schemas.base import DEFAULT_WAIT_SECONDS, MAX_WAIT_SECONDS, SafeId
+from claude_review.presentation.schemas.checks import CheckRequest
 from claude_review.presentation.schemas.story import StoryRequest, StoryTakenResponse
 from claude_review.presentation.schemas.threads import (
     PointRequest,
@@ -218,6 +219,17 @@ async def report_status(request: StatusRequest, review: ReviewDep) -> None:
     measured from here, so both are quoted with the time they were said.
     """
     review.report_status(model=request.model, context=request.context)
+
+
+@router.post("/check", status_code=HTTPStatus.NO_CONTENT, responses=refusals(NoRepositoryError, takes=Takes.JSON_BODY))
+async def report_a_check(request: CheckRequest, review: ReviewDep) -> None:
+    """Take a check the agent ran, stamped with the tree it ran on, in place of any reported under its name.
+
+    The reader cannot see that the tests ran, nor on which code: this says
+    both. A review of files or of a conversation has no tree to stamp it
+    with, and refuses it.
+    """
+    await review.report_check(request.to_domain())
 
 
 @router.put("/story", responses=refusals(StoryRefusedError, NoRepositoryError, takes=Takes.JSON_BODY))
