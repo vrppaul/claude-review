@@ -14,7 +14,9 @@
 	let { count, outOfDate, label, testId }: Props = $props();
 </script>
 
-<!-- A mark of how many places failed: the error's cross and a figure, said in words to a screen reader -->
+<!-- A mark of how many places failed: the error's cross and a figure, said in words to a screen reader. A kind of its
+	own, not a Count: a Count is a figure alone in a tag's box, and this is a mark and a figure on the row's ground -->
+
 <span
 	data-testid={testId}
 	title={label}

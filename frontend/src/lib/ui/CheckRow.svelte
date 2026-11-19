@@ -1,65 +1,61 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import type { CheckStands } from './check-row';
 	import FoldChevron from './FoldChevron.svelte';
 	import Icon from './Icon.svelte';
 	import type { IconName, IconTone } from './icons';
 
-	/** How a check ended. */
-	type Ended = 'passed' | 'failed';
-
-	/** What a check's mark draws, in its tone while it is of the code on screen, and says to whoever cannot see it. */
-	interface EndMark {
+	/** What a check's row draws for how it stands: its mark, in its colour where it has one, and the mark's word. */
+	interface StandingLook {
 		icon: IconName;
-		tone: IconTone;
+		tone: IconTone | undefined;
 		said: string;
+		/** The class its row is drawn with. */
+		look: string;
 	}
 
-	const MARKS: Record<Ended, EndMark> = {
-		passed: { icon: 'check', tone: 'done', said: 'passed' },
-		failed: { icon: 'cross', tone: 'danger', said: 'failed' }
+	const LOOKS: Record<CheckStands, StandingLook> = {
+		failing: { icon: 'cross', tone: 'danger', said: 'failed', look: 'cr-ui-check-failed' },
+		passing: { icon: 'check', tone: 'done', said: 'passed', look: 'cr-ui-check' },
+		'failed-before': { icon: 'cross', tone: undefined, said: 'failed', look: 'cr-ui-check cr-ui-check-out-of-date' },
+		'passed-before': { icon: 'check', tone: undefined, said: 'passed', look: 'cr-ui-check cr-ui-check-out-of-date' }
 	};
 
 	interface Props {
-		ended: Ended;
+		stands: CheckStands;
 		/** What the check is called: the tool that ran. */
 		name: string;
 		/** What it said in short, where it said anything. */
 		said: string | null;
 		/** When it was reported. */
 		when: string;
-		/** Whether the code changed after it ran: its mark and name step back to ink, said of code no longer on screen. */
-		outOfDate: boolean;
 		testId: string;
-		/**
-		 * The places it failed, each a CheckFailure, for a failure of the code on screen that says where: under its
-		 * line, which folds them away.
-		 */
+		/** The places a failing check failed, each a CheckFailure, where it says: under its line, which folds them. */
 		failures?: Snippet | undefined;
 	}
 
-	let { ended, name, said, when, outOfDate, testId, failures }: Props = $props();
+	let { stands, name, said, when, testId, failures }: Props = $props();
 
-	const mark = $derived(MARKS[ended]);
-	// A failure of the code on screen is what the reader came to the pane for: a block on the error's tint
-	const failingNow = $derived(ended === 'failed' && !outOfDate);
+	const drawn = $derived(LOOKS[stands]);
 	let folded = $state(false);
 </script>
 
-<!-- Its mark, name, words and time, a column each; the chevron of what it folds after the time -->
+<!-- A kind of its own, not a Row: its mark, name, words and time are cells of the pane's one grid (CheckList), so
+	each column lines up across every check, in whichever group it stands; the chevron of what it folds after the time -->
 {#snippet line(folds: boolean)}
 	<span class="cr-ui-check-mark">
-		<Icon name={mark.icon} size="xs" tone={outOfDate ? undefined : mark.tone} label={mark.said} />
+		<Icon name={drawn.icon} size="xs" tone={drawn.tone} label={drawn.said} />
 	</span>
 	<span class="cr-ui-check-name">{name}</span>
-	<span class={['cr-ui-check-said', failingNow && 'cr-ui-check-failing']}>{said ?? ''}</span>
+	<span class={['cr-ui-check-said', stands === 'failing' && 'cr-ui-check-failing']}>{said ?? ''}</span>
 	<span class="cr-ui-check-when">
 		{when}
 		{#if folds}<FoldChevron {folded} />{/if}
 	</span>
 {/snippet}
 
-{#if failingNow}
-	<li data-testid={testId} class="cr-ui-check-failed">
+{#if stands === 'failing'}
+	<li data-testid={testId} class={drawn.look}>
 		{#if failures}
 			<button
 				type="button"
@@ -79,5 +75,5 @@
 		{/if}
 	</li>
 {:else}
-	<li data-testid={testId} class={['cr-ui-check', outOfDate && 'cr-ui-check-out-of-date']}>{@render line(false)}</li>
+	<li data-testid={testId} class={drawn.look}>{@render line(false)}</li>
 {/if}

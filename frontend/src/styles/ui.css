@@ -70,6 +70,10 @@
 	border-color: currentColor;
 	color: inherit;
 }
+/* An icon on it is in its words too: a hue of its own would sit on the ink ground, as a green tick would */
+.cr-pressable:is([aria-pressed='true'], :where(.cr-ui-bar-page) [aria-haspopup][aria-expanded='true']) .cr-ui-icon {
+	color: inherit;
+}
 /*
  * A button or a segment eases into its pressed or open look, but for a
  * reader who asked for less motion (less-motion.css). A row and a band the keys
@@ -2818,7 +2822,6 @@
 	align-items: baseline;
 	padding: --spacing(1.5) --spacing(2);
 	font-size: var(--text-xs);
-	line-height: var(--text-xs--line-height);
 }
 .cr-ui-check-mark {
 	display: flex;
@@ -2886,7 +2889,6 @@
 	padding: --spacing(1.5) --spacing(2);
 	border-radius: var(--radius-field);
 	font-size: var(--text-xs);
-	line-height: var(--text-xs--line-height);
 	text-align: start;
 }
 .cr-ui-check-what {
@@ -2926,7 +2928,6 @@
 	gap: --spacing(2);
 	padding-inline: --spacing(2);
 	font-size: var(--text-sm);
-	line-height: var(--text-sm--line-height);
 }
 .cr-ui-checks-out-of-date-says > .cr-ui-icon {
 	margin-top: --spacing(0.5);
@@ -2956,7 +2957,6 @@
 	background-color: var(--cr-error-tint);
 	font-family: var(--font-sans);
 	font-size: var(--text-xs);
-	line-height: var(--text-xs--line-height);
 }
 .cr-ui-line-failure-check {
 	display: inline-flex;

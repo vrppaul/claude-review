@@ -1,13 +1,16 @@
 <script lang="ts" module>
 	import type { Check } from '$lib/types';
 	import type { ButtonTone } from '$lib/ui/button';
-	import type { IconName } from '$lib/ui/icons';
+	import type { CheckStands } from '$lib/ui/check-row';
+	import type { IconName, IconTone } from '$lib/ui/icons';
 	import { wordsFor, type CountedWords } from '$lib/utils/words';
 
 	/** The worst of what the checks say, as the chip says it: its look, its mark, a figure and the words after it. */
 	interface ChipSays {
 		tone: ButtonTone;
 		icon: IconName;
+		/** The mark's own colour, where the button's words do not give it one: the green of all passed. */
+		iconTone: IconTone | undefined;
 		figure: number;
 		words: string;
 	}
@@ -18,14 +21,25 @@
 
 	/** A failure on the code on screen first, then what the code changed after, then that every one passed. */
 	function worstOf(total: number, failing: number, outOfDate: number): ChipSays {
-		if (failing > 0) return { tone: 'failing', icon: 'cross', figure: failing, words: `of ${total} failed` };
-		if (outOfDate > 0) return { tone: 'warned', icon: 'old', figure: outOfDate, words: `of ${total} out of date` };
-		return { tone: 'quiet', icon: 'check', figure: total, words: wordsFor(total, CHECKS) };
+		if (failing > 0) {
+			return { tone: 'failing', icon: 'cross', iconTone: undefined, figure: failing, words: `of ${total} failed` };
+		}
+		if (outOfDate > 0) {
+			return { tone: 'warned', icon: 'old', iconTone: undefined, figure: outOfDate, words: `of ${total} out of date` };
+		}
+		return { tone: 'quiet', icon: 'check', iconTone: 'done', figure: total, words: wordsFor(total, CHECKS) };
 	}
 
-	/** Whether a check failed on the code on screen. */
-	function failsNow(check: Check): boolean {
-		return check.status === 'failed' && !check.out_of_date;
+	/** How a check of each ending stands, on the code on screen and once the code changed after it. */
+	const STANDING: Record<Check['status'], { current: CheckStands; outOfDate: CheckStands }> = {
+		failed: { current: 'failing', outOfDate: 'failed-before' },
+		passed: { current: 'passing', outOfDate: 'passed-before' }
+	};
+
+	/** How a check stands, as the review says it ended and whether the code moved on since. */
+	function standsOf(check: Check): CheckStands {
+		const ending = STANDING[check.status];
+		return check.out_of_date ? ending.outOfDate : ending.current;
 	}
 </script>
 
@@ -55,9 +69,9 @@
 
 	const checks = $derived(review.checks.all);
 	// Failed first, then those the code changed after, then the rest: the order of what the reader must look at
-	const failing = $derived(checks.filter(failsNow));
+	const failing = $derived(checks.filter((check) => standsOf(check) === 'failing'));
 	const outOfDate = $derived(checks.filter((check) => check.out_of_date));
-	const standing = $derived(checks.filter((check) => !check.out_of_date && !failsNow(check)));
+	const passing = $derived(checks.filter((check) => standsOf(check) === 'passing'));
 	const says = $derived(worstOf(checks.length, failing.length, outOfDate.length));
 	const named = $derived(`${HEADING}: ${says.figure} ${says.words}`);
 	// Every file that changed after one of them ran, once; none where git could not say
@@ -89,11 +103,10 @@
 <!-- A check, and where it failed under it where that is said of the code on screen -->
 {#snippet row(check: Check, failures: Snippet | undefined)}
 	<CheckRow
-		ended={check.status}
+		stands={standsOf(check)}
 		name={check.name}
 		said={check.summary}
 		when={reportedWhen(check)}
-		outOfDate={check.out_of_date}
 		testId="check"
 		{failures}
 	/>
@@ -119,7 +132,7 @@
 		{#snippet trigger(control)}
 			<!-- As the window narrows its words give way, then its figure, the mark kept to the last -->
 			<Button {...control} tone={says.tone} size="sm" testId="checks" aria-label={named} title={named}>
-				<Icon name={says.icon} size="xs" tone={says.tone === 'quiet' && !open ? 'done' : undefined} />
+				<Icon name={says.icon} size="xs" tone={says.iconTone} />
 				<span class="max-cr-header-narrowest:sr-only">
 					{says.figure} <span class="max-cr-header-narrower:sr-only">{says.words}</span>
 				</span>
@@ -155,7 +168,7 @@
 					{/each}
 				</OutOfDateChecks>
 			{/if}
-			{#each standing as check (check.name)}
+			{#each passing as check (check.name)}
 				{@render row(check, undefined)}
 			{/each}
 		</CheckList>

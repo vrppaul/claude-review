@@ -16,7 +16,9 @@
 	let { what, where, why, title, testId, onclick }: Props = $props();
 </script>
 
-<!-- What failed, then where in the colour of a way somewhere and why, under the line of the check that failed -->
+<!-- What failed, then where in the colour of a way somewhere and why, under the line of the check that failed. A kind
+	of its own, not a Row: a Row says its label and words on one line, and this says what failed on a line above
+	where and why, which wrap as long as the check said them -->
 {#snippet said()}
 	<span class="cr-ui-check-what">{what}</span>
 	<span class="cr-ui-check-where">{where}</span>

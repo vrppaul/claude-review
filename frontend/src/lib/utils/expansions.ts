@@ -157,7 +157,12 @@ export function readReaching(
 	const end = last === undefined ? null : gapBelow(last, revealed.length);
 	const hiding = [...gaps, ...(end === null ? [] : [end])].find((gap) => hides(gap, line));
 	if (hiding === undefined) return null;
-	return readsDownTo(hiding, line) ? readDownTo(hiding, line, longestRead) : readUpTo(hiding, line, longestRead);
+	// Down from the hunk above where there is one and it is the nearer, or the gap runs on past the last hunk
+	const { above, below, last: lastHidden } = hiding;
+	if (above !== null && (below === null || lastHidden === null || line - hiding.first <= lastHidden - line)) {
+		return readDownTo(hiding, above, line, longestRead);
+	}
+	return below === null || lastHidden === null ? null : readUpTo(hiding, below, lastHidden, line, longestRead);
 }
 
 /** Whether a gap hides a line: one below the last hunk hides every line past it until a read says where the file ends. */
@@ -165,25 +170,17 @@ function hides(gap: ContextGap, line: number): boolean {
 	return line >= gap.first && (gap.last === null || line <= gap.last) && hiddenIn(gap) !== 0;
 }
 
-/** Whether a line is reached down from the hunk above its gap rather than up from the one below: whichever is nearer. */
-function readsDownTo(gap: ContextGap, line: number): boolean {
-	if (gap.above === null) return false;
-	return gap.below === null || gap.last === null || line - gap.first <= gap.last - line;
-}
-
 /** The lines down from the hunk above a gap to a step past a line in it, as many as one read hands back. */
-function readDownTo(gap: ContextGap, line: number, longestRead: number): GapRead | null {
-	if (gap.above === null) return null;
+function readDownTo(gap: ContextGap, above: string, line: number, longestRead: number): GapRead {
 	const furthest = Math.min(line + EXPAND_STEP, gap.first + longestRead - 1);
 	const window = { start: gap.first, end: gap.last === null ? furthest : Math.min(gap.last, furthest) };
-	return { gap: gap.key, window, landing: { hunk: gap.above, side: 'below' }, oldOffset: gap.oldOffset };
+	return { gap: gap.key, window, landing: { hunk: above, side: 'below' }, oldOffset: gap.oldOffset };
 }
 
 /** The lines up from the hunk below a gap to a step before a line in it, as many as one read hands back. */
-function readUpTo(gap: ContextGap, line: number, longestRead: number): GapRead | null {
-	if (gap.below === null || gap.last === null) return null;
-	const window = { start: Math.max(gap.first, line - EXPAND_STEP, gap.last - longestRead + 1), end: gap.last };
-	return { gap: gap.key, window, landing: { hunk: gap.below, side: 'above' }, oldOffset: gap.oldOffset };
+function readUpTo(gap: ContextGap, below: string, lastHidden: number, line: number, longestRead: number): GapRead {
+	const window = { start: Math.max(gap.first, line - EXPAND_STEP, lastHidden - longestRead + 1), end: lastHidden };
+	return { gap: gap.key, window, landing: { hunk: below, side: 'above' }, oldOffset: gap.oldOffset };
 }
 
 /** How many lines a read asks for. */

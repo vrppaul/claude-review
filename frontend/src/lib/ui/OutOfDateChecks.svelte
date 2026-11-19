@@ -18,7 +18,8 @@
 </script>
 
 <!-- The checks that ran before the code changed, together on the warning's tint under the one sentence that says
-	so, in the grid of all the checks -->
+	so. A kind of its own, not a Callout: it is a row group of the pane's one grid (CheckList), so its checks' columns
+	line up with those outside it, which a Callout's body cannot -->
 <li data-testid={testId} class="cr-ui-checks-out-of-date">
 	<p class="cr-ui-checks-out-of-date-says">
 		<Icon name="old" size="sm" tone="warning" />
