@@ -62,7 +62,7 @@ describe('an unsent review', () => {
 		review.submission.setBody('Overall fine');
 
 		review = openReview();
-		const count = review.restoredCount;
+		const count = review.draftNotices.restoredCount;
 
 		expect(count).toBe(1);
 		expect(review.threads.all[0].body).toBe('tighten this');
@@ -74,7 +74,7 @@ describe('an unsent review', () => {
 		review.threads.add(newComment({ file: 'a.py', body: 'tighten this' }));
 
 		review = openReview({ facts: { title: 'other-repo: changes since v1', identity: 'another-review' } });
-		const count = review.restoredCount;
+		const count = review.draftNotices.restoredCount;
 
 		expect(count).toBe(0);
 		expect(review.threads.all).toEqual([]);
@@ -120,7 +120,7 @@ describe('an unsent review', () => {
 		await review.submission.submit(true);
 
 		review = openReview();
-		expect(review.restoredCount).toBe(0);
+		expect(review.draftNotices.restoredCount).toBe(0);
 	});
 
 	it('never hands out a comment id a restored comment already has, even after a deletion', () => {

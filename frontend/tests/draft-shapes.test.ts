@@ -497,7 +497,7 @@ describe('a draft written by an older release', () => {
 		keptByAnOlderRelease({ version: SHAPE_WITH_TURN_IDS, comments: [keptComment()], sent: [] });
 
 		const review = openReview();
-		const count = review.restoredCount;
+		const count = review.draftNotices.restoredCount;
 
 		expect(count).toBe(1);
 		expect(review.threads.add(newComment({ body: 'next' }))).not.toBe(fullThread().id);

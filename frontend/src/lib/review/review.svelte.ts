@@ -18,6 +18,7 @@ import { Answerer } from '$lib/review/answerer.svelte';
 import { Clock } from '$lib/review/clock.svelte';
 import { CommentFields } from '$lib/review/comment-fields';
 import { Conversation } from '$lib/review/conversation.svelte';
+import { DraftNotices } from '$lib/review/draft-notices.svelte';
 import { Feedback } from '$lib/review/feedback.svelte';
 import { FileSections } from '$lib/dom/file-sections';
 import { Jumps } from '$lib/dom/jump';
@@ -134,12 +135,8 @@ export class Review {
 	/** The time now, for whatever says how long ago something was. */
 	readonly clock = new Clock();
 
-	// How many threads came back from the draft, so the reader is told rather
-	// than left to wonder where they came from; zero once they have seen it
-	#restoredCount: number;
-	// Whether a kept draft could not be read and was set aside, so the reader
-	// is told why their unsent work is not here; false once they have seen it
-	#draftSetAside: boolean;
+	/** What the reader is told of the draft it opened from. */
+	readonly draftNotices: DraftNotices;
 	// What handing the diff on screen over costs, in characters: counted once
 	// a diff, not again whenever a thread changes
 	readonly #diffCharacters: number;
@@ -223,8 +220,7 @@ export class Review {
 		});
 		this.navigator = new Navigator(this.threads, this.sections, this.wayIntoStory);
 		// What the draft kept that had not gone out: the header's "unsent" counts the same
-		this.#restoredCount = $state(draft === null ? 0 : this.threads.unsent.length);
-		this.#draftSetAside = $state(draftSetAside);
+		this.draftNotices = new DraftNotices(draft === null ? 0 : this.threads.unsent.length, draftSetAside);
 		this.#diffCharacters = $derived(diffCharacters(this.diff.files));
 		this.#weight = $derived(tokensOf(this.#diffCharacters + threadCharacters(this.threads.all)));
 		this.#hello = $derived({
@@ -285,22 +281,6 @@ export class Review {
 	 */
 	get partsScrolledPast(): ReadonlySet<string> {
 		return this.story.contents.partsAbove(this.parts.beingRead);
-	}
-
-	get restoredCount(): number {
-		return this.#restoredCount;
-	}
-
-	dismissRestored(): void {
-		this.#restoredCount = 0;
-	}
-
-	get draftSetAside(): boolean {
-		return this.#draftSetAside;
-	}
-
-	dismissSetAside(): void {
-		this.#draftSetAside = false;
 	}
 
 	/** What handing this review over costs, in tokens, as far as this side can tell. */
