@@ -87,7 +87,7 @@ class ReaderThreads:
         of it.
 
         Added to what it had: a turn it has keeps the words it first had, and
-        one a copy no longer holds stays.
+        one a later copy lacks stays.
         """
         had = self._handed.get(thread.thread_id)
         has = _as_handed(thread, round_number) if had is None else had.grown_by(thread)

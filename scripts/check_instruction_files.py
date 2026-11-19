@@ -4,7 +4,7 @@
 of an area under `.claude/rules/` into every session that opens a file of
 that area. A rule is cheap to add and nothing asks one to leave, so a file
 left alone grows until it is read in part and followed less. Each is held
-to its bytes, its lines and its longest line, and what no longer fits goes
+to its bytes, its lines and its longest line, and what does not fit goes
 where it belongs: a rule for one area to that area's file, what a tool can
 hold to a gate. How a thing is built is read in its code.
 

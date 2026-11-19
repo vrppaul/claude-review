@@ -234,8 +234,8 @@ def _path(header: list[str]) -> str | None:
 def _old_path(header: list[str]) -> str | None:
     """Where a renamed file was, read from its header; None for a file that did not move.
 
-    A copy leaves its original where it was, so only a rename says where
-    the file is no longer.
+    A copy leaves its original where it was, so only a rename names
+    the path the file left.
     """
     return next(
         (
@@ -266,7 +266,7 @@ def _paths_line_path(paths_line: str) -> str | None:
     Only a file with no markers and no move reaches here — a binary file or
     a permission change — and for those the two halves name the same file.
     So the split is the one that makes them equal, which a name containing
-    " b/" no longer defeats.
+    " b/" does not defeat.
     """
     quoted = QUOTED_PATHS.match(paths_line)
     if quoted:

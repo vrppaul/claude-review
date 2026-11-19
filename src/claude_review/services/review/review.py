@@ -297,7 +297,7 @@ class Review:
         self._check_threads([thread])
         [handed] = self._hand_over([thread])
         # Handed over with the thread already; named again, they are the same
-        # files. Like every image in the thread, one this review no longer keeps
+        # files. Like every image in the thread, one this review does not keep
         # is left out: after a restart a screenshot is gone however recently it
         # was pasted, and nothing here can tell the two apart.
         images = self._handover.kept_images(asked.images)
@@ -610,8 +610,8 @@ class Review:
         """Threads as the agent is handed them, each one it may answer in from now on.
 
         The pages are told at once what the agent now has of each, words and
-        all: the reader's to rewrite no longer, and what a page takes in place
-        of its own where the agent was handed an older copy. A round of no
+        all, which are not the reader's to rewrite, and what a page takes in
+        place of its own where the agent was handed an older copy. A round of no
         threads hands nothing over, and tells nothing.
         """
         handed = {

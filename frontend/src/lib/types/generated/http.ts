@@ -507,9 +507,8 @@ export interface paths {
          * Read Thread
          * @description Hand over one thread the review holds, in full: every turn, its lines, its images.
          *
-         *     Read, so handed over: the agent may open its images from now on, and
-         *     the reader can no longer take them off. A POST for that: a read must
-         *     change nothing.
+         *     Read, so handed over: its images are the agent's to open, and not the
+         *     reader's to take off. A POST for that: a read must change nothing.
          */
         post: operations["read_thread_api_catch_up_threads__thread_id__post"];
         delete?: never;
@@ -1259,8 +1258,8 @@ export interface components {
          * LineSide
          * @description Which version of the file a line belongs to.
          *
-         *     OLD — the version before the change; such a line no longer exists in the
-         *     working tree, so its number only makes sense against the original file.
+         *     OLD — the version before the change; such a line is not in the working
+         *     tree, so its number only makes sense against the original file.
          *     NEW — the version after the change. Files and transcript modes have no
          *     "before", so every line there is NEW.
          * @enum {string}

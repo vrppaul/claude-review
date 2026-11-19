@@ -2,7 +2,7 @@
 
 The agent changes files while the review is being read, and so does an
 editor, a rebase or a stash. The review cannot tell the difference and does
-not need to: all it has to say is that what is on screen is no longer what
+not need to: all it has to say is that what is on screen differs from what
 is on disk, and let the reader decide when to take it again. Swapping the
 diff under someone mid-sentence orphans what they were writing.
 """

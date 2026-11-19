@@ -14,8 +14,8 @@ class ThreadHandover:
     """Turns the threads a page holds into threads an agent reads.
 
     Every image a thread names is handed over on the way: kept until the
-    review ends, since the agent may open it at any time from then on, and no
-    longer the reader's to take off.
+    review ends, since the agent may open it at any time from then on, and not
+    the reader's to take off.
     """
 
     def __init__(self, images: ImageService) -> None:

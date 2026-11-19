@@ -283,7 +283,7 @@ class FollowedStep(Step):
     the change, nothing of its lines is found, or it would meet another
     step of its file once followed. It then stands nowhere and claims no
     line, and shows no piece: a piece cut at its old lines would show other
-    code, and an empty one would claim a status its file no longer has.
+    code, and an empty one would claim a status its file does not have.
     Whether its code changed is said only of code it shows.
     """
 

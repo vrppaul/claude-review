@@ -74,6 +74,8 @@ from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict
 
+from faults import Fault, report
+
 # Shorter than this, a name abbreviates what it holds rather than saying it
 SHORTEST_NAME = 3
 # Shorter than that, and still whole words; matched whatever their case
@@ -130,9 +132,6 @@ REFUSALS_PACKAGE = "claude_review.domain"
 REFUSAL_ELSEWHERE = (
     "`{name}` is a kind of refusal kept outside `claude_review/domain/exceptions.py`, which keeps them all"
 )
-# What the process exits with
-ALL_KEPT = 0
-RULE_BROKEN = 1
 
 
 class GivenName(BaseModel):
@@ -168,23 +167,10 @@ class Said(BaseModel):
     says: str
 
 
-class Breach(BaseModel):
-    """One place that breaks a rule, and what it does."""
-
-    model_config = ConfigDict(frozen=True)
-
-    path: Path
-    line: int
-    says: str
-
-    def __str__(self) -> str:
-        return f"{self.path}:{self.line}: {self.says}"
-
-
-def breaches_in(path: Path) -> list[Breach]:
+def faults_in(path: Path) -> list[Fault]:
     """Every place in one file that breaks a rule, in the order they are found."""
     tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
-    found: list[Breach] = []
+    found: list[Fault] = []
     file = CheckedFile(
         path=path,
         copy_module_names=_names_of_the_copy_module(tree),
@@ -243,7 +229,7 @@ def _names_of_the_copy_module(tree: ast.AST) -> frozenset[str]:
     )
 
 
-def _look_inside(node: ast.AST, file: CheckedFile, *, inside_function: bool, found: list[Breach]) -> None:
+def _look_inside(node: ast.AST, file: CheckedFile, *, inside_function: bool, found: list[Fault]) -> None:
     """Check everything under a node, knowing whether it already sits in a function."""
     for child in ast.iter_child_nodes(node):
         said = [
@@ -255,7 +241,7 @@ def _look_inside(node: ast.AST, file: CheckedFile, *, inside_function: bool, fou
             *_said_of_a_command_by_position(child),
             *_said_of_a_refusal_elsewhere(child, file),
         ]
-        found.extend(Breach(path=file.path, line=one.line, says=one.says) for one in said)
+        found.extend(Fault(path=file.path, line=one.line, says=one.says) for one in said)
         _look_inside(child, file, inside_function=inside_function or isinstance(child, FUNCTIONS), found=found)
 
 
@@ -404,10 +390,7 @@ def _python_files(places: list[str]) -> list[Path]:
 
 
 def main(places: list[str]) -> int:
-    breaches = [breach for path in _python_files(places) for breach in breaches_in(path)]
-    for breach in breaches:
-        print(breach)
-    return RULE_BROKEN if breaches else ALL_KEPT
+    return report([fault for path in _python_files(places) for fault in faults_in(path)])
 
 
 if __name__ == "__main__":

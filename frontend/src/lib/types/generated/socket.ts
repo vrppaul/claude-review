@@ -227,8 +227,8 @@ export interface components {
          * LineSide
          * @description Which version of the file a line belongs to.
          *
-         *     OLD — the version before the change; such a line no longer exists in the
-         *     working tree, so its number only makes sense against the original file.
+         *     OLD — the version before the change; such a line is not in the working
+         *     tree, so its number only makes sense against the original file.
          *     NEW — the version after the change. Files and transcript modes have no
          *     "before", so every line there is NEW.
          * @enum {string}

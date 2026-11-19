@@ -29,6 +29,15 @@ repos:
         types: [python]
         exclude: ^tests/
 
+      # A comment or a docstring says what stands, never what was, and carries
+      # no date (.claude/rules/prose.md). The tests are left alone, as above
+      - id: prose
+        name: prose (comments and docstrings tell no history and no date)
+        entry: uv run python scripts/check_prose.py
+        language: system
+        types: [python]
+        exclude: ^tests/
+
       # A test checks what an act did, never how the page looks
       # (.claude/rules/tests.md): a browser test reads no box or size, no
       # computed style or opacity, no class or style attribute, and takes no

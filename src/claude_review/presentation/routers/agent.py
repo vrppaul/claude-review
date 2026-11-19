@@ -138,9 +138,8 @@ async def catch_up(review: ReviewDep) -> CatchUpResponse:
 async def read_thread(thread_id: SafeId, review: ReviewDep) -> Thread:
     """Hand over one thread the review holds, in full: every turn, its lines, its images.
 
-    Read, so handed over: the agent may open its images from now on, and
-    the reader can no longer take them off. A POST for that: a read must
-    change nothing.
+    Read, so handed over: its images are the agent's to open, and not the
+    reader's to take off. A POST for that: a read must change nothing.
     """
     return Thread.from_domain(review.read_thread(thread_id))
 
