@@ -8,9 +8,9 @@ export class TreeMoved {
 	// Zero means there is nothing to say: nothing has moved, or the reader has
 	// dismissed it until something does
 	#count = $state(0);
-	// What the reader has already waved away. The tree does not move back, so
-	// the same number arriving again — on a reload, or with the next diff — is
-	// the same news they have already dismissed.
+	// What the reader has already waved away. The same number arriving again —
+	// on a reload, or with the next diff — is taken for the news they
+	// dismissed, though the tree may have moved back and on again since.
 	#dismissed = 0;
 
 	/** How many files have moved on since this diff was taken, if still worth saying. */

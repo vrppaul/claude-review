@@ -1,12 +1,8 @@
-"""The checks the agent reported, each the last reported under its name, stamped with the tree it ran on.
+"""The checks the agent reported, for the review's life: the reader cannot otherwise see that one ran, nor on what.
 
-The reader cannot see that the agent's tests ran, nor on which code: the
-agent says so, and the review keeps it for its life and tells every page.
-The tree is git's, written from a staging as the report arrives, never the
-files' times, which a commit made after the check would move without
-changing a line it ran on. Each time the working tree changes, the review
-measures every check against it again: a check with paths changed since
-its tree is out of date.
+Each is stamped with the tree git writes down, never the files' times,
+which a commit made after the check would move without changing a line it
+ran on.
 """
 
 import asyncio

@@ -1,10 +1,8 @@
-"""Noticing that the working tree has moved on since the diff was taken.
+"""Hearing each change of the working tree while a review is open.
 
 The agent changes files while the review is being read, and so does an
-editor, a rebase or a stash. The review cannot tell the difference and does
-not need to: all it has to say is that what is on screen differs from what
-is on disk, and let the reader decide when to take it again. Swapping the
-diff under someone mid-sentence orphans what they were writing.
+editor, a rebase or a stash. Whatever the review took from the tree — the
+diff on screen, the tree a check ran on — is measured against each change.
 """
 
 import asyncio
@@ -48,13 +46,7 @@ class TreeWatcherService:
         return files_moved(await self.read(root), taken_at)
 
     async def changes(self, root: Path, *, since: TreeState, lifetime: ReviewLifetime) -> AsyncGenerator[TreeState]:
-        """Yield the tree each time it changes, from the tree given on, until the review ends.
-
-        Every change, one back to an earlier tree too: whoever listens
-        measures it against what it holds. Once per change rather than once
-        per poll: a notice that repeats every half second while somebody
-        edits is noise.
-        """
+        """Yield the tree each time it changes, back to an earlier one too, from the tree given on, until the end."""
         last = since
         while not await lifetime.ended_within(self._poll_seconds):
             current = await self._look(root)
