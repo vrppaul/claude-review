@@ -3,7 +3,9 @@ import { render, screen, within } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import ReviewScreen from '$lib/components/ReviewScreen.svelte';
 import type { Review } from '$lib/review/review.svelte';
-import type { CheckFailure } from '$lib/types';
+import type { CheckFailure, StoryHeld } from '$lib/types';
+import { flushSync } from 'svelte';
+import { storyHeld, toldChapter, toldStep } from '../story';
 import { failedCheck, failure } from '../checks';
 import { contextLine, diffFile, hunk } from '../diff';
 import { fakeServer } from '../fake-server';
@@ -19,9 +21,9 @@ const file = diffFile({
 	]
 });
 
-/** The review on screen, holding a check that failed where these say. */
-function onScreenFailing(failures: CheckFailure[]): Review {
-	const review = openReview({ files: [file], facts: { checks: [failedCheck(failures, { name: 'pytest' })] } });
+/** The review on screen, holding a check that failed where these say, and the story told of it, if any. */
+function onScreenFailing(failures: CheckFailure[], story: StoryHeld | null = null): Review {
+	const review = openReview({ files: [file], story, facts: { checks: [failedCheck(failures, { name: 'pytest' })] } });
 	render(ReviewScreen, { props: { review } });
 	return review;
 }
@@ -35,12 +37,46 @@ async function pressFailure(): Promise<void> {
 }
 
 describe('going to where a check failed', () => {
-	it('takes the reader to the line, the keyboard on its number, and puts the pane away', async () => {
+	it('takes the reader to the line, the keyboard on its number', async () => {
 		onScreenFailing([failure({ path: 'src/app.py', line: 2 })]);
 
 		await pressFailure();
 
 		expect(document.activeElement?.textContent?.trim()).toBe('2');
+	});
+
+	it('brings the files on screen from a story that tells nothing of the line, and goes to it there', async () => {
+		const review = onScreenFailing([failure({ path: 'src/app.py', line: 2 })], storyHeld());
+		review.views.showStory();
+		flushSync();
+
+		await pressFailure();
+
+		expect(review.views.onScreen.name).toBe('files');
+		expect(document.activeElement?.textContent?.trim()).toBe('2');
+	});
+
+	it('goes to the line in the story where a piece of it draws the line', async () => {
+		const told = storyHeld({ chapters: [toldChapter('ch-1', [toldStep('src/app.py', 2)])] });
+		const review = onScreenFailing([failure({ path: 'src/app.py', line: 2 })], told);
+		review.views.showStory();
+		flushSync();
+
+		await pressFailure();
+
+		expect(review.views.onScreen.name).toBe('story');
+		expect(document.activeElement?.textContent?.trim()).toBe('2');
+	});
+
+	it('puts the pane away at the press, while the lines it reads in are on their way', async () => {
+		const server = fakeServer();
+		server.answer('GET /api/file-window', { start: 4, lines: [], total: 50 });
+		onScreenFailing([failure({ path: 'src/app.py', line: 16 })]);
+		const user = userEvent.setup({ delay: null });
+		await user.click(screen.getByTestId('checks'));
+
+		await user.click(within(screen.getByTestId('checks-pane')).getByRole('button', { name: /app\.py/ }));
+
 		expect(screen.queryByTestId('checks-pane')).toBeNull();
 	});
 
