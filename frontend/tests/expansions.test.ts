@@ -6,6 +6,7 @@ import {
 	hiddenIn,
 	hunkKey,
 	readOf,
+	readReaching,
 	type ContextGap,
 	type RevealedLines,
 	toContextLines,
@@ -223,5 +224,27 @@ describe('lines read from the file', () => {
 		const lines = toContextLines(10, ['a'], -2);
 
 		expect(lines[0]).toEqual({ kind: 'context', old_number: 8, new_number: 10, content: 'a' });
+	});
+});
+
+describe('reading in what hides a line', () => {
+	// Lines 30 and 100 are drawn; how long the file is, no read has said
+	const file = diffFile({ hunks: [unchangedHunk(30, 1), unchangedHunk(100, 1)] });
+
+	it.each([
+		{ line: 40, reads: { start: 31, end: 60 }, from: { hunk: '30:30', side: 'below' } },
+		{ line: 90, reads: { start: 70, end: 99 }, from: { hunk: '100:100', side: 'above' } },
+		{ line: 10, reads: { start: 1, end: 29 }, from: { hunk: '30:30', side: 'above' } },
+		{ line: 150, reads: { start: 101, end: 170 }, from: { hunk: '100:100', side: 'below' } },
+		{ line: 4000, reads: { start: 101, end: 2100 }, from: { hunk: '100:100', side: 'below' } }
+	])('reads line $line from the nearer hunk to a step past it, as far as one read goes', ({ line, reads, from }) => {
+		const read = readReaching(file, revealed({}), line, LONGEST_READ);
+
+		expect({ window: read?.window, landing: read?.landing }).toEqual({ window: reads, landing: from });
+	});
+
+	it('reads nothing for a line drawn, or past where a read said the file ends', () => {
+		expect(readReaching(file, revealed({}), 30, LONGEST_READ)).toBeNull();
+		expect(readReaching(file, revealed({ length: 120 }), 121, LONGEST_READ)).toBeNull();
 	});
 });

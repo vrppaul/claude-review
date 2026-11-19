@@ -198,7 +198,7 @@ export class Review {
 		});
 		this.views = new ReadingViews(
 			{
-				files: new FilesReading(this.diff, this.threads, this.reading),
+				files: new FilesReading(this.diff, this.threads, this.reading, this.limits.max_window_lines),
 				story: new StoryReading(this.story, this.threads)
 			},
 			this.layout.readingView,

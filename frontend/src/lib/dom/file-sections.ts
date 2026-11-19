@@ -113,7 +113,7 @@ export class FileSections {
 		const awaited = this.#awaitedThread;
 		if (awaited?.threadId === threadId && performance.now() <= awaited.until) {
 			this.#beginTaking();
-			this.#arriveAtThread(element);
+			this.#arriveAt(element);
 		}
 		return () => this.#unregisterThread(threadId, element);
 	}
@@ -211,6 +211,19 @@ export class FileSections {
 	}
 
 	/**
+	 * Take the reader to a line's number in a section, by the key its place
+	 * is known by, to the middle of the reading area with the keyboard on it,
+	 * once what is pending is drawn: lines just read in, a file unfolded, a
+	 * view just come on screen. Rows not built yet are built as their
+	 * section is brought into view, and the line is gone to once that comes
+	 * to rest.
+	 */
+	goToLine(sectionKey: string, lineKey: string): void {
+		const taking = this.#beginTaking();
+		void tick().then(() => this.#reachLine(taking, sectionKey, lineKey));
+	}
+
+	/**
 	 * Bring a thread on the story's words into view and put the keyboard on
 	 * it: now if it is drawn, or once the story is, if it has only just come
 	 * on screen. The story draws its words whole as it is drawn: there is no
@@ -219,7 +232,7 @@ export class FileSections {
 	goToStoryThread(threadId: string): void {
 		this.#onceDrawn(
 			() => this.#threads.get(threadId),
-			(thread) => this.#arriveAtThread(thread)
+			(thread) => this.#arriveAt(thread)
 		);
 	}
 
@@ -263,10 +276,27 @@ export class FileSections {
 	lineOrFile(path: string, lineKey: string): HTMLElement | null {
 		const ofTheFile = this.#sections.all.filter((section) => section.path === path).map((section) => section.element);
 		if (ofTheFile.length === 0) return toggleOf(firstInDocument(this.#elements()));
-		const line = ofTheFile
-			.map((element) => element.querySelector<HTMLElement>(`[data-place="${lineKey}"]`))
-			.find((found) => found !== null);
+		const line = ofTheFile.map((element) => lineIn(element, lineKey)).find((found) => found !== null);
 		return line ?? toggleOf(firstInDocument(ofTheFile));
+	}
+
+	/**
+	 * Go to a line's number in a section, if this is still where the reader
+	 * is taken: now where it is drawn, or once its section, brought into
+	 * view, has its rows built and has come to rest.
+	 */
+	#reachLine(taking: number, sectionKey: string, lineKey: string): void {
+		const section = this.#sections.get(sectionKey);
+		if (taking !== this.#taken || section === undefined) return;
+		const line = lineIn(section.element, lineKey);
+		if (line) this.#arriveAt(line);
+		else this.#jumps.land(this.#sections.band, section.element, () => this.#arriveAtLineIn(section.element, lineKey));
+	}
+
+	/** Go to a line's number in a section, if it is drawn there. */
+	#arriveAtLineIn(section: HTMLElement, lineKey: string): void {
+		const line = lineIn(section, lineKey);
+		if (line) this.#arriveAt(line);
 	}
 
 	/**
@@ -278,7 +308,7 @@ export class FileSections {
 		const drawn = this.#threads.get(threadId);
 		if (drawn) {
 			this.#beginTaking();
-			this.#arriveAtThread(drawn);
+			this.#arriveAt(drawn);
 		} else {
 			this.#awaitedThread = { threadId, until: performance.now() + AWAIT_ROWS_FOR };
 		}
@@ -329,16 +359,16 @@ export class FileSections {
 	}
 
 	/**
-	 * Take the reader to a thread at once, to the middle of its scrolling
-	 * area, and put the keyboard on it: the reader is there now, and the
-	 * next key — a line down, the next file, marking it viewed — acts from
-	 * there rather than from where the keyboard was before. The jump puts
-	 * the thread where it goes, so taking the keyboard does not move the
+	 * Take the reader to a thread or a line's number at once, to the middle
+	 * of its scrolling area, and put the keyboard on it: the reader is there
+	 * now, and the next key — a line down, the next file, marking it viewed —
+	 * acts from there rather than from where the keyboard was before. The
+	 * jump puts it where it goes, so taking the keyboard does not move the
 	 * screen again.
 	 */
-	#arriveAtThread(thread: HTMLElement): void {
-		this.#jumps.to(thread, 'center');
-		thread.focus({ preventScroll: true });
+	#arriveAt(element: HTMLElement): void {
+		this.#jumps.to(element, 'center');
+		element.focus({ preventScroll: true });
 	}
 
 	/** Where every section is, in the order they announced themselves. */
@@ -387,6 +417,11 @@ export class FileSections {
 		delete this.#marked.element.dataset.marked;
 		this.#marked = null;
 	}
+}
+
+/** A line's number drawn in a section, by the key its place is known by; null where the section does not draw it. */
+function lineIn(section: HTMLElement, lineKey: string): HTMLElement | null {
+	return section.querySelector<HTMLElement>(`[data-place="${lineKey}"]`);
 }
 
 /** The toggle that folds a file's section: what stands for the file where nothing in it is drawn to stand for; null where the section folds nothing. */

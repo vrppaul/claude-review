@@ -10,8 +10,8 @@
 import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 
 import { readFileWindow } from '$lib/api/review-api';
-import type { DiffLine } from '$lib/types';
-import { type ContextGap, type GapRead, type RevealedLines, toContextLines } from '$lib/utils/expansions';
+import type { DiffFile, DiffLine } from '$lib/types';
+import { type ContextGap, type GapRead, readReaching, type RevealedLines, toContextLines } from '$lib/utils/expansions';
 
 /** What a file with nothing revealed beside a hunk has there: nothing. */
 const NOTHING_BESIDE: ReadonlyMap<string, DiffLine[]> = new Map();
@@ -24,6 +24,11 @@ function keep(beside: Beside, path: string, hunk: string, withRead: (kept: DiffL
 	const forPath = beside.get(path) ?? new SvelteMap<string, DiffLine[]>();
 	forPath.set(hunk, withRead(forPath.get(hunk) ?? []));
 	beside.set(path, forPath);
+}
+
+/** Whether two reads ask for the same lines of the same gap. */
+function sameWindow(one: GapRead, other: GapRead): boolean {
+	return one.gap === other.gap && one.window.start === other.window.start && one.window.end === other.window.end;
 }
 
 /** What a read of a gap is known by while it is on its way: the file, and the gap. */
@@ -54,6 +59,22 @@ export class RevealedContext {
 	/** Whether the lines of a gap are on their way. */
 	isReading(path: string, gap: ContextGap): boolean {
 		return this.#reading.has(readingKey(path, gap.key));
+	}
+
+	/**
+	 * Read in what hides a line of a file as it stands, read after read
+	 * where it lies further from the hunks than one read reaches. It stops
+	 * once nothing hides the line, and where a read moved nothing: one of
+	 * that gap already on its way, or a file that changed under the diff.
+	 */
+	async revealLine(file: DiffFile, line: number, longestRead: number): Promise<void> {
+		let read = readReaching(file, this.forFile(file.path), line, longestRead);
+		while (read !== null) {
+			const before = read;
+			await this.reveal(file.path, read);
+			read = readReaching(file, this.forFile(file.path), line, longestRead);
+			if (read !== null && sameWindow(read, before)) return;
+		}
 	}
 
 	/**

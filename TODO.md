@@ -39,18 +39,6 @@ tests. Remove items when done — don't check them off.
       thread resolved, but a reply — the reader's or the author's — stays
       whatever it says. A duplicate answer has no way out of the thread.
 
-- [ ] `feat(ui)`: the checks the agent ran, in the header. The server
-      holds them: `claude-review check` reports each, the review stamps it
-      with the tree it ran on, and `GET /api/review`'s `checks` and the
-      `checks` push say each as it stands, `out_of_date` on the check and
-      on each failure. After the view switch the header draws "✓ 3
-      checks", a yellow dot once one is out of date, "✕ 1 of 3 failed", or
-      nothing when none was reported; the chip opens a list of the
-      commands, and a band under a failing line says what failed there.
-      Drawn on the design canvas of 2026-10-20 (board Checks), after the
-      story's design of 2026-10-07. `push-handling.ts` takes the push in
-      and draws nothing of it yet.
-
 ## Bugs
 
 - [ ] `fix(ui)`: with the keyboard on a thread's fold toggle, `u` folds the

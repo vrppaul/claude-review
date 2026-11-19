@@ -51,6 +51,12 @@ export interface ReadingView {
 	sectionOfFile: (path: string) => string | null;
 	/** Bring out lines the view has folded away, so what hangs on them can be drawn. */
 	unfold: (lines: FileLines) => void;
+	/**
+	 * Bring a line of a file as it stands into what the view draws, and hand
+	 * back the section it is drawn in, by its key; null where the view
+	 * cannot draw it.
+	 */
+	drawLine: (path: string, line: number) => Promise<string | null>;
 }
 
 /**
@@ -73,11 +79,14 @@ export class FilesReading implements ReadingView {
 	readonly #diff: ReviewDiff;
 	readonly #threads: Threads;
 	readonly #reading: ReadingProgress;
+	// The most lines one read of a file hands back
+	readonly #longestRead: number;
 
-	constructor(diff: ReviewDiff, threads: Threads, reading: ReadingProgress) {
+	constructor(diff: ReviewDiff, threads: Threads, reading: ReadingProgress, longestRead: number) {
 		this.#diff = diff;
 		this.#threads = threads;
 		this.#reading = reading;
+		this.#longestRead = longestRead;
 	}
 
 	/**
@@ -125,5 +134,18 @@ export class FilesReading implements ReadingView {
 	/** A folded file draws no line, and no thread: it is opened. */
 	unfold(lines: FileLines): void {
 		this.#reading.unfold(lines.file);
+	}
+
+	/**
+	 * Any line of a file the diff on screen holds, whatever base it is read
+	 * against, as the file as it stands is the review's own side: its file
+	 * unfolded, and what the diff left out around it read in.
+	 */
+	async drawLine(path: string, line: number): Promise<string | null> {
+		const file = this.#diff.files.find((held) => held.path === path);
+		if (file === undefined) return null;
+		this.#reading.unfold(path);
+		await this.#diff.revealed.revealLine(file, line, this.#longestRead);
+		return fileSectionKey(path);
 	}
 }

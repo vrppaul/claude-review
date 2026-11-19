@@ -69,6 +69,12 @@
 			: `The code may have changed after ${ranBefore} ran.`
 	);
 
+	/** Take the reader to the line of a file where a check failed, the pane put away. */
+	function goTo(path: string, line: number) {
+		open = false;
+		void review.navigator.goToLine(path, line);
+	}
+
 	/** When a check was reported: the round too, where it is not the one being written. */
 	function reportedWhen(check: Check): string {
 		const time = clockTime(check.at);
@@ -130,6 +136,7 @@
 							why={failure.why}
 							title="{failure.path}:{failure.line}"
 							testId="check-failure"
+							onclick={review.diff.holds(failure.path) ? () => goTo(failure.path, failure.line) : undefined}
 						/>
 					{/each}
 				{/snippet}

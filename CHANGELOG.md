@@ -19,6 +19,13 @@
   git's trees, so a commit made after a check leaves it current; the page
   hears which files changed since each, and which failures stand in one.
   `retake` names the checks to run again, and `catch-up` lists them.
+- **The page shows the agent's checks.** A chip after the view switch
+  says the worst of them — "1 of 3 failed", "2 of 3 out of date", "3
+  checks" — and opens them: what failed first, each failure under it,
+  then what the code changed after, with the files that changed. A
+  failure is drawn under its line, and its file's row in the tree counts
+  them; both turn grey once the file changes. Pressing a failure takes
+  you to its line, reading in what the diff left out around it.
 
 ### Changed
 - **Help's "What's new" names no release.** The news it opens is of the

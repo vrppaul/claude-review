@@ -163,6 +163,11 @@ export class StoryReading implements ReadingView {
 		return this.#story.pieces.firstOf(path)?.key ?? null;
 	}
 
+	/** A line a piece draws: a piece reads nothing in around what it tells. */
+	drawLine(path: string, line: number): Promise<string | null> {
+		return Promise.resolve(this.sectionOf({ file: path, side: 'new', start_line: line, end_line: line }));
+	}
+
 	/** A story folds nothing away. */
 	unfold(): void {
 		// Nothing of a story is folded: every piece it draws is on the page

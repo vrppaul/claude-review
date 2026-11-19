@@ -1,6 +1,7 @@
 /**
  * Moving the reader through the review: from thread to thread, whatever
- * each hangs on, from section to section, and to a file somebody names.
+ * each hangs on, from section to section, and to a file or a line somebody
+ * names.
  *
  * Naming a thread is the anchor's business and touches nothing; bringing one
  * into view opens what hides it and moves the screen, so it lives here, with
@@ -8,7 +9,8 @@
  * among the threads, which only moving changes. Every control that takes the
  * reader to a thread moves them through here — n and p, a, the header's
  * arrows, the replies, the finish pane, the panel's chips, the notices — and
- * so do ] and [ from section to section, and a file the agent names. What is
+ * so do ] and [ from section to section, a file the agent names, and a line
+ * somebody names: where a check failed. What is
  * walked, and where a thread or a file is drawn, is asked of the view the
  * review is read in (`ReadingView`). No view draws everything by itself: a
  * story draws what it tells and leaves out, the files under a narrower base
@@ -25,6 +27,7 @@ import type { FileSections } from '$lib/dom/file-sections';
 import type { ReadingView } from '$lib/review/reading-view';
 import type { Threads } from '$lib/review/threads.svelte';
 import type { Thread } from '$lib/types';
+import { placeKey } from '$lib/utils/line-places';
 
 /** The views the review is read in, as moving the reader needs them. */
 export interface ViewsOnScreen {
@@ -155,6 +158,25 @@ export class Navigator {
 		const section = this.#views.onScreen.sectionOfFile(path);
 		if (section !== null) this.#sections.show(section);
 		else void this.#views.showEverything().then((drawingAll) => this.#showIn(drawingAll, path));
+	}
+
+	/**
+	 * Take the reader to a line of a file as it stands, with the keyboard on
+	 * its number, in the middle of the reading area: where the view on
+	 * screen draws it, its file unfolded and what the diff left out around
+	 * it read in, or else where every file is drawn, which comes on screen
+	 * for it. A line drawn nowhere is not gone to.
+	 */
+	async goToLine(path: string, line: number): Promise<void> {
+		const lineKey = placeKey({ side: 'new', number: line });
+		const onScreen = await this.#views.onScreen.drawLine(path, line);
+		if (onScreen !== null) {
+			this.#sections.goToLine(onScreen, lineKey);
+			return;
+		}
+		const drawingAll = await this.#views.showEverything();
+		const section = await drawingAll.drawLine(path, line);
+		if (section !== null) this.#sections.goToLine(section, lineKey);
 	}
 
 	/** Bring a thread on lines of a file into view, where the view on screen draws them or where every thread is drawn. */
