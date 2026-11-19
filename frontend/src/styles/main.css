@@ -344,7 +344,7 @@
 	color: var(--cr-control-text);
 }
 .cr-expand:disabled {
-	color: var(--cr-muted);
+	color: var(--cr-faint);
 }
 
 /*

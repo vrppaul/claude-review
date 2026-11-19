@@ -195,18 +195,15 @@
 	color: var(--cr-mark-text);
 }
 /*
- * One that cannot be pressed keeps its ground and steps back to muted
- * words; a filled one, whose ground is a saturated colour of its own, takes
- * a surface's instead, so it no longer reads as the act to take
+ * One that is off, whether it lets the keyboard go (disabled) or keeps it
+ * (aria-disabled), keeps its ground and steps back to faint words; a filled
+ * one, whose ground is a saturated colour of its own, takes a surface's
+ * instead, so it no longer reads as the act to take
  */
-.cr-ui-button:disabled {
-	color: var(--cr-muted);
-}
-/* One that leads nowhere for now and keeps the keyboard (aria-disabled) is off: faint, as a fold held open is */
-.cr-ui-button[aria-disabled='true'] {
+.cr-ui-button:is(:disabled, [aria-disabled='true']) {
 	color: var(--cr-faint);
 }
-.cr-ui-filled:disabled {
+.cr-ui-filled:is(:disabled, [aria-disabled='true']) {
 	background-color: var(--color-base-300);
 }
 
