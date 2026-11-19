@@ -124,8 +124,8 @@ class ImageService:
     what says an id exists, so no path is ever built from one, and what keeps
     the review under its limit without counting the directory on every upload.
     It decides an image's fate at once, before the disk is touched: an image
-    on its way out leaves what it keeps first, so nothing can hand it over
-    meanwhile.
+    on its way out is struck from what is kept before its file goes, so
+    nothing can hand it over meanwhile.
     """
 
     def __init__(self, store: ImageStore, quota: ImageQuota) -> None:

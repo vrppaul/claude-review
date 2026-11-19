@@ -417,6 +417,14 @@ of it is built yet.
       where the rule is that a route calls one (`.claude/rules/api.md`):
       GET /api/review (`presentation/routers/page.py:81-82`), GET
       /api/diff (`178-179`) and GET /api/versions (`192-193`).
+- [ ] `refactor(scripts)`: a gate's fault is written twice: `scripts/faults.py`
+      for the gates that read a file by its lines, and a `Fault` of its own
+      in `scripts/check_instruction_files.py`, whose fault may be of a whole
+      file and so has no line, with its own exit codes.
+- [ ] What the prose gate does not read: a comment's length (503 passages
+      over the rule's, which stay until a change rewrites them, so a gate
+      would have to read only what a commit writes), and the page's
+      comments under `frontend/`.
 - [ ] The instruction-files gate reads a path only between two backticks
       on one line of prose (`scripts/check_instruction_files.py`): a path
       inside a fenced block, or one a Markdown link points at, is not held

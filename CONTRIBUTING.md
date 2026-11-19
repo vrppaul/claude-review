@@ -52,7 +52,7 @@ cd frontend && pnpm build            # outputs to src/claude_review/static/dist/
 
 ## Conventions
 
-- **Commits**: [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`, etc.), a subject of at most 72 characters and a body of at most 5 lines of why — enforced by commit-msg hooks
+- **Commits**: [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`, etc.), a short subject and a few lines of why (`.claude/rules/prose.md`) — enforced by commit-msg hooks
 - **Python**: type hints on all signatures, async/await for I/O, Pydantic models (not dataclasses), structlog for logging, `StrEnum` with `auto()` for enums
 - **Frontend**: Svelte 5 runes, TypeScript strict mode, no `any`. Every kind of element — a button, a field, a pane — comes from the component library, `frontend/src/lib/ui/`; a kind it lacks is added there first (`.claude/rules/page.md`)
 - **Tests**: only for a behavior someone can name — what the CLI prints, what a route answers, what the reader sees, where the keyboard lands — written before its code, at the cheapest level that sees it. Never for a look (a color, a size, a pixel, a position): tokens, the linters and your own eyes in the browser hold it. Run the tests of the part you changed, and everything before a release or a merge to master. The full rules: `.claude/rules/tests.md`.
