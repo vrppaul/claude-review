@@ -32,7 +32,7 @@ type FactPush = Exclude<ServerPush, { type: 'reply' | 'handed' | 'chat' | 'point
  * thread, a raised thread or a note added, what was read of a story told
  * again forgotten and the threads moved onto it — is always done.
  * What it says of the review's facts — its agent, its round, its diff, its
- * story — is taken in only when the facts the page read do not hold it
+ * story, its checks — is taken in only when the facts the page read do not hold it
  * already: a page opening from a draft is handed what was said since the
  * draft, some of it before the facts were read.
  */
@@ -98,7 +98,7 @@ function learnFrom(review: Review, push: FactPush): void {
 			review.story.learnAsking(push.asking);
 			return;
 		case 'checks':
-			// No part of this page draws the checks the agent ran
+			review.checks.take(push.checks);
 			return;
 		default:
 			unknown(push);

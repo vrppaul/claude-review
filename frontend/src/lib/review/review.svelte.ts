@@ -15,6 +15,7 @@ import type { ReplySound } from '$lib/reader/reply-sound';
 import type { Settings } from '$lib/reader/settings.svelte';
 import { WITHOUT_ASKING, writesWithoutAsking } from '$lib/reader/story-writing';
 import { Answerer } from '$lib/review/answerer.svelte';
+import { Checks } from '$lib/review/checks.svelte';
 import { Clock } from '$lib/review/clock.svelte';
 import { CommentFields } from '$lib/review/comment-fields';
 import { Conversation } from '$lib/review/conversation.svelte';
@@ -109,6 +110,7 @@ export class Review {
 	/** How far the server's telling has got for this page. */
 	readonly telling: Telling;
 	readonly answerer: Answerer;
+	readonly checks: Checks;
 	readonly diff: ReviewDiff;
 	/** How far the reader has got through the files. */
 	readonly reading: ReadingProgress;
@@ -167,6 +169,7 @@ export class Review {
 		this.rounds.reach(kept.round);
 		this.telling = new Telling({ instance: facts.instance, sequence: facts.sequence }, kept.told);
 		this.answerer = new Answerer(facts.answerer_attached, facts.agent, facts.work);
+		this.checks = new Checks(facts.checks);
 		this.diff = new ReviewDiff(firstDiff, () => this.settings.current.ignore_whitespace);
 		this.reading = new ReadingProgress(kept.files);
 		this.threads = new Threads(this.rounds, kept, this.commentFields);
@@ -251,6 +254,7 @@ export class Review {
 		this.noteAnswerer(facts.answerer_attached);
 		this.answerer.report(facts.agent);
 		this.answerer.showWork(facts.work);
+		this.checks.take(facts.checks);
 		this.story.learnAsking(facts.story_asking);
 	}
 

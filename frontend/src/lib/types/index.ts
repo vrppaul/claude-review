@@ -81,6 +81,11 @@ export type ReviewVersion = Schemas['ReviewVersion'];
  */
 export type AgentStatus = Schemas['AgentStatus'];
 
+/** A check the agent ran — tests, a linter — as the review holds it: how it ended, and whether the code moved on since. */
+export type Check = Schemas['Check'];
+/** A place a check failed, and whether its file changed since the check ran. */
+export type CheckFailure = Schemas['CheckFailure'];
+
 /** Who wrote a turn: the reader, or whoever answers for the change. */
 export type TurnAuthor = Schemas['TurnAuthor'];
 

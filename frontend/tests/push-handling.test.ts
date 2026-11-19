@@ -7,6 +7,7 @@ import { catchUp, takePush } from '$lib/page/push-handling';
 import type { Review } from '$lib/review/review.svelte';
 import type { ServerPush, SessionHello } from '$lib/types';
 import { work } from './agent-work';
+import { check, failedCheck, failure } from './checks';
 import {
 	A_LATER_TAKE,
 	contextLine,
@@ -122,6 +123,17 @@ describe('what the server pushes, taken in', () => {
 		handOverNext(review, { type: 'status', agent });
 
 		expect(review.answerer.status).toEqual(agent);
+	});
+
+	it('holds the checks the agent reported as the review opens, and each lot pushed in their place, whole', () => {
+		const ran = check({ name: 'ruff' });
+		const ranAgain = failedCheck([failure()], { name: 'pytest' });
+		review = openReview({ facts: { checks: [ran] } });
+		expect(review.checks.all).toEqual([ran]);
+
+		handOverNext(review, { type: 'checks', checks: [ranAgain] });
+
+		expect(review.checks.all).toEqual([ranAgain]);
 	});
 
 	it('brings the file the agent shows into view, and makes it the one being read', () => {
@@ -425,16 +437,18 @@ describe('catching up on what the server could not hand over again', () => {
 		expect(review.threads.handing.has(id, id)).toBe(true);
 	});
 
-	it('learns again where the review stands: the round, whoever answers, and its work', async () => {
+	it('learns again where the review stands: the round, whoever answers, its work and its checks', async () => {
 		const status = { model: 'opus-5', context: '53% of 1M', at: Date.now() };
 		const underWay = work();
+		const ran = check();
 		caughtUpFrom().answer(
 			'GET /api/review',
-			reviewResponse({ round: 3, answerer_attached: true, agent: status, work: underWay })
+			reviewResponse({ round: 3, answerer_attached: true, agent: status, work: underWay, checks: [ran] })
 		);
 
 		await catchUp(review, GOES_ON_FROM);
 
+		expect(review.checks.all).toEqual([ran]);
 		expect(review.rounds.current).toBe(3);
 		expect(review.answerer.attached).toBe(true);
 		expect(review.answerer.status).toEqual(status);

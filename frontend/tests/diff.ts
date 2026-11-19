@@ -112,6 +112,7 @@ export function reviewResponse(given: Partial<ReviewResponse> = {}): ReviewRespo
 		work: null,
 		takes_a_story: true,
 		story_asking: null,
+		checks: [],
 		limits: SEND_LIMITS,
 		release: '1.5.0',
 		instance: THIS_RUN,
