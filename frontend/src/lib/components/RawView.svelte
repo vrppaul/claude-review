@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { ClassValue } from 'svelte/elements';
 	import type { DiffLine, LineSide } from '$lib/types';
+	import LineFailure from '$lib/ui/LineFailure.svelte';
 	import type { DrawnLine } from '$lib/utils/drawn-file';
 	import { useReview } from '$lib/review/context';
 	import type { FileDrawing } from './file-drawing.svelte';
@@ -88,6 +89,20 @@
 								{@html drawn.markup}
 							</td>
 						</tr>
+
+						{#each drawing.failuresUnder(drawn.place) as found (found)}
+							<tr>
+								<td colspan={columns}>
+									<LineFailure
+										check={found.check}
+										what={found.failure.what}
+										why={found.failure.why}
+										outOfDate={found.failure.out_of_date}
+										testId="line-failure"
+									/>
+								</td>
+							</tr>
+						{/each}
 
 						{#if commenting.hasNotes(drawn.place)}
 							<tr>

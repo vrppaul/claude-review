@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { ClassValue } from 'svelte/elements';
 	import type { LinePlace, LineSide } from '$lib/types';
+	import LineFailure from '$lib/ui/LineFailure.svelte';
 	import type { DrawnLine } from '$lib/utils/drawn-file';
 	import { splitRows, type SplitRow } from '$lib/utils/split-rows';
 	import type { FileDrawing } from './file-drawing.svelte';
@@ -126,6 +127,22 @@
 								{#if row.right}{@html row.right.markup}{/if}
 							</td>
 						</tr>
+
+						<!-- What the checks found failing on the line of the right, under it as its notes are -->
+						{#each row.right ? drawing.failuresUnder(row.right.place) : [] as found (found)}
+							<tr>
+								<td colspan="2"></td>
+								<td colspan="2">
+									<LineFailure
+										check={found.check}
+										what={found.failure.what}
+										why={found.failure.why}
+										outOfDate={found.failure.out_of_date}
+										testId="line-failure"
+									/>
+								</td>
+							</tr>
+						{/each}
 
 						{#if leftNotes || rightNotes}
 							<tr>

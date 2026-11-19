@@ -3,6 +3,7 @@ import { render, within } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import FileList from '$lib/components/FileList.svelte';
 import { addedLine, diffFile, hunk, OF_A_CONVERSATION, OF_FILES, removedLine, wholeFile } from '../diff';
+import { failedCheck, failure } from '../checks';
 import { inReview, openReview } from '../review';
 
 const diffFiles = [
@@ -336,5 +337,21 @@ describe('sizing the tree', () => {
 		expect(review.layout.fileTree.width).toBeGreaterThan(before);
 		await user.keyboard('{ArrowLeft}');
 		expect(review.layout.fileTree.width).toBe(before);
+	});
+});
+
+describe('where the checks failed, in the tree', () => {
+	it('says on a file’s row how many places the checks failed in it, and nothing on a file they did not', () => {
+		const failedIn = [failure({ path: 'src/a.py', line: 3 }), failure({ path: 'src/a.py', line: 9 })];
+		const review = openReview({
+			files: [diffFile({ path: 'src/a.py' }), diffFile({ path: 'src/b.py' })],
+			facts: { checks: [failedCheck(failedIn, { name: 'pytest' }), failedCheck([failure({ path: 'src/a.py' })])] }
+		});
+
+		const { getAllByTestId } = render(FileList, inReview(review));
+
+		expect(getAllByTestId('file-failures').map((mark) => mark.textContent.replace(/\s+/g, ' ').trim())).toEqual([
+			'3 3 places the checks failed'
+		]);
 	});
 });

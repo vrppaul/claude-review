@@ -6,6 +6,7 @@ import { addedLine, contextLine, diffFile, diffResponse, hunk, removedLine, sinc
 import { fakeServer } from '../fake-server';
 import { newComment } from '../new-comment';
 import type { Review } from '$lib/review/review.svelte';
+import { failedCheck, failure } from '../checks';
 import { inReview, openReview } from '../review';
 
 let review: Review;
@@ -177,5 +178,51 @@ describe('a comment no line drawn here can hang under', () => {
 		const { queryByTestId } = render(FileBody, inReview(review, { ...asAFile(), view: 'preview' }));
 
 		expect(queryByTestId('unplaced-threads')).toBeNull();
+	});
+});
+
+describe('where the checks failed', () => {
+	/** Make the review one of the file whose test failed on its new line 30, its file changed since or not. */
+	function failedOnLine30(outOfDate: boolean): void {
+		const said = failure({
+			path: 'src/app.py',
+			line: 30,
+			what: 'test_there',
+			why: 'expected 2',
+			out_of_date: outOfDate
+		});
+		review = openReview({ files: [file], facts: { checks: [failedCheck([said], { name: 'pytest' })] } });
+	}
+
+	/** Words as the reader reads them, however the markup breaks them. */
+	function read(element: HTMLElement): string {
+		return element.textContent.replace(/\s+/g, ' ').trim();
+	}
+
+	it.each(['raw', 'split'] as const)(
+		'says under the line of the file as it stands which check failed there, what and why, in %s',
+		(view) => {
+			failedOnLine30(false);
+
+			render(FileBody, inReview(review, { ...asAFile(), view }));
+
+			expect(screen.getAllByTestId('line-failure').map(read)).toEqual(['pytest test_there expected 2']);
+		}
+	);
+
+	it('says a failure the code changed after is out of date', () => {
+		failedOnLine30(true);
+
+		render(FileBody, inReview(review, asAFile()));
+
+		expect(read(screen.getByTestId('line-failure'))).toBe('pytest test_there expected 2 out of date');
+	});
+
+	it('says it in a piece of a story that draws the line', () => {
+		failedOnLine30(false);
+
+		render(FileBody, inReview(review, AS_A_STEP));
+
+		expect(screen.getAllByTestId('line-failure').map(read)).toEqual(['pytest test_there expected 2']);
 	});
 });

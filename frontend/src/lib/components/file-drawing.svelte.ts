@@ -16,7 +16,8 @@ import { type Numbering, STORY_PIECES_NUMBERING } from '$lib/anchors/numbering';
 import { type DrawnFile, LineCommenting } from '$lib/components/line-commenting.svelte';
 import type { RevealedContext } from '$lib/review/revealed-context.svelte';
 import type { Review } from '$lib/review/review.svelte';
-import type { DiffFile, DiffLayout, DiffLine } from '$lib/types';
+import type { FailureFound } from '$lib/review/checks.svelte';
+import type { DiffFile, DiffLayout, DiffLine, LinePlace } from '$lib/types';
 import { type DrawnHunk, drawnHunks } from '$lib/utils/drawn-file';
 import {
 	type ContextGap,
@@ -105,6 +106,8 @@ const ROWS_OF_A_HUNK: Record<FileView, (lines: readonly DiffLine[]) => number> =
 };
 // A file with no lines says why in their place, and is held this many rows for it
 const ROWS_FOR_NO_LINES = 1;
+// What a line no check failed on has under it
+const NO_FAILURES: readonly FailureFound[] = [];
 
 /** Where the lines read in around a file's hunks are kept; null for a piece, which has nowhere to keep any. */
 function revealedIn(extent: Extent): RevealedContext | null {
@@ -174,6 +177,8 @@ export class FileDrawing implements DrawnFile {
 	readonly #shownFile: DiffFile;
 	readonly #hunks: DrawnHunk[];
 	readonly #end: ContextGap | null;
+	// Where the checks failed in the file, by the line of it as it stands: asked of every line drawn
+	readonly #failuresByLine: ReadonlyMap<number, readonly FailureFound[]>;
 
 	constructor(review: Review, source: DrawingSource) {
 		this.#review = review;
@@ -184,7 +189,19 @@ export class FileDrawing implements DrawnFile {
 		// What changed inside a replaced line is marked in a diff, where lines are replaced
 		this.#hunks = $derived(drawnHunks(this.#shownFile, source.language(), review.mode === 'diff'));
 		this.#end = $derived(gapAtTheEnd(this.#shownFile, source.extent()));
+		this.#failuresByLine = $derived(
+			Map.groupBy(review.checks.failuresIn(source.file().path), ({ failure }) => failure.line)
+		);
 		this.commenting = new LineCommenting(review, this);
+	}
+
+	/**
+	 * Where the checks failed on a line: a check runs on the file as it
+	 * stands, its new side, whose numbers are the review's own in every
+	 * drawing, a narrower base's and a story's pieces too.
+	 */
+	failuresUnder(place: LinePlace): readonly FailureFound[] {
+		return place.side === 'new' ? (this.#failuresByLine.get(place.number) ?? NO_FAILURES) : NO_FAILURES;
 	}
 
 	path(): string {

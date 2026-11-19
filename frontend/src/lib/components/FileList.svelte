@@ -10,6 +10,7 @@
 	import { fileSectionKey } from '$lib/review/reading-view';
 	import Dot from '$lib/ui/Dot.svelte';
 	import EmptyNote from '$lib/ui/EmptyNote.svelte';
+	import FailureCount from '$lib/ui/FailureCount.svelte';
 	import Filter from '$lib/ui/Filter.svelte';
 	import Heading from '$lib/ui/Heading.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
@@ -32,6 +33,8 @@
 		files: { ...FILES, sought: 'file', soughtBy: 'path' },
 		transcript: { one: 'message', many: 'messages', sought: 'message', soughtBy: 'name' }
 	};
+	// What the mark of the checks' failures on a file's row says, counted
+	const PLACES_FAILED: CountedWords = { one: 'place the checks failed', many: 'places the checks failed' };
 	// What every row that names a file carries, so the filter can hand the keyboard to the first of them
 	const FILE_ROW_ROLE = 'file-row';
 
@@ -93,6 +96,16 @@
 			{shownAs}
 		{/snippet}
 		{#snippet marks()}
+			{@const failed = review.checks.failuresIn(file.path)}
+			{#if failed.length > 0}
+				<!-- Where the checks failed in it, in ink once the file changed after every one of them -->
+				<FailureCount
+					count={failed.length}
+					outOfDate={failed.every(({ failure }) => failure.out_of_date)}
+					label={counted(failed.length, PLACES_FAILED)}
+					testId="file-failures"
+				/>
+			{/if}
 			{#if !review.diff.narrowed && review.lastRetake.isChanged(file.path)}
 				<!-- The same fact the file header spells out, where there is no
 					room to spell it -->
