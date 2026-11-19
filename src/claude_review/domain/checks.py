@@ -1,10 +1,4 @@
-"""The checks the agent ran — its tests, its linters, its type checkers — as the review holds them.
-
-The reader cannot see that a check ran, nor on which code. The agent reports
-each as it ended; the review stamps it with the tree it ran on, and measures
-that tree against the working tree, so a check the code has moved on from is
-said to be out of date.
-"""
+"""The checks the agent ran, as the review holds them: the reader cannot otherwise see that one ran, nor on what."""
 
 from collections.abc import Sequence
 from enum import StrEnum, auto
@@ -54,16 +48,7 @@ class CheckReport(BaseModel):
 
     def stamped(self, *, round_number: int, at: EpochMillis, tree: str | None) -> Check:
         """The report as the review holds it, stamped with when it came and the tree it ran on: current, by its tree."""
-        return Check(
-            name=self.name,
-            status=self.status,
-            summary=self.summary,
-            failures=self.failures,
-            round=round_number,
-            at=at,
-            tree=tree,
-            changed_since=None if tree is None else [],
-        )
+        return Check(report=self, round=round_number, at=at, tree=tree, changed_since=None if tree is None else [])
 
 
 class Check(BaseModel):
@@ -71,10 +56,7 @@ class Check(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    name: str
-    status: CheckStatus
-    summary: str | None
-    failures: list[CheckFailure]
+    report: CheckReport
     # The round being written when it was reported, and the moment
     round: int
     at: EpochMillis
@@ -93,10 +75,7 @@ class Check(BaseModel):
     def measured(self, changed_since: dict[str, list[str]]) -> Check:
         """The check against the working tree, from the paths changed since each tree: unknown where its tree is not."""
         return Check(
-            name=self.name,
-            status=self.status,
-            summary=self.summary,
-            failures=self.failures,
+            report=self.report,
             round=self.round,
             at=self.at,
             tree=self.tree,

@@ -62,7 +62,7 @@ class ReviewChecks:
     @property
     def names_out_of_date(self) -> list[str]:
         """The names of the checks the code may have moved on from, to run again."""
-        return [check.name for check in self._held.values() if check.out_of_date]
+        return [check.report.name for check in self._held.values() if check.out_of_date]
 
     async def report(self, report: CheckReport, *, round_number: int) -> None:
         """Take a check, stamped with the tree as it stands, in place of any under its name, and tell the pages.

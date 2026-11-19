@@ -114,11 +114,12 @@ class Check(Schema):
 
     @classmethod
     def from_domain(cls, check: checks.Check) -> Self:
+        reported = check.report
         return cls(
-            name=check.name,
-            status=check.status,
-            summary=check.summary,
-            failures=[CheckFailure.from_domain(failure, check=check) for failure in check.failures],
+            name=reported.name,
+            status=reported.status,
+            summary=reported.summary,
+            failures=[CheckFailure.from_domain(failure, check=check) for failure in reported.failures],
             round=check.round,
             at=check.at,
             changed_since=check.changed_since,

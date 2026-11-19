@@ -8,6 +8,7 @@ in a file that changed. Every page is told the checks whole, each time they
 change.
 """
 
+import asyncio
 from typing import override
 
 from claude_review.domain.checks import Check, CheckFailure, CheckReport, CheckStatus
@@ -17,8 +18,11 @@ from tests.helpers import FixedClock, RecordingPage
 
 # When the review's clock says the checks arrive
 REPORTED_AT = 1_791_000_000_000
-# The tree git writes the working tree down as, while nothing changes
+# The tree git writes the working tree down as, while nothing changes; the one
+# it writes once a file has changed; and one git can no longer read
 THE_TREE = "tree-of-the-change"
+TREE_EDITED = "tree-edited-since"
+TREE_UNREAD = "tree-pruned-since"
 SECOND_ROUND = 2
 # Where the tests failed, and a file of the change no test failed in
 FAILING_TEST_FILE = "tests/test_a.py"
@@ -32,6 +36,7 @@ PYTEST_FAILED = CheckReport(
 )
 PYTEST_PASSED = CheckReport(name="pytest", status=CheckStatus.PASSED, summary="412 passed", failures=[])
 RUFF_PASSED = CheckReport(name="ruff", status=CheckStatus.PASSED, summary=None, failures=[])
+TY_PASSED = CheckReport(name="ty", status=CheckStatus.PASSED, summary=None, failures=[])
 TY_FAILED_IN_TWO_FILES = CheckReport(
     name="ty",
     status=CheckStatus.FAILED,
@@ -43,45 +48,42 @@ TY_FAILED_IN_TWO_FILES = CheckReport(
 )
 
 
-class TreeWrittenAs(TreesWritten):
-    """A repository whose working tree git writes down as one tree, or will not write at all.
+class TreesOfTheTest(TreesWritten):
+    """A repository whose working tree git writes down as the test says, and measures as the test says.
 
-    What has changed since each tree is the test's to say, as the working tree moves.
+    `tree` is None where git will not write it. A measuring is answered once
+    `answer` is set, which it is unless the test holds git back.
     """
 
-    def __init__(self, tree: str | None) -> None:
-        self._tree = tree
+    def __init__(self) -> None:
+        self.tree: str | None = THE_TREE
         self.changed: dict[str, list[str]] = {THE_TREE: []}
+        self.asked = asyncio.Event()
+        self.answer = asyncio.Event()
+        self.answer.set()
 
     @override
     async def tree_as_it_stands(self) -> str | None:
-        return self._tree
+        return self.tree
 
     @override
     async def changed_since(self, trees: list[str]) -> dict[str, list[str]]:
+        self.asked.set()
+        await self.answer.wait()
         return self.changed
 
 
-def _checks(page: RecordingPage, trees: TreeWrittenAs) -> ReviewChecks:
+def _checks(page: RecordingPage, trees: TreesOfTheTest) -> ReviewChecks:
     return ReviewChecks(trees, FixedClock(REPORTED_AT), page)
 
 
 async def test_a_check_reported_is_held_stamped_and_current_and_every_page_is_told() -> None:
     page = RecordingPage()
-    checks = _checks(page, TreeWrittenAs(THE_TREE))
+    checks = _checks(page, TreesOfTheTest())
 
     await checks.report(PYTEST_FAILED, round_number=SECOND_ROUND)
 
-    held = Check(
-        name="pytest",
-        status=CheckStatus.FAILED,
-        summary="1 failed, 411 passed",
-        failures=PYTEST_FAILED.failures,
-        round=SECOND_ROUND,
-        at=REPORTED_AT,
-        tree=THE_TREE,
-        changed_since=[],
-    )
+    held = Check(report=PYTEST_FAILED, round=SECOND_ROUND, at=REPORTED_AT, tree=THE_TREE, changed_since=[])
     assert checks.held == [held]
     assert not held.out_of_date
     assert page.told == [ChecksChanged(checks=[held])]
@@ -89,22 +91,19 @@ async def test_a_check_reported_is_held_stamped_and_current_and_every_page_is_to
 
 async def test_a_check_reported_again_under_its_name_takes_its_place() -> None:
     """The list the reader reads does not reshuffle: the tests stay where they were, green now."""
-    checks = _checks(RecordingPage(), TreeWrittenAs(THE_TREE))
+    checks = _checks(RecordingPage(), TreesOfTheTest())
     await checks.report(PYTEST_FAILED, round_number=SECOND_ROUND)
     await checks.report(RUFF_PASSED, round_number=SECOND_ROUND)
 
     await checks.report(PYTEST_PASSED, round_number=SECOND_ROUND)
 
-    assert [(check.name, check.status) for check in checks.held] == [
-        ("pytest", CheckStatus.PASSED),
-        ("ruff", CheckStatus.PASSED),
-    ]
+    assert [check.report for check in checks.held] == [PYTEST_PASSED, RUFF_PASSED]
 
 
 async def test_a_check_a_file_changed_under_is_out_of_date_and_so_is_each_failure_in_that_file() -> None:
     """A failure in a file nobody touched since still stands; one in a file edited since may be fixed."""
     page = RecordingPage()
-    trees = TreeWrittenAs(THE_TREE)
+    trees = TreesOfTheTest()
     checks = _checks(page, trees)
     await checks.report(TY_FAILED_IN_TWO_FILES, round_number=SECOND_ROUND)
 
@@ -113,14 +112,14 @@ async def test_a_check_a_file_changed_under_is_out_of_date_and_so_is_each_failur
 
     [held] = checks.held
     assert (held.out_of_date, held.changed_since, checks.names_out_of_date) == (True, [FAILING_TEST_FILE], ["ty"])
-    assert [held.failure_out_of_date(failure) for failure in held.failures] == [True, False]
+    assert [held.failure_out_of_date(failure) for failure in held.report.failures] == [True, False]
     assert page.told[-1] == ChecksChanged(checks=[held])
 
 
 async def test_measuring_checks_the_code_has_not_moved_on_from_tells_nobody() -> None:
     """The watch measures at every save: a page told nothing new each time hears noise."""
     page = RecordingPage()
-    checks = _checks(page, TreeWrittenAs(THE_TREE))
+    checks = _checks(page, TreesOfTheTest())
     await checks.report(PYTEST_PASSED, round_number=SECOND_ROUND)
 
     await checks.measure()
@@ -128,19 +127,42 @@ async def test_measuring_checks_the_code_has_not_moved_on_from_tells_nobody() ->
     assert len(page.told) == 1
 
 
-async def test_a_check_nobody_can_measure_is_out_of_date_and_every_failure_with_it() -> None:
+async def test_a_check_nobody_can_measure_stays_out_of_date_beside_those_measured_current() -> None:
     """Git would not write its tree, or will not read it now: a reader told it is current stops looking."""
-    unwritten = _checks(RecordingPage(), TreeWrittenAs(None))
-    await unwritten.report(PYTEST_FAILED, round_number=SECOND_ROUND)
-    unread_trees = TreeWrittenAs(THE_TREE)
-    unread = _checks(RecordingPage(), unread_trees)
-    await unread.report(PYTEST_FAILED, round_number=SECOND_ROUND)
+    trees = TreesOfTheTest()
+    checks = _checks(RecordingPage(), trees)
+    trees.tree = None
+    await checks.report(PYTEST_FAILED, round_number=SECOND_ROUND)
+    trees.tree = THE_TREE
+    await checks.report(RUFF_PASSED, round_number=SECOND_ROUND)
+    trees.tree = TREE_UNREAD
+    await checks.report(TY_PASSED, round_number=SECOND_ROUND)
 
-    unread_trees.changed = {}
-    await unread.measure()
+    await checks.measure()
 
-    held = [*unwritten.held, *unread.held]
-    assert [(check.out_of_date, check.failure_out_of_date(check.failures[0])) for check in held] == [
-        (True, True),
-        (True, True),
+    assert [(check.report.name, check.out_of_date) for check in checks.held] == [
+        ("pytest", True),
+        ("ruff", False),
+        ("ty", True),
     ]
+    [unstamped, _, _] = checks.held
+    assert [unstamped.failure_out_of_date(failure) for failure in PYTEST_FAILED.failures] == [True]
+
+
+async def test_a_check_reported_while_a_measuring_waits_on_git_is_not_measured_by_it() -> None:
+    """That measuring asked git of the trees held before it: of the one reported since, it knows nothing."""
+    trees = TreesOfTheTest()
+    checks = _checks(RecordingPage(), trees)
+    await checks.report(PYTEST_PASSED, round_number=SECOND_ROUND)
+    trees.answer.clear()
+    measuring = asyncio.create_task(checks.measure())
+    await trees.asked.wait()
+
+    trees.tree = TREE_EDITED
+    reporting = asyncio.create_task(checks.report(RUFF_PASSED, round_number=SECOND_ROUND))
+    # A turn of the loop, in which the report would land were nothing holding it back
+    await asyncio.sleep(0)
+    trees.answer.set()
+    await asyncio.gather(measuring, reporting)
+
+    assert [(check.report.name, check.out_of_date) for check in checks.held] == [("pytest", False), ("ruff", False)]
