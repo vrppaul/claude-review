@@ -27,8 +27,9 @@ const UNITS: readonly TimeUnit[] = [
 	SECONDS
 ];
 
-// What a wait is counted from is said to the second, as the wait itself is
-const TO_THE_SECOND: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit' };
+// A time of day as a clock on the wall says it; what a wait is counted from is said to the second, as the wait is
+const TO_THE_MINUTE: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit' };
+const TO_THE_SECOND: Intl.DateTimeFormatOptions = { ...TO_THE_MINUTE, second: '2-digit' };
 
 // How many digits the seconds of a wait are said in, and what fills them out: "0:08"
 const SECONDS_DIGITS = 2;
@@ -60,6 +61,11 @@ export function timeWaited(since: number, now: number): string {
 	const minutes = Math.floor(seconds / SECONDS_IN_A_MINUTE);
 	const secondsLeftOver = String(seconds % SECONDS_IN_A_MINUTE).padStart(SECONDS_DIGITS, NO_SECONDS);
 	return `${minutes}:${secondsLeftOver}`;
+}
+
+/** The time of day a moment was, to the minute. */
+export function clockTime(at: number): string {
+	return new Date(at).toLocaleTimeString([], TO_THE_MINUTE);
 }
 
 /** The time of day a moment was, to the second. */

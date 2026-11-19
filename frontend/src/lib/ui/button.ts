@@ -28,8 +28,13 @@ import type { Snippet } from 'svelte';
  *   answer beside it.
  * - marked: something of the reader's own to look at, or what they narrowed
  *   the review to, on their mark's tint.
+ * - failing: what opens on something that failed, the agent's checks: the
+ *   error's words inside its edge, on the page's ground, so the failure is
+ *   read before it is opened.
+ * - warned: what opens on something to look at again, a check the code
+ *   changed after: the warning's words inside its edge.
  */
-export type ButtonTone = 'primary' | 'quiet' | 'secondary' | 'asking' | 'danger' | 'marked';
+export type ButtonTone = 'primary' | 'quiet' | 'secondary' | 'asking' | 'danger' | 'marked' | 'failing' | 'warned';
 
 /** xs among words and small controls, 24 pixels; sm in a row of acts and where it ends a bar, 32 pixels. */
 export type ButtonSize = 'xs' | 'sm';
@@ -47,7 +52,9 @@ export const BUTTON_TONES: Record<ButtonTone, string> = {
 	secondary: 'cr-ui-secondary',
 	asking: 'cr-ui-asking',
 	danger: 'cr-ui-danger cr-ui-filled',
-	marked: 'cr-ui-marked'
+	marked: 'cr-ui-marked',
+	failing: 'cr-ui-failing',
+	warned: 'cr-ui-warned'
 };
 
 export const BUTTON_SIZES: Record<ButtonSize, string> = { xs: 'cr-ui-xs', sm: 'cr-ui-sm' };

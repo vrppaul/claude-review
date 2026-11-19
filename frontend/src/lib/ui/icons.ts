@@ -28,6 +28,8 @@ const TRACED_FIRM: HowDrawn = { kind: 'traced', width: 1.6 };
 const WINDOW = 'M3.5 3h9a1.5 1.5 0 0 1 1.5 1.5v7a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 11.5v-7A1.5 1.5 0 0 1 3.5 3z';
 // A ring as wide as the drawing leaves room for, which a mark stands in
 const RING = 'M2 8a6 6 0 1 0 12 0a6 6 0 1 0 -12 0';
+// A clock's hands, drawn in that ring
+const CLOCK_HANDS = 'M8 5v3.2l2 1.3';
 // A page with its top corner cut off, which a file and a change suggested to one are drawn on
 const PAGE = 'M4 2.5h5l3 3v8H4z';
 // A speech bubble, its tail at the bottom left, which a word said and a word sent are drawn in
@@ -216,7 +218,9 @@ export const ICONS = {
 	// left for later, each list of its overview by its mark
 	decided: { viewBox: '0 0 16 16', paths: [RING, 'M5.5 8.2l1.8 1.8 3.4-3.6'], drawn: TRACED_FINE },
 	'turned-down': { viewBox: '0 0 16 16', paths: [RING, 'M6 6l4 4M10 6l-4 4'], drawn: TRACED_FINE },
-	'left-for-later': { viewBox: '0 0 16 16', paths: [RING, 'M8 5v3.2l2 1.3'], drawn: TRACED_FINE },
+	'left-for-later': { viewBox: '0 0 16 16', paths: [RING, CLOCK_HANDS], drawn: TRACED_FINE },
+	// The same clock: what was true of an earlier moment and may not be now, as a check the code changed after
+	old: { viewBox: '0 0 16 16', paths: [RING, CLOCK_HANDS], drawn: TRACED_FINE },
 	// A window with a column down one side, shaded while it stands open, or narrowed to a strip with an arrow the
 	// way it comes back in: a side column's toggle, drawing the state the column is in
 	'column-left-open': {

@@ -9,6 +9,7 @@
 	import type { NoticeTone } from '$lib/ui/notice';
 	import NoticeBar from '$lib/ui/NoticeBar.svelte';
 	import BasePicker from './BasePicker.svelte';
+	import ChecksChip from './ChecksChip.svelte';
 	import FinishReview from './FinishReview.svelte';
 	import HelpMenu from './HelpMenu.svelte';
 	import RepliesMenu from './RepliesMenu.svelte';
@@ -61,6 +62,8 @@
 		<HelpMenu />
 		<!-- Right after Help, where it never moves, whatever else the header shows -->
 		<ViewSwitch />
+		<!-- What the agent's checks say of the change, whichever way it is read -->
+		<ChecksChip />
 		<!-- What the diff is compared against, as a control. A story is of the review's own diff whatever base the
 		files are read against, so it shows none -->
 		{#if review.views.onScreen.name === 'files' && review.diff.phrase}
