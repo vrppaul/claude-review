@@ -11,10 +11,11 @@ import contextlib
 import os
 from pathlib import Path
 
+from claude_review.domain.interfaces import GitError
 from claude_review.domain.models import TreeState
 from claude_review.repositories.git_repository import GitRepository
 from claude_review.services.review.review_lifetime import ReviewLifetime
-from claude_review.services.review.tree_watcher_service import TreeWatcherService
+from claude_review.services.review.tree_watcher_service import TreeWatcherService, files_moved
 from tests.helpers import LOOK_EVERY_SECONDS, RecordingPage, git
 
 POLL_SECONDS = 0.02
@@ -41,6 +42,29 @@ class CountingGit(GitRepository):
         return await super().changed_paths(path)
 
 
+async def _as_git_says(listed: list[str]) -> list[str]:
+    return listed
+
+
+async def _cannot_say(_listed: list[str]) -> list[str]:
+    """What git mid-rebase answers: not what has changed, but that it cannot say."""
+    msg = "index.lock exists"
+    raise GitError(msg)
+
+
+# The poll git cannot answer, one after the watcher has looked once, and what it answers then
+FAILING_POLL = 2
+ANSWER_ON_POLL = {FAILING_POLL: _cannot_say}
+
+
+class GitThatFailsOnce(CountingGit):
+    """Git that cannot say what has changed the second time it is asked, as one mid-rebase cannot."""
+
+    async def changed_paths(self, path: Path) -> list[str]:
+        listed = await super().changed_paths(path)
+        return await ANSWER_ON_POLL.get(self.polls, _as_git_says)(listed)
+
+
 def _watcher() -> TreeWatcherService:
     return TreeWatcherService(GitRepository(objects=None), poll_seconds=POLL_SECONDS)
 
@@ -49,24 +73,23 @@ async def _first(
     watcher: TreeWatcherService, root: Path, taken_at: TreeState, *, give_up_after: float = REPORT_TIMEOUT_SECONDS
 ) -> int | None:
     """How many files the watcher reports moving, or nothing before it gives up."""
-    changes = watcher.changes(root, taken_at=lambda: taken_at, lifetime=ReviewLifetime(RecordingPage()))
+    changes = watcher.changes(root, since=taken_at, lifetime=ReviewLifetime(RecordingPage()))
     try:
-        return await asyncio.wait_for(anext(changes), timeout=give_up_after)
+        return files_moved(await asyncio.wait_for(anext(changes), timeout=give_up_after), taken_at)
     except TimeoutError:
         return None
     finally:
         await changes.aclose()
 
 
-async def _quiet(root: Path, taken_at: TreeState) -> bool:
+async def _quiet(root: Path, taken_at: TreeState, repository: CountingGit) -> bool:
     """Whether the watcher stays silent for as many polls as it takes to notice anything.
 
     Counted in polls, not in seconds: a busy machine polls less often, and a
     watcher given too few looks would pass for one that saw nothing.
     """
-    repository = CountingGit()
     watcher = TreeWatcherService(repository, poll_seconds=POLL_SECONDS)
-    changes = watcher.changes(root, taken_at=lambda: taken_at, lifetime=ReviewLifetime(RecordingPage()))
+    changes = watcher.changes(root, since=taken_at, lifetime=ReviewLifetime(RecordingPage()))
     reported = asyncio.ensure_future(anext(changes))
     try:
         async with asyncio.timeout(REPORT_TIMEOUT_SECONDS):
@@ -107,7 +130,33 @@ async def test_a_tree_that_has_not_moved_is_not_reported(tmp_git_repo: Path) -> 
     watcher = _watcher()
     taken_at = await watcher.read(tmp_git_repo)
 
-    assert await _quiet(tmp_git_repo, taken_at)
+    assert await _quiet(tmp_git_repo, taken_at, CountingGit())
+
+
+async def test_a_tree_git_cannot_read_for_a_moment_has_not_moved(tmp_git_repo: Path) -> None:
+    """A repository mid-rebase says nothing of its files: that is no news of them."""
+    (tmp_git_repo / "initial.txt").write_text("changed before the diff\n")
+    taken_at = await _watcher().read(tmp_git_repo)
+
+    assert await _quiet(tmp_git_repo, taken_at, GitThatFailsOnce())
+
+
+async def test_a_tree_gone_back_to_how_it_stood_is_reported(tmp_git_repo: Path) -> None:
+    """Whoever was told it moved is told it moved back: a file made and then removed leaves nothing moved."""
+    watcher = _watcher()
+    taken_at = await watcher.read(tmp_git_repo)
+    made = tmp_git_repo / "scratch.txt"
+
+    changes = watcher.changes(tmp_git_repo, since=taken_at, lifetime=ReviewLifetime(RecordingPage()))
+    try:
+        made.write_text("for a moment\n")
+        moved = await asyncio.wait_for(anext(changes), timeout=REPORT_TIMEOUT_SECONDS)
+        made.unlink()
+        back = await asyncio.wait_for(anext(changes), timeout=REPORT_TIMEOUT_SECONDS)
+    finally:
+        await changes.aclose()
+
+    assert (files_moved(moved, taken_at), files_moved(back, taken_at)) == (1, 0)
 
 
 async def test_a_change_is_reported_once_rather_than_every_poll(tmp_git_repo: Path) -> None:
@@ -116,9 +165,9 @@ async def test_a_change_is_reported_once_rather_than_every_poll(tmp_git_repo: Pa
     taken_at = await watcher.read(tmp_git_repo)
     (tmp_git_repo / "initial.txt").write_text("changed\n")
 
-    changes = watcher.changes(tmp_git_repo, taken_at=lambda: taken_at, lifetime=ReviewLifetime(RecordingPage()))
+    changes = watcher.changes(tmp_git_repo, since=taken_at, lifetime=ReviewLifetime(RecordingPage()))
     try:
-        assert await asyncio.wait_for(anext(changes), timeout=5) == 1
+        assert files_moved(await asyncio.wait_for(anext(changes), timeout=5), taken_at) == 1
         second = asyncio.ensure_future(anext(changes))
         done, _ = await asyncio.wait({second}, timeout=0.5)
         assert not done, "the same change was reported twice"
@@ -203,7 +252,7 @@ async def test_staging_a_change_moves_nothing(tmp_git_repo: Path) -> None:
 
     git(tmp_git_repo, "add", "initial.txt")
 
-    assert await _quiet(tmp_git_repo, taken_at)
+    assert await _quiet(tmp_git_repo, taken_at, CountingGit())
 
 
 async def test_a_file_made_runnable_after_the_diff_is_reported(tmp_git_repo: Path) -> None:

@@ -15,6 +15,14 @@
   it is of. The news is now 1.7.1's: Alt+Enter asks the agent, and PHP is
   highlighted.
 
+### Fixed
+- **The notice that files changed on disk goes once they are back.** A
+  file made and removed again, or one put back as HEAD has it, left the
+  notice standing over a diff that was true again. The review hears every
+  change of the tree now, and says when nothing has moved from the diff.
+  Nor does a moment git cannot read the tree, mid-rebase, count as a
+  change.
+
 ## [1.7.3] - 2026-11-18
 
 ### Changed

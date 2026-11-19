@@ -41,7 +41,7 @@ from claude_review.services.review.review_content import ReviewContent, TakesCom
 from claude_review.services.review.review_lifetime import ReviewLifetime
 from claude_review.services.review.review_versions import ReviewVersions
 from claude_review.services.review.round_tracker import RoundBeingWritten
-from claude_review.services.review.tree_watcher_service import TreeWatcherService
+from claude_review.services.review.tree_watcher_service import TreeWatcherService, files_moved
 from claude_review.services.review_opening import OpenedRepository, ReviewOpening
 from claude_review.services.unified_diff import parse_unified_diff
 
@@ -117,7 +117,10 @@ class ContentSource(TakesCompared):
 
     @abstractmethod
     def tree_moves(self, lifetime: ReviewLifetime) -> AsyncIterator[int]:
-        """How many files have moved, each time the tree stops matching the take on screen, until the review ends."""
+        """How many files stand otherwise than in the take on screen, each time the tree changes, until the review ends.
+
+        Zero, once the tree is back as the take holds it.
+        """
 
 
 class RepositorySource(ContentSource):
@@ -239,8 +242,12 @@ class RepositorySource(ContentSource):
         return await self._windows.read_window(self._root, path, start, end, in_review=self._content.paths)
 
     @override
-    def tree_moves(self, lifetime: ReviewLifetime) -> AsyncIterator[int]:
-        return self._watcher.changes(self._root, taken_at=lambda: self._content.tree, lifetime=lifetime)
+    async def tree_moves(self, lifetime: ReviewLifetime) -> AsyncIterator[int]:
+        """Measured against the take on screen as each change is heard, so a retake settles the tree unrestarted."""
+        async for tree in self._watcher.changes(self._root, since=self._content.tree, lifetime=lifetime):
+            moved = files_moved(tree, self._content.tree)
+            log.info("tree_moved", file_count=moved)
+            yield moved
 
 
 class FixedSource(ContentSource):

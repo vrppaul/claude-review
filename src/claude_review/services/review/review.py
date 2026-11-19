@@ -542,7 +542,7 @@ class Review:
             self._lifetime.end(gone.result())
 
     async def tell_when_the_tree_moves(self) -> None:
-        """Tell the pages each time the tree stops matching the diff, from the first page on, until the review ends.
+        """Tell the pages how far the tree stands from the diff each time it changes, from the first page on.
 
         Said, never acted on: the reader decides when to take the diff again.
         """
