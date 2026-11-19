@@ -42,7 +42,7 @@ from claude_review.presentation.schemas.agent import (
     TimeoutEvent,
 )
 from claude_review.presentation.schemas.base import DEFAULT_WAIT_SECONDS, MAX_WAIT_SECONDS, SafeId
-from claude_review.presentation.schemas.checks import CheckRequest
+from claude_review.presentation.schemas.checks import Check, CheckRequest
 from claude_review.presentation.schemas.story import StoryRequest, StoryTakenResponse
 from claude_review.presentation.schemas.threads import (
     PointRequest,
@@ -132,6 +132,7 @@ async def catch_up(review: ReviewDep) -> CatchUpResponse:
         agent=AgentStatus.from_domain(standing.agent),
         threads=[ThreadSummary.from_draft(held) for held in caught_up.threads],
         panel=[PanelEntry.from_domain(entry) for entry in caught_up.panel],
+        checks=[Check.from_domain(check) for check in standing.checks],
     )
 
 

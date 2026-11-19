@@ -6,8 +6,10 @@ import pytest
 
 from claude_review.cli.rendering import GIST_LENGTH, render_catch_up, render_thread
 from claude_review.domain import models
+from claude_review.domain.checks import CheckStatus
 from claude_review.domain.models import CommentSeverity, Turn, TurnAuthor
 from claude_review.presentation.schemas.agent import AgentStatus, CatchUpResponse, PanelEntry
+from claude_review.presentation.schemas.checks import Check
 from claude_review.presentation.schemas.threads import Thread, ThreadSummary
 from tests.helpers import line_anchor, thread
 
@@ -45,6 +47,29 @@ SEEN = CatchUpResponse(
     agent=AgentStatus(model="opus-5", context="45% of 1M", at=SAID_AT),
     threads=[_summary(DISCUSSED)],
     panel=[ASKED_TO_RUN_THE_TESTS],
+    checks=[],
+)
+
+# A check the code has not moved on from, and one a file changed under since it ran
+TESTS_CURRENT = Check(
+    name="pytest",
+    status=CheckStatus.PASSED,
+    summary="412 passed",
+    failures=[],
+    round=3,
+    at=SAID_AT,
+    changed_since=[],
+    out_of_date=False,
+)
+LINT_OUT_OF_DATE = Check(
+    name="ruff",
+    status=CheckStatus.FAILED,
+    summary="1 error",
+    failures=[],
+    round=3,
+    at=SAID_AT,
+    changed_since=["src/app.py"],
+    out_of_date=True,
 )
 
 
@@ -112,6 +137,12 @@ def test_a_thread_asked_for_by_name_comes_in_full() -> None:
     assert "And if it does, what then?" in printed
     assert "you: It cannot: one queue." in printed
     assert "lines:     return event" in printed
+
+
+def test_the_checks_reported_are_a_line_saying_how_each_ended_and_which_to_run_again() -> None:
+    printed = render_catch_up(SEEN.model_copy(update={"checks": [TESTS_CURRENT, LINT_OUT_OF_DATE]}))
+
+    assert "checks: pytest passed · ruff failed, out of date" in printed.splitlines()
 
 
 def test_a_review_nobody_answers_says_so() -> None:

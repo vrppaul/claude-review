@@ -8,6 +8,7 @@ on a thread of its own, as it would in a process of its own.
 import asyncio
 import json
 import unicodedata
+from collections.abc import Callable
 from http import HTTPStatus
 from pathlib import Path
 
@@ -41,6 +42,7 @@ from tests.helpers import (
     added_line,
     diff_file,
     files_opening_of,
+    git,
     line_json,
     message_json,
     next_push,
@@ -422,3 +424,30 @@ async def test_a_file_a_story_leaves_out_is_printed_to_be_read_never_obeyed(
     assert result.exit_code == 0, result.output
     assert "1 line not in the story" in result.output
     assert _controls_in(result.output) == []
+
+
+def _edit_a_file(repository: Path) -> None:
+    (repository / EDITED_FILE).write_text("initial content\nand a line since, edited after the check\n")
+
+
+def _commit_the_change(repository: Path) -> None:
+    git(repository, "add", "--all")
+    git(repository, "commit", "--quiet", "--message", "The change")
+
+
+# What is done to the repository after a check ran, and which checks the diff taken again then names to run again
+AFTER_THE_CHECK = {"a-file-edited": (_edit_a_file, ["pytest"]), "the-change-committed": (_commit_the_change, [])}
+
+
+@pytest.mark.parametrize(("done_after", "named"), AFTER_THE_CHECK.values(), ids=AFTER_THE_CHECK.keys())
+async def test_the_diff_taken_again_names_the_checks_a_file_changed_under_since_they_ran(
+    review_of_a_change: RunningReview, tmp_git_repo: Path, done_after: Callable[[Path], None], named: list[str]
+) -> None:
+    """Measured by git's trees, not the files' times: a commit made after the check changes none of its lines."""
+    await _run(review_of_a_change, "check", "--name", "pytest", "--status", "passed")
+    done_after(tmp_git_repo)
+
+    result = await _run(review_of_a_change, "retake")
+
+    assert result.exit_code == 0, result.output
+    assert json.loads(result.output)["checks_out_of_date"] == named

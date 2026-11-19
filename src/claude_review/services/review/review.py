@@ -30,6 +30,7 @@ from collections.abc import Awaitable
 from contextlib import AbstractContextManager
 
 import structlog
+from pydantic import BaseModel
 
 from claude_review.domain.checks import CheckReport
 from claude_review.domain.exceptions import ReviewEndedError, UnknownFileError
@@ -96,6 +97,14 @@ from claude_review.services.review.thread_handover import ThreadHandover
 from claude_review.services.round_formatter import RoundFormatter
 
 log = structlog.get_logger()
+
+
+class TakenAgain(BaseModel):
+    """The diff taken again, as the agent is told it: the take, and the checks it left to run again."""
+
+    retaken: Retaken
+    # By name, each check a file changed under since it ran, or that nobody can say none did
+    checks_out_of_date: list[str]
 
 
 class Review:
@@ -522,13 +531,15 @@ class Review:
         """The story the review holds, on the take of its change on screen: None while nobody has told one."""
         return self._story.held
 
-    async def retake(self) -> Retaken:
+    async def retake(self) -> TakenAgain:
         """Take the diff again, after the work a round asked for, follow the story told onto it, and tell the pages.
 
         The source takes one retake at a time and reads the round from the
         review's rounds once its turn comes, so a round sent while git works
         is not its round. Followed before the pages are told, so a page that
-        reads the diff and then the story reads both of one take.
+        reads the diff and then the story reads both of one take. The checks
+        are measured against the tree then, not as the watch last heard it:
+        the agent retakes the moment it stops editing.
 
         Raises:
             NoRepositoryError: if the review's content did not come from a repository.
@@ -536,8 +547,9 @@ class Review:
         retaken = await self._source.retake(self._rounds)
         self._tell_asking(await self._story.follow(self._source.content, round_number=retaken.round))
         self._page.tell(DiffRetaken(file_count=retaken.file_count, changes=retaken.changes))
+        await self._checks.measure()
         await self._keep()
-        return retaken
+        return TakenAgain(retaken=retaken, checks_out_of_date=self._checks.names_out_of_date)
 
     def end(self) -> None:
         """End a review that was kept open for rounds."""
@@ -558,10 +570,14 @@ class Review:
         """Tell the pages how far the tree stands from the diff each time it changes, from the first page on.
 
         Said, never acted on: the reader decides when to take the diff again.
+        The checks are measured again at each change, and once as the watch
+        begins, for a check reported before anything watched the tree.
         """
         if await self._lifetime.before_the_end(self._presence.until_first_page()):
+            await self._checks.measure()
             async for moved in self._source.tree_moves(self._lifetime):
                 self._page.tell(TreeMoved(moved_count=moved))
+                await self._checks.measure()
 
     def exit_report(self) -> str:
         """What the review hands back as it ends: its rounds, and whatever the agent never took."""

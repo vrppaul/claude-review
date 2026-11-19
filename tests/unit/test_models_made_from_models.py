@@ -148,6 +148,7 @@ CHECK_REPORTED = CheckReport(
     summary="1 failed",
     failures=[CheckFailure(path="tests/test_a.py", line=3, what="test_rename", why="AssertionError")],
 )
+CHECK_HELD = CHECK_REPORTED.stamped(round_number=2, at=TAKEN_AT, tree="a-tree")
 MOVED_ON = CodeMovedOn(round=2, left_out=None)
 
 MADE = [
@@ -251,8 +252,14 @@ MADE = [
     MadeFrom(
         what="a check reported, stamped",
         source=CHECK_REPORTED,
-        made=CHECK_REPORTED.stamped(round_number=2, at=TAKEN_AT, tree="a-tree"),
+        made=CHECK_HELD,
         replaced={"round", "at", "tree", "changed_since"},
+    ),
+    MadeFrom(
+        what="a check measured against the working tree",
+        source=CHECK_HELD,
+        made=CHECK_HELD.measured({"a-tree": ["tests/test_a.py"]}),
+        replaced={"changed_since"},
     ),
 ]
 EACH_MADE = pytest.mark.parametrize("model", MADE, ids=[model.what for model in MADE])

@@ -14,6 +14,11 @@
   writes down as it arrives and hands the checks to the page, in its facts
   and pushed whole as they change; one reported again under its name
   takes its place. A review of files or a conversation refuses them.
+- **A check is out of date once a file changes after it.** Each time the
+  working tree changes, the review measures every check against it by
+  git's trees, so a commit made after a check leaves it current; the page
+  hears which files changed since each, and which failures stand in one.
+  `retake` names the checks to run again, and `catch-up` lists them.
 
 ### Changed
 - **Help's "What's new" names no release.** The news it opens is of the

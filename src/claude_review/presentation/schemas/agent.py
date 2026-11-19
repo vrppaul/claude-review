@@ -17,6 +17,7 @@ from claude_review.presentation.schemas.base import (
     Schema,
     made_or_none,
 )
+from claude_review.presentation.schemas.checks import Check
 from claude_review.presentation.schemas.threads import SaysSomething, Thread, ThreadDraft, ThreadSummary
 
 # The most threads one panel message may point at
@@ -254,6 +255,8 @@ class CatchUpResponse(Schema):
     agent: AgentStatus
     threads: list[ThreadSummary]
     panel: list[PanelEntry]
+    # The checks the agent reported, each as it now stands against the working tree
+    checks: list[Check]
 
 
 class MessageRequest(SaysSomething):

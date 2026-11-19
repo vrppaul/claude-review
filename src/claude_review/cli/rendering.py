@@ -9,6 +9,7 @@ from pathlib import Path
 
 from claude_review.domain.models import TurnAuthor, says_nothing
 from claude_review.presentation.schemas.agent import CatchUpResponse
+from claude_review.presentation.schemas.checks import Check
 from claude_review.presentation.schemas.story import LeftOutOfFile, StoryTakenResponse
 from claude_review.presentation.schemas.threads import Thread, ThreadSummary
 from claude_review.services.thread_markdown import tags_of
@@ -34,6 +35,11 @@ ROUND_LABEL = "round"
 NOBODY_ANSWERING = "nobody answering"
 OPEN_LABEL = "open"
 PANEL_HEADING = "panel:"
+# The line of the checks the agent reported, each said in short, and the
+# words a check the code moved on from is marked with
+CHECKS_HEADING = "checks:"
+CLAUSE_SEPARATOR = ", "
+OUT_OF_DATE = "out of date"
 # What a message that is an image alone says, where an empty line says nothing
 IMAGE_ONLY = "(image)"
 IMAGE_LABEL = "image"
@@ -68,6 +74,9 @@ def render_catch_up(seen: CatchUpResponse) -> str:
             ]
         ),
     ]
+
+    if seen.checks:
+        lines.append(f"{CHECKS_HEADING} {MARK_SEPARATOR.join(_check_in_short(check) for check in seen.checks)}")
 
     for summary in seen.threads:
         lines.append("")
@@ -113,6 +122,12 @@ def _left_out(left_out: list[LeftOutOfFile]) -> str:
     lines = sum(left.changed_lines for left in left_out)
     files = FILES_SEPARATOR.join(left.file for left in left_out)
     return LEFT_OUT.format(lines=_counted(lines, LINE_NOUN), files=files)
+
+
+def _check_in_short(check: Check) -> str:
+    """A check in a few words: its name, how it ended, and that it is out of date, where it is."""
+    said = f"{check.name} {check.status}"
+    return f"{said}{CLAUSE_SEPARATOR}{OUT_OF_DATE}" if check.out_of_date else said
 
 
 def _marks(summary: ThreadSummary) -> str:

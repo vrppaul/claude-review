@@ -164,7 +164,7 @@ async def test_a_round_sent_while_the_diff_is_taken_again_leaves_the_take_in_the
     await review.submit(threads=[], body=A_ROUND, ends=False)
     first.answer.set()
 
-    assert (await retaking).round == FIRST_ROUND
+    assert (await retaking).retaken.round == FIRST_ROUND
 
 
 async def test_a_retake_waiting_its_turn_while_a_round_is_sent_is_taken_in_that_round(reviews: ReviewFactory) -> None:
@@ -183,7 +183,7 @@ async def test_a_retake_waiting_its_turn_while_a_round_is_sent_is_taken_in_that_
     await _until_asked(second)
     second.answer.set()
 
-    assert ((await older).round, (await newer).round) == (FIRST_ROUND, FIRST_ROUND + 1)
+    assert ((await older).retaken.round, (await newer).retaken.round) == (FIRST_ROUND, FIRST_ROUND + 1)
 
 
 async def test_a_tree_git_will_not_stage_as_the_review_opens_leaves_on_screen_what_was_read_for_it(

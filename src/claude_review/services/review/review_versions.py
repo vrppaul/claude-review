@@ -183,18 +183,19 @@ class ReviewVersions:
         ]
         return [VersionOnOffer(key=RefKey(name=HEAD), at=None, changed=None), *listed]
 
-    async def _counts(self, bases: list[str]) -> dict[str, int]:
-        """How many files differ from each base, when git will say.
+    async def changed_since(self, bases: list[str]) -> dict[str, list[str]]:
+        """The paths that differ between each base and the working tree now, for each git will say it of.
 
-        The count is the reason to pick one base over another, so it is worth
-        one staging of the tree — but only one, which is why every base is
-        asked at once, and each only once: two rounds whose tree never moved
-        are one tree.
+        One staging of the tree, whatever the number of bases, and each base
+        asked once: two rounds whose tree never moved are one tree.
         """
         try:
             async with self._repository.staged(self._opened.root) as staged:
-                changed = await staged.names_changed_since(list(dict.fromkeys(bases)))
+                return await staged.names_changed_since(list(dict.fromkeys(bases)))
         except GitError as refusal:
-            log.warning("counts_refused", reason=str(refusal))
+            log.warning("staging_refused", reason=str(refusal))
             return {}
-        return {base: len(paths) for base, paths in changed.items()}
+
+    async def _counts(self, bases: list[str]) -> dict[str, int]:
+        """How many files differ from each base, when git will say: the reason to pick one base over another."""
+        return {base: len(paths) for base, paths in (await self.changed_since(bases)).items()}

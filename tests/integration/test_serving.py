@@ -25,7 +25,7 @@ from claude_review.hosting.errors import ReviewStoppedError, ServerStartError
 from claude_review.hosting.hosted_review import HostedReview
 from claude_review.hosting.ports import ANY_FREE_PORT, bind
 from claude_review.hosting.serving import hold_open, serve_review, stop_signals
-from claude_review.presentation.schemas.pushes import ChangedPush
+from claude_review.presentation.schemas.pushes import ChangedPush, ChecksPush
 from claude_review.repositories.git_repository import GitRepository, GitStagedTree
 from claude_review.services.review_opening import ReviewOpening, open_diff
 from tests.helpers import (
@@ -44,6 +44,9 @@ from tests.page_socket import page_socket_held
 
 SUBMIT_ROUTE = "/api/submit"
 MESSAGE_ROUTE = "/api/message"
+# Where the agent reports a check it ran, and one it reports
+CHECK_ROUTE = "/api/check"
+A_CHECK = {"name": "pytest", "status": "passed"}
 THE_ROUND = "Rename the helper."
 # A round sent with the review kept open for the next, and the last round, sent and ending the review
 A_ROUND = {"threads": [], "body": THE_ROUND, "end": False}
@@ -219,6 +222,28 @@ async def test_a_file_changed_under_the_review_is_said_to_the_review_on_screen(
     await asyncio.wait_for(serving, timeout=SETTLE_SECONDS)
 
     assert moved == ChangedPush(moved_count=1)
+
+
+async def test_a_check_a_file_changes_under_is_said_out_of_date_to_the_review_on_screen(
+    reviews: ReviewFactory, announcer: RecordingAnnouncer, tmp_path_factory: pytest.TempPathFactory
+) -> None:
+    """Heard by the watch on the tree: the reader sees it before the agent takes the diff again."""
+    repository = committed_repository(tmp_path_factory.mktemp("apart"), INITIAL_FILES)
+    (repository / INITIAL_FILE).write_text("changed\n")
+    opened = await open_diff(repository, None, GitRepository(objects=None))
+    serving = asyncio.ensure_future(_served(reviews.hosted(opened), announcer))
+    address = await asyncio.wait_for(announcer.address, SETTLE_SECONDS)
+
+    async with page_socket_held(_port_of(address)) as page, AsyncClient(base_url=address) as agent:
+        await agent.post(CHECK_ROUTE, json=A_CHECK)
+        reported = await asyncio.to_thread(next_push, page, ChecksPush)
+        (repository / INITIAL_FILE).write_text("changed again, after the check\n")
+        measured = await asyncio.to_thread(next_push, page, ChecksPush)
+        await agent.post(SUBMIT_ROUTE, json=LAST_ROUND)
+    await asyncio.wait_for(serving, timeout=SETTLE_SECONDS)
+
+    assert [check.out_of_date for check in reported.checks] == [False]
+    assert [check.changed_since for check in measured.checks] == [[INITIAL_FILE]]
 
 
 async def test_a_watch_on_the_tree_that_fails_leaves_the_review_running_and_its_round_handed_back(

@@ -90,6 +90,19 @@ class Check(BaseModel):
         """Whether the code may have moved on since the check ran: a file changed, or nobody can say none did."""
         return self.changed_since != []
 
+    def measured(self, changed_since: dict[str, list[str]]) -> Check:
+        """The check against the working tree, from the paths changed since each tree: unknown where its tree is not."""
+        return Check(
+            name=self.name,
+            status=self.status,
+            summary=self.summary,
+            failures=self.failures,
+            round=self.round,
+            at=self.at,
+            tree=self.tree,
+            changed_since=None if self.tree is None else changed_since.get(self.tree),
+        )
+
     def failure_out_of_date(self, failure: CheckFailure) -> bool:
         """Whether the file a failure is in may have changed since the check ran."""
         return self.changed_since is None or failure.path in self.changed_since

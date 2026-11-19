@@ -249,6 +249,10 @@ class RepositorySource(ContentSource):
             return None
 
     @override
+    async def changed_since(self, trees: list[str]) -> dict[str, list[str]]:
+        return await self._versions.changed_since(trees)
+
+    @override
     async def file_window(self, path: str, start: int, end: int) -> FileWindow:
         return await self._windows.read_window(self._root, path, start, end, in_review=self._content.paths)
 
@@ -320,6 +324,12 @@ class FixedSource(ContentSource):
     async def tree_as_it_stands(self) -> str | None:
         """Raises: NoRepositoryError, always: what was read once has no tree."""
         msg = "No repository: no tree for a check to have run on"
+        raise NoRepositoryError(msg)
+
+    @override
+    async def changed_since(self, trees: list[str]) -> dict[str, list[str]]:
+        """Raises: NoRepositoryError, always: what was read once has no tree."""
+        msg = "No repository to measure trees against"
         raise NoRepositoryError(msg)
 
     @override

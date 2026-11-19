@@ -413,7 +413,8 @@ export interface paths {
          *     whether whitespace counts — and asking it to fetch keeps that one path.
          *     They are also told which files moved: a file the reader had ticked off
          *     keeps its tick through a retake, so without this they walk past code the
-         *     agent rewrote under them.
+         *     agent rewrote under them. The agent is told which of its checks the
+         *     change left out of date, to run again.
          */
         post: operations["retake_diff_api_retake_post"];
         delete?: never;
@@ -839,6 +840,8 @@ export interface components {
             threads: components["schemas"]["ThreadSummary"][];
             /** Panel */
             panel: components["schemas"]["PanelEntry"][];
+            /** Checks */
+            checks: components["schemas"]["Check"][];
         };
         /**
          * ChangesSince
@@ -1728,6 +1731,8 @@ export interface components {
             /** Round */
             round: number;
             changes: components["schemas"]["ChangesSince"] | null;
+            /** Checks Out Of Date */
+            checks_out_of_date: string[];
         };
         /**
          * ReviewResponse

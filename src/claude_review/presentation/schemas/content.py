@@ -365,6 +365,9 @@ class RetakeResponse(Schema):
     file_count: int
     round: int
     changes: ChangesSince | None
+    # The checks the agent reported that the code may have moved on from, by
+    # name: a file changed since each ran, or nobody can say none did
+    checks_out_of_date: list[str]
 
 
 class FileWindowResponse(Schema):

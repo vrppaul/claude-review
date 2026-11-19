@@ -370,11 +370,16 @@ async def retake_diff(review: ReviewDep) -> RetakeResponse:
     whether whitespace counts — and asking it to fetch keeps that one path.
     They are also told which files moved: a file the reader had ticked off
     keeps its tick through a retake, so without this they walk past code the
-    agent rewrote under them.
+    agent rewrote under them. The agent is told which of its checks the
+    change left out of date, to run again.
     """
-    retaken = await review.retake()
+    taken = await review.retake()
+    retaken = taken.retaken
     return RetakeResponse(
-        file_count=retaken.file_count, round=retaken.round, changes=made_or_none(changes_since_round, retaken.changes)
+        file_count=retaken.file_count,
+        round=retaken.round,
+        changes=made_or_none(changes_since_round, retaken.changes),
+        checks_out_of_date=taken.checks_out_of_date,
     )
 
 

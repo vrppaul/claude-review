@@ -114,9 +114,10 @@ somebody who is waiting.
    ```
    `wait` hands over what happens next, never what already happened — so an
    agent that restarted mid-review knows nothing until somebody says
-   something. This prints the round, a line per thread and the panel in
-   short. It is an index on purpose: `claude-review catch-up --thread
-   comment-4` gets that one thread in full, with its lines and every turn.
+   something. This prints the round, a line per thread, the panel in short,
+   and the checks you reported, each marked once it is out of date. It is
+   an index on purpose: `claude-review catch-up --thread comment-4` gets
+   that one thread in full, with its lines and every turn.
    `--json` is the same thing for a program to read rather than a person —
    worth it when you mean to count or filter rather than to catch up. The
    index lists each thread in short (`thread_id`, `where`, `severity`,
@@ -310,6 +311,9 @@ somebody who is waiting.
    and keeps a copy of what it was written against. What comes back names the
    files that changed since the round began — read those again rather than
    the whole diff, and the reader can put that same list on screen alone.
+   It names too, in `checks_out_of_date`, each check you reported that a
+   file has changed under since it ran: run those again and report them
+   (step 11).
 
 10. Point at a line, when what you have to say belongs on the code:
     ```bash
@@ -327,6 +331,21 @@ somebody who is waiting.
     the reader cannot always write themselves: under a narrower base the left
     of the diff belongs to that base, so their gutters are shut there. Yours
     is anchored in the review's own diff and is not.
+
+11. Report each check you run — the tests, a linter, a type checker — as it
+    ends:
+    ```bash
+    claude-review check --port <port> --name pytest --status failed \
+      --summary "1 failed, 411 passed" \
+      --failure "tests/test_names.py:42: test_rename: AssertionError"
+    ```
+    The reader cannot see that your tests ran, nor on which code. The review
+    stamps each check with the tree as it stands, and shows it out of date
+    once a file changes after it. Name it by its tool — `pytest`, `ruff`,
+    `ty`, `vitest`, `eslint`, `svelte-check` — and report it again under the
+    same name when you run it again: it replaces the one before. Repeat
+    `--failure` for each place it failed, written as compilers print it, the
+    path from the repository's root. A diff review only, as `retake` is.
 
 While you work, the review says when the working tree has moved on and
 offers the user a "Retake" of its own. It never swaps the diff by itself, so
