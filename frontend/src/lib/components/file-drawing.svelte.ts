@@ -16,7 +16,7 @@ import { type Numbering, STORY_PIECES_NUMBERING } from '$lib/anchors/numbering';
 import { type DrawnFile, LineCommenting } from '$lib/components/line-commenting.svelte';
 import type { RevealedContext } from '$lib/review/revealed-context.svelte';
 import type { Review } from '$lib/review/review.svelte';
-import type { FailureFound } from '$lib/review/checks.svelte';
+import { type FailureFound, NO_FAILURES } from '$lib/review/checks.svelte';
 import type { DiffFile, DiffLayout, DiffLine, LinePlace } from '$lib/types';
 import { type DrawnHunk, drawnHunks } from '$lib/utils/drawn-file';
 import {
@@ -106,8 +106,6 @@ const ROWS_OF_A_HUNK: Record<FileView, (lines: readonly DiffLine[]) => number> =
 };
 // A file with no lines says why in their place, and is held this many rows for it
 const ROWS_FOR_NO_LINES = 1;
-// What a line no check failed on has under it
-const NO_FAILURES: readonly FailureFound[] = [];
 
 /** Where the lines read in around a file's hunks are kept; null for a piece, which has nowhere to keep any. */
 function revealedIn(extent: Extent): RevealedContext | null {

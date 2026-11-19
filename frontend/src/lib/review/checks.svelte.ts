@@ -11,15 +11,19 @@ import type { Check, CheckFailure } from '$lib/types';
 export interface FailureFound {
 	/** The check that failed there, by its name. */
 	check: string;
+	/** Whether that check is out of date: a failure is as fresh as its check, whose result hangs on the whole tree. */
+	outOfDate: boolean;
 	failure: CheckFailure;
 }
 
-// What a file no check failed in holds
-const NO_FAILURES: readonly FailureFound[] = [];
+/** What a file, or a line, no check failed in holds. */
+export const NO_FAILURES: readonly FailureFound[] = [];
 
 /** Every place the checks failed, by the file it is in, in the order the checks say them. */
 function failuresByFile(checks: readonly Check[]): ReadonlyMap<string, readonly FailureFound[]> {
-	const found = checks.flatMap((check) => check.failures.map((failure) => ({ check: check.name, failure })));
+	const found = checks.flatMap((check) =>
+		check.failures.map((failure) => ({ check: check.name, outOfDate: check.out_of_date, failure }))
+	);
 	return Map.groupBy(found, ({ failure }) => failure.path);
 }
 

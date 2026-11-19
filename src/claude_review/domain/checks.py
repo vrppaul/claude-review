@@ -81,7 +81,3 @@ class Check(BaseModel):
             tree=self.tree,
             changed_since=None if self.tree is None else changed_since.get(self.tree),
         )
-
-    def failure_out_of_date(self, failure: CheckFailure) -> bool:
-        """Whether the file a failure is in may have changed since the check ran."""
-        return self.changed_since is None or failure.path in self.changed_since

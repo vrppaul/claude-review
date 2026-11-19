@@ -77,24 +77,16 @@ class CheckRequest(Schema):
 
 
 class CheckFailure(Schema):
-    """One place a check failed, and whether its file changed since the check ran."""
+    """One place a check failed: as fresh as its check, since a check's result hangs on the whole tree."""
 
     path: str
     line: int
     what: str
     why: str | None
-    # The server's to decide, never the page's: its file is among those changed, or nobody can say it is not
-    out_of_date: StrictBool
 
     @classmethod
-    def from_domain(cls, failure: checks.CheckFailure, *, check: checks.Check) -> Self:
-        return cls(
-            path=failure.path,
-            line=failure.line,
-            what=failure.what,
-            why=failure.why,
-            out_of_date=check.failure_out_of_date(failure),
-        )
+    def from_domain(cls, failure: checks.CheckFailure) -> Self:
+        return cls(path=failure.path, line=failure.line, what=failure.what, why=failure.why)
 
 
 class Check(Schema):
@@ -119,7 +111,7 @@ class Check(Schema):
             name=reported.name,
             status=reported.status,
             summary=reported.summary,
-            failures=[CheckFailure.from_domain(failure, check=check) for failure in reported.failures],
+            failures=[CheckFailure.from_domain(failure) for failure in reported.failures],
             round=check.round,
             at=check.at,
             changed_since=check.changed_since,

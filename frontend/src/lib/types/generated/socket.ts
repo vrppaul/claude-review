@@ -134,7 +134,7 @@ export interface components {
         };
         /**
          * CheckFailure
-         * @description One place a check failed, and whether its file changed since the check ran.
+         * @description One place a check failed: as fresh as its check, since a check's result hangs on the whole tree.
          */
         CheckFailure: {
             /** Path */
@@ -145,8 +145,6 @@ export interface components {
             what: string;
             /** Why */
             why: string | null;
-            /** Out Of Date */
-            out_of_date: boolean;
         };
         /**
          * CheckStatus

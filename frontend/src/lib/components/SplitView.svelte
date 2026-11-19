@@ -137,7 +137,7 @@
 										check={found.check}
 										what={found.failure.what}
 										why={found.failure.why}
-										outOfDate={found.failure.out_of_date}
+										outOfDate={found.outOfDate}
 										testId="line-failure"
 									/>
 								</td>

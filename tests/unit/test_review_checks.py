@@ -100,8 +100,8 @@ async def test_a_check_reported_again_under_its_name_takes_its_place() -> None:
     assert [check.report for check in checks.held] == [PYTEST_PASSED, RUFF_PASSED]
 
 
-async def test_a_check_a_file_changed_under_is_out_of_date_and_so_is_each_failure_in_that_file() -> None:
-    """A failure in a file nobody touched since still stands; one in a file edited since may be fixed."""
+async def test_a_check_a_file_changed_under_is_out_of_date() -> None:
+    """A test's result hangs on the whole tree, so any file changed since may have changed it."""
     page = RecordingPage()
     trees = TreesOfTheTest()
     checks = _checks(page, trees)
@@ -112,7 +112,6 @@ async def test_a_check_a_file_changed_under_is_out_of_date_and_so_is_each_failur
 
     [held] = checks.held
     assert (held.out_of_date, held.changed_since, checks.names_out_of_date) == (True, [FAILING_TEST_FILE], ["ty"])
-    assert [held.failure_out_of_date(failure) for failure in held.report.failures] == [True, False]
     assert page.told[-1] == ChecksChanged(checks=[held])
 
 
@@ -145,8 +144,6 @@ async def test_a_check_nobody_can_measure_stays_out_of_date_beside_those_measure
         ("ruff", False),
         ("ty", True),
     ]
-    [unstamped, _, _] = checks.held
-    assert [unstamped.failure_out_of_date(failure) for failure in PYTEST_FAILED.failures] == [True]
 
 
 async def test_a_check_reported_while_a_measuring_waits_on_git_is_not_measured_by_it() -> None:

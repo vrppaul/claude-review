@@ -35,6 +35,7 @@
 	};
 	// What the mark of the checks' failures on a file's row says, counted
 	const PLACES_FAILED: CountedWords = { one: 'place the checks failed', many: 'places the checks failed' };
+	const OUT_OF_DATE_SAID = ', out of date';
 	// What every row that names a file carries, so the filter can hand the keyboard to the first of them
 	const FILE_ROW_ROLE = 'file-row';
 
@@ -98,11 +99,12 @@
 		{#snippet marks()}
 			{@const failed = review.checks.failuresIn(file.path)}
 			{#if failed.length > 0}
-				<!-- Where the checks failed in it, in ink once the file changed after every one of them -->
+				<!-- Where the checks failed in it, in ink once every check that found them is out of date -->
+				{@const outOfDate = failed.every((found) => found.outOfDate)}
 				<FailureCount
 					count={failed.length}
-					outOfDate={failed.every(({ failure }) => failure.out_of_date)}
-					label={counted(failed.length, PLACES_FAILED)}
+					{outOfDate}
+					label="{counted(failed.length, PLACES_FAILED)}{outOfDate ? OUT_OF_DATE_SAID : ''}"
 					testId="file-failures"
 				/>
 			{/if}

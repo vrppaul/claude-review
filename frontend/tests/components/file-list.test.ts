@@ -354,4 +354,17 @@ describe('where the checks failed, in the tree', () => {
 			'3 3 places the checks failed'
 		]);
 	});
+
+	it('says the places in a file are out of date once every check that found them is, though the file did not change', () => {
+		const review = openReview({
+			files: [diffFile({ path: 'src/a.py' })],
+			facts: {
+				checks: [failedCheck([failure({ path: 'src/a.py' })], { changed_since: ['src/b.py'], out_of_date: true })]
+			}
+		});
+
+		const { getByTestId } = render(FileList, inReview(review));
+
+		expect(getByTestId('file-failures').textContent).toContain('1 place the checks failed, out of date');
+	});
 });

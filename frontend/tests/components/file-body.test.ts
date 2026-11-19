@@ -6,6 +6,7 @@ import { addedLine, contextLine, diffFile, diffResponse, hunk, removedLine, sinc
 import { fakeServer } from '../fake-server';
 import { newComment } from '../new-comment';
 import type { Review } from '$lib/review/review.svelte';
+import type { Check } from '$lib/types';
 import { failedCheck, failure } from '../checks';
 import { inReview, openReview } from '../review';
 
@@ -182,16 +183,10 @@ describe('a comment no line drawn here can hang under', () => {
 });
 
 describe('where the checks failed', () => {
-	/** Make the review one of the file whose test failed on its new line 30, its file changed since or not. */
-	function failedOnLine30(outOfDate: boolean): void {
-		const said = failure({
-			path: 'src/app.py',
-			line: 30,
-			what: 'test_there',
-			why: 'expected 2',
-			out_of_date: outOfDate
-		});
-		review = openReview({ files: [file], facts: { checks: [failedCheck([said], { name: 'pytest' })] } });
+	/** Make the review one of the file whose test failed on its new line 30, as the check stands otherwise current. */
+	function failedOnLine30(standing: Partial<Check> = {}): void {
+		const said = failure({ path: 'src/app.py', line: 30, what: 'test_there', why: 'expected 2' });
+		review = openReview({ files: [file], facts: { checks: [failedCheck([said], { name: 'pytest', ...standing })] } });
 	}
 
 	/** Words as the reader reads them, however the markup breaks them. */
@@ -202,7 +197,7 @@ describe('where the checks failed', () => {
 	it.each(['raw', 'split'] as const)(
 		'says under the line of the file as it stands which check failed there, what and why, in %s',
 		(view) => {
-			failedOnLine30(false);
+			failedOnLine30();
 
 			render(FileBody, inReview(review, { ...asAFile(), view }));
 
@@ -210,8 +205,8 @@ describe('where the checks failed', () => {
 		}
 	);
 
-	it('says a failure the code changed after is out of date', () => {
-		failedOnLine30(true);
+	it('says a failure is out of date once its check is, though its own file did not change', () => {
+		failedOnLine30({ changed_since: ['src/other.py'], out_of_date: true });
 
 		render(FileBody, inReview(review, asAFile()));
 
@@ -219,7 +214,7 @@ describe('where the checks failed', () => {
 	});
 
 	it('says it in a piece of a story that draws the line', () => {
-		failedOnLine30(false);
+		failedOnLine30();
 
 		render(FileBody, inReview(review, AS_A_STEP));
 
