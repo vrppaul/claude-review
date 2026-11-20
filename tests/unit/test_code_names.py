@@ -53,6 +53,51 @@ JAVASCRIPT_FILE = b"""export class Drawer {
 export const drawn = () => new Drawer();
 """
 
+PYTHON_BINDINGS = b"""import os
+
+
+class Store:
+    def __init__(self, objects: str, *paths: str, limit=2) -> None:
+        self._objects = objects
+        reader = lambda named: named
+        reader.size = limit
+        first, rest = paths[0], paths[1:]
+        if (count := len(rest)) > limit:
+            total = count
+
+    def entries(self) -> None:
+        for entry in os.listdir(self._objects):
+            with open(entry) as handle:
+                try:
+                    handle.read()
+                except OSError as failure:
+                    raise failure
+"""
+
+TYPESCRIPT_BINDINGS = b"""import { Size } from './size';
+
+export function draw(width: number, { height }: Size, depth?: number, ...rest: number[]): number {
+  const area = width * height;
+  let [first] = rest;
+  const scaled = (factor: number) => area * factor;
+  const doubled = rest.map(item => item * 2);
+  for (const each of rest) {
+    try {
+      scaled(each);
+    } catch (problem) {
+      throw problem;
+    }
+  }
+  return first;
+}
+"""
+
+JAVASCRIPT_BINDINGS = b"""export function drawn(width, { height }, depth = 1, ...rest) {
+  const [first] = rest;
+  return width * height * depth * first;
+}
+"""
+
 SVELTE_FILE = b"""<script lang="ts">
   let { open = false } = $props();
   const shown = $derived(open);
@@ -159,6 +204,30 @@ def test_python_names_are_found_where_they_define_and_use_never_in_a_comment_or_
         ("drawer.js", JAVASCRIPT_FILE, "#open", DefinitionKind.FIELD),
         ("drawer.js", JAVASCRIPT_FILE, "toggle", DefinitionKind.METHOD),
         ("drawer.js", JAVASCRIPT_FILE, "drawn", DefinitionKind.FUNCTION),
+        ("store.py", PYTHON_BINDINGS, "objects", DefinitionKind.PARAMETER),
+        ("store.py", PYTHON_BINDINGS, "paths", DefinitionKind.PARAMETER),
+        ("store.py", PYTHON_BINDINGS, "limit", DefinitionKind.PARAMETER),
+        ("store.py", PYTHON_BINDINGS, "named", DefinitionKind.PARAMETER),
+        ("store.py", PYTHON_BINDINGS, "_objects", DefinitionKind.FIELD),
+        ("store.py", PYTHON_BINDINGS, "reader", DefinitionKind.VARIABLE),
+        ("store.py", PYTHON_BINDINGS, "first", DefinitionKind.VARIABLE),
+        ("store.py", PYTHON_BINDINGS, "count", DefinitionKind.VARIABLE),
+        ("store.py", PYTHON_BINDINGS, "total", DefinitionKind.VARIABLE),
+        ("draw.ts", TYPESCRIPT_BINDINGS, "width", DefinitionKind.PARAMETER),
+        ("draw.ts", TYPESCRIPT_BINDINGS, "height", DefinitionKind.PARAMETER),
+        ("draw.ts", TYPESCRIPT_BINDINGS, "depth", DefinitionKind.PARAMETER),
+        ("draw.ts", TYPESCRIPT_BINDINGS, "rest", DefinitionKind.PARAMETER),
+        ("draw.ts", TYPESCRIPT_BINDINGS, "factor", DefinitionKind.PARAMETER),
+        ("draw.ts", TYPESCRIPT_BINDINGS, "item", DefinitionKind.PARAMETER),
+        ("draw.ts", TYPESCRIPT_BINDINGS, "area", DefinitionKind.VARIABLE),
+        ("draw.ts", TYPESCRIPT_BINDINGS, "first", DefinitionKind.VARIABLE),
+        ("draw.ts", TYPESCRIPT_BINDINGS, "scaled", DefinitionKind.FUNCTION),
+        ("draw.ts", TYPESCRIPT_BINDINGS, "doubled", DefinitionKind.VARIABLE),
+        ("drawn.js", JAVASCRIPT_BINDINGS, "width", DefinitionKind.PARAMETER),
+        ("drawn.js", JAVASCRIPT_BINDINGS, "height", DefinitionKind.PARAMETER),
+        ("drawn.js", JAVASCRIPT_BINDINGS, "depth", DefinitionKind.PARAMETER),
+        ("drawn.js", JAVASCRIPT_BINDINGS, "rest", DefinitionKind.PARAMETER),
+        ("drawn.js", JAVASCRIPT_BINDINGS, "first", DefinitionKind.VARIABLE),
         ("Pane.svelte", SVELTE_FILE, "open", DefinitionKind.VARIABLE),
         ("Pane.svelte", SVELTE_FILE, "shown", DefinitionKind.VARIABLE),
     ],
@@ -167,6 +236,27 @@ def test_a_definition_says_what_it_defines(path: str, content: bytes, name: str,
     [definition] = [place for place in places_of(path, content, name, frozenset()) if place.defined_as is not None]
 
     assert definition.defined_as == defined_as
+
+
+@pytest.mark.parametrize(
+    ("path", "content", "name"),
+    [
+        ("store.py", PYTHON_BINDINGS, "os"),
+        ("store.py", PYTHON_BINDINGS, "entry"),
+        ("store.py", PYTHON_BINDINGS, "handle"),
+        ("store.py", PYTHON_BINDINGS, "failure"),
+        ("store.py", PYTHON_BINDINGS, "size"),
+        ("draw.ts", TYPESCRIPT_BINDINGS, "Size"),
+        ("draw.ts", TYPESCRIPT_BINDINGS, "each"),
+        ("draw.ts", TYPESCRIPT_BINDINGS, "problem"),
+    ],
+)
+def test_an_import_a_loop_target_a_with_s_or_a_catch_s_name_and_another_object_s_attribute_define_nothing(
+    path: str, content: bytes, name: str
+) -> None:
+    places = places_of(path, content, name, frozenset())
+
+    assert [place.defined_as for place in places] == [None] * len(places)
 
 
 def test_a_typescript_member_is_defined_by_the_interface_and_by_the_class_and_used_inside_its_method() -> None:

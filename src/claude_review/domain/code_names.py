@@ -40,9 +40,11 @@ class DefinitionKind(StrEnum):
     ENUM = auto()
     FUNCTION = auto()
     METHOD = auto()
-    # A name a class's body or an interface gives its instances
+    # A name a class's body, an interface, or a method's assignment to `self` gives its instances
     FIELD = auto()
-    # A name a module or a program's top level gives a value
+    # A name a function takes a value by
+    PARAMETER = auto()
+    # A name a declaration or an assignment gives a value, in any scope
     VARIABLE = auto()
 
 

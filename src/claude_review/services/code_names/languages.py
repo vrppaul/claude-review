@@ -72,6 +72,8 @@ JAVASCRIPT_NAMES = frozenset(
 )
 TYPESCRIPT_NAMES = JAVASCRIPT_NAMES | {"type_identifier"}
 
+# A loop's target, a `with`'s or a catch's name and an import bind a name too, and are left out: none is
+# where a reader looks for what a name is
 PYTHON_DEFINITIONS = """
 (class_definition body: (block (function_definition name: (identifier) @name) @definition.method))
 (class_definition
@@ -80,37 +82,62 @@ PYTHON_DEFINITIONS = """
 (class_definition name: (identifier) @name) @definition.class
 (type_alias_statement left: (type (identifier) @name)) @definition.type
 (class_definition body: (block (expression_statement (assignment left: (identifier) @name) @definition.field)))
-(module (expression_statement (assignment left: (identifier) @name) @definition.variable))
+((assignment left: (attribute object: (identifier) @receiver attribute: (identifier) @name)) @definition.field
+  (#eq? @receiver "self"))
+[(parameters (identifier) @name @definition.parameter)
+ (lambda_parameters (identifier) @name @definition.parameter)]
+[(default_parameter name: (identifier) @name)
+ (typed_default_parameter name: (identifier) @name)] @definition.parameter
+(typed_parameter
+  [(identifier) @name
+   (list_splat_pattern (identifier) @name)
+   (dictionary_splat_pattern (identifier) @name)]) @definition.parameter
+(parameters
+  [(list_splat_pattern (identifier) @name) (dictionary_splat_pattern (identifier) @name)] @definition.parameter)
+(assignment left: (identifier) @name) @definition.variable
+(assignment left: [(pattern_list (identifier) @name) (tuple_pattern (identifier) @name)]) @definition.variable
+(named_expression name: (identifier) @name) @definition.variable
 """
 
-# What JavaScript and TypeScript define alike: a function however written, a method, and a value a program's top
-# level names, each declared or destructured, exported or not
-SCRIPT_DEFINITIONS = """
+# The names a destructuring pattern binds, in JavaScript and TypeScript alike
+DESTRUCTURED_NAMES = """[
+  (object_pattern
+    [(shorthand_property_identifier_pattern) @name
+     (object_assignment_pattern left: (shorthand_property_identifier_pattern) @name)
+     (pair_pattern value: (identifier) @name)])
+  (array_pattern (identifier) @name)]"""
+
+# What JavaScript and TypeScript define alike: a function however written, a method, a value declared or
+# destructured in any scope, and a parameter of an arrow function that takes one bare. A loop's target, a catch's
+# name and an import are left out, as in Python
+SCRIPT_DEFINITIONS = f"""
 (function_declaration name: (identifier) @name) @definition.function
 (generator_function_declaration name: (identifier) @name) @definition.function
 (variable_declarator name: (identifier) @name value: [(arrow_function) (function_expression)]) @definition.function
 (method_definition name: [(property_identifier) (private_property_identifier)] @name) @definition.method
-(program
-  [(lexical_declaration (variable_declarator name: (identifier) @name) @definition.variable)
-   (variable_declaration (variable_declarator name: (identifier) @name) @definition.variable)
-   (export_statement
-     declaration: (lexical_declaration (variable_declarator name: (identifier) @name) @definition.variable))])
-(program
-  (lexical_declaration
-    (variable_declarator
-      name: (object_pattern
-        [(shorthand_property_identifier_pattern) @name
-         (object_assignment_pattern left: (shorthand_property_identifier_pattern) @name)])) @definition.variable))
+(variable_declarator name: (identifier) @name) @definition.variable
+(variable_declarator name: {DESTRUCTURED_NAMES}) @definition.variable
+(arrow_function parameter: (identifier) @name @definition.parameter)
 """
 
 JAVASCRIPT_DEFINITIONS = f"""
 {SCRIPT_DEFINITIONS}
 (class_declaration name: (identifier) @name) @definition.class
 (field_definition property: [(property_identifier) (private_property_identifier)] @name) @definition.field
+(formal_parameters
+  [(identifier) @name
+   (assignment_pattern left: (identifier) @name)
+   (rest_pattern (identifier) @name)
+   {DESTRUCTURED_NAMES}] @definition.parameter)
 """
+
+# What a TypeScript parameter binds, whatever its type or default
+TYPESCRIPT_PARAMETER_NAMES = f"[(identifier) @name (rest_pattern (identifier) @name) {DESTRUCTURED_NAMES}]"
 
 TYPESCRIPT_DEFINITIONS = f"""
 {SCRIPT_DEFINITIONS}
+(required_parameter pattern: {TYPESCRIPT_PARAMETER_NAMES}) @definition.parameter
+(optional_parameter pattern: {TYPESCRIPT_PARAMETER_NAMES}) @definition.parameter
 (method_signature name: (property_identifier) @name) @definition.method
 (abstract_method_signature name: (property_identifier) @name) @definition.method
 (class_declaration name: (type_identifier) @name) @definition.class

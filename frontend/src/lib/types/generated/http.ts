@@ -1017,7 +1017,7 @@ export interface components {
          * @description What a definition of a name defines, as the grammars tell them apart.
          * @enum {string}
          */
-        DefinitionKind: "class" | "interface" | "type" | "enum" | "function" | "method" | "field" | "variable";
+        DefinitionKind: "class" | "interface" | "type" | "enum" | "function" | "method" | "field" | "parameter" | "variable";
         /**
          * Diagram
          * @description The change drawn, as Mermaid writes one, and the chapter each part of the drawing leads to.
