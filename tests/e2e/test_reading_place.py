@@ -128,7 +128,7 @@ async def test_a_retake_that_leaves_a_file_read_alone_untouched_keeps_the_reader
     read = alone.get_by_role("button", name=f"Comment on line {CHANGED_LINE}", exact=True)
     await read.evaluate("number => number.scrollIntoView({ block: 'start' })")
 
-    # The agent's work grows the file the change touches, and retakes the diff: the file read alone is read anew
+    # The agent's work grows the file the change touches, and retakes the diff: the file read alone is as it was
     write_files(a_file_left_alone, {ABOVE_FILE: _grown(ABOVE_FILE)})
     async with AsyncClient(base_url=review.url) as agent:
         await agent.post("/api/retake", json={})
