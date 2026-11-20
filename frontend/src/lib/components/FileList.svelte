@@ -3,10 +3,11 @@
 	import { fileStats } from '$lib/utils/file-stats';
 	import { fileTree, type TreeNode } from '$lib/utils/file-tree';
 	import { isComposingText } from '$lib/dom/keyboard';
-	import { formerName } from '$lib/utils/paths';
+	import { fileName, folderOf, formerName } from '$lib/utils/paths';
 	import { counted, type CountedWords, FILES } from '$lib/utils/words';
 	import { tourStop } from '$lib/guide/tour';
 	import { useReview } from '$lib/review/context';
+	import { filesOutsideTheChange } from '$lib/review/files-way';
 	import { fileSectionKey } from '$lib/review/reading-view';
 	import Dot from '$lib/ui/Dot.svelte';
 	import EmptyNote from '$lib/ui/EmptyNote.svelte';
@@ -54,6 +55,10 @@
 	// Only a diff is a tree: the files of a plan, or the messages of a transcript, are a list
 	const tree = $derived(isDiffMode ? fileTree(matching) : []);
 
+	// The files the change did not touch, under its own, and the one of them read alone now
+	const readAlone = $derived(review.views.fileReadAlone);
+	const outside = $derived(filesOutsideTheChange(review.threads, review.diff, readAlone));
+
 	const headedBy = $derived.by(() => {
 		const total = review.diff.files.length;
 		const shown = matching.length;
@@ -63,6 +68,12 @@
 
 	// What the filter leaves, drawn: where it looks for the first file to go to
 	let list: HTMLElement | undefined = $state();
+
+	/** Go to a file of the change, among the change's files: a file read alone gives way to them. */
+	function goToFile(path: string) {
+		review.views.show('files');
+		review.sections.scrollTo(fileSectionKey(path));
+	}
 
 	/**
 	 * Enter goes to the first file the filter leaves, as a click on it would;
@@ -88,7 +99,7 @@
 		current={review.sections.fileInView === file.path}
 		{viewed}
 		threads={review.threads.onLinesOf(file.path).length}
-		onclick={() => review.sections.scrollTo(fileSectionKey(file.path))}
+		onclick={() => goToFile(file.path)}
 	>
 		{#snippet name()}
 			{#if file.old_path}
@@ -199,5 +210,32 @@
 				{/each}
 			{/if}
 		</ul>
+	{/if}
+
+	{#if outside.length > 0}
+		<!-- Under the change's own files, those it did not touch that the reader reads or left something in: one
+			press to read each alone -->
+		<div data-testid="outside-files" class="mt-3 flex flex-col gap-1">
+			<Heading tag="h3" heads="list" testId="outside-files-heading">Not in this change</Heading>
+			<ul>
+				{#each outside as path (path)}
+					<FileRow
+						testId="outside-file"
+						status={null}
+						current={path === readAlone}
+						threads={review.threads.onLinesOf(path).length}
+						title={path}
+						onclick={() => void review.navigator.readAlone(path)}
+					>
+						{#snippet name()}
+							{fileName(path)}
+						{/snippet}
+						{#snippet end()}
+							<span class="cr-faint text-xs">{folderOf(path)}</span>
+						{/snippet}
+					</FileRow>
+				{/each}
+			</ul>
+		</div>
 	{/if}
 </SideColumn>

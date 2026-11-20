@@ -50,7 +50,7 @@ export function threadsAboveTheFiles(threads: Threads, diff: ReviewDiff): Thread
 	return threadsOffTheDiff(above, diff.files);
 }
 
-/** The order n and p walk the files the change did not touch in: by path. */
+/** The order the tree lists the files the change did not touch in, and n and p walk them: by path. */
 function byPath(one: string, other: string): number {
 	return one.localeCompare(other);
 }
@@ -75,4 +75,20 @@ export function threadsInFilesOrder(threads: Threads, diff: ReviewDiff): Thread[
 		)
 		.map(({ thread }) => thread);
 	return [...inDiffOrder(byTheChange, diff.files), ...readAlone];
+}
+
+/**
+ * The files the change did not touch that the tree lists, by path: the one
+ * read alone, while it is, and every one a thread is read in or a comment
+ * is being written on.
+ */
+export function filesOutsideTheChange(threads: Threads, diff: ReviewDiff, readAlone: string | null): string[] {
+	const threadsIn = threads.onLines.flatMap(({ lines }) =>
+		whereRead(lines, diff) === 'in-its-file-alone' ? [lines.file] : []
+	);
+	const writtenOn = threads.writing.fields.flatMap(({ at }) =>
+		at.kind === 'new' && !diff.holds(at.file) ? [at.file] : []
+	);
+	const shown = readAlone === null ? [] : [readAlone];
+	return [...new Set([...shown, ...threadsIn, ...writtenOn])].toSorted(byPath);
 }

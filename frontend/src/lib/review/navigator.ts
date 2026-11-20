@@ -42,6 +42,8 @@ export interface ViewsOnScreen {
 	 * page waits for a section asked for before it is.
 	 */
 	showTheChange: () => Promise<ReadingView>;
+	/** Bring a file the change did not touch on screen alone, at once, and hand its view over once it is read. */
+	readAlone: (path: string) => Promise<ReadingView>;
 	/** Bring on screen the view of the Files way of reading that draws a thread on these lines, and hand it over. */
 	showWhereRead: (lines: ThreadLines) => Promise<ReadingView>;
 	/** Bring a view on screen, as it draws the review now, and hand it over: how the reader chose to read stays. */
@@ -177,6 +179,19 @@ export class Navigator {
 		const section = this.#views.onScreen.sectionOfFile(path);
 		if (section !== null) this.#sections.show(section);
 		else void this.#views.showTheChange().then((files) => this.#showIn(files, path));
+	}
+
+	/**
+	 * Take the reader into a file the change did not touch, to read it
+	 * alone from its head, from where they pick it: the tree's row of it.
+	 * Where they were is noted for Back.
+	 */
+	async readAlone(path: string): Promise<void> {
+		const left = this.#placeRead();
+		const alone = await this.#views.readAlone(path);
+		this.#noteComingInto(left, alone, path);
+		const section = alone.sectionOfFile(path);
+		if (section !== null) this.#sections.scrollTo(section);
 	}
 
 	/**

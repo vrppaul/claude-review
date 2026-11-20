@@ -8,7 +8,7 @@ import type { FileOfTakeResponse } from '$lib/types';
 import { addedLine, contextLine, diffFile, hunk } from '../diff';
 import { type FakeServer, fakeServer } from '../fake-server';
 import { frames } from '../frames';
-import { newComment } from '../new-comment';
+import { newComment, onAFileGone } from '../new-comment';
 import { openReview } from '../review';
 import { settled } from '../settled';
 
@@ -141,5 +141,74 @@ describe('a file the change did not touch, read alone', () => {
 
 		expect(screen.queryByTestId('file-alone-failed')).toBeNull();
 		expect(screen.getByTestId('file-lines').textContent).toContain('def caller():');
+	});
+});
+
+describe('the tree, beside the change’s files and a file read alone', () => {
+	/** The rows the tree lists under "Not in this change", by what each says. */
+	function listedOutside(): string[] {
+		return screen.queryAllByTestId('outside-file').map((row) => row.textContent?.replace(/\s+/g, ' ').trim());
+	}
+
+	it('lists each file a thread is read alone in, with its threads, and none whose file is gone', () => {
+		review.threads.add(newComment({ file: CALLER, startLine: 2, body: 'the agent forgot this call' }));
+		review.threads.add(onAFileGone({ file: 'gone.py', body: 'on a file removed again' }));
+		flushSync();
+
+		expect(within(screen.getByTestId('sidebar')).getByText('Not in this change')).toBeTruthy();
+		expect(listedOutside()).toEqual(['caller.py 1 src/']);
+	});
+
+	it('opens a file it lists alone at a press on its row, the row the current one', async () => {
+		review.threads.add(newComment({ file: CALLER, startLine: 2, body: 'the agent forgot this call' }));
+		flushSync();
+
+		await press('outside-file');
+
+		expect(screen.getByTestId('file-alone-heading').textContent).toBe(CALLER);
+		expect(screen.getByTestId('outside-file').getAttribute('aria-current')).toBe('true');
+	});
+
+	it('keeps a file put away listed while a thread is read in it', async () => {
+		await goneToAThreadOnTheCaller();
+
+		await press('put-file-away');
+
+		expect(listedOutside()).toEqual(['caller.py 1 src/']);
+	});
+
+	it('lists a file put away no more where nothing of the reader’s hangs on it', async () => {
+		review.threads.add(newComment({ file: CALLER, startLine: 2, body: 'the agent forgot this call' }));
+		flushSync();
+		await press('outside-file');
+		review.threads.remove(review.threads.all[0].id);
+		await cameToRest();
+		expect(listedOutside()).toEqual(['caller.py src/']);
+
+		await press('put-file-away');
+
+		expect(listedOutside()).toEqual([]);
+	});
+
+	it('keeps a file put away listed while a comment is being written on its line', async () => {
+		const user = userEvent.setup();
+		await goneToAThreadOnTheCaller();
+		await user.click(screen.getByRole('button', { name: 'Comment on line 3' }));
+		await user.type(screen.getByTestId('comment-input'), 'not sent yet');
+		review.threads.remove(review.threads.all[0].id);
+		await cameToRest();
+
+		await press('put-file-away');
+
+		expect(listedOutside()).toEqual(['caller.py src/']);
+	});
+
+	it('leaves the file read alone for the change’s files at a press on a file of the change', async () => {
+		await goneToAThreadOnTheCaller();
+
+		await press('file-item');
+
+		expect(screen.queryByTestId('file-alone-view')).toBeNull();
+		expect(screen.getByTestId('diff-view').textContent).toContain('in a.py');
 	});
 });

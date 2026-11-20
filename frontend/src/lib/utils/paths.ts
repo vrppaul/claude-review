@@ -12,7 +12,7 @@ export function fileName(path: string): string {
 }
 
 /** The folders a path is in, as written before its name: empty for a file at the top. */
-function folderOf(path: string): string {
+export function folderOf(path: string): string {
 	return path.slice(0, path.lastIndexOf(PATH_SEPARATOR) + 1);
 }
 

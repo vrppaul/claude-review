@@ -69,6 +69,11 @@ export class ReadingViews implements ViewsOnScreen {
 		return this.#views[FILE_ALONE];
 	}
 
+	/** The file read alone now; null while another view is on screen. */
+	get fileReadAlone(): string | null {
+		return this.#nameOnScreen === FILE_ALONE ? this.fileAlone.path : null;
+	}
+
 	/** Read the review the way the reader chooses, and the next review they open too. */
 	choose(name: ReadingChoice): void {
 		this.#nameOnScreen = name;

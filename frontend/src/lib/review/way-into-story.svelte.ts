@@ -64,6 +64,10 @@ export class WayIntoStory implements ViewsOnScreen {
 		return this.#views.showTheChange();
 	}
 
+	readAlone(path: string): Promise<ReadingView> {
+		return this.#views.readAlone(path);
+	}
+
 	showWhereRead(lines: ThreadLines): Promise<ReadingView> {
 		return this.#views.showWhereRead(lines);
 	}
