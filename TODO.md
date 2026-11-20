@@ -291,11 +291,8 @@ What a thing is:
       show what `GET /api/name` answers, the uses the change did not touch
       set apart, which are what the agent may have forgotten.
 - [ ] `feat(ui)`: a file outside the change, opened from a place the
-      lookup found. The page shows it alone and whole from
-      `GET /api/file-of-take`, one column of numbers, and the reader
-      comments on its lines as on any; it stays in the tree of files while
-      the reader is in it or a thread hangs on it. Its threads follow
-      through `POST /api/anchors/follow` as any other.
+      lookup found: the lookup takes the reader into the file read alone,
+      on the line it names, as a thread on it already does.
 - [ ] `feat`: what the server does not find yet. A Svelte component is
       defined by its file, which the lookup reports as no definition
       (`CommentThread` gave 13 places and none defining it); a loop's

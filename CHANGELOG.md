@@ -41,6 +41,14 @@
   point --file src/caller.py --lines 12` hangs a thread on lines of any
   text file of the take, quoted as the review last took them: the place
   the change forgot.
+- **A file the change did not touch is read alone.** A thread on such a
+  file takes you to it, whole, in place of the change's files: one column
+  of numbers, nothing to scroll into past its end, and its lines take
+  comments as any. The file tree lists it under "Not in this change" while
+  you read it or anything of yours hangs on it, and "Put away" on its bar
+  takes you back where you came from. n and p walk its threads after the
+  change's; a retake reads it anew, or puts you among the change's files
+  once the change touches it.
 
 ### Changed
 - **Help's "What's new" names no release.** The news it opens is of the
