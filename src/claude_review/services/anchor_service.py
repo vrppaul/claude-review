@@ -92,40 +92,39 @@ class AnchorHandler[Kind: AnchorBase](ABC):
 
 
 class LineAnchorHandler(AnchorHandler[LineAnchor]):
-    """Line anchors, read against the review's own diff, and on a file it does not hold against the file whole.
-
-    A file the change leaves as the base has it has the same lines on the new
-    side as the take holds it, numbered alike: read whole, it is one hunk of
-    them, and has no old side.
-    """
+    """Line anchors: the old side read in the diff, the new side in the file of the take whole where it was read."""
 
     def __init__(self, diff_files: list[DiffFile], take_files: list[FileOfTake]) -> None:
         # The diff's own files, which a refusal names
         self._diff_paths = [file.path for file in diff_files]
-        # The hunks each file is read in: the diff's own, else the file of the take whole
-        self._hunks = {file.path: [file.hunk] for file in take_files} | {file.path: file.hunks for file in diff_files}
+        in_the_diff = {file.path: file.hunks for file in diff_files}
+        # The diff's new side is a part of its file whole, numbered alike: a new line no hunk shows is a line still
+        self._hunks: dict[LineSide, dict[str, list[DiffHunk]]] = {
+            LineSide.OLD: in_the_diff,
+            LineSide.NEW: in_the_diff | {file.path: [file.hunk] for file in take_files},
+        }
         # Each side of each file, read off its hunks once however many anchors ask
         self._side_lines: dict[LineSide, dict[str, list[SideLine]]] = {side: {} for side in LineSide}
 
     @override
     def quote(self, anchor: LineAnchor) -> LineAnchor:
-        """The anchor with the lines it names read off the diff, or off the file of the take the diff lacks.
+        """The anchor with the lines it names read off what the review holds of their side of the file.
 
         Raises:
             AnchorTooLongError: if it names more lines than a thread may quote:
                 such a thread could never be sent in a round.
-            UnknownAnchorFileError: if the review holds no lines of the file: not in the diff, nor a text file of
-                the take.
-            AnchorLinesNotShownError: if the review does not show those lines of it.
+            UnknownAnchorFileError: if the review reads no lines of the file.
+            AnchorLinesNotShownError: if the review does not hold those lines of it.
         """
         line_count = anchor.end_line - anchor.start_line + 1
         if line_count > MAX_QUOTE_LINES:
             msg = f"a thread may hang on at most {MAX_QUOTE_LINES} lines, not {line_count}"
             raise AnchorTooLongError(msg)
 
-        if anchor.file not in self._hunks:
+        # Every file the review reads lines of has a new side
+        if anchor.file not in self._hunks[LineSide.NEW]:
             listed = FILES_SEPARATOR.join(self._diff_paths[:FILES_NAMED_IN_REFUSAL])
-            msg = f"{anchor.file} is no text file of the take on screen. The change touches: {listed}"
+            msg = f"{anchor.file} is no file this review reads the lines of. It holds: {listed}"
             raise UnknownAnchorFileError(msg)
 
         on_screen = {line.number: line.content for line in self._lines_of(anchor.file, anchor.side)}
@@ -169,7 +168,7 @@ class LineAnchorHandler(AnchorHandler[LineAnchor]):
 
     @override
     def follow(self, anchor: LineAnchor) -> LineAnchor:
-        """Where the anchor's lines are in the diff as it now stands, or in the file of the take the diff lacks.
+        """Where the anchor's lines are in what the review now holds of their side of the file.
 
         The lines it quotes are looked for and the anchor follows them; when
         they are gone it stays on its old numbers and says so, rather than
@@ -190,7 +189,7 @@ class LineAnchorHandler(AnchorHandler[LineAnchor]):
         """Every line of one side of a file, none where the review holds no lines of the file."""
         known = self._side_lines[side]
         if path not in known:
-            known[path] = side_lines(self._hunks.get(path, []), side)
+            known[path] = side_lines(self._hunks[side].get(path, []), side)
         return known[path]
 
 

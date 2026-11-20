@@ -45,6 +45,7 @@ from claude_review.domain.models import (
     FileOfTake,
     FilePath,
     LineAnchor,
+    LineSide,
     PanelCancel,
     PanelEntry,
     PanelMessage,
@@ -412,7 +413,7 @@ class Review:
 
         The anchor is checked against the content on screen and quoted from
         it, because the quote is what lets the thread find its code again: a
-        file the change did not touch is quoted from the take whole.
+        new line is quoted from its file as the take holds it whole.
 
         Raises:
             UnknownAnchorFileError, AnchorLinesNotShownError, AnchorTooLongError:
@@ -638,21 +639,15 @@ class Review:
 
     @property
     def _anchors_of_the_diff(self) -> AnchorService:
-        """Every kind of anchor, read against the diff on screen alone and the story told, with nothing awaited.
-
-        What reads no lines of a file the diff lacks reads these: a check of
-        quotes, and a round, which is sent before anything is awaited and
-        quotes lines only of a conversation, which has no take to read.
-        """
+        """Every kind of anchor, read against the diff alone and the story told: nothing awaited, for a round."""
+        # A round quotes lines only of a conversation, which has no take to read
         return AnchorService(lines=LineAnchorHandler(self._source.content.files, []), story=self._story_anchors)
 
     async def _anchors_reading(self, anchors: list[Anchor]) -> AnchorService:
-        """Every kind of anchor, read against what the review holds now: the take on screen, and the story told.
-
-        Each file of the take these anchors name and its diff lacks is read
-        whole, all of them in one asking.
-        """
-        named = frozenset(anchor.file for anchor in anchors if isinstance(anchor, LineAnchor))
+        """Every kind of anchor, read against the take on screen and the story told, each file named read at once."""
+        named = frozenset(
+            anchor.file for anchor in anchors if isinstance(anchor, LineAnchor) and anchor.side is LineSide.NEW
+        )
         return AnchorService(lines=await self._source.line_anchors(named), story=self._story_anchors)
 
     @property

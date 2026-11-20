@@ -170,11 +170,36 @@ def test_lines_that_come_back_take_the_outdated_mark_off() -> None:
 
 
 def test_a_thread_on_a_removed_line_is_looked_for_among_removed_lines() -> None:
+    """In the diff, though the file of the take is read whole beside it: the take holds no removed line."""
     files = [diff_file(FILE, [context_line(1, 1, "import os"), removed_line(2, RUN), added_line(2, RUN)])]
 
-    followed = LineAnchorHandler(files, []).follow(line_anchor(FILE, 5, side=LineSide.OLD, quote=[RUN]))
+    followed = LineAnchorHandler(files, [file_of_take(FILE, ["import os", RUN])]).follow(
+        line_anchor(FILE, 5, side=LineSide.OLD, quote=[RUN])
+    )
 
     assert (followed.side, followed.start_line, followed.outdated) == (LineSide.OLD, 2, False)
+
+
+# Two lines added at the top of a file whose diff shows them and the line after, and nothing further down
+ADDED_ON_TOP = [
+    diff_file(FILE, [added_line(1, "import re"), added_line(2, "import sys"), context_line(1, 3, "import os")])
+]
+# The same file as the take holds it, whole
+ADDED_ON_TOP_WHOLE = [file_of_take(FILE, ["import re", "import sys", "import os", "", RUN, RETURN])]
+
+
+def test_a_thread_on_the_new_side_follows_its_lines_in_the_file_whole_where_the_diff_does_not_show_them() -> None:
+    """The agent pointed at a place the change forgot, then wrote higher up in the file: the place moved, unshown."""
+    followed = LineAnchorHandler(ADDED_ON_TOP, ADDED_ON_TOP_WHOLE).follow(line_anchor(FILE, 3, 4, quote=[RUN, RETURN]))
+
+    assert (followed.start_line, followed.end_line, followed.outdated) == (5, 6, False)
+
+
+def test_quoting_a_new_line_the_diff_does_not_show_reads_it_off_the_file_whole() -> None:
+    """A line of the file is a line of the file, whatever a hunk of it shows."""
+    quoted = LineAnchorHandler(ADDED_ON_TOP, ADDED_ON_TOP_WHOLE).quote(line_anchor(FILE, 5, 6))
+
+    assert quoted.quote == [RUN, RETURN]
 
 
 def test_quoting_reads_the_lines_off_the_diff() -> None:
@@ -199,10 +224,10 @@ def test_lines_more_than_a_quote_keeps_are_refused() -> None:
         LineAnchorHandler(every_line_shown, []).quote(line_anchor(FILE, 1, longest))
 
 
-def test_quoting_a_file_the_take_holds_no_text_of_names_the_files_the_change_touches() -> None:
+def test_quoting_a_file_the_review_reads_no_lines_of_names_the_files_it_holds() -> None:
     with pytest.raises(
         UnknownAnchorFileError,
-        match=re.escape("elsewhere.py is no text file of the take on screen. The change touches: a.py"),
+        match=re.escape("elsewhere.py is no file this review reads the lines of. It holds: a.py"),
     ):
         LineAnchorHandler(MOVED_DOWN, []).quote(line_anchor("elsewhere.py", 1))
 

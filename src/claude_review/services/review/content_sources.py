@@ -132,7 +132,7 @@ class ContentSource(TakesCompared, TreesWritten):
 
     @abstractmethod
     async def line_anchors(self, named: frozenset[str]) -> LineAnchorHandler:
-        """Line anchors read against the take on screen: its diff, and each of these files it lacks, read whole."""
+        """Line anchors read against the take on screen, the new side of each of these files read whole."""
 
     @abstractmethod
     def tree_moves(self, lifetime: ReviewLifetime) -> AsyncIterator[int]:
@@ -303,16 +303,17 @@ class RepositorySource(ContentSource):
 
     @override
     async def line_anchors(self, named: frozenset[str]) -> LineAnchorHandler:
-        """The files the diff lacks read from the tree the take was written down as, all in one asking.
-
-        Where git wrote down no tree there is nothing to read them from, and a
-        thread on one of them is outdated.
-        """
+        """The files read from the tree the take was written down as, in one asking; the diff alone where not."""
         content = self._content
         if content.written_as is None:
             return LineAnchorHandler(content.files, [])
-        lacked = sorted(named - content.paths)
-        return LineAnchorHandler(content.files, await self._files_of_take.text_files(content.written_as, lacked))
+        try:
+            take_files = await self._files_of_take.text_files(content.written_as, sorted(named))
+        except GitError as refusal:
+            # No thread is left unmoved for git's sake: they are read as where no tree was written down
+            log.warning("take_files_unread", reason=str(refusal))
+            return LineAnchorHandler(content.files, [])
+        return LineAnchorHandler(content.files, take_files)
 
     @override
     async def tree_moves(self, lifetime: ReviewLifetime) -> AsyncIterator[int]:

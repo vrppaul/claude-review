@@ -52,6 +52,13 @@ async def test_a_path_the_take_holds_no_file_at_is_refused_as_not_there() -> Non
         await files_of_take().file(TAKE, "src/gone.py")
 
 
+async def test_of_the_files_a_thread_names_only_those_the_review_reads_line_by_line_are_read_whole() -> None:
+    """A thread on a binary file, one too large, or one the take lacks has no lines to follow or quote."""
+    read = await files_of_take().text_files(TAKE, ["src/flags.py", "logo.png", "dump.log", "src/gone.py"])
+
+    assert [file.path for file in read] == ["src/flags.py"]
+
+
 @pytest.mark.parametrize("path", ["logo.png", "dump.log"], ids=["not-text", "larger-than-the-review-reads"])
 async def test_a_file_the_review_does_not_read_line_by_line_is_refused_as_unreadable(path: str) -> None:
     with pytest.raises(FileUnreadableError, match=path):

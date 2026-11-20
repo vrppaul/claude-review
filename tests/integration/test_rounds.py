@@ -9,12 +9,14 @@ changed, retakes the diff, and reading continues.
 import asyncio
 from http import HTTPStatus
 from pathlib import Path
+from typing import override
 
 import pytest
 from fastapi.testclient import TestClient
 from httpx2 import AsyncClient
 
-from claude_review.domain.models import FIRST_ROUND
+from claude_review.domain.interfaces import GitError
+from claude_review.domain.models import FIRST_ROUND, FilesRead
 from claude_review.presentation.schemas.pushes import AnswererPush, DiffPush, HandedPush
 from claude_review.services.review_opening import ReviewOpening
 from tests.helpers import (
@@ -25,19 +27,24 @@ from tests.helpers import (
     LOCAL_HEADERS,
     REVIEW_ROUTE,
     REVIEWED_FILE,
+    REVIEWED_LINE,
     WAIT_FOR_EVENT,
     ReviewFactory,
+    added_line,
+    diff_file,
     git,
     http_client,
     line_json,
     next_push,
     open_session,
     page_client,
+    pointed_json,
     repository_opening,
     review_has_ended,
     thread_json,
     until_an_agent_waits,
 )
+from tests.without_git import RepositoryHeldStill, change_held_still
 
 A_THREAD = thread_json(line_json(REVIEWED_FILE, 1), "Still reads oddly.")
 
@@ -245,3 +252,48 @@ async def test_after_a_retake_each_thread_is_told_where_its_lines_went(
     assert (followed["start_line"], followed["outdated"]) == (2, False)
     assert (gone["start_line"], gone["outdated"]) == (1, True)
     assert (reverted["start_line"], reverted["outdated"]) == (1, False)
+
+
+async def test_a_thread_on_a_place_the_change_forgot_follows_it_once_the_change_writes_above_it(
+    tmp_git_repo: Path, reviews: ReviewFactory
+) -> None:
+    """The file joins the diff, whose hunk shows the lines written and not the place: the place moved all the same."""
+    far_below = [f"line {number}\n" for number in range(1, 21)]
+    (tmp_git_repo / "forgot.py").write_text("".join(far_below))
+    git(tmp_git_repo, "add", "forgot.py")
+    git(tmp_git_repo, "commit", "-m", "forgot")
+    (tmp_git_repo / "a.py").write_text("x = 1\n")
+
+    async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as client:
+        await client.post(
+            "/api/point", json={"lines": pointed_json("forgot.py", 19), "body": "Here too.", "severity": "note"}
+        )
+        [raised] = (await client.get("/api/threads")).json()["threads"]
+        (tmp_git_repo / "forgot.py").write_text("import os\nimport sys\n" + "".join(far_below))
+        await client.post("/api/retake", json={}, headers=LOCAL_HEADERS)
+        response = await client.post("/api/anchors/follow", json={"anchors": [raised["anchor"]]}, headers=LOCAL_HEADERS)
+
+    [followed] = response.json()["anchors"]
+    assert (followed["start_line"], followed["outdated"]) == (21, False)
+
+
+class TreesUnread(RepositoryHeldStill):
+    """A repository held still whose trees git will not read just now."""
+
+    @override
+    async def files_of(self, root: Path, tree: str, paths: list[str]) -> FilesRead:
+        msg = "git cannot read the tree just now"
+        raise GitError(msg)
+
+
+async def test_threads_follow_in_the_diff_alone_when_git_will_not_read_the_take(reviews: ReviewFactory) -> None:
+    """A thread is never left unmoved for git's sake."""
+    change = [diff_file(REVIEWED_FILE, [added_line(1, "import sys"), added_line(2, REVIEWED_LINE)])]
+    hosted = reviews.hosted(change_held_still(change, title=""), repository=TreesUnread(change))
+    on_the_line = {**line_json(REVIEWED_FILE, 1), "quote": [REVIEWED_LINE]}
+
+    async with http_client(hosted.app) as client:
+        response = await client.post("/api/anchors/follow", json={"anchors": [on_the_line]}, headers=LOCAL_HEADERS)
+
+    [followed] = response.json()["anchors"]
+    assert (followed["start_line"], followed["outdated"]) == (2, False)

@@ -115,7 +115,7 @@ class UnknownVersionError(InvalidRequestError):
 
 
 class UnknownAnchorFileError(NotFoundError):
-    """Raised when an anchor names a file the review holds no lines of: not in its diff, nor a text file of the take."""
+    """Raised when an anchor names a file the review reads no lines of."""
 
 
 class UnknownFileError(NotFoundError):
