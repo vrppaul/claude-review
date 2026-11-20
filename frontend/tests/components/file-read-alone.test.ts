@@ -254,6 +254,17 @@ describe('a file read alone, as the change is taken again', () => {
 		expect(screen.getByTestId('file-lines').textContent).toContain('def caller_renamed():');
 	});
 
+	it('leaves the keyboard in a field the reader is typing in as a read anew fails', async () => {
+		const user = userEvent.setup();
+		await user.click(screen.getByTestId('file-filter'));
+		server.refuse('GET /api/file-of-take', NO_SUCH_FILE, `no file of the take on screen at ${CALLER}`);
+
+		await retakenWith([A_PY], [{ ...review.threads.all[0].anchor, standing: 'file_gone' }]);
+
+		expect(screen.getByTestId('file-alone-failed').textContent).toBe(`no file of the take on screen at ${CALLER}`);
+		expect(document.activeElement).toBe(screen.getByTestId('file-filter'));
+	});
+
 	it('is read anew for the take, as it stands now', async () => {
 		server.answer('GET /api/file-of-take', {
 			...CALLER_OF_THE_TAKE,

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { focusWhatRemains } from '$lib/dom/keyboard';
+	import { focusWhatRemains, isTypingTarget } from '$lib/dom/keyboard';
 	import { provideScrollArea } from '$lib/dom/scroll-area';
 	import { useReview } from '$lib/review/context';
 	import { fileSectionKey } from '$lib/review/reading-view';
@@ -41,9 +41,10 @@
 	// The file read anew for a take leaves the reader on the line they read
 	keepPlaceRead(review.sections, () => file);
 
-	// A failure's act takes the keyboard from wherever it was, as the failure takes the place of the file's lines
+	// A failure's act takes the keyboard as the failure takes the place of the file's lines, but never from a field
+	// the reader is typing in: a read anew for a retake can fail under one
 	$effect(() => {
-		tryAgainButton?.focus();
+		if (!isTypingTarget(document.activeElement)) tryAgainButton?.focus();
 	});
 
 	/** Read the file again after a read that failed, going on to where the reader was being taken in it. */
