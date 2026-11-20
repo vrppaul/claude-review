@@ -173,15 +173,10 @@ class DiffFile(BaseModel):
 
 
 class FileOfTake(BaseModel):
-    """A text file of the take on screen, read whole from the tree the take was written down as.
-
-    What the reader opens of a file the change did not touch, and what a
-    thread on such a file is read against. Its one hunk holds every line as a
-    context line on the new side, numbered as the diff and the name lookup
-    number it: no change in it sets an old side apart.
-    """
+    """A text file of the take on screen, read whole: what a reader opens of it, and a new-side thread is read in."""
 
     path: str
+    # Every line a context line on the new side, numbered as the diff numbers it
     hunk: DiffHunk
 
     @property
@@ -217,8 +212,7 @@ class TurnAuthor(StrEnum):
 class AnchorKind(StrEnum):
     """What a thread can hang on.
 
-    LINE — lines of one side of a file of the take: in the review's own diff, or on
-    the new side of a file the diff does not hold.
+    LINE — lines of one side of a file of the take.
     STORY — a block of the words of the story told of the change.
     """
 
@@ -317,17 +311,11 @@ def check_line_span(start_line: int, end_line: int) -> None:
 
 
 class LineAnchor(AnchorBase):
-    """Lines of one side of a file of the take on screen.
-
-    Line numbers are only meaningful together with the side: a hunk that
-    replaces a line has both an old line 42 and a new line 42. A file the
-    review's own diff holds is read in the diff; one it does not — the change
-    leaves it as the base has it — is read whole as the take holds it,
-    its new side numbered as the diff would number it, and has no old side.
-    """
+    """Lines of one side of a file of the take: the old side as the diff holds it, the new as the file does."""
 
     kind: Literal[AnchorKind.LINE] = AnchorKind.LINE
     file: FilePath
+    # Line numbers mean something only with their side: a hunk replacing a line has an old 42 and a new 42
     side: LineSide
     start_line: int = Field(ge=FIRST_LINE)
     end_line: int = Field(ge=FIRST_LINE)
@@ -891,10 +879,7 @@ type TreeState = frozenset[PathState]
 
 
 class FilesRead(BaseModel):
-    """What a tree holds at the paths asked: each file read, by path, and those larger than the review reads, unread.
-
-    A path neither names is one the tree holds no file at.
-    """
+    """What a tree holds at the paths asked: each file read, by path, and those larger than the review reads, unread."""
 
     model_config = ConfigDict(frozen=True)
 

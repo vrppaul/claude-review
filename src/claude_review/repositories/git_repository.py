@@ -197,9 +197,8 @@ DESCRIPTION_SEPARATOR = " "
 BLOB_TYPE = "blob"
 BLOBS_READ = ["cat-file", "--batch=%(objectsize)"]
 BLOB_END = b"\n"
-# What separates a path's steps, and the steps git reads a path starting with against the working tree, not the
-# tree asked: one leaving the repository fails the whole batch
 PATH_STEP_SEPARATOR = "/"
+# Git reads a path starting with one of these steps against the working tree, and fails the batch if it leaves it
 WORKING_TREE_STEPS = frozenset({".", ".."})
 
 # Where in an object store git finds the other stores it reads objects from,
@@ -655,8 +654,7 @@ def _line_to_each(answered: str) -> list[str]:
 
 
 def _can_be_asked(path: str) -> bool:
-    """Whether git can be asked what a tree holds at a path: one asked a line at a time, never read against the
-    working tree."""
+    """Whether git can be asked what a tree holds at a path, a line at a time and never against the working tree."""
     first_step, _, _ = path.partition(PATH_STEP_SEPARATOR)
     return LINE_END not in path and first_step not in WORKING_TREE_STEPS
 

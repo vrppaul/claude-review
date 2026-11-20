@@ -257,10 +257,7 @@ export interface paths {
         };
         /**
          * Get File Of Take
-         * @description Serve a file of the take on screen whole, for the reader to open a file the change did not touch.
-         *
-         *     Read from the tree the take was written down as, never the disk, so its
-         *     lines are numbered as the diff's and a name's places are.
+         * @description Serve a file of the take on screen whole, as its tree holds it, for the reader to open one the change left.
          */
         get: operations["get_file_of_take_api_file_of_take_get"];
         put?: never;
@@ -287,8 +284,7 @@ export interface paths {
          *     The page holds the threads and the review holds the content, so after a
          *     round the threads come here to be moved: one whose lines survived
          *     follows them, one whose lines are gone is marked outdated and keeps its
-         *     quote. A thread on a file the diff does not hold follows its lines in
-         *     the file as the take holds it.
+         *     quote. New lines are followed in their file as the take holds it whole.
          */
         post: operations["follow_anchors_api_anchors_follow_post"];
         delete?: never;
@@ -1208,9 +1204,6 @@ export interface components {
         /**
          * FileOfTakeResponse
          * @description Response for GET /api/file-of-take — a file of the take on screen read whole, drawn as a file of the diff is.
-         *
-         *     Its one hunk holds every line as a context line on the new side: there is
-         *     no change in it, so the page draws one column of numbers.
          */
         FileOfTakeResponse: {
             /** Path */

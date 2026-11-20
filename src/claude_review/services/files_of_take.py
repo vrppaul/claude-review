@@ -41,11 +41,7 @@ class FilesOfTake:
         return FileOfTake(path=path, hunk=whole_hunk(content))
 
     async def text_files(self, tree: str, paths: list[str]) -> list[FileOfTake]:
-        """Each of these files of the take written down as `tree` that the review reads line by line, whole.
-
-        Read in one asking however many: a path the tree holds no text file
-        at, or one too large to read, is left out.
-        """
+        """Those of these files of the take the review reads line by line, each whole, all in one asking."""
         read = await self._repository.files_of(self._root, tree, paths)
         return [
             FileOfTake(path=path, hunk=whole_hunk(content))

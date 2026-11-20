@@ -92,13 +92,10 @@ class DiffFile(Schema):
 
 
 class FileOfTakeResponse(Schema):
-    """Response for GET /api/file-of-take — a file of the take on screen read whole, drawn as a file of the diff is.
-
-    Its one hunk holds every line as a context line on the new side: there is
-    no change in it, so the page draws one column of numbers.
-    """
+    """Response for GET /api/file-of-take — a file of the take on screen read whole, drawn as a file of the diff is."""
 
     path: str
+    # Every line a context line on the new side: one column of numbers
     hunk: DiffHunk
     # Whether a thread may name it: a path holding a control character is shown, but only to be read
     commentable: StrictBool

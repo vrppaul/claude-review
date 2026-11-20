@@ -257,11 +257,7 @@ async def get_name(
 async def get_file_of_take(
     path: Annotated[str, Query(min_length=1, max_length=MAX_PATH_LENGTH)], review: ReviewDep
 ) -> FileOfTakeResponse:
-    """Serve a file of the take on screen whole, for the reader to open a file the change did not touch.
-
-    Read from the tree the take was written down as, never the disk, so its
-    lines are numbered as the diff's and a name's places are.
-    """
+    """Serve a file of the take on screen whole, as its tree holds it, for the reader to open one the change left."""
     return FileOfTakeResponse.from_domain(await review.file_of_take(path))
 
 
@@ -272,8 +268,7 @@ async def follow_anchors(request: FollowRequest, review: ReviewDep) -> FollowRes
     The page holds the threads and the review holds the content, so after a
     round the threads come here to be moved: one whose lines survived
     follows them, one whose lines are gone is marked outdated and keeps its
-    quote. A thread on a file the diff does not hold follows its lines in
-    the file as the take holds it.
+    quote. New lines are followed in their file as the take holds it whole.
     """
     followed = await review.follow([anchor.to_domain() for anchor in request.anchors])
     return FollowResponse(anchors=[anchor_from_domain(anchor) for anchor in followed])
