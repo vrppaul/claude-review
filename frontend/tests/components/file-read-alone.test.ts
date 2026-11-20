@@ -217,9 +217,6 @@ describe('a file read alone, come to from nowhere', () => {
 });
 
 describe('a file read alone, as the change is taken again', () => {
-	// What the server says of a file the take holds none of
-	const NO_SUCH_FILE = 404;
-
 	/** Take the change again, as a round landing does: the threads followed to these anchors, the diff these files. */
 	async function retakenWith(files: DiffFile[], anchors: Anchor[]): Promise<void> {
 		server.answer('POST /api/anchors/follow', { anchors });
@@ -232,48 +229,6 @@ describe('a file read alone, as the change is taken again', () => {
 	beforeEach(async () => {
 		openedOn([A_PY]);
 		await goneToAThreadOnTheCaller();
-	});
-
-	it('keeps its lines on the page while it is read anew for the take', async () => {
-		const reads = server.hold('GET /api/file-of-take');
-		server.answer('POST /api/anchors/follow', { anchors: [review.threads.all[0].anchor] });
-		server.answer('GET /api/diff', diffResponse({ files: [A_PY], take: A_LATER_TAKE }));
-		server.answer('GET /api/story', storyResponse());
-
-		await review.takeRetakenDiff();
-		await cameToRest();
-		expect(reads.requests).toHaveLength(1);
-		const whileReading = screen.getByTestId('file-lines').textContent;
-		reads.answer(0, {
-			...CALLER_OF_THE_TAKE,
-			hunk: hunk([contextLine(null, 1, 'def caller_renamed():')], { header: '' })
-		});
-		await cameToRest();
-
-		expect(whileReading).toContain('def caller():');
-		expect(screen.getByTestId('file-lines').textContent).toContain('def caller_renamed():');
-	});
-
-	it('leaves the keyboard in a field the reader is typing in as a read anew fails', async () => {
-		const user = userEvent.setup();
-		await user.click(screen.getByTestId('file-filter'));
-		server.refuse('GET /api/file-of-take', NO_SUCH_FILE, `no file of the take on screen at ${CALLER}`);
-
-		await retakenWith([A_PY], [{ ...review.threads.all[0].anchor, standing: 'file_gone' }]);
-
-		expect(screen.getByTestId('file-alone-failed').textContent).toBe(`no file of the take on screen at ${CALLER}`);
-		expect(document.activeElement).toBe(screen.getByTestId('file-filter'));
-	});
-
-	it('is read anew for the take, as it stands now', async () => {
-		server.answer('GET /api/file-of-take', {
-			...CALLER_OF_THE_TAKE,
-			hunk: hunk([contextLine(null, 1, 'def caller_renamed():')], { header: '' })
-		});
-
-		await retakenWith([A_PY], [review.threads.all[0].anchor]);
-
-		expect(screen.getByTestId('file-lines').textContent).toContain('def caller_renamed():');
 	});
 
 	it('gives way to the change’s files once the change touches it', async () => {
@@ -304,16 +259,6 @@ describe('a file read alone, as the change is taken again', () => {
 		// The change's files in its order: a.py, then the caller
 		const [, caller] = screen.getAllByTestId('file-section');
 		expect(document.activeElement).toBe(within(caller).getByRole('button', { name: 'Comment on line 3' }));
-	});
-
-	it('says in place that the take holds it no more, and its thread is drawn above the change’s files', async () => {
-		server.refuse('GET /api/file-of-take', NO_SUCH_FILE, `no file of the take on screen at ${CALLER}`);
-
-		await retakenWith([A_PY], [{ ...review.threads.all[0].anchor, standing: 'file_gone' }]);
-		expect(screen.getByTestId('file-alone-failed').textContent).toBe(`no file of the take on screen at ${CALLER}`);
-		await press('put-file-away');
-
-		expect(screen.getByTestId('unplaced-threads').textContent).toContain('the agent forgot this call');
 	});
 });
 

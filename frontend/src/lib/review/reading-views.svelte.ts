@@ -133,18 +133,14 @@ export class ReadingViews implements ViewsOnScreen {
 	}
 
 	/**
-	 * Keep a reader in a file read alone as the change is taken again: in
-	 * it, read anew for the take, where the change still leaves it; among
-	 * the change's files where it now touches it, taken over by them
-	 * (`FilesReading.takeOver`).
+	 * Bring the change's files on screen in place of a file read alone that
+	 * the change now holds, taken again, and have them take the reader over
+	 * on the line they read (`FilesReading.takeOver`). A file the change
+	 * still leaves stays read alone as it is.
 	 */
-	async followTheTake(): Promise<void> {
+	async giveWayToTheChange(): Promise<void> {
 		const path = this.fileReadAlone;
-		if (path === null) return;
-		if (!this.#diff.holds(path)) {
-			await this.fileAlone.open(path);
-			return;
-		}
+		if (path === null || !this.#diff.holds(path)) return;
 		const read = this.onScreen.placeRead();
 		const files = this.#views.files;
 		this.#bring(FILES);

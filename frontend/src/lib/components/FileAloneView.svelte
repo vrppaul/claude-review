@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { focusWhatRemains, isTypingTarget } from '$lib/dom/keyboard';
+	import { focusWhatRemains } from '$lib/dom/keyboard';
 	import { provideScrollArea } from '$lib/dom/scroll-area';
 	import { useReview } from '$lib/review/context';
 	import { fileSectionKey } from '$lib/review/reading-view';
@@ -10,7 +10,6 @@
 	import { EVERY_LINE } from './file-drawing.svelte';
 	import FileTitle from './FileTitle.svelte';
 	import LinesSection from './LinesSection.svelte';
-	import { keepPlaceRead } from './place-kept.svelte';
 
 	// What the bar says of the file, where a file of the change says what became of it
 	const NOT_IN_THIS_CHANGE = 'not in this change';
@@ -19,8 +18,7 @@
 	const alone = review.views.fileAlone;
 
 	const path = $derived(alone.path);
-	const file = $derived(alone.file);
-	const failure = $derived(alone.failure);
+	const outcome = $derived(alone.outcome);
 	const threads = $derived(path === null ? 0 : review.threads.onLinesOf(path).length);
 
 	let container: HTMLElement | undefined = $state();
@@ -38,13 +36,9 @@
 		return review.sections.watchInView(container);
 	});
 
-	// The file read anew for a take leaves the reader on the line they read
-	keepPlaceRead(review.sections, () => file);
-
-	// A failure's act takes the keyboard as the failure takes the place of the file's lines, but never from a field
-	// the reader is typing in: a read anew for a retake can fail under one
+	// A failure's act takes the keyboard as the failure is said: a file is read only where the reader asked for it
 	$effect(() => {
-		if (!isTypingTarget(document.activeElement)) tryAgainButton?.focus();
+		tryAgainButton?.focus();
 	});
 
 	/** Read the file again after a read that failed, going on to where the reader was being taken in it. */
@@ -85,13 +79,12 @@
 	line to its last, in one column whatever layout the reader chose for a change, so scrolling never leads into
 	another file -->
 <main bind:this={container} data-testid="file-alone-view" class="cr-diff-area bg-(--cr-ground-reading)">
-	{#if path !== null}
+	{#if path !== null && outcome !== null}
 		{#key path}
-			{#if file !== null}
-				<!-- As last read, while a read anew is on its way -->
+			{#if outcome.kind === 'read'}
 				<LinesSection
 					sectionKey={fileSectionKey(path)}
-					{file}
+					file={outcome.file}
 					language={languageOf(review.mode, path)}
 					view="raw"
 					extent={EVERY_LINE}
@@ -103,13 +96,13 @@
 					{/snippet}
 				</LinesSection>
 			{:else}
-				<!-- First on its way, or not read: the bar stands all the same, with the way out of the file -->
+				<!-- On its way, or not read: the bar stands all the same, with the way out of the file -->
 				<section data-testid="file-alone">
 					{@render bar(path)}
-					{#if failure !== null}
+					{#if outcome.kind === 'failed'}
 						<!-- Why, under the bar, and the act to read it again -->
 						<div class="flex flex-wrap items-center gap-2 px-4 py-3">
-							<Failure stands="inline" testId="file-alone-failed" said={failure} />
+							<Failure stands="inline" testId="file-alone-failed" said={outcome.why} />
 							<Button
 								bind:element={tryAgainButton}
 								tone="quiet"

@@ -47,8 +47,8 @@
   comments as any. The file tree lists it under "Not in this change" while
   you read it or anything of yours hangs on it, and "Put away" on its bar
   takes you back where you came from. n and p walk its threads after the
-  change's; a retake reads it anew, or puts you among the change's files
-  once the change touches it.
+  change's; a retake leaves you in it, or puts you among the change's
+  files once the change touches it.
 
 ### Changed
 - **Help's "What's new" names no release.** The news it opens is of the
