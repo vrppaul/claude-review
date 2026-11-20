@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { DiffFile, ReviewMode } from '$lib/types';
 	import { messageOf } from '$lib/utils/errors';
+	import { fileStats } from '$lib/utils/file-stats';
 	import { languageOf } from '$lib/utils/highlight';
 	import { isRenderable } from '$lib/utils/renderable';
 	import { useReview } from '$lib/review/context';
@@ -79,7 +80,15 @@
 	{#snippet header()}
 		<Bar heads="section" {viewed} testId="file-header">
 			<!-- A heading each, so a file can be reached by its name as well as scrolled to -->
-			<FileTitle {file} element="h2" testId="file-heading" {showsChange} threads={commentCount}>
+			<FileTitle
+				path={file.path}
+				formerPath={file.old_path}
+				element="h2"
+				testId="file-heading"
+				became={showsChange ? file.status : null}
+				changed={showsChange ? fileStats(file) : null}
+				threads={commentCount}
+			>
 				{#snippet beside()}
 					{#if !review.diff.narrowed && review.lastRetake.isChanged(file.path)}
 						<Button

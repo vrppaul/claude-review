@@ -1,17 +1,15 @@
 <script lang="ts">
-	import type { DiffFile } from '$lib/types';
-
 	interface Props {
-		/** The file a heading names: one that was moved says where it was, before where it is. */
-		file: DiffFile;
+		/** Where the file a heading names is. */
+		path: string;
+		/** Where it was, for a file the change moved; none for any other. */
+		formerPath: string | null;
 	}
 
-	let { file }: Props = $props();
+	let { path, formerPath }: Props = $props();
 </script>
 
-<!-- A file's path as a heading says it, wherever its lines are drawn: whole among the files, or a piece of it in a story -->
-{#if file.old_path}
-	<!-- Moved: where it was, quieter than where it is -->
-	<span class="cr-muted font-normal">{file.old_path} →</span>
-{/if}
-{file.path}
+<!-- A file's path as a heading says it, wherever its lines are drawn: whole among the files, a piece of it in a story,
+	or a file read alone. Moved, where it was stands quieter before it, the space after the arrow inside its words, so
+	nothing stands before the path of a file not moved -->
+{#if formerPath}<span class="cr-muted font-normal">{`${formerPath} → `}</span>{/if}{path}

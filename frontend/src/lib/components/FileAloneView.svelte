@@ -5,11 +5,10 @@
 	import { fileSectionKey } from '$lib/review/reading-view';
 	import Bar from '$lib/ui/Bar.svelte';
 	import Button from '$lib/ui/Button.svelte';
-	import Count from '$lib/ui/Count.svelte';
 	import Failure from '$lib/ui/Failure.svelte';
-	import Heading from '$lib/ui/Heading.svelte';
 	import { languageOf } from '$lib/utils/highlight';
 	import { EVERY_LINE } from './file-drawing.svelte';
+	import FileTitle from './FileTitle.svelte';
 	import LinesSection from './LinesSection.svelte';
 	import { keepPlaceRead } from './place-kept.svelte';
 
@@ -50,11 +49,15 @@
 	where a file of the change is marked viewed and folded -->
 {#snippet bar(shown: string)}
 	<Bar heads="section" testId="file-alone-header">
-		<Heading tag="h2" heads="piece" testId="file-alone-heading">{shown}</Heading>
-		<span class="cr-muted text-xs">{NOT_IN_THIS_CHANGE}</span>
-		{#if threads > 0}
-			<Count tone="reader" count={threads} testId="section-comment-count" />
-		{/if}
+		<FileTitle
+			path={shown}
+			formerPath={null}
+			element="h2"
+			testId="file-alone-heading"
+			became={NOT_IN_THIS_CHANGE}
+			changed={null}
+			{threads}
+		/>
 		<div class="flex-1"></div>
 		<Button
 			bind:element={putAwayButton}

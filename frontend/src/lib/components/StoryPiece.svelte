@@ -5,6 +5,7 @@
 	import { threadsOnThePiece } from '$lib/review/story-reading';
 	import type { DiffFile } from '$lib/types';
 	import Bar from '$lib/ui/Bar.svelte';
+	import { fileStats } from '$lib/utils/file-stats';
 	import { languageOf } from '$lib/utils/highlight';
 	import { type Extent, linesView, type PieceShows } from './file-drawing.svelte';
 	import FileTitle from './FileTitle.svelte';
@@ -66,7 +67,16 @@
 	{#snippet header()}
 		<Bar heads="section" testId="story-piece-header">
 			{@render numbered?.()}
-			<FileTitle file={piece} element={fileNamed} testId="piece-file" showsChange {threads} {beside} />
+			<FileTitle
+				path={piece.path}
+				formerPath={piece.old_path}
+				element={fileNamed}
+				testId="piece-file"
+				became={piece.status}
+				changed={fileStats(piece)}
+				{threads}
+				{beside}
+			/>
 			{@render afterTheFile?.()}
 		</Bar>
 	{/snippet}
