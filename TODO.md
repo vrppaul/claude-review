@@ -267,12 +267,14 @@ Where a thing is:
 
 What a thing is:
 
-- [ ] `feat`: where a name is defined and where it is used, from the name
-      in the code, shown in the pane of the whole-file look. Its uses stand
-      apart: those in this change, and those the change did not touch,
-      which are what the agent may have forgotten. First by the name alone
-      (`git grep -w`): at once and in any language, but two things of one
-      name run together, so it is marked as found by name.
+- [ ] `feat(ui)`: where a name is defined and where it is used, on the
+      page: Ctrl+click a name in the code, and the lookup's pane and window
+      show what `GET /api/name` answers, the uses the change did not touch
+      set apart, which are what the agent may have forgotten.
+- [ ] `feat`: what the server does not find yet. A Svelte component is
+      defined by its file, which the lookup reports as no definition
+      (`CommentThread` gave 13 places and none defining it); a loop's
+      target and an import are no definition either.
 - [ ] `feat`: a language server behind the same pane where the reader has
       one installed, its answers marked exact. One for each language, and
       slow to start on a large repository: never the only way.
