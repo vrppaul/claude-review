@@ -102,6 +102,10 @@ class FileUnreadableError(RefusedError):
     """Raised when a file the review holds cannot be read as text, or is too large to read."""
 
 
+class NoWordHereError(NotFoundError):
+    """Raised when a place in the code is asked about that holds no word: a blank, punctuation, or past a line's end."""
+
+
 class UnknownVersionError(InvalidRequestError):
     """Raised when a base is asked for that this review never offered."""
 
