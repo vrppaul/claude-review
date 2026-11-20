@@ -37,6 +37,10 @@
   so does `b`. Each jump stacks its place, and the rail of a column put
   away keeps the way back as an icon. A retake forgets them: its lines are
   numbered anew.
+- **The agent points at a file the change did not touch.** `claude-review
+  point --file src/caller.py --lines 12` hangs a thread on lines of any
+  text file of the take, quoted as the review last took them: the place
+  the change forgot.
 
 ### Changed
 - **Help's "What's new" names no release.** The news it opens is of the
@@ -52,6 +56,10 @@
   change of the tree now, and says when nothing has moved from the diff.
   Nor does a moment git cannot read the tree, mid-rebase, count as a
   change.
+- **A thread keeps its place when the agent reverts its file.** The file
+  leaves the diff, and every thread on it was marked outdated though its
+  lines stood unchanged; it now follows them in the file as the review
+  took it.
 
 ## [1.7.3] - 2026-11-18
 

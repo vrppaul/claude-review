@@ -325,7 +325,9 @@ somebody who is waiting.
     Use it for what a paragraph in the panel would bury — where you did
     something other than what was asked, and why. It becomes an ordinary
     thread the reader answers, settles or removes, drawn as yours rather than
-    as one of their marks, and it does not count as their unsent work.
+    as one of their marks, and it does not count as their unsent work. A file
+    the change did not touch takes one too, on its lines as the review last
+    took them: say so where the change forgot a place.
 
     `--side old` hangs it on a line the change removed, which is the one place
     the reader cannot always write themselves: under a narrower base the left

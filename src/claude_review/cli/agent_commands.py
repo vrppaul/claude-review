@@ -270,7 +270,13 @@ def show_command(*, client: ReviewClient, path: str) -> None:
 
 @click.command("point")
 @review_port
-@click.option("--file", "path", required=True, type=FILE, help="File the thread hangs on, as the diff names it.")
+@click.option(
+    "--file",
+    "path",
+    required=True,
+    type=FILE,
+    help="File the thread hangs on, as the repository names it: one the change did not touch too.",
+)
 @click.option("--lines", required=True, type=THREAD_LINES, help=f"Line or range it is about, e.g. {LINES_EXAMPLE}.")
 @click.option(
     "--side",
