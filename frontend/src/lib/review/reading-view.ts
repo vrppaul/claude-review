@@ -9,6 +9,7 @@
  * answer to these questions, not a branch in whoever asks them.
  */
 
+import { tick } from 'svelte';
 import type { FileLines, ThreadLines } from '$lib/anchors/views';
 import type { FileSections } from '$lib/dom/file-sections';
 import type { ReadingPlace } from '$lib/dom/reading-place';
@@ -202,12 +203,32 @@ export class FilesReading implements ReadingView {
 	 */
 	async returnTo(place: ReadingPlace): Promise<boolean> {
 		// What the files' own view knows a section by is its file's path
-		const path = place.within;
-		if (this.sectionOfFile(path) === null) return false;
-		const line = place.line === null ? null : placeOfKey(place.line);
-		if (line?.side === 'new') await this.drawLine(path, line.number);
-		else if (line !== null) this.#reading.unfold(path);
+		if (this.sectionOfFile(place.within) === null) return false;
+		await this.#drawPlace(place);
 		this.#sections.goBackTo(place);
 		return true;
+	}
+
+	/**
+	 * Take the reader over from a file read alone that the change now
+	 * touches, as a new diff keeps them, which is no jump they asked for: on
+	 * the line they read, drawn first, and the keyboard back on the line that
+	 * held it, or on what stands for that line where it is not drawn. Called
+	 * as these files come on screen, before the file read alone is gone.
+	 */
+	async takeOver(place: ReadingPlace): Promise<void> {
+		const keyboardOn = this.#sections.lineWithTheKeyboard();
+		await this.#drawPlace(place);
+		// The files come on screen, and the section is drawn, once what is pending is
+		await tick();
+		this.#sections.returnTo(place);
+		if (keyboardOn !== null) this.#sections.keyboardBackTo(place.within, keyboardOn);
+	}
+
+	/** Draw a place read: its line read in where the diff on screen leaves it out, its file unfolded. */
+	async #drawPlace(place: ReadingPlace): Promise<void> {
+		const line = place.line === null ? null : placeOfKey(place.line);
+		if (line?.side === 'new') await this.drawLine(place.within, line.number);
+		else if (line !== null) this.#reading.unfold(place.within);
 	}
 }

@@ -185,6 +185,22 @@ export class FileSections {
 		return this.#current()?.key ?? null;
 	}
 
+	/** The line whose number holds the keyboard, in any section, by the key its place is known by; null where none does. */
+	lineWithTheKeyboard(): string | null {
+		const focus = document.activeElement;
+		if (!(focus instanceof HTMLElement) || this.#focused() === null) return null;
+		return focus.dataset.place ?? null;
+	}
+
+	/**
+	 * Put the keyboard on a line's number, by the file it is a line of and
+	 * the key its place is known by, the screen left still: on what stands
+	 * for the line where it is not drawn (`lineOrFile`).
+	 */
+	keyboardBackTo(path: string, lineKey: string): void {
+		this.lineOrFile(path, lineKey)?.focus({ preventScroll: true });
+	}
+
 	/** The file of the section the reader is in. */
 	currentFile(): string | null {
 		return this.#current()?.path ?? null;

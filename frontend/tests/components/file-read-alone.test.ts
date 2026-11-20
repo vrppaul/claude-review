@@ -255,6 +255,27 @@ describe('a file read alone, as the change is taken again', () => {
 		expect(screen.getAllByTestId('file-section').map((section) => section.dataset.path)).toEqual(['a.py', CALLER]);
 	});
 
+	it('leaves the keyboard on the line that held it, once the change touches the file', async () => {
+		const callerChanged = diffFile({
+			path: CALLER,
+			hunks: [
+				hunk([
+					contextLine(1, 1, 'def caller():'),
+					contextLine(2, 2, '    handler()'),
+					contextLine(3, 3, '    return'),
+					addedLine(4, 'lock()')
+				])
+			]
+		});
+		screen.getByRole('button', { name: 'Comment on line 3' }).focus();
+
+		await retakenWith([A_PY, callerChanged], [review.threads.all[0].anchor]);
+
+		// The change's files in its order: a.py, then the caller
+		const [, caller] = screen.getAllByTestId('file-section');
+		expect(document.activeElement).toBe(within(caller).getByRole('button', { name: 'Comment on line 3' }));
+	});
+
 	it('says in place that the take holds it no more, and its thread is drawn above the change’s files', async () => {
 		server.refuse('GET /api/file-of-take', NO_SUCH_FILE, `no file of the take on screen at ${CALLER}`);
 

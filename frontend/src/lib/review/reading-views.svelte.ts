@@ -25,12 +25,12 @@ import type { PageLayout, ReadingChoice } from '$lib/reader/page-layout.svelte';
 import type { FileAloneReading } from '$lib/review/file-alone-reading.svelte';
 import { whereRead } from '$lib/review/files-way';
 import type { ViewsOnScreen } from '$lib/review/navigator';
-import type { ReadingView, ReadingViewName } from '$lib/review/reading-view';
+import type { FilesReading, ReadingView, ReadingViewName } from '$lib/review/reading-view';
 import type { ReviewDiff } from '$lib/review/review-diff.svelte';
 
-/** Each view a review is read in, by its name: a file read alone by what only it does. */
+/** Each view a review is read in, by its name: the files and a file read alone by what only they do. */
 interface Views {
-	files: ReadingView;
+	files: FilesReading;
 	story: ReadingView;
 	'file-alone': FileAloneReading;
 }
@@ -134,7 +134,8 @@ export class ReadingViews implements ViewsOnScreen {
 	/**
 	 * Keep a reader in a file read alone as the change is taken again: in
 	 * it, read anew for the take, where the change still leaves it; among
-	 * the change's files, on the line they read, where it now touches it.
+	 * the change's files where it now touches it, taken over by them
+	 * (`FilesReading.takeOver`).
 	 */
 	async followTheTake(): Promise<void> {
 		const path = this.fileReadAlone;
@@ -144,8 +145,9 @@ export class ReadingViews implements ViewsOnScreen {
 			return;
 		}
 		const read = this.onScreen.placeRead();
-		const files = this.show(FILES);
-		if (read !== null) await files.returnTo(read.place);
+		const files = this.#views.files;
+		this.#bring(FILES);
+		if (read !== null) await files.takeOver(read.place);
 	}
 
 	/** Bring on screen the view of the Files way of reading that draws a thread on these lines, and hand it over. */
