@@ -13,6 +13,11 @@
  * what it tells and what it leaves out, and a narrower base the lines it
  * shows. Whatever takes the reader to something the view on screen does not
  * draw asks here for the view that does, in one place.
+ *
+ * A reader with the story on screen is trying Story, however it came there:
+ * they chose it, a thread only the story draws brought it, or the review
+ * opened the way they read last. Every way it comes on screen passes through
+ * here, so nothing watches what is on screen to catch it after.
  */
 
 import type { ThreadLines } from '$lib/anchors/views';
@@ -33,15 +38,22 @@ interface Views {
 /** How the reader chose to read last, as the page's layout keeps it. */
 type KeptChoice = PageLayout['readingView'];
 
-// The view every review can be read in, which draws the change's files; and the one a file it did not touch is
-// read alone in
+/** Whoever keeps that Story was introduced to the reader. */
+export interface StoryIntroductions {
+	noteStoryIntroduced: () => void;
+}
+
+// The view every review can be read in, which draws the change's files; the one a file it did not touch is read
+// alone in; and the story's, which the reader is trying while it is on screen
 const FILES: ReadingViewName = 'files';
 const FILE_ALONE = 'file-alone' satisfies ReadingViewName;
+const STORY: ReadingViewName = 'story';
 
 export class ReadingViews implements ViewsOnScreen {
 	readonly #views: Views;
 	readonly #kept: KeptChoice;
 	readonly #diff: ReviewDiff;
+	readonly #introductions: StoryIntroductions;
 	#nameOnScreen: ReadingViewName;
 
 	/**
@@ -51,12 +63,21 @@ export class ReadingViews implements ViewsOnScreen {
 	 *   though the reader chose the story last
 	 * @param diff the review's own diff, which says where a thread is read, and which a narrower base may be in
 	 *   force on
+	 * @param introductions whoever keeps that Story was introduced, which the story on screen is
 	 */
-	constructor(views: Views, kept: KeptChoice, mayOpenAsStory: boolean, diff: ReviewDiff) {
+	constructor(
+		views: Views,
+		kept: KeptChoice,
+		mayOpenAsStory: boolean,
+		diff: ReviewDiff,
+		introductions: StoryIntroductions
+	) {
 		this.#views = views;
 		this.#kept = kept;
 		this.#diff = diff;
-		this.#nameOnScreen = $state(mayOpenAsStory ? kept.name : FILES);
+		this.#introductions = introductions;
+		this.#nameOnScreen = $state(FILES);
+		this.#bring(mayOpenAsStory ? kept.name : FILES);
 	}
 
 	/** The view the review is read in now. */
@@ -76,7 +97,7 @@ export class ReadingViews implements ViewsOnScreen {
 
 	/** Read the review the way the reader chooses, and the next review they open too. */
 	choose(name: ReadingChoice): void {
-		this.#nameOnScreen = name;
+		this.#bring(name);
 		this.#kept.set(name);
 	}
 
@@ -86,7 +107,7 @@ export class ReadingViews implements ViewsOnScreen {
 	 * read stays as they chose it.
 	 */
 	show(name: ReadingViewName): ReadingView {
-		this.#nameOnScreen = name;
+		this.#bring(name);
 		return this.#views[name];
 	}
 
@@ -105,7 +126,7 @@ export class ReadingViews implements ViewsOnScreen {
 	async readAlone(path: string): Promise<ReadingView> {
 		const alone = this.fileAlone;
 		const reading = alone.open(path);
-		this.#nameOnScreen = FILE_ALONE;
+		this.#bring(FILE_ALONE);
 		await reading;
 		return alone;
 	}
@@ -130,5 +151,11 @@ export class ReadingViews implements ViewsOnScreen {
 	/** Bring on screen the view of the Files way of reading that draws a thread on these lines, and hand it over. */
 	showWhereRead(lines: ThreadLines): Promise<ReadingView> {
 		return whereRead(lines, this.#diff) === 'in-its-file-alone' ? this.readAlone(lines.file) : this.showTheChange();
+	}
+
+	/** Bring a view on screen: the story brought is being tried. */
+	#bring(name: ReadingViewName): void {
+		this.#nameOnScreen = name;
+		if (name === STORY) this.#introductions.noteStoryIntroduced();
 	}
 }

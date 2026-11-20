@@ -132,7 +132,7 @@ export class Review {
 	readonly parts = new ReadingParts(this.#jumps);
 	/** The ways the review is read — file by file, a file it did not touch alone, or as its story — and which is on screen. */
 	readonly views: ReadingViews;
-	/** Every way the reader comes to read the review as its story. */
+	/** The reader asking to read the review as its story. */
 	readonly wayIntoStory: WayIntoStory;
 	readonly navigator: Navigator;
 	/** The places the reader left as the page took them to a line, which Back takes them to; written by the navigator. */
@@ -208,7 +208,8 @@ export class Review {
 			},
 			this.layout.readingView,
 			this.story.canBeTold && this.storyViewOpens,
-			this.diff
+			this.diff,
+			this.guide
 		);
 		this.feedback = new Feedback({
 			reading: () => ({
@@ -227,7 +228,7 @@ export class Review {
 			writeStoriesWithoutAsking: () => this.settings.change({ story_writing: WITHOUT_ASKING })
 		});
 		this.wayBack = new WayBack(this.diff);
-		this.navigator = new Navigator(this.threads, this.sections, this.wayIntoStory, this.wayBack);
+		this.navigator = new Navigator(this.threads, this.sections, this.views, this.wayBack);
 		// What the draft kept that had not gone out: the header's "unsent" counts the same
 		this.draftNotices = new DraftNotices(draft === null ? 0 : this.threads.unsent.length, draftSetAside);
 		this.#diffCharacters = $derived(diffCharacters(this.diff.files));
