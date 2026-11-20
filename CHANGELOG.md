@@ -27,6 +27,15 @@
   failure is drawn under its line, and its file's row in the tree counts
   them; both turn grey once their check is out of date. Pressing a failure takes
   you to its line, reading in what the diff left out around it.
+- **The review says where a name in the code stands.** `GET /api/name`
+  takes a place — a file, its side, a line and a column — and answers
+  the name there as its language's grammar reads it, and every place it
+  stands in the take on screen: whether each defines it, and as what, the
+  definition it stands inside, and whether the change wrote its line. A
+  word in a comment or a string is no name. Python, JavaScript,
+  TypeScript and a Svelte component's scripts are read by their grammars;
+  any other file, and a component's markup, is searched for the whole
+  word. The take is read as git wrote it down, never off the disk.
 
 ### Changed
 - **Help's "What's new" names no release.** The news it opens is of the
