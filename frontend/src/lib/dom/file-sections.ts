@@ -23,8 +23,8 @@ import { Announced, type Announcement } from '$lib/dom/announced';
 import { ArrivedLine } from '$lib/dom/arrived-line.svelte';
 import { firstInDocument } from '$lib/dom/document-order';
 import type { Jumps } from '$lib/dom/jump';
-import { focusWhatRemains, lineNumbersIn, moveByLine, seenWhole } from '$lib/dom/keyboard';
-import { bringBack, type ReadingPlace, readingPlaceIn } from '$lib/dom/reading-place';
+import { focusWhatRemains, moveByLine, seenWhole } from '$lib/dom/keyboard';
+import { bringBack, goBackAmong, type ReadingPlace, readingPlaceIn } from '$lib/dom/reading-place';
 
 /**
  * What every toggle that folds something carries — a thread, a file — so the
@@ -53,14 +53,6 @@ interface AwaitedThread {
 /** A section as it announced itself: what it is known by and where it is, and the file it draws lines of. */
 interface Section extends Announcement {
 	path: string;
-}
-
-/** Where the reader reads from: a section, by its key, the file it draws lines of, and a line of it. */
-export interface ReadFrom {
-	section: string;
-	path: string;
-	/** The line, by the key its place is known by; null for the section's top. */
-	line: string | null;
 }
 
 /** A section marked as the one pointed at, and the timer that takes the mark off. */
@@ -105,6 +97,11 @@ export class FileSections {
 		return this.#sections.beingRead?.key ?? null;
 	}
 
+	/** The file a section draws lines of, by the section's key; null for a section not drawn. */
+	fileOf(sectionKey: string): string | null {
+		return this.#sections.get(sectionKey)?.path ?? null;
+	}
+
 	/** The file the reader is in: the one that section draws lines of. */
 	get fileInView(): string | null {
 		return this.#sections.beingRead?.path ?? null;
@@ -144,27 +141,42 @@ export class FileSections {
 		return this.#sections.watch(root);
 	}
 
-	/** Where the reader is reading in an area: the first line still showing at its top, in the section being read. */
-	readingPlace(root: HTMLElement): ReadingPlace | null {
+	/**
+	 * Where the reader is reading, while the reading area is watched: the
+	 * first line still showing at its top, in the section being read. None
+	 * while no section is being read.
+	 */
+	readingPlace(): ReadingPlace | null {
 		const section = this.#sections.beingRead;
-		return section === null ? null : readingPlaceIn(section.key, section.element, root);
+		const area = this.#sections.area;
+		return section === null || area === null ? null : readingPlaceIn(section.key, section.element, area);
 	}
 
-	/**
-	 * Where the reader reads from, while the reading area is watched: the
-	 * line whose number holds the keyboard, where they see it whole; or else
-	 * the first line they see whole in the section being read, or that
-	 * section's top where it draws none. Null while no section is being read.
-	 */
-	readFrom(): ReadFrom | null {
+	/** Whether the reader sees a line's number whole in a section now, by the key its place is known by. */
+	seesLine(sectionKey: string, lineKey: string): boolean {
+		const section = this.#sections.get(sectionKey);
 		const area = this.#sections.area;
-		return area === null ? null : (this.#lineHoldingKeyboard(area) ?? this.#lineAtTheTop(area));
+		const line = section === undefined ? null : lineIn(section.element, lineKey);
+		return line !== null && area !== null && seenWhole(line, area);
 	}
 
 	/** Put the reader back where they were reading, as near as what is drawn now allows; nowhere, if the section left. */
-	returnTo(root: HTMLElement, place: ReadingPlace): void {
-		const section = this.#sections.get(place.section);
-		if (section) bringBack(place, section.element, root);
+	returnTo(place: ReadingPlace): void {
+		const section = this.#sections.get(place.within);
+		const area = this.#sections.area;
+		if (section && area) bringBack(place, section.element, area);
+	}
+
+	/**
+	 * Take the reader back to where they were reading, as they saw it, once
+	 * the view that draws it is drawn: the keyboard on the line they read
+	 * from, or on the file's own toggle where they read from none.
+	 */
+	goBackTo(place: ReadingPlace): void {
+		this.#onceDrawn(
+			() => this.#sections.get(place.within),
+			() => goBackAmong(this.#sections, this.#jumps, place, keyboardToPlace)
+		);
 	}
 
 	/** The section the reader is in, by its key: the one a line of which has the focus, if one has, or else the one in view. */
@@ -410,23 +422,6 @@ export class FileSections {
 		return this.#focused() ?? this.#sections.beingRead;
 	}
 
-	/** The line whose number holds the keyboard, in the section it is drawn in, where the reader sees it whole. */
-	#lineHoldingKeyboard(area: HTMLElement): ReadFrom | null {
-		const holding = this.#focused();
-		const number = document.activeElement;
-		if (holding === null || !(number instanceof HTMLElement) || !seenWhole(number, area)) return null;
-		const line = number.dataset.place;
-		return line === undefined ? null : { section: holding.key, path: holding.path, line };
-	}
-
-	/** The first line the reader sees whole in the section being read, or that section's top where it draws none. */
-	#lineAtTheTop(area: HTMLElement): ReadFrom | null {
-		const read = this.#sections.beingRead;
-		if (read === null) return null;
-		const first = lineNumbersIn(read.element).find((number) => seenWhole(number, area));
-		return { section: read.key, path: read.path, line: first?.dataset.place ?? null };
-	}
-
 	/** The section holding the focus, if any does. */
 	#focused(): Section | null {
 		const focus = document.activeElement;
@@ -468,6 +463,11 @@ export class FileSections {
 /** A line's number drawn in a section, by the key its place is known by; null where the section does not draw it. */
 function lineIn(section: HTMLElement, lineKey: string): HTMLElement | null {
 	return section.querySelector<HTMLElement>(`[data-place="${lineKey}"]`);
+}
+
+/** Put the keyboard on the line gone back to, or where none is drawn on the section's own toggle, the screen left still. */
+function keyboardToPlace(section: Section, line: HTMLElement | null): void {
+	(line ?? toggleOf(section.element))?.focus({ preventScroll: true });
 }
 
 /** The toggle that folds a file's section: what stands for the file where nothing in it is drawn to stand for; null where the section folds nothing. */

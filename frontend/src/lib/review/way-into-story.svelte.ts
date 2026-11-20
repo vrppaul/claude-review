@@ -63,16 +63,10 @@ export class WayIntoStory implements ViewsOnScreen {
 		return this.#views.showEverything();
 	}
 
-	/** Bring the story on screen for a thread only it draws, and hand its view over. */
-	showStory(): ReadingView {
-		this.#tried();
-		return this.#views.showStory();
-	}
-
-	/** Bring back on screen the view the reader read in: one brought back to the story is trying it. */
-	bringBack(name: ReadingViewName): void {
+	/** Bring a view on screen for something it draws, and hand it over: one brought the story is trying it. */
+	show(name: ReadingViewName): ReadingView {
 		if (name === STORY) this.#tried();
-		this.#views.bringBack(name);
+		return this.#views.show(name);
 	}
 
 	/** Whether the reader is being asked before a story is written, having asked to read the story. */

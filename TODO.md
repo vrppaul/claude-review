@@ -259,6 +259,10 @@ Where a thing is:
 - [ ] `feat`: the functions a change touches, under each file in the tree.
       Git names the function in a hunk's heading (`@@ … @@ def handler():`),
       and `services/unified_diff.py` reads past it.
+- [ ] `feat(ui)`: Back from every jump, not only to a line: going to a file
+      (the agent's `show`, a file's row), a thread (n and p, a, the chips)
+      or a chapter notes the place left, as going to where a check failed
+      does.
 - [ ] `feat(ui)`: one key to open a thing by its name: a file of the
       change, a function it touches, a chapter, a thread.
 

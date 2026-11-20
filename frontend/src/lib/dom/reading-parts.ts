@@ -20,6 +20,7 @@ import { Announced, type Announcement } from '$lib/dom/announced';
 import { Crossing } from '$lib/dom/crossing';
 import type { Jumps } from '$lib/dom/jump';
 import { lendKeyboard, lendKeyboardToWhatRemains } from '$lib/dom/keyboard';
+import { goBackAmong, type ReadingPlace, readingPlaceIn } from '$lib/dom/reading-place';
 
 /** A part as it announced itself: what whoever draws it knows it by, the whole of it, which the band reads it by, and its head. */
 interface Part extends Announcement {
@@ -115,6 +116,27 @@ export class ReadingParts {
 	}
 
 	/**
+	 * Where the reader is reading, while the reading area is watched: the
+	 * first line still showing at its top in the part being read, or the
+	 * part's top where it draws none, as over the overview. None while no
+	 * part is being read.
+	 */
+	readingPlace(): ReadingPlace | null {
+		const part = this.#parts.beingRead;
+		const area = this.#parts.area;
+		return part === null || area === null ? null : readingPlaceIn(part.key, part.element, area);
+	}
+
+	/**
+	 * Take the reader back to where they were reading in a part, as they saw
+	 * it: the keyboard on the line they read from, or lent to the part's head
+	 * where they read from none.
+	 */
+	goBackTo(place: ReadingPlace): void {
+		goBackAmong(this.#parts, this.#jumps, place, keyboardToPlace);
+	}
+
+	/**
 	 * Put the keyboard on the head of the part being read, if what had it
 	 * went: a bar over the part that is drawn only while the reader is deep
 	 * in it. The head is where the bar's own buttons take the reader, and
@@ -145,4 +167,10 @@ export class ReadingParts {
 		takeBackPart();
 		this.#headsInView.remove(head);
 	}
+}
+
+/** Put the keyboard on the line gone back to, or where none is drawn lend it to the part's head, the screen left still. */
+function keyboardToPlace(part: Part, line: HTMLElement | null): void {
+	if (line) line.focus({ preventScroll: true });
+	else lendKeyboard(part.head);
 }

@@ -26,8 +26,6 @@ type KeptChoice = PageLayout['readingView'];
 
 // The view every review can be read in, and the one that can draw every thread and file it holds
 const FILES: ReadingViewName = 'files';
-// The view that draws the story told of the change, and every thread on its words
-const STORY: ReadingViewName = 'story';
 
 export class ReadingViews implements ViewsOnScreen {
 	readonly #views: Views;
@@ -60,20 +58,14 @@ export class ReadingViews implements ViewsOnScreen {
 		this.#kept.set(name);
 	}
 
-	/** Bring the files on screen for something only they show: how the reader chose to read stays as they chose it. */
-	showFiles(): void {
-		this.#nameOnScreen = FILES;
-	}
-
-	/** Bring back on screen the view the reader read in before the page took them elsewhere: the choice stays as they made it. */
-	bringBack(name: ReadingViewName): void {
+	/**
+	 * Bring a view on screen for something it draws — what only it shows, a
+	 * place the reader read in it — and hand it over: how the reader chose to
+	 * read stays as they chose it.
+	 */
+	show(name: ReadingViewName): ReadingView {
 		this.#nameOnScreen = name;
-	}
-
-	/** Bring the story on screen for a thread only it draws, and hand its view over: the choice stays as the reader made it. */
-	showStory(): ReadingView {
-		this.#nameOnScreen = STORY;
-		return this.#views[STORY];
+		return this.#views[name];
 	}
 
 	/**
@@ -83,8 +75,8 @@ export class ReadingViews implements ViewsOnScreen {
 	 * and the files' bar says it.
 	 */
 	async showEverything(): Promise<ReadingView> {
-		this.showFiles();
+		const files = this.show(FILES);
 		if (this.#diff.narrowed) await this.#diff.showWholeReview();
-		return this.#views[FILES];
+		return files;
 	}
 }

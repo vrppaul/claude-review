@@ -201,8 +201,8 @@ export class Review {
 		});
 		this.views = new ReadingViews(
 			{
-				files: new FilesReading(this.diff, this.threads, this.reading, this.limits.max_window_lines),
-				story: new StoryReading(this.story, this.threads)
+				files: new FilesReading(this.diff, this.threads, this.reading, this.sections, this.limits.max_window_lines),
+				story: new StoryReading(this.story, this.threads, this.sections, this.parts)
 			},
 			this.layout.readingView,
 			this.story.canBeTold && this.storyViewOpens,
@@ -455,6 +455,6 @@ export class Review {
 		const since = this.lastRetake.changedSinceKey;
 		if (since === null) return;
 		await this.diff.setBase(since);
-		this.views.showFiles();
+		this.views.show('files');
 	}
 }

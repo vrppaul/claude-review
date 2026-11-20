@@ -65,3 +65,12 @@ export interface PutAway extends ColumnWidth {
 	readonly changedByReader: boolean;
 	toggle: () => void;
 }
+
+/** The way back to where the reader was before the page took them elsewhere, as a column offers it. */
+export interface WayBackTo {
+	/** Where it leads, as short as the reader knows it: `routes.ts:33`. */
+	called: string;
+	/** Where it leads in full, on the pointer: `src/http/routes.ts:33`. */
+	calledInFull: string;
+	go: () => void;
+}

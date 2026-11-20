@@ -2,11 +2,24 @@
 	import type { Snippet } from 'svelte';
 	import { focusWhatRemains } from '$lib/dom/keyboard';
 	import Bar from './Bar.svelte';
-	import { COLUMN_HOLDS, COLUMN_SIDES, type ColumnHolds, type ColumnSide, type PutAway } from './column';
+	import BackTo from './BackTo.svelte';
+	import {
+		COLUMN_HOLDS,
+		COLUMN_SIDES,
+		type ColumnHolds,
+		type ColumnSide,
+		type PutAway,
+		type WayBackTo
+	} from './column';
 	import ColumnRail from './ColumnRail.svelte';
 	import EdgeGrip from './EdgeGrip.svelte';
 	import Icon from './Icon.svelte';
 	import IconButton from './IconButton.svelte';
+
+	// What the tests know the way back by, at the column's foot and at its rail's: one column with a way back stands
+	// on screen at a time, the one beside what is read
+	const BACK_TEST_ID = 'go-back';
+	const BACK_ON_RAIL_TEST_ID = 'go-back-on-rail';
 
 	/** What the tests know each part of the column by, written whole where the column is drawn. */
 	interface TestIds {
@@ -40,10 +53,13 @@
 		/** What its rail says is behind it, once it is put away. */
 		marks?: Snippet | undefined;
 		children: Snippet;
-		/** What stands at its foot, ruled off from what is above it: what the reader writes there, or a way back. */
+		/** What stands at its foot, ruled off from what is above it: what the reader writes there. */
 		foot?: Snippet | undefined;
-		/** What stands at the foot of its rail once it is put away: the foot's act, as its icon alone. */
-		railFoot?: Snippet | undefined;
+		/**
+		 * The way back to where the reader was, while there is one: across its foot, and once it is put away as
+		 * its icon at its rail's foot, its words on the pointer.
+		 */
+		back?: WayBackTo | undefined;
 	}
 
 	let {
@@ -61,7 +77,7 @@
 		marks,
 		children,
 		foot,
-		railFoot
+		back
 	}: Props = $props();
 
 	const drawn = $derived(COLUMN_SIDES[side]);
@@ -144,6 +160,11 @@
 			{#if foot}
 				<div class="cr-ui-column-foot">{@render foot()}</div>
 			{/if}
+			{#if back}
+				<div class="cr-ui-column-foot">
+					<BackTo place={back.called} whole={back.calledInFull} testId={BACK_TEST_ID} onclick={back.go} />
+				</div>
+			{/if}
 		</svelte:element>
 	{:else}
 		<ColumnRail
@@ -158,8 +179,19 @@
 			onclick={() => column.toggle()}
 		/>
 		<!-- Under the rail, not in it: the rail is one button, and a button holds none -->
-		{#if railFoot}
-			<div class="cr-ui-column-rail-foot">{@render railFoot()}</div>
+		{#if back}
+			<div class="cr-ui-column-rail-foot">
+				<IconButton
+					tone="quiet"
+					size="xs"
+					shape="square"
+					label="Back to {back.called}"
+					testId={BACK_ON_RAIL_TEST_ID}
+					onclick={back.go}
+				>
+					<Icon name="chevron" size="sm" pointing="left" />
+				</IconButton>
+			</div>
 		{/if}
 	{/if}
 </div>

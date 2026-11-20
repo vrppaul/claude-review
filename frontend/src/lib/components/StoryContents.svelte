@@ -30,7 +30,7 @@
 		NOT_IN_THE_STORY
 	} from './story-words';
 	import StoryHousekeeping from './StoryHousekeeping.svelte';
-	import WayBack from './WayBack.svelte';
+	import { wayBackOf } from './way-back';
 
 	const review = useReview();
 
@@ -49,14 +49,6 @@
 	const leftOutChanged = $derived(held?.moved_on?.left_out ?? null);
 </script>
 
-{#snippet back()}
-	<WayBack stands="foot" />
-{/snippet}
-
-{#snippet backOnRail()}
-	<WayBack stands="rail" />
-{/snippet}
-
 <!-- The story's contents, beside it: its parts down an axis, the overview and then every chapter with
 	the files it tells, then what it leaves out and what the agent called housekeeping. Each file is a
 	row as the tree of files draws it. At its foot, and its rail's, the way back, while there is one.
@@ -72,8 +64,7 @@
 		resizing="Resize the contents"
 		key={chordName(COLUMN_CHORD)}
 		holds="list"
-		foot={review.wayBack.top ? back : undefined}
-		railFoot={review.wayBack.top ? backOnRail : undefined}
+		back={wayBackOf(review)}
 		testIds={{
 			column: 'contents',
 			head: 'contents-head',

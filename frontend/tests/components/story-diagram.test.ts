@@ -205,9 +205,9 @@ describe("a story's diagram", () => {
 		render(ReviewScreen, { props: { review } });
 		await within(figure()).findByTestId('diagram-drawing');
 
-		review.views.showFiles();
+		review.views.show('files');
 		flushSync();
-		review.views.showStory();
+		review.views.show('story');
 		flushSync();
 
 		expect(within(figure()).queryByTestId('diagram-drawing')).not.toBeNull();

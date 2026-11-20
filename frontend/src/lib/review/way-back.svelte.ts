@@ -3,30 +3,24 @@
  *
  * A reader taken somewhere they did not scroll to has left their own place:
  * the places they leave stack up, and Back takes them to the last. A place
- * is of the diff it was read in: another diff — a retake, another base —
- * numbers the lines anew, so the places left in the one before lead nowhere
- * true, and none is offered.
+ * is of the take it was read in: another take of the diff numbers the lines
+ * anew, so the places left in the one before lead nowhere true, and none is
+ * offered. Another base over the same take numbers the file as it stands
+ * the same, and keeps them.
  */
 
 import type { ReadingViewName } from '$lib/reader/page-layout.svelte';
+import type { PlaceRead } from '$lib/review/reading-view';
 import type { ReviewDiff } from '$lib/review/review-diff.svelte';
-import type { DiffFile, LinePlace } from '$lib/types';
 
-/** Where the reader was as the page took them elsewhere. */
-export interface PlaceLeft {
-	/** The view they read the review in. */
+/** Where the reader was as the page took them elsewhere: the view they read in, and where in it. */
+export interface PlaceLeft extends PlaceRead {
 	view: ReadingViewName;
-	/** The section they read in, by the key its view knows it by. */
-	section: string;
-	/** The file it draws lines of. */
-	path: string;
-	/** The line they read from; null for the section's top. */
-	line: LinePlace | null;
 }
 
-/** The places left, and the diff they were read in, by its files. */
+/** The places left, and the take of the diff they were read in. */
 interface Stack {
-	readIn: readonly DiffFile[];
+	take: number;
 	places: readonly PlaceLeft[];
 }
 
@@ -34,23 +28,23 @@ export class WayBack {
 	readonly #diff: ReviewDiff;
 	#stack: Stack;
 
-	/** @param diff the diff on screen, whose places a stack holds */
+	/** @param diff the diff on screen, whose take a stack is of */
 	constructor(diff: ReviewDiff) {
 		this.#diff = diff;
-		this.#stack = $state.raw({ readIn: diff.files, places: [] });
+		this.#stack = $state.raw({ take: diff.takeOnScreen, places: [] });
 	}
 
-	/** The place Back takes the reader to: the last they left in the diff on screen; null where they left none. */
+	/** The place Back takes the reader to: the last they left in the take on screen; null where they left none. */
 	get top(): PlaceLeft | null {
-		const { readIn, places } = this.#stack;
-		return readIn === this.#diff.files ? (places.at(-1) ?? null) : null;
+		const { take, places } = this.#stack;
+		return take === this.#diff.takeOnScreen ? (places.at(-1) ?? null) : null;
 	}
 
-	/** The reader leaves a place, read in the diff on screen: on top of those they left in it before. */
+	/** The reader leaves a place, read in the take on screen: on top of those they left in it before. */
 	note(place: PlaceLeft): void {
-		const readIn = this.#diff.files;
-		const before = this.#stack.readIn === readIn ? this.#stack.places : [];
-		this.#stack = { readIn, places: [...before, place] };
+		const take = this.#diff.takeOnScreen;
+		const before = this.#stack.take === take ? this.#stack.places : [];
+		this.#stack = { take, places: [...before, place] };
 	}
 
 	/** Take the place Back goes to off the stack, and hand it over; null where there is none. */

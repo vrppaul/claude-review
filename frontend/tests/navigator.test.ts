@@ -229,20 +229,25 @@ describe('moving the reader in whatever view the review is read in', () => {
 
 	/** The review read in one view alone, with nothing else to bring on screen: what that view draws none of is nowhere. */
 	function onlyIn(view: ReadingView): ViewsOnScreen {
-		return { onScreen: view, showEverything: () => Promise.resolve(view), showStory: () => view };
+		return { onScreen: view, showEverything: () => Promise.resolve(view), show: () => view };
+	}
+
+	/** A navigator of the review's threads and sections, moving the reader through these views. */
+	function navigatorOver(views: ViewsOnScreen): Navigator {
+		return new Navigator(review.threads, review.sections, views, review.wayBack);
 	}
 
 	it("goes to a thread on the story's words in the story, brought on screen for it", async () => {
 		review.threads.add(storyComment({ at: 'overview', text: 'doubt' }, 'on the doubt'));
 		const brought = drawThreads();
 		const [thread] = review.threads.all;
-		const showStory = vi.fn(() => DRAWS_NOTHING);
-		const navigator = new Navigator(review.threads, review.sections, { ...onlyIn(DRAWS_NOTHING), showStory });
+		const show = vi.fn(() => DRAWS_NOTHING);
+		const navigator = navigatorOver({ ...onlyIn(DRAWS_NOTHING), show });
 
 		navigator.reveal(thread);
 		await settled();
 
-		expect(showStory).toHaveBeenCalledOnce();
+		expect(show).toHaveBeenCalledWith('story');
 		expect(brought).toEqual(['on the doubt']);
 	});
 
@@ -259,7 +264,7 @@ describe('moving the reader in whatever view the review is read in', () => {
 		review.threads.add(newComment({ startLine: 1, body: 'one' }));
 		const brought = drawThreads();
 		const [thread] = review.threads.all;
-		const navigator = new Navigator(review.threads, review.sections, onlyIn(DRAWS_NOTHING));
+		const navigator = navigatorOver(onlyIn(DRAWS_NOTHING));
 
 		navigator.reveal(thread);
 		await settled();
@@ -274,7 +279,7 @@ describe('moving the reader in whatever view the review is read in', () => {
 		sectionKnownBy('in the files', brought);
 		const drawsAll = { ...DRAWS_NOTHING, sectionOf: () => 'in the files' };
 		const showEverything = vi.fn(() => Promise.resolve(drawsAll));
-		const navigator = new Navigator(review.threads, review.sections, { ...onlyIn(DRAWS_NOTHING), showEverything });
+		const navigator = navigatorOver({ ...onlyIn(DRAWS_NOTHING), showEverything });
 
 		navigator.reveal(thread);
 		await settled();
@@ -289,7 +294,7 @@ describe('moving the reader in whatever view the review is read in', () => {
 		sectionKnownBy('the piece that draws it', []);
 		const draws = { ...DRAWS_NOTHING, sectionOf: () => 'the piece that draws it' };
 		const showEverything = vi.fn(() => Promise.resolve(DRAWS_NOTHING));
-		const navigator = new Navigator(review.threads, review.sections, { ...onlyIn(draws), showEverything });
+		const navigator = navigatorOver({ ...onlyIn(draws), showEverything });
 
 		navigator.reveal(thread);
 
@@ -300,7 +305,7 @@ describe('moving the reader in whatever view the review is read in', () => {
 		const brought: string[] = [];
 		sectionKnownBy('a.py in the files', brought);
 		const drawsAll = { ...DRAWS_NOTHING, sectionOfFile: () => 'a.py in the files' };
-		const navigator = new Navigator(review.threads, review.sections, {
+		const navigator = navigatorOver({
 			...onlyIn(DRAWS_NOTHING),
 			showEverything: () => Promise.resolve(drawsAll)
 		});
@@ -314,7 +319,7 @@ describe('moving the reader in whatever view the review is read in', () => {
 	it('shows no file no view draws any of, though a section stands on the page under its name', async () => {
 		const brought: string[] = [];
 		sectionKnownBy('a.py', brought);
-		const navigator = new Navigator(review.threads, review.sections, onlyIn(DRAWS_NOTHING));
+		const navigator = navigatorOver(onlyIn(DRAWS_NOTHING));
 
 		navigator.showFile('a.py');
 		await settled();
@@ -326,7 +331,7 @@ describe('moving the reader in whatever view the review is read in', () => {
 		const brought: string[] = [];
 		sectionKnownBy('the first piece of a.py', brought);
 		const view = { ...DRAWS_NOTHING, sectionOfFile: vi.fn(() => 'the first piece of a.py') };
-		const navigator = new Navigator(review.threads, review.sections, onlyIn(view));
+		const navigator = navigatorOver(onlyIn(view));
 
 		navigator.showFile('a.py');
 
@@ -339,7 +344,7 @@ describe('moving the reader in whatever view the review is read in', () => {
 		sectionKnownBy('drawn second', brought);
 		sectionKnownBy('drawn first', brought);
 		const view = { ...DRAWS_NOTHING, sectionKeys: () => ['drawn first', 'drawn second'] };
-		const navigator = new Navigator(review.threads, review.sections, onlyIn(view));
+		const navigator = navigatorOver(onlyIn(view));
 
 		navigator.stepSection(1);
 
@@ -353,7 +358,7 @@ describe('moving the reader in whatever view the review is read in', () => {
 		sectionKnownBy('drawn third', brought);
 		const lineNumber = second.appendChild(document.createElement('button'));
 		const view = { ...DRAWS_NOTHING, sectionKeys: () => ['drawn first', 'drawn second', 'drawn third'] };
-		const navigator = new Navigator(review.threads, review.sections, onlyIn(view));
+		const navigator = navigatorOver(onlyIn(view));
 		lineNumber.focus();
 
 		navigator.stepSection(1);
@@ -367,7 +372,7 @@ describe('moving the reader in whatever view the review is read in', () => {
 		const brought: string[] = [];
 		sectionKnownBy('the piece that draws it', brought);
 		const view = { ...DRAWS_NOTHING, sectionOf: () => 'the piece that draws it', unfold: vi.fn() };
-		const navigator = new Navigator(review.threads, review.sections, onlyIn(view));
+		const navigator = navigatorOver(onlyIn(view));
 
 		navigator.reveal(thread);
 

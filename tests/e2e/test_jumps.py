@@ -17,7 +17,7 @@ from playwright.async_api import Locator, Page, expect
 
 from claude_review.domain.models import CommentSeverity
 from tests.e2e.browsers_loop import in_the_browsers_loop
-from tests.e2e.page_reads import SCROLLED
+from tests.e2e.page_reads import FOCUSED_ELEMENT, SCROLLED
 from tests.helpers import (
     ReviewServers,
     RunningReview,
@@ -28,6 +28,7 @@ from tests.helpers import (
 )
 from tests.stories import as_the_agent_writes, step, story_of
 
+CHECK_ROUTE = "/api/check"
 STORY_ROUTE = "/api/story"
 SHOW_ROUTE = "/api/show"
 POINT_ROUTE = "/api/point"
@@ -38,6 +39,8 @@ LINES_OF_EACH = 60
 CHANGED_LINES = (5, 15, 25, 35, 45, 55)
 PATHS = [f"file_{number:02}.py" for number in range(FILES_OF_MANY_HUNKS)]
 FIRST_FILE = PATHS[0]
+# Where answering round 1 changes the first file once more: what a base since that round draws
+ANSWERED_AT = 2
 # Far down the review, with screens of files below it still: it can be brought to the top of the area
 FAR_FILE = PATHS[24]
 # The file right above it, and what the agent says on its last changed line: drawn as a card under that
@@ -79,6 +82,16 @@ WATCHED_FOR_FRAMES = 20
 # file above left in view by that fraction. Where the fractions fall is a sum of every height above, so a
 # test takes the anchoring away rather than look for a file that lands so
 WITHOUT_SCROLL_ANCHORING = '[data-testid="diff-view"] { overflow-anchor: none; }'
+# A check that failed far down the review, on a changed line of the far file, as the agent reports it
+FAILED_AT = CHANGED_LINES[2]
+A_CHECK_FAILED_IN_THE_FAR_FILE = {
+    "name": "pytest",
+    "status": "failed",
+    "failures": [{"path": FAR_FILE, "line": FAILED_AT, "what": "test_far"}],
+}
+# How far down the files the reader has read when the page takes them away, in pixels: screens above the far file
+READ_DOWN_TO = 1500
+SCROLLED_DOWN_TO = "(area, offset) => { area.scrollTop = offset; }"
 # A pixel of rounding, given to where the reader's turn of the wheel left the area
 LESS_THAN_A_PIXEL = 1
 # How far the reader turns the wheel against the page's own scroll, in pixels
@@ -121,6 +134,17 @@ async def review_with_a_thread_above_the_far_file(review: RunningReview) -> Runn
     async with AsyncClient(base_url=review.url) as agent:
         (await agent.post(POINT_ROUTE, json=raised)).raise_for_status()
     return review
+
+
+@in_the_browsers_loop
+async def review_with_a_round(many_hunks: Path, servers: ReviewServers) -> RunningReview:
+    """A review whose round 1 was answered by a change to the first file alone."""
+    started = await servers.start(await repository_opening(many_hunks))
+    async with AsyncClient(base_url=started.url) as agent:
+        await agent.post("/api/retake", json={})
+        write_files(many_hunks, {FIRST_FILE: _lines(FIRST_FILE, (*CHANGED_LINES, ANSWERED_AT))})
+        await agent.post("/api/retake", json={})
+    return started
 
 
 def _section(page: Page, path: str) -> Locator:
@@ -200,3 +224,86 @@ async def test_a_reader_who_scrolls_while_the_page_takes_them_to_a_file_is_left_
     await _marked(page, FAR_FILE)
 
     assert await area.evaluate(SCROLLED) <= taken_to - A_TURN_OF_THE_WHEEL + LESS_THAN_A_PIXEL
+
+
+async def _check_failed_in_the_far_file(review: RunningReview) -> None:
+    async with AsyncClient(base_url=review.url) as agent:
+        (await agent.post(CHECK_ROUTE, json=A_CHECK_FAILED_IN_THE_FAR_FILE)).raise_for_status()
+
+
+async def _go_to_where_the_check_failed(page: Page) -> None:
+    await page.get_by_test_id("checks").click()
+    await page.get_by_test_id("checks-pane").get_by_role("button", name=f"{FAR_FILE}:{FAILED_AT}").click()
+    await expect(page.locator(FOCUSED_ELEMENT)).to_have_text(str(FAILED_AT))
+
+
+async def _read_down_the_files(page: Page) -> Locator:
+    """The files read some way down, far above the far file: the area they scroll in."""
+    await page.wait_for_selector('[data-testid="file-item"]')
+    area = page.get_by_test_id("diff-view")
+    await area.evaluate(SCROLLED_DOWN_TO, READ_DOWN_TO)
+    await page.evaluate(FRAMES_DRAWN, WATCHED_FOR_FRAMES)
+    return area
+
+
+async def _go_back(page: Page) -> None:
+    await page.get_by_test_id("go-back").click()
+    await page.evaluate(FRAMES_DRAWN, WATCHED_FOR_FRAMES)
+
+
+async def test_back_from_where_a_check_failed_shows_the_reader_what_they_were_reading(
+    review: RunningReview, page: Page
+) -> None:
+    await _check_failed_in_the_far_file(review)
+    await page.goto(review.url)
+    area = await _read_down_the_files(page)
+    read_at = await area.evaluate(SCROLLED)
+    await _go_to_where_the_check_failed(page)
+
+    await _go_back(page)
+
+    assert abs(await area.evaluate(SCROLLED) - read_at) < LESS_THAN_A_PIXEL
+
+
+async def test_going_again_to_a_line_in_sight_leaves_no_way_back_to_it(review: RunningReview, page: Page) -> None:
+    await _check_failed_in_the_far_file(review)
+    await page.goto(review.url)
+    await _read_down_the_files(page)
+    await _go_to_where_the_check_failed(page)
+
+    await _go_to_where_the_check_failed(page)
+    await _go_back(page)
+
+    await expect(page.get_by_test_id("go-back")).to_have_count(0)
+
+
+async def test_back_from_a_jump_out_of_a_narrower_base_takes_the_reader_to_the_file_they_read(
+    review_with_a_round: RunningReview, page: Page
+) -> None:
+    """The jump puts the whole review back, as the narrower base draws no line of the far file."""
+    await _check_failed_in_the_far_file(review_with_a_round)
+    await page.goto(review_with_a_round.url)
+    await page.wait_for_selector('[data-testid="file-item"]')
+    await page.click('[data-testid="base-picker"]')
+    await page.get_by_test_id("base-option").filter(has_text="round 1").click()
+    await page.wait_for_selector('[data-testid="narrowed-to"]')
+    await _go_to_where_the_check_failed(page)
+
+    await _go_back(page)
+
+    await expect(_section(page, FIRST_FILE).locator(FOCUSED_ELEMENT)).to_have_count(1)
+
+
+async def test_back_from_a_jump_off_the_storys_words_brings_the_story_back_as_the_reader_left_it(
+    review: RunningReview, page: Page
+) -> None:
+    await _check_failed_in_the_far_file(review)
+    await page.goto(review.url)
+    await page.wait_for_selector('[data-testid="file-item"]')
+    await page.click('[data-testid="read-as-story"]')
+    await page.wait_for_selector('[data-testid="story-piece"]')
+    await _go_to_where_the_check_failed(page)
+
+    await _go_back(page)
+
+    await expect(page.get_by_test_id("story-view")).to_have_js_property("scrollTop", 0)

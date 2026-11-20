@@ -241,7 +241,7 @@ describe('which way a review is read', () => {
 		review = openReview({ story: TOLD });
 		review.views.choose('story');
 
-		review.views.showFiles();
+		review.views.show('files');
 
 		expect(review.views.onScreen.name).toBe('files');
 	});
@@ -250,7 +250,7 @@ describe('which way a review is read', () => {
 		review = openReview({ story: TOLD });
 		review.views.choose('story');
 
-		review.views.showFiles();
+		review.views.show('files');
 
 		expect(openReview({ story: TOLD }).views.onScreen.name).toBe('story');
 	});
@@ -258,7 +258,7 @@ describe('which way a review is read', () => {
 	it('is as its story once that is brought on screen for a thread only it draws, and its view is handed over', () => {
 		review = openReview({ story: TOLD });
 
-		const handedOver = review.views.showStory();
+		const handedOver = review.views.show('story');
 
 		expect(review.views.onScreen.name).toBe('story');
 		expect(handedOver).toBe(review.views.onScreen);
@@ -267,7 +267,7 @@ describe('which way a review is read', () => {
 	it('is still by its files, in the next review opened, though the story was brought on screen in this one', () => {
 		review = openReview({ story: TOLD });
 
-		review.views.showStory();
+		review.views.show('story');
 
 		expect(openReview({ story: TOLD }).views.onScreen.name).toBe('files');
 	});

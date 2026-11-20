@@ -19,7 +19,7 @@
 	import FileRow from './FileRow.svelte';
 	import FileTreeFolder from './FileTreeFolder.svelte';
 	import { chordName, COLUMN_CHORD } from './keymap';
-	import WayBack from './WayBack.svelte';
+	import { wayBackOf } from './way-back';
 
 	/** What the tree lists, in words: counted in its heading, looked for in its filter. */
 	interface Listed extends CountedWords {
@@ -141,14 +141,6 @@
 	{/if}
 {/snippet}
 
-{#snippet back()}
-	<WayBack stands="foot" />
-{/snippet}
-
-{#snippet backOnRail()}
-	<WayBack stands="rail" />
-{/snippet}
-
 <!-- The files of the review, in the column beside them: the frame, its width and being put away are the column's;
 	its rail counts the files. At its foot, and its rail's, the way back, while there is one -->
 <SideColumn
@@ -160,8 +152,7 @@
 	resizing="Resize the file tree"
 	key={chordName(COLUMN_CHORD)}
 	holds="list"
-	foot={review.wayBack.top ? back : undefined}
-	railFoot={review.wayBack.top ? backOnRail : undefined}
+	back={wayBackOf(review)}
 	data-tour={tourStop('file-tree')}
 	testIds={{
 		column: 'sidebar',

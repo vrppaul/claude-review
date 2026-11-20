@@ -42,10 +42,9 @@
 	// back once it is; nothing but the diff itself starts it.
 	$effect.pre(() => {
 		void review.diff.files;
-		const area = untrack(() => container);
-		const place = area ? untrack(() => review.sections.readingPlace(area)) : null;
-		if (!area || place === null) return;
-		void tick().then(() => review.sections.returnTo(area, place));
+		const place = untrack(() => review.sections.readingPlace());
+		if (place === null) return;
+		void tick().then(() => review.sections.returnTo(place));
 	});
 </script>
 

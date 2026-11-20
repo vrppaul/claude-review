@@ -118,7 +118,10 @@
 	height: var(--cr-button-sm);
 	padding-inline: --spacing(3);
 }
-/* One of the ways on a pane lists (Button's `listed`): across the pane, its words at its start, its icon further off */
+/*
+ * One of the ways a pane lists, or the one way at a column's foot (Button's `listed`): across the room it stands in,
+ * its words at its start, its icon further off
+ */
 .cr-ui-button-listed {
 	width: 100%;
 	justify-content: flex-start;

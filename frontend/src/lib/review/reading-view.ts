@@ -11,11 +11,15 @@
 
 import { inDiffOrder, isDrawn } from '$lib/anchors/placement';
 import type { FileLines } from '$lib/anchors/views';
+import type { FileSections } from '$lib/dom/file-sections';
+import type { ReadingPlace } from '$lib/dom/reading-place';
 import type { ReadingViewName } from '$lib/reader/page-layout.svelte';
 import type { ReadingProgress } from '$lib/review/reading-progress.svelte';
 import type { ReviewDiff } from '$lib/review/review-diff.svelte';
 import type { Threads } from '$lib/review/threads.svelte';
-import type { Thread } from '$lib/types';
+import type { LinePlace, Thread } from '$lib/types';
+import { placeOfKey } from '$lib/utils/line-places';
+import { fileName } from '$lib/utils/paths';
 
 /**
  * What a view draws of the review as it stands, in the two things a key
@@ -57,6 +61,36 @@ export interface ReadingView {
 	 * cannot draw it.
 	 */
 	drawLine: (path: string, line: number) => Promise<string | null>;
+	/** Where the reader reads in it, and what to call that place; null while nothing of it is being read. */
+	placeRead: () => PlaceRead | null;
+	/**
+	 * Put the reader back at a place read in it, as they saw it, once the
+	 * place is drawn: its file unfolded, its line read in. False where the
+	 * view cannot draw the place now, and the reader is not moved.
+	 */
+	returnTo: (place: ReadingPlace) => Promise<boolean>;
+}
+
+/** Where the reader reads in a view, and what the way back there calls it. */
+export interface PlaceRead {
+	place: ReadingPlace;
+	/** As short as the reader knows it: a file's name and the line, `routes.ts:33`, or a chapter's title. */
+	called: string;
+	/** In full, on the pointer: `src/http/routes.ts:33`. */
+	calledInFull: string;
+}
+
+/** A place in a section of lines, called by its file and the line read from; null for a section not drawn. */
+export function placeInLines(sections: FileSections, place: ReadingPlace): PlaceRead | null {
+	const path = sections.fileOf(place.within);
+	if (path === null) return null;
+	const line = place.line === null ? null : placeOfKey(place.line);
+	return { place, called: lineCalled(fileName(path), line), calledInFull: lineCalled(path, line) };
+}
+
+/** A file and the line read from in it, as the reader knows them: `routes.ts:33`; the file alone where there is none. */
+function lineCalled(file: string, line: LinePlace | null): string {
+	return line === null ? file : `${file}:${line.number}`;
 }
 
 /**
@@ -79,13 +113,22 @@ export class FilesReading implements ReadingView {
 	readonly #diff: ReviewDiff;
 	readonly #threads: Threads;
 	readonly #reading: ReadingProgress;
+	// The sections the files are drawn in, which say where the reader reads and take them back there
+	readonly #sections: FileSections;
 	// The most lines one read of a file hands back
 	readonly #longestRead: number;
 
-	constructor(diff: ReviewDiff, threads: Threads, reading: ReadingProgress, longestRead: number) {
+	constructor(
+		diff: ReviewDiff,
+		threads: Threads,
+		reading: ReadingProgress,
+		sections: FileSections,
+		longestRead: number
+	) {
 		this.#diff = diff;
 		this.#threads = threads;
 		this.#reading = reading;
+		this.#sections = sections;
 		this.#longestRead = longestRead;
 	}
 
@@ -147,5 +190,26 @@ export class FilesReading implements ReadingView {
 		this.#reading.unfold(path);
 		await this.#diff.revealed.revealLine(file, line, this.#longestRead);
 		return fileSectionKey(path);
+	}
+
+	placeRead(): PlaceRead | null {
+		const place = this.#sections.readingPlace();
+		return place === null ? null : placeInLines(this.#sections, place);
+	}
+
+	/**
+	 * Its file unfolded, and a line of the file as it stands read in where
+	 * the diff on screen leaves it out; a file the diff on screen holds none
+	 * of is not drawn.
+	 */
+	async returnTo(place: ReadingPlace): Promise<boolean> {
+		// What the files' own view knows a section by is its file's path
+		const path = place.within;
+		if (this.sectionOfFile(path) === null) return false;
+		const line = place.line === null ? null : placeOfKey(place.line);
+		if (line?.side === 'new') await this.drawLine(path, line.number);
+		else this.#reading.unfold(path);
+		this.#sections.goBackTo(place);
+		return true;
 	}
 }

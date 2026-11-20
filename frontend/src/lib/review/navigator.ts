@@ -27,9 +27,9 @@ import type { FileSections } from '$lib/dom/file-sections';
 import type { ReadingViewName } from '$lib/reader/page-layout.svelte';
 import type { ReadingView } from '$lib/review/reading-view';
 import type { Threads } from '$lib/review/threads.svelte';
-import type { WayBack } from '$lib/review/way-back.svelte';
+import type { PlaceLeft, WayBack } from '$lib/review/way-back.svelte';
 import type { Thread } from '$lib/types';
-import { placeKey, placeOfKey } from '$lib/utils/line-places';
+import { placeKey } from '$lib/utils/line-places';
 
 /** The views the review is read in, as moving the reader needs them. */
 export interface ViewsOnScreen {
@@ -42,11 +42,12 @@ export interface ViewsOnScreen {
 	 * section asked for before it is.
 	 */
 	showEverything: () => Promise<ReadingView>;
-	/** Bring the story on screen, which alone draws the threads on its words, and hand its view over. */
-	showStory: () => ReadingView;
-	/** Bring back on screen the view the reader read in before the page took them elsewhere. */
-	bringBack: (name: ReadingViewName) => void;
+	/** Bring a view on screen, as it draws the review now, and hand it over: how the reader chose to read stays. */
+	show: (name: ReadingViewName) => ReadingView;
 }
+
+// The view that alone draws the threads on the story's words
+const STORY: ReadingViewName = 'story';
 
 /** Where the reader is among the threads: the one they were last brought to, among the threads as they stood then. */
 interface ReaderAt {
@@ -173,46 +174,51 @@ export class Navigator {
 	 * screen draws it, its file unfolded and what the diff left out around
 	 * it read in, or else where every file is drawn, which comes on screen
 	 * for it. A line drawn nowhere is not gone to. Where the reader was is
-	 * noted first, for Back to take them to.
+	 * read first, and noted for Back once they are taken somewhere else.
 	 */
 	async goToLine(path: string, line: number): Promise<void> {
-		this.#noteThePlaceLeft();
+		const left = this.#placeRead();
 		const lineKey = placeKey({ side: 'new', number: line });
 		const onScreen = await this.#views.onScreen.drawLine(path, line);
 		if (onScreen !== null) {
-			this.#sections.goToLine(onScreen, lineKey);
+			this.#goToLineFrom(left, onScreen, lineKey);
 			return;
 		}
 		const drawingAll = await this.#views.showEverything();
 		const section = await drawingAll.drawLine(path, line);
-		if (section !== null) this.#sections.goToLine(section, lineKey);
+		if (section !== null) this.#goToLineFrom(left, section, lineKey);
 	}
 
 	/**
-	 * Take the reader back to the last place they left in the diff on
-	 * screen: its view back on screen, how they chose to read left as it is,
-	 * and the line they read from in the middle of the reading area with the
-	 * keyboard on it, or the top of the section where they read from none.
-	 * The place is taken off the way back, and going there notes none.
+	 * Take the reader back to the last place they left in the take on
+	 * screen, as they saw it: in the view they read it in, how they chose
+	 * to read left as it is, or where every file is drawn where that view
+	 * cannot draw the place now. The place is taken off the way back, and
+	 * going there notes none.
 	 */
-	goBack(): void {
-		const place = this.#wayBack.takeTop();
-		if (place === null) return;
-		this.#views.bringBack(place.view);
-		if (place.line === null) this.#sections.scrollTo(place.section);
-		else this.#sections.goToLine(place.section, placeKey(place.line));
+	async goBack(): Promise<void> {
+		const left = this.#wayBack.takeTop();
+		if (left === null) return;
+		if (await this.#views.show(left.view).returnTo(left.place)) return;
+		const drawingAll = await this.#views.showEverything();
+		await drawingAll.returnTo(left.place);
 	}
 
-	/** Note where the reader reads from, in the view on screen, as the page takes them elsewhere. */
-	#noteThePlaceLeft(): void {
-		const readFrom = this.#sections.readFrom();
-		if (readFrom === null) return;
-		this.#wayBack.note({
-			view: this.#views.onScreen.name,
-			section: readFrom.section,
-			path: readFrom.path,
-			line: readFrom.line === null ? null : placeOfKey(readFrom.line)
-		});
+	/** Where the reader reads, in the view on screen. */
+	#placeRead(): PlaceLeft | null {
+		const onScreen = this.#views.onScreen;
+		const read = onScreen.placeRead();
+		return read === null ? null : { ...read, view: onScreen.name };
+	}
+
+	/**
+	 * Go to a line's number in a section, noting the place left for Back
+	 * where the reader is taken somewhere else: a line they see already
+	 * leaves them looking at what they saw, and Back would lead nowhere.
+	 */
+	#goToLineFrom(left: PlaceLeft | null, section: string, lineKey: string): void {
+		if (left !== null && !this.#sections.seesLine(section, lineKey)) this.#wayBack.note(left);
+		this.#sections.goToLine(section, lineKey);
 	}
 
 	/** Bring a thread on lines of a file into view, where the view on screen draws them or where every thread is drawn. */
@@ -224,7 +230,7 @@ export class Navigator {
 
 	/** Bring a thread on the story's words into view in the story, which comes on screen for it. */
 	#revealOnTheStory(thread: Thread): void {
-		const story = this.#views.showStory();
+		const story = this.#views.show(STORY);
 		this.#at = { thread: thread.id, among: story.threadsInOrder() };
 		this.#sections.goToStoryThread(thread.id);
 	}

@@ -22,12 +22,28 @@ import {
 	overviewLine,
 	stepReason
 } from '$lib/anchors/story';
+import { tick } from 'svelte';
 import type { FileLines } from '$lib/anchors/views';
-import { type Drawn, LINES_WITH_THEIR_THREADS, NOTHING_DRAWN, type ReadingView } from '$lib/review/reading-view';
+import type { FileSections } from '$lib/dom/file-sections';
+import type { ReadingPlace } from '$lib/dom/reading-place';
+import type { ReadingParts } from '$lib/dom/reading-parts';
+import {
+	type Drawn,
+	LINES_WITH_THEIR_THREADS,
+	NOTHING_DRAWN,
+	placeInLines,
+	type PlaceRead,
+	type ReadingView
+} from '$lib/review/reading-view';
 import type { ReviewStory } from '$lib/review/review-story.svelte';
 import type { ChapterListed, FileListed } from '$lib/review/story-contents';
+import { OVERVIEW_PART } from '$lib/review/story-keys';
 import type { Threads } from '$lib/review/threads.svelte';
 import type { StoryBlock, Thread, ToldStory } from '$lib/types';
+
+// What the way back calls the parts of a story that are no chapter: its overview, and what no step tells
+const OVERVIEW_CALLED = 'the overview';
+const LEFT_OUT_CALLED = 'what no step tells';
 
 /**
  * The threads on a block of the story's words, where the story says
@@ -124,10 +140,15 @@ export class StoryReading implements ReadingView {
 	readonly name = 'story';
 	readonly #story: ReviewStory;
 	readonly #threads: Threads;
+	// The sections its pieces are drawn in, and its parts: where the reader reads in it is in one or the other
+	readonly #sections: FileSections;
+	readonly #parts: ReadingParts;
 
-	constructor(story: ReviewStory, threads: Threads) {
+	constructor(story: ReviewStory, threads: Threads, sections: FileSections, parts: ReadingParts) {
 		this.#story = story;
 		this.#threads = threads;
+		this.#sections = sections;
+		this.#parts = parts;
 	}
 
 	/**
@@ -171,5 +192,33 @@ export class StoryReading implements ReadingView {
 	/** A story folds nothing away. */
 	unfold(): void {
 		// Nothing of a story is folded: every piece it draws is on the page
+	}
+
+	/**
+	 * In a piece of a file, called by its file and line; else in a part of
+	 * the story, its overview or a chapter, called by its title.
+	 */
+	placeRead(): PlaceRead | null {
+		const inAPiece = this.#sections.readingPlace();
+		if (inAPiece !== null) return placeInLines(this.#sections, inAPiece);
+		const inAPart = this.#parts.readingPlace();
+		if (inAPart === null) return null;
+		const called = this.#partCalled(inAPart.within);
+		return { place: inAPart, called, calledInFull: called };
+	}
+
+	/** A story draws every piece and part it tells whole: once it is drawn, the place is there. */
+	async returnTo(place: ReadingPlace): Promise<boolean> {
+		await tick();
+		if (this.#story.pieces.keys.includes(place.within)) this.#sections.goBackTo(place);
+		else this.#parts.goBackTo(place);
+		return true;
+	}
+
+	/** What a part of the story is called: a chapter by its title, the rest by what they are. */
+	#partCalled(part: string): string {
+		const chapter = this.#story.contents.chapterAt(part);
+		if (chapter !== null) return chapter.told.title;
+		return part === OVERVIEW_PART ? OVERVIEW_CALLED : LEFT_OUT_CALLED;
 	}
 }

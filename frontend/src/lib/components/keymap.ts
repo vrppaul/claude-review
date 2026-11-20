@@ -229,7 +229,7 @@ const KEYMAP: readonly KeyRow[] = [
 	},
 	// The place left is gone back to in the view it was left in, whatever is on screen
 	{
-		presses: [alone('b', (review) => review.navigator.goBack())],
+		presses: [alone('b', (review) => void review.navigator.goBack())],
 		does: 'Back to where you were',
 		views: EVERY_VIEW,
 		live: WHILE_THERE_IS_A_WAY_BACK

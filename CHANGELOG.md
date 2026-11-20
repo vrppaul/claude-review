@@ -30,12 +30,13 @@
 - **The line you are taken to is lit.** Going to where a check failed
   lights the line in your colour, its half alone in two columns, until
   the keyboard leaves it; a line you step to with j and k is not lit.
-- **Back to where you were.** Before taking you to a line, the page notes
-  the line you read from; "Back to routes.ts:33" at the foot of the file
-  tree, or of the story's contents, takes you there again, in the view
-  you read it in, and so does `b`. Each jump stacks its place, and the
-  rail of a column put away keeps the way back as an icon. A new diff
-  forgets them: its lines are numbered anew.
+- **Back to where you were.** Taking you to where a check failed, the page
+  notes where you were reading, in the files or anywhere in the story;
+  "Back to routes.ts:33" at the foot of the file tree, or of the story's
+  contents, puts you back as you saw it, in the view you read it in, and
+  so does `b`. Each jump stacks its place, and the rail of a column put
+  away keeps the way back as an icon. A retake forgets them: its lines are
+  numbered anew.
 
 ### Changed
 - **Help's "What's new" names no release.** The news it opens is of the

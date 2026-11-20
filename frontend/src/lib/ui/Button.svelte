@@ -9,8 +9,9 @@
 		size: ButtonSize;
 		testId: string;
 		/**
-		 * Whether it is one of the ways on a pane lists, one under another: across the pane, its words at its start,
-		 * so the ways read down as a list; none for a button among others in a line.
+		 * Whether it is one of the ways a pane lists, one under another, or the one way at a column's foot: across the
+		 * room it stands in, its words at its start, so the ways read down as a list; none for a button among others in
+		 * a line.
 		 */
 		listed?: boolean;
 		/** What a way a pane lists says of itself at its end, quieter than its words: "7 stops", "draft kept". */

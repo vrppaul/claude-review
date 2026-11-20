@@ -128,7 +128,7 @@ const NO_PAGE_LOOKUPS = [...NO_TEST_ID_LOOKUPS, ...NO_PAGE_WIDE_ID_LOOKUPS];
 // the way into Story's `readAsStory`. Taking the reader to what only one view
 // draws changes what is on screen and leaves their choice alone
 const CHOSEN_BY_THE_READER =
-	'Only the switch and Try Story write how the reader chose to read; to bring a view on screen, call showFiles or showStory.';
+	'Only the switch and Try Story write how the reader chose to read; to bring a view on screen, call show.';
 const NO_CHOOSING = [
 	{
 		selector: "CallExpression[callee.property.name='choose'][callee.object.property.name='views']",

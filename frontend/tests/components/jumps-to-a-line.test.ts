@@ -2,13 +2,17 @@ import { describe, it, expect } from 'vitest';
 import { render, screen, within } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import ReviewScreen from '$lib/components/ReviewScreen.svelte';
+import type { ReadingViewName } from '$lib/reader/page-layout.svelte';
 import type { Review } from '$lib/review/review.svelte';
+import { OVERVIEW_PART } from '$lib/review/story-keys';
+import type { PlaceLeft } from '$lib/review/way-back.svelte';
 import type { CheckFailure, StoryHeld } from '$lib/types';
 import { flushSync } from 'svelte';
 import { storyHeld, toldChapter, toldStep } from '../story';
 import { failedCheck, failure } from '../checks';
-import { contextLine, diffFile, diffResponse, hunk } from '../diff';
+import { A_LATER_TAKE, contextLine, diffFile, diffResponse, hunk } from '../diff';
 import { fakeServer } from '../fake-server';
+import { frames } from '../frames';
 import { openReview } from '../review';
 import { settled } from '../settled';
 
@@ -28,23 +32,24 @@ function onScreenFailing(failures: CheckFailure[], story: StoryHeld | null = nul
 	return review;
 }
 
-/** Press where a check failed, in the pane the header's chip opens: the first failure, or the one at this place. */
-async function pressFailure(where: RegExp = /app\.py/): Promise<void> {
+/** Press where a check failed, in the pane the header's chip opens. */
+async function pressFailure(): Promise<void> {
 	const user = userEvent.setup({ delay: null });
 	await user.click(screen.getByTestId('checks'));
-	await user.click(within(screen.getByTestId('checks-pane')).getByRole('button', { name: where }));
+	await user.click(within(screen.getByTestId('checks-pane')).getByRole('button', { name: /app\.py/ }));
 	await settled();
 }
 
-/** The number of a line drawn in the files, to put the keyboard on. */
-function lineNumber(number: number): HTMLElement | undefined {
-	return screen.getAllByTestId('line-gutter').find((gutter) => gutter.textContent?.trim() === String(number));
+/** A place the reader left, in a view, at the top of the reading area: within a section or a part, at a line or none. */
+function leftAt(view: ReadingViewName, within: string, line: string | null, called: string): PlaceLeft {
+	return { view, place: { within, line, offset: 0 }, called, calledInFull: called };
 }
 
-/** Press a control and let the page take the reader where it does. */
+/** Press a control and let the page take the reader where it does, until they come to rest. */
 async function press(testId: string): Promise<void> {
 	await userEvent.setup({ delay: null }).click(screen.getByTestId(testId));
 	await settled();
+	await frames();
 }
 
 describe('going to where a check failed', () => {
@@ -56,36 +61,9 @@ describe('going to where a check failed', () => {
 		expect(document.activeElement?.textContent?.trim()).toBe('2');
 	});
 
-	it('lights the line it takes the reader to', async () => {
-		const review = onScreenFailing([failure({ path: 'src/app.py', line: 2 })]);
-
-		await pressFailure();
-
-		expect(review.sections.arrived.lineIn('src/app.py')).toBe('new:2');
-	});
-
-	it('puts the light out once the keyboard leaves the line: a line gone to by j is not lit', async () => {
-		const review = onScreenFailing([failure({ path: 'src/app.py', line: 2 })]);
-		await pressFailure();
-
-		await userEvent.setup({ delay: null }).keyboard('j');
-
-		expect(review.sections.arrived.lineIn('src/app.py')).toBeNull();
-	});
-
-	it('keeps the line lit while the window alone loses the keyboard', async () => {
-		const review = onScreenFailing([failure({ path: 'src/app.py', line: 2 })]);
-		await pressFailure();
-
-		// A window the reader leaves blurs what holds the keyboard, which holds it still for the page
-		document.activeElement?.dispatchEvent(new FocusEvent('blur'));
-
-		expect(review.sections.arrived.lineIn('src/app.py')).toBe('new:2');
-	});
-
 	it('brings the files on screen from a story that tells nothing of the line, and goes to it there', async () => {
 		const review = onScreenFailing([failure({ path: 'src/app.py', line: 2 })], storyHeld());
-		review.views.showStory();
+		review.views.show('story');
 		flushSync();
 
 		await pressFailure();
@@ -97,7 +75,7 @@ describe('going to where a check failed', () => {
 	it('goes to the line in the story where a piece of it draws the line', async () => {
 		const told = storyHeld({ chapters: [toldChapter('ch-1', [toldStep('src/app.py', 2)])] });
 		const review = onScreenFailing([failure({ path: 'src/app.py', line: 2 })], told);
-		review.views.showStory();
+		review.views.show('story');
 		flushSync();
 
 		await pressFailure();
@@ -149,6 +127,8 @@ describe('going to where a check failed', () => {
 	});
 });
 
+// Where the reader read before the page took them elsewhere is read off the page as laid out, which jsdom does not
+// do: the browser tests note it (tests/e2e/test_jumps.py), and these leave it on the way back by hand
 describe('going back to where the reader was before going to a line', () => {
 	it('offers no way back before the page took the reader anywhere', () => {
 		onScreenFailing([failure({ path: 'src/app.py', line: 2 })]);
@@ -156,42 +136,53 @@ describe('going back to where the reader was before going to a line', () => {
 		expect(screen.queryByTestId('go-back')).toBeNull();
 	});
 
-	it('names the line read from, the first at the top of the file being read, by its file and number', async () => {
-		onScreenFailing([failure({ path: 'src/app.py', line: 50 })]);
+	it('names where it goes back to', () => {
+		const review = onScreenFailing([]);
 
-		await pressFailure();
+		review.wayBack.note(leftAt('files', 'src/app.py', 'new:2', 'app.py:2'));
+		flushSync();
 
-		expect(screen.getByTestId('go-back').textContent?.trim()).toBe('Back to app.py:1');
+		expect(screen.getByTestId('go-back').textContent?.trim()).toBe('Back to app.py:2');
 	});
 
-	it('takes the reader back to that line, the keyboard on its number, with nowhere left to go back to', async () => {
-		onScreenFailing([failure({ path: 'src/app.py', line: 50 })]);
-		await pressFailure();
+	it('takes the reader back to the line they read from, the keyboard on its number, with nowhere left to go back to', async () => {
+		const review = onScreenFailing([]);
+		review.wayBack.note(leftAt('files', 'src/app.py', 'new:2', 'app.py:2'));
+		flushSync();
 
 		await press('go-back');
 
-		expect(document.activeElement?.textContent?.trim()).toBe('1');
+		expect(document.activeElement?.textContent?.trim()).toBe('2');
 		expect(screen.queryByTestId('go-back')).toBeNull();
 	});
 
-	it('goes back through every place left, the last first, each the line the keyboard was on', async () => {
+	it("puts the keyboard on the file's own toggle going back to the top of a file, where no line was read from", async () => {
 		const review = onScreenFailing([]);
-		lineNumber(3)?.focus();
-		await review.navigator.goToLine('src/app.py', 2);
-		await settled();
-		await review.navigator.goToLine('src/app.py', 50);
-		await settled();
+		review.wayBack.note(leftAt('files', 'src/app.py', null, 'app.py'));
+		flushSync();
+
+		await press('go-back');
+
+		expect(document.activeElement?.getAttribute('aria-label')).toContain('app.py');
+	});
+
+	it('goes back through every place left, the last first', async () => {
+		const review = onScreenFailing([]);
+		review.wayBack.note(leftAt('files', 'src/app.py', 'new:2', 'app.py:2'));
+		review.wayBack.note(leftAt('files', 'src/app.py', 'new:3', 'app.py:3'));
+		flushSync();
 
 		await press('go-back');
 		const firstBack = document.activeElement?.textContent?.trim();
 		await press('go-back');
 
-		expect([firstBack, document.activeElement?.textContent?.trim()]).toEqual(['2', '3']);
+		expect([firstBack, document.activeElement?.textContent?.trim()]).toEqual(['3', '2']);
 	});
 
 	it('goes back by b, which the help lists while there is a way back', async () => {
-		onScreenFailing([failure({ path: 'src/app.py', line: 50 })]);
-		await pressFailure();
+		const review = onScreenFailing([]);
+		review.wayBack.note(leftAt('files', 'src/app.py', 'new:1', 'app.py:1'));
+		flushSync();
 		const user = userEvent.setup({ delay: null });
 		await user.keyboard('?');
 		const listed = within(screen.getByTestId('shortcuts-list')).getByText('Back to where you were').textContent;
@@ -199,13 +190,14 @@ describe('going back to where the reader was before going to a line', () => {
 
 		await user.keyboard('b');
 		await settled();
+		await frames();
 
 		expect([listed, document.activeElement?.textContent?.trim()]).toEqual(['Back to where you were', '1']);
 	});
 
 	it('goes back from the tree put away, by the button at the foot of its rail', async () => {
-		const review = onScreenFailing([failure({ path: 'src/app.py', line: 50 })]);
-		await pressFailure();
+		const review = onScreenFailing([]);
+		review.wayBack.note(leftAt('files', 'src/app.py', 'new:1', 'app.py:1'));
 		review.layout.fileTree.toggle();
 		flushSync();
 
@@ -214,24 +206,22 @@ describe('going back to where the reader was before going to a line', () => {
 		expect(document.activeElement?.textContent?.trim()).toBe('1');
 	});
 
-	it('brings back the story the reader read in, at the line they read from in it', async () => {
-		const told = storyHeld({ chapters: [toldChapter('ch-1', [toldStep('src/app.py', 1)])] });
-		const review = onScreenFailing([failure({ path: 'src/app.py', line: 50 })], told);
-		review.views.showStory();
+	it("brings back the story where the reader read its words, the keyboard lent to the part's head", async () => {
+		const review = onScreenFailing([], storyHeld());
+		review.wayBack.note(leftAt('story', OVERVIEW_PART, null, 'the overview'));
 		flushSync();
-		await pressFailure();
 
 		await press('go-back');
 
 		expect(review.views.onScreen.name).toBe('story');
-		expect(document.activeElement?.textContent?.trim()).toBe('1');
+		expect(document.activeElement?.textContent).toContain('A change, told');
 	});
 
-	it('forgets the way back once the diff is taken again, which may number the lines anew', async () => {
+	it('forgets the way back once the change is taken again, which numbers its lines anew', async () => {
 		const server = fakeServer();
-		server.answer('GET /api/diff', diffResponse({ files: [file] }));
-		const review = onScreenFailing([failure({ path: 'src/app.py', line: 50 })]);
-		await pressFailure();
+		server.answer('GET /api/diff', diffResponse({ files: [file], take: A_LATER_TAKE }));
+		const review = onScreenFailing([]);
+		review.wayBack.note(leftAt('files', 'src/app.py', 'new:1', 'app.py:1'));
 
 		await review.diff.take();
 		flushSync();

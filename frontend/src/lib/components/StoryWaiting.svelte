@@ -123,7 +123,7 @@
 					tone="primary"
 					size="sm"
 					testId="read-files-meanwhile"
-					onclick={() => review.views.showFiles()}
+					onclick={() => review.views.show('files')}
 				>
 					Read the files meanwhile
 				</Button>

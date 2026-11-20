@@ -247,7 +247,7 @@ describe('Story introduced at the switch', () => {
 		const server = serving();
 		const review = await drawn({ story: A_STORY });
 
-		review.wayIntoStory.showStory();
+		review.wayIntoStory.show('story');
 
 		expect(review.guide.introducesStory).toBe(false);
 		await vi.waitFor(() => expect(server.bodiesSentTo('PUT /api/guide')).toEqual([{ story_introduced: true }]));
