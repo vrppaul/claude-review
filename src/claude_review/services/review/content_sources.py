@@ -1,8 +1,8 @@
 """Where a review's content comes from: a repository, taken again whenever asked, or files read once.
 
 A review of a repository can be read against other bases, widened past its
-hunks, taken again after a round, watched for the tree moving under it, and
-asked where a name in it stands.
+hunks, taken again after a round, watched for the tree moving under it,
+asked where a name in it stands, and opened at a file the change did not touch.
 Files and a conversation can do none of that. Each kind of review answers
 for itself here, and its host picks the kind by what was opened
 (`content_source`). The one thing the review asks a source about its kind
@@ -31,6 +31,7 @@ from claude_review.domain.interfaces import Clock, GitError, ReviewedRepository,
 from claude_review.domain.models import (
     ChangedSinceRound,
     DiffFile,
+    FileOfTake,
     OfConversation,
     OfFiles,
     ReviewKey,
@@ -40,6 +41,7 @@ from claude_review.domain.models import (
 from claude_review.services.code_names.lookup import NameLookup
 from claude_review.services.diff_reading import read_diff
 from claude_review.services.file_window_service import FileWindow, FileWindowService
+from claude_review.services.files_of_take import FilesOfTake
 from claude_review.services.review.review_checks import TreesWritten
 from claude_review.services.review.review_content import ReviewContent, TakesCompared
 from claude_review.services.review.review_lifetime import ReviewLifetime
@@ -124,6 +126,10 @@ class ContentSource(TakesCompared, TreesWritten):
         """The name at a place the reader points at, and every place it stands in the take on screen."""
 
     @abstractmethod
+    async def file_of_take(self, path: str) -> FileOfTake:
+        """A file of the take on screen, whole: what the reader opens of a file the change did not touch."""
+
+    @abstractmethod
     def tree_moves(self, lifetime: ReviewLifetime) -> AsyncIterator[int]:
         """How many files stand otherwise than in the take on screen, each time the tree changes, until the review ends.
 
@@ -144,6 +150,7 @@ class RepositorySource(ContentSource):
         self._watcher = TreeWatcherService(repository)
         self._windows = FileWindowService(repository)
         self._names = NameLookup(repository, opened.root)
+        self._files_of_take = FilesOfTake(repository, opened.root)
         self._versions = ReviewVersions(repository, clock, opened)
         # Held while the diff is taken again, so two retakes never interleave
         self._retaking = asyncio.Lock()
@@ -274,12 +281,20 @@ class RepositorySource(ContentSource):
             NoWordHereError: if the place holds no word.
         """
         content = self._content
-        if content.written_as is None:
-            msg = "git wrote down no tree of the take on screen: no name in it can be looked up"
-            raise TakeNotWrittenError(msg)
         return await self._names.name_at(
-            place, tree=content.written_as, base=self._versions.pinned_base, files=content.files
+            place, tree=_tree_written(content), base=self._versions.pinned_base, files=content.files
         )
+
+    @override
+    async def file_of_take(self, path: str) -> FileOfTake:
+        """Read from the tree the take on screen was written down as, never the disk, so its lines are the diff's.
+
+        Raises:
+            TakeNotWrittenError: if git wrote down no tree of the take.
+            FileNotInReviewError: if the take holds no file at the path.
+            FileUnreadableError: if the file is not text, or larger than the review reads line by line.
+        """
+        return await self._files_of_take.file(_tree_written(self._content), path)
 
     @override
     async def tree_moves(self, lifetime: ReviewLifetime) -> AsyncIterator[int]:
@@ -370,9 +385,27 @@ class FixedSource(ContentSource):
         raise NoRepositoryError(msg)
 
     @override
+    async def file_of_take(self, path: str) -> FileOfTake:
+        """Raises: NoRepositoryError, always: what was read once is every file there is to open."""
+        msg = "No repository to open a file the review does not hold from"
+        raise NoRepositoryError(msg)
+
+    @override
     def tree_moves(self, lifetime: ReviewLifetime) -> AsyncIterator[int]:
         """No tree to watch: nothing in it ever moves."""
         return _no_moves()
+
+
+def _tree_written(content: ReviewContent) -> str:
+    """The tree a take was written down as: what anything read of the take is read from.
+
+    Raises:
+        TakeNotWrittenError: if git wrote down none.
+    """
+    if content.written_as is None:
+        msg = "git wrote down no tree of the take on screen: nothing in it can be read"
+        raise TakeNotWrittenError(msg)
+    return content.written_as
 
 
 async def _no_moves() -> AsyncIterator[int]:

@@ -42,6 +42,7 @@ from claude_review.domain.models import (
     AgentWork,
     Anchor,
     CommentSeverity,
+    FileOfTake,
     FilePath,
     LineAnchor,
     PanelCancel,
@@ -264,6 +265,10 @@ class Review:
     async def name_at(self, place: CodePlace) -> NameFound:
         """The name at a place the reader points at, and every place it stands in the take on screen."""
         return await self._source.name_at(place)
+
+    async def file_of_take(self, path: str) -> FileOfTake:
+        """A file of the take on screen, whole: what the reader opens of a file the change did not touch."""
+        return await self._source.file_of_take(path)
 
     def follow(self, anchors: list[Anchor]) -> list[Anchor]:
         """Where each anchor is in the content and the story as they now stand, or marked outdated."""

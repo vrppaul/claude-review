@@ -91,6 +91,23 @@ class DiffFile(Schema):
         )
 
 
+class FileOfTakeResponse(Schema):
+    """Response for GET /api/file-of-take — a file of the take on screen read whole, drawn as a file of the diff is.
+
+    Its one hunk holds every line as a context line on the new side: there is
+    no change in it, so the page draws one column of numbers.
+    """
+
+    path: str
+    hunk: DiffHunk
+    # Whether a thread may name it: a path holding a control character is shown, but only to be read
+    commentable: StrictBool
+
+    @classmethod
+    def from_domain(cls, file: models.FileOfTake) -> Self:
+        return cls(path=file.path, hunk=DiffHunk.from_domain(file.hunk), commentable=file.commentable)
+
+
 class SendLimits(Schema):
     """The limits the browser checks before it sends: an image, the lines a comment covers, a read of a file, a text.
 

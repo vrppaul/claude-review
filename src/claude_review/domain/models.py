@@ -172,6 +172,24 @@ class DiffFile(BaseModel):
         )
 
 
+class FileOfTake(BaseModel):
+    """A text file of the take on screen, read whole from the tree the take was written down as.
+
+    What the reader opens of a file the change did not touch, and what a
+    thread on such a file is read against. Its one hunk holds every line as a
+    context line on the new side, numbered as the diff and the name lookup
+    number it: no change in it sets an old side apart.
+    """
+
+    path: str
+    hunk: DiffHunk
+
+    @property
+    def commentable(self) -> bool:
+        """Whether a thread may hang on the file: whether its path is one a thread may name."""
+        return thread_may_name(self.path)
+
+
 class CommentSeverity(StrEnum):
     """How the reader means a comment to be taken.
 

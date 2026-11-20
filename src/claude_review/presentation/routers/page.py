@@ -46,6 +46,7 @@ from claude_review.presentation.schemas.content import (
     SEND_LIMITS,
     DiffFile,
     DiffResponse,
+    FileOfTakeResponse,
     FileWindowResponse,
     RetakeResponse,
     ReviewResponse,
@@ -245,6 +246,23 @@ async def get_name(
     """
     found = await review.name_at(CodePlace(path=path, side=side, line=line, column=column))
     return NameResponse.from_domain(found)
+
+
+@router.get(
+    "/file-of-take",
+    responses=refusals(
+        NoRepositoryError, TakeNotWrittenError, FileNotInReviewError, FileUnreadableError, takes=Takes.PARAMETERS
+    ),
+)
+async def get_file_of_take(
+    path: Annotated[str, Query(min_length=1, max_length=MAX_PATH_LENGTH)], review: ReviewDep
+) -> FileOfTakeResponse:
+    """Serve a file of the take on screen whole, for the reader to open a file the change did not touch.
+
+    Read from the tree the take was written down as, never the disk, so its
+    lines are numbered as the diff's and a name's places are.
+    """
+    return FileOfTakeResponse.from_domain(await review.file_of_take(path))
 
 
 @router.post("/anchors/follow", responses=refusals(takes=Takes.JSON_BODY))

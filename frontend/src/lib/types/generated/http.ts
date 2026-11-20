@@ -248,6 +248,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/file-of-take": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get File Of Take
+         * @description Serve a file of the take on screen whole, for the reader to open a file the change did not touch.
+         *
+         *     Read from the tree the take was written down as, never the disk, so its
+         *     lines are numbered as the diff's and a name's places are.
+         */
+        get: operations["get_file_of_take_api_file_of_take_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/anchors/follow": {
         parameters: {
             query?: never;
@@ -1179,6 +1202,20 @@ export interface components {
             loc: (string | number)[];
             /** Msg */
             msg: string;
+        };
+        /**
+         * FileOfTakeResponse
+         * @description Response for GET /api/file-of-take — a file of the take on screen read whole, drawn as a file of the diff is.
+         *
+         *     Its one hunk holds every line as a context line on the new side: there is
+         *     no change in it, so the page draws one column of numbers.
+         */
+        FileOfTakeResponse: {
+            /** Path */
+            path: string;
+            hunk: components["schemas"]["DiffHunk"];
+            /** Commentable */
+            commentable: boolean;
         };
         /**
          * FileStatus
@@ -2947,6 +2984,64 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["NameResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Refusal"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Refusal"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Refusal"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Refusal"];
+                };
+            };
+        };
+    };
+    get_file_of_take_api_file_of_take_get: {
+        parameters: {
+            query: {
+                path: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FileOfTakeResponse"];
                 };
             };
             /** @description Forbidden */

@@ -58,6 +58,8 @@ WIDENED_TO = 6
 
 # Where the page asks what name stands at a place in the code
 NAME_ROUTE = "/api/name"
+# Where the page asks for a file of the take whole
+FILE_OF_TAKE_ROUTE = "/api/file-of-take"
 
 # An image no review keeps: its path is reached, whatever it then answers
 NO_SUCH_IMAGE = "never-pasted"
@@ -456,6 +458,47 @@ async def test_a_name_is_not_looked_up_in_a_take_git_wrote_no_tree_of(
 
 async def test_a_name_is_not_looked_up_without_a_repository(files_client: AsyncClient) -> None:
     response = await files_client.get(NAME_ROUTE, params={"path": "a.py", "side": "new", "line": 1, "column": 0})
+
+    assert response.status_code == HTTPStatus.NOT_FOUND
+    assert "No repository" in Refusal.model_validate_json(response.content).detail
+
+
+async def test_a_file_of_the_take_is_served_whole_as_the_take_holds_it(
+    tmp_git_repo: Path, reviews: ReviewFactory
+) -> None:
+    """Read from the tree the take was written down as: neither the base nor what is saved after the take."""
+    write_files(tmp_git_repo, {"src/flags.py": "shown = True\n"})
+    git(tmp_git_repo, "add", "src/flags.py")
+    git(tmp_git_repo, "commit", "-m", "flags")
+    write_files(tmp_git_repo, {"src/flags.py": "shown = False\n"})
+
+    async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as client:
+        write_files(tmp_git_repo, {"src/flags.py": "saved after the take\n"})
+        response = await client.get(FILE_OF_TAKE_ROUTE, params={"path": "src/flags.py"})
+
+    assert response.json() == {
+        "path": "src/flags.py",
+        "hunk": {
+            "header": "",
+            "old_start": 1,
+            "new_start": 1,
+            "lines": [{"kind": "context", "old_number": None, "new_number": 1, "content": "shown = False"}],
+        },
+        "commentable": True,
+    }
+
+
+async def test_a_file_is_not_opened_whole_from_a_take_git_wrote_no_tree_of(
+    tmp_git_repo: Path, reviews: ReviewFactory
+) -> None:
+    async with http_client(reviews.app(await repository_opening(tmp_git_repo), keeps_marks=False)) as client:
+        response = await client.get(FILE_OF_TAKE_ROUTE, params={"path": "initial.txt"})
+
+    assert response.status_code == HTTPStatus.CONFLICT
+
+
+async def test_a_file_is_not_opened_whole_without_a_repository(files_client: AsyncClient) -> None:
+    response = await files_client.get(FILE_OF_TAKE_ROUTE, params={"path": "a.py"})
 
     assert response.status_code == HTTPStatus.NOT_FOUND
     assert "No repository" in Refusal.model_validate_json(response.content).detail
