@@ -14,10 +14,10 @@
  * shows. Whatever takes the reader to something the view on screen does not
  * draw asks here for the view that does, in one place.
  *
- * A reader with the story on screen is trying Story, however it came there:
- * they chose it, a thread only the story draws brought it, or the review
- * opened the way they read last. Every way it comes on screen passes through
- * here, so nothing watches what is on screen to catch it after.
+ * A reader the page brings the story on screen for is trying Story: a
+ * thread only the story draws brought it, or the review opened the way they
+ * read last. Every way the page brings it passes through here, so nothing
+ * watches what is on screen to catch it after.
  */
 
 import type { ThreadLines } from '$lib/anchors/views';
@@ -97,7 +97,8 @@ export class ReadingViews implements ViewsOnScreen {
 
 	/** Read the review the way the reader chooses, and the next review they open too. */
 	choose(name: ReadingChoice): void {
-		this.#bring(name);
+		// The reader asked: whatever they asked through (`WayIntoStory`) notes the story tried
+		this.#nameOnScreen = name;
 		this.#kept.set(name);
 	}
 
@@ -155,7 +156,7 @@ export class ReadingViews implements ViewsOnScreen {
 		return whereRead(lines, this.#diff) === 'in-its-file-alone' ? this.readAlone(lines.file) : this.showTheChange();
 	}
 
-	/** Bring a view on screen: the story brought is being tried. */
+	/** Bring a view on screen for the reader: the story brought is being tried. */
 	#bring(name: ReadingViewName): void {
 		this.#nameOnScreen = name;
 		if (name === STORY) this.#introductions.noteStoryIntroduced();

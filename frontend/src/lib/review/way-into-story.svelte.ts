@@ -5,8 +5,8 @@
  * introduced — and where reading it means having one written, it is
  * written: asked first, unless they chose stories written without asking.
  * One who asked for it has tried it, whether or not it comes on screen yet,
- * as one with the story on screen is trying it (`ReadingViews`): it is
- * introduced to them from then on, which the guide keeps.
+ * as one the page brings it on screen for is trying it (`ReadingViews`): it
+ * is introduced to them from then on, which the guide keeps.
  */
 
 import type { ReadingChoice } from '$lib/reader/page-layout.svelte';
@@ -53,8 +53,9 @@ export class WayIntoStory {
 	 * without asking: then it is written at once.
 	 */
 	readAsStory(): void {
+		this.#introductions.noteStoryIntroduced();
 		if (this.#readings.viewOpens()) this.#views.choose(STORY);
-		else if (this.#readings.askedFirst()) this.#askFirst();
+		else if (this.#readings.askedFirst()) this.#askingBeforeWriting = true;
 		else this.#writeAndShow();
 	}
 
@@ -67,12 +68,6 @@ export class WayIntoStory {
 	/** The question before a story is written is closed, whatever the reader said. */
 	stopAskingBeforeWriting(): void {
 		this.#askingBeforeWriting = false;
-	}
-
-	/** Ask the reader before a story is written: they asked for it, and so have tried Story. */
-	#askFirst(): void {
-		this.#introductions.noteStoryIntroduced();
-		this.#askingBeforeWriting = true;
 	}
 
 	/** Have the story written, and bring where it will be on screen. */
