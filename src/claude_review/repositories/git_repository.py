@@ -320,7 +320,7 @@ class GitStagedTree(StagedTree):
         if not asked:
             return set()
         handed = "".join(f"{side}{LINE_END}" for _, side in asked)
-        sizes = (await _run(self._path, SIZES_ASKED, self._variables, handed=handed)).splitlines()
+        sizes = _line_to_each(await _run(self._path, SIZES_ASKED, self._variables, handed=handed))
         return {
             path
             for (path, _), size in zip(asked, sizes, strict=True)
@@ -483,9 +483,7 @@ class GitRepository(ReviewedRepository):
         if not asked:
             return {}
         handed = "".join(f"{tree}{BLOB_AT}{path}{LINE_END}" for path in asked)
-        answered = await _run(root, OBJECTS_DESCRIBED, variables, handed=handed)
-        # Parted at line feeds alone: a path git says is missing comes back in its line, whatever it holds
-        described = answered.removesuffix(LINE_END).split(LINE_END)
+        described = _line_to_each(await _run(root, OBJECTS_DESCRIBED, variables, handed=handed))
         blobs = {
             path: blob
             for path, description in zip(asked, described, strict=True)
@@ -639,6 +637,15 @@ def _succeeded(run: GitRun, arguments: list[str]) -> GitRun:
         msg = f"git command failed: {run.errors.strip()}"
         raise GitError(msg)
     return run
+
+
+def _line_to_each(answered: str) -> list[str]:
+    """What `cat-file` answered a batch, a line to each object asked.
+
+    Parted at line feeds alone, never as `splitlines` parts text: a path git
+    says is missing comes back in its line, whatever it holds.
+    """
+    return answered.removesuffix(LINE_END).split(LINE_END)
 
 
 def _blob_described(description: str) -> StoredBlob | None:
