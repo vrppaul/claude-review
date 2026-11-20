@@ -64,12 +64,6 @@ class SourceLines(BaseModel):
         starts = list(accumulate((len(line) + len(LINE_END) for line in lines), initial=0))
         return cls(content=content, lines=lines, starts=starts)
 
-    def holds(self, position: LinePosition) -> bool:
-        """Whether the file has a character at a position."""
-        return FIRST_LINE <= position.line <= len(self.lines) and (
-            FIRST_COLUMN <= position.column < len(self.text(position.line))
-        )
-
     def text(self, line: int) -> str:
         return self.lines[line - FIRST_LINE].decode(TEXT_ENCODING, errors=NOT_TEXT)
 
@@ -127,22 +121,26 @@ class Definition(BaseModel):
 def word_at(path: str, content: bytes, line: int, column: int) -> str:
     """The word at a place in a file: the name the grammar reads there, or else the word of text the place is in.
 
+    A column may stand at the end of its line, where a click past the last
+    character lands: the place then holds no word.
+
     Raises:
-        NoWordHereError: if the place holds no word, or the file has no such place.
+        NoWordHereError: if the file has no such line, the line no such column, or the place holds no word.
     """
     source = SourceLines.of(content)
-    position = LinePosition(line=line, column=column)
-    if not source.holds(position):
-        msg = f"no line {line} with a column {column} in {path}"
+    if not FIRST_LINE <= line <= len(source.lines):
+        msg = f"{path} has no line {line}"
         raise NoWordHereError(msg)
     text = source.text(line)
-    code = _read_code(code_files_of(path), content)
-    start = source.offset_of(position)
-    if code is not None and code.holds(start):
-        name = code.name_around(start, start + len(text[column].encode(TEXT_ENCODING)))
-        if name is not None:
-            return _text_of(name)
-    return _word_around(text, position, path)
+    if not FIRST_COLUMN <= column <= len(text):
+        msg = f"line {line} of {path} has no column {column}"
+        raise NoWordHereError(msg)
+    name = _name_at(path, source, LinePosition(line=line, column=column)) if column < len(text) else None
+    word = name or _word_around(text, column)
+    if word is None:
+        msg = f"line {line}, column {column} of {path} holds no word"
+        raise NoWordHereError(msg)
+    return word
 
 
 def places_of(path: str, content: bytes, name: str, added_lines: frozenset[int]) -> list[NamePlace]:
@@ -152,6 +150,17 @@ def places_of(path: str, content: bytes, name: str, added_lines: frozenset[int])
     named = [] if code is None else _named_places(path, source, code, name, added_lines)
     texts = _text_places(path, source, code, name, added_lines)
     return sorted([*named, *texts], key=lambda place: (place.line, place.column))
+
+
+def _name_at(path: str, source: SourceLines, position: LinePosition) -> str | None:
+    """The name the file's grammar reads at a character, if the character is code and a name's."""
+    code = _read_code(code_files_of(path), source.content)
+    start = source.offset_of(position)
+    if code is None or not code.holds(start):
+        return None
+    character = source.text(position.line)[position.column]
+    name = code.name_around(start, start + len(character.encode(TEXT_ENCODING)))
+    return None if name is None else _text_of(name)
 
 
 def _read_code(files: CodeFiles | None, content: bytes) -> ReadCode | None:
@@ -288,17 +297,9 @@ def _occurrences(content: bytes, wanted: bytes) -> list[int]:
     return starts
 
 
-def _word_around(text: str, position: LinePosition, path: str) -> str:
-    """The word of text a column stands in.
-
-    Raises:
-        NoWordHereError: if it stands in none.
-    """
-    for word in WORD.finditer(text):
-        if word.start() <= position.column < word.end():
-            return word.group()
-    msg = f"no word at line {position.line}, column {position.column} of {path}"
-    raise NoWordHereError(msg)
+def _word_around(text: str, column: int) -> str | None:
+    """The word of text a column stands in, if any."""
+    return next((word.group() for word in WORD.finditer(text) if word.start() <= column < word.end()), None)
 
 
 def _text_of(node: Node) -> str:

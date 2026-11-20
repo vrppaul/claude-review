@@ -340,5 +340,6 @@ async def test_a_commit_is_read_as_its_tree(tmp_git_repo: Path, tmp_path_factory
 
 
 async def test_no_tree_is_read_without_a_store_that_kept_it(tmp_git_repo: Path) -> None:
-    with pytest.raises(GitError):
+    """Refused for what it is, not for what git makes of a store that is not there."""
+    with pytest.raises(GitError, match="without an object store of the review's own"):
         await GitRepository(objects=None).files_of(tmp_git_repo, HEAD, ["initial.txt"])

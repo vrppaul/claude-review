@@ -144,12 +144,19 @@ def test_the_word_at_a_place_is_the_name_the_grammar_reads_there_or_the_word_of_
 
 
 @pytest.mark.parametrize(
-    ("line", "column"),
-    [(12, 21), (3, 5), (17, 0), (99, 0), (12, 99)],
-    ids=["punctuation", "a-blank", "past-the-last-line", "far-past-the-end", "past-the-line-end"],
+    ("line", "column", "said"),
+    [
+        (12, 21, "line 12, column 21 of review.py holds no word"),
+        (3, 5, "line 3, column 5 of review.py holds no word"),
+        (2, 0, "line 2, column 0 of review.py holds no word"),
+        (12, 28, "line 12, column 28 of review.py holds no word"),
+        (12, 29, "line 12 of review.py has no column 29"),
+        (17, 0, "review.py has no line 17"),
+    ],
+    ids=["punctuation", "a-blank", "a-blank-line", "the-line-end", "past-the-line-end", "past-the-last-line"],
 )
-def test_a_place_that_holds_no_word_is_refused(line: int, column: int) -> None:
-    with pytest.raises(NoWordHereError):
+def test_a_place_that_holds_no_word_is_refused_saying_what_is_wrong(line: int, column: int, said: str) -> None:
+    with pytest.raises(NoWordHereError, match=f"^{said}$"):
         word_at("review.py", PYTHON_FILE, line, column)
 
 
