@@ -91,13 +91,34 @@ class AnchorHandler[Kind: AnchorBase](ABC):
         """The anchor moved onto what the review holds now, or saying that what it was on is gone."""
 
 
+class TakeRead(BaseModel):
+    """The take, read for the anchors asked about: each file of it they name that the review reads lines of, whole."""
+
+    files: list[FileOfTake]
+
+
+class TakeUnread(BaseModel):
+    """The take, not read: what stands of a file the diff does not hold is not known."""
+
+
 class LineAnchorHandler(AnchorHandler[LineAnchor]):
     """Line anchors: the old side read in the diff, the new side in the file of the take whole where it was read."""
 
-    def __init__(self, diff_files: list[DiffFile], take_files: list[FileOfTake]) -> None:
+    def __init__(self, diff_files: list[DiffFile], take: TakeRead | TakeUnread) -> None:
         # The diff's own files, which a refusal names
         self._diff_paths = [file.path for file in diff_files]
         in_the_diff = {file.path: file.hunks for file in diff_files}
+        match take:
+            case TakeRead(files=take_files):
+                sides_read_whole = frozenset(LineSide)
+            case TakeUnread():
+                take_files = []
+                sides_read_whole = frozenset({LineSide.OLD})
+            case _:
+                assert_never(take)
+        # The sides of which the review read every file named, the old always, as the diff holds it whole:
+        # a file missing from one of these is gone, and from another only unread
+        self._sides_read_whole = sides_read_whole
         # The diff's new side is a part of its file whole, numbered alike: a new line no hunk shows is a line still
         self._hunks: dict[LineSide, dict[str, list[DiffHunk]]] = {
             LineSide.OLD: in_the_diff,
@@ -174,10 +195,11 @@ class LineAnchorHandler(AnchorHandler[LineAnchor]):
         they are gone it stays on its old numbers and says so, rather than
         pointing at whatever has slid into their place. One that never kept
         its lines has nothing to search for, and is left where it is. Either
-        has lost its file where the review reads no lines of that side of it.
+        has lost its file where the review reads no lines of that side of it,
+        and stands as it stood where the review did not read that side.
         """
         if anchor.file not in self._hunks[anchor.side]:
-            return anchor.lost_its_file()
+            return anchor.lost_its_file() if anchor.side in self._sides_read_whole else anchor
         if not anchor.quote:
             return anchor.current_at(anchor.start_line, anchor.end_line)
 

@@ -75,7 +75,7 @@ from claude_review.domain.page_events import (
     TreeMoved,
 )
 from claude_review.domain.story import Step, Story, StoryAsking, StoryHeld
-from claude_review.services.anchor_service import AnchorService, LineAnchorHandler, StoryAnchorHandler
+from claude_review.services.anchor_service import AnchorService, LineAnchorHandler, StoryAnchorHandler, TakeUnread
 from claude_review.services.exit_report import exit_report
 from claude_review.services.file_window_service import FileWindow
 from claude_review.services.image_service import ImageService, StoredImage
@@ -641,7 +641,9 @@ class Review:
     def _anchors_of_the_diff(self) -> AnchorService:
         """Every kind of anchor, read against the diff alone and the story told: nothing awaited, for a round."""
         # A round quotes lines only of a conversation, which has no take to read
-        return AnchorService(lines=LineAnchorHandler(self._source.content.files, []), story=self._story_anchors)
+        return AnchorService(
+            lines=LineAnchorHandler(self._source.content.files, TakeUnread()), story=self._story_anchors
+        )
 
     async def _anchors_reading(self, anchors: list[Anchor]) -> AnchorService:
         """Every kind of anchor, read against the take on screen and the story told, each file named read at once."""

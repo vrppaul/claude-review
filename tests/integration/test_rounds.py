@@ -287,13 +287,19 @@ class TreesUnread(RepositoryHeldStill):
 
 
 async def test_threads_follow_in_the_diff_alone_when_git_will_not_read_the_take(reviews: ReviewFactory) -> None:
-    """A thread is never left unmoved for git's sake."""
+    """A thread is never left unmoved for git's sake, nor called gone from a file nobody read."""
     change = [diff_file(REVIEWED_FILE, [added_line(1, "import sys"), added_line(2, REVIEWED_LINE)])]
     hosted = reviews.hosted(change_held_still(change, title=""), repository=TreesUnread(change))
     on_the_line = {**line_json(REVIEWED_FILE, 1), "quote": [REVIEWED_LINE]}
+    on_a_file_the_change_left_alone = {**line_json("untouched.py", 4), "quote": ["kept = True"]}
 
     async with http_client(hosted.app) as client:
-        response = await client.post("/api/anchors/follow", json={"anchors": [on_the_line]}, headers=LOCAL_HEADERS)
+        response = await client.post(
+            "/api/anchors/follow",
+            json={"anchors": [on_the_line, on_a_file_the_change_left_alone]},
+            headers=LOCAL_HEADERS,
+        )
 
-    [followed] = response.json()["anchors"]
+    followed, left_alone = response.json()["anchors"]
     assert (followed["start_line"], followed["standing"]) == (2, LineStanding.ON_ITS_LINES)
+    assert left_alone == on_a_file_the_change_left_alone

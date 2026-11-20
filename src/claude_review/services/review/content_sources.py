@@ -38,7 +38,7 @@ from claude_review.domain.models import (
     VersionKey,
     VersionOnOffer,
 )
-from claude_review.services.anchor_service import LineAnchorHandler
+from claude_review.services.anchor_service import LineAnchorHandler, TakeRead, TakeUnread
 from claude_review.services.code_names.lookup import NameLookup
 from claude_review.services.diff_reading import read_diff
 from claude_review.services.file_window_service import FileWindow, FileWindowService
@@ -306,14 +306,14 @@ class RepositorySource(ContentSource):
         """The files read from the tree the take was written down as, in one asking; the diff alone where not."""
         content = self._content
         if content.written_as is None:
-            return LineAnchorHandler(content.files, [])
+            return LineAnchorHandler(content.files, TakeUnread())
         try:
             take_files = await self._files_of_take.text_files(content.written_as, sorted(named))
         except GitError as refusal:
             # No thread is left unmoved for git's sake: they are read as where no tree was written down
             log.warning("take_files_unread", reason=str(refusal))
-            return LineAnchorHandler(content.files, [])
-        return LineAnchorHandler(content.files, take_files)
+            return LineAnchorHandler(content.files, TakeUnread())
+        return LineAnchorHandler(content.files, TakeRead(files=take_files))
 
     @override
     async def tree_moves(self, lifetime: ReviewLifetime) -> AsyncIterator[int]:
@@ -411,8 +411,8 @@ class FixedSource(ContentSource):
 
     @override
     async def line_anchors(self, named: frozenset[str]) -> LineAnchorHandler:
-        """What was read once alone: a thread on a file it does not hold has lost its file."""
-        return LineAnchorHandler(self._content.files, [])
+        """What was read once is the whole take: a thread on a file it does not hold has lost its file."""
+        return LineAnchorHandler(self._content.files, TakeRead(files=[]))
 
     @override
     def tree_moves(self, lifetime: ReviewLifetime) -> AsyncIterator[int]:
