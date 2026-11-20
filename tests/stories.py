@@ -424,7 +424,7 @@ def take_of(files: list[DiffFile], take: int) -> ReviewContent:
 
 def _lines_of_each_file(files: list[DiffFile]) -> dict[str, list[str]]:
     """What each file of a take says: the lines its hunks show on their new side."""
-    return {file.path: [line.content for line in side_lines(file, LineSide.NEW)] for file in files}
+    return {file.path: [line.content for line in side_lines(file.hunks, LineSide.NEW)] for file in files}
 
 
 def between_takes(earlier: list[DiffFile], later: list[DiffFile]) -> list[DiffFile]:

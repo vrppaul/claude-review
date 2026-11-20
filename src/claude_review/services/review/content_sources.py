@@ -38,6 +38,7 @@ from claude_review.domain.models import (
     VersionKey,
     VersionOnOffer,
 )
+from claude_review.services.anchor_service import LineAnchorHandler
 from claude_review.services.code_names.lookup import NameLookup
 from claude_review.services.diff_reading import read_diff
 from claude_review.services.file_window_service import FileWindow, FileWindowService
@@ -128,6 +129,10 @@ class ContentSource(TakesCompared, TreesWritten):
     @abstractmethod
     async def file_of_take(self, path: str) -> FileOfTake:
         """A file of the take on screen, whole: what the reader opens of a file the change did not touch."""
+
+    @abstractmethod
+    async def line_anchors(self, named: frozenset[str]) -> LineAnchorHandler:
+        """Line anchors read against the take on screen: its diff, and each of these files it lacks, read whole."""
 
     @abstractmethod
     def tree_moves(self, lifetime: ReviewLifetime) -> AsyncIterator[int]:
@@ -297,6 +302,19 @@ class RepositorySource(ContentSource):
         return await self._files_of_take.file(_tree_written(self._content), path)
 
     @override
+    async def line_anchors(self, named: frozenset[str]) -> LineAnchorHandler:
+        """The files the diff lacks read from the tree the take was written down as, all in one asking.
+
+        Where git wrote down no tree there is nothing to read them from, and a
+        thread on one of them is outdated.
+        """
+        content = self._content
+        if content.written_as is None:
+            return LineAnchorHandler(content.files, [])
+        lacked = sorted(named - content.paths)
+        return LineAnchorHandler(content.files, await self._files_of_take.text_files(content.written_as, lacked))
+
+    @override
     async def tree_moves(self, lifetime: ReviewLifetime) -> AsyncIterator[int]:
         """Measured against the take on screen as each change is heard, so a retake settles the tree unrestarted."""
         async for tree in self._watcher.changes(self._root, since=self._content.tree, lifetime=lifetime):
@@ -389,6 +407,11 @@ class FixedSource(ContentSource):
         """Raises: NoRepositoryError, always: what was read once is every file there is to open."""
         msg = "No repository to open a file the review does not hold from"
         raise NoRepositoryError(msg)
+
+    @override
+    async def line_anchors(self, named: frozenset[str]) -> LineAnchorHandler:
+        """What was read once alone: a thread on a file it does not hold is outdated."""
+        return LineAnchorHandler(self._content.files, [])
 
     @override
     def tree_moves(self, lifetime: ReviewLifetime) -> AsyncIterator[int]:

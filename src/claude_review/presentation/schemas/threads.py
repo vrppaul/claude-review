@@ -45,18 +45,18 @@ from claude_review.services.place_words import place_in_words
 # The most turns one thread carries
 MAX_TURNS = 200
 
-# The longest line an anchor may quote. It quotes a line of the diff, which
-# shows the lines of no file larger than this many bytes, and a character
-# takes at least one
+# The longest line an anchor may quote. It quotes a line of the take, whose
+# lines the review reads of no file larger than this many bytes, and a
+# character takes at least one
 MAX_QUOTE_LINE_LENGTH = LARGEST_FILE_SHOWN_BYTES
 # One line an anchor quotes, as the page sends it
 QuoteLine = Annotated[str, Field(max_length=MAX_QUOTE_LINE_LENGTH)]
 
 
 class LineAnchor(Schema):
-    """Lines of one side of a file in the review's own diff, as the page names them: where, and what they said.
+    """Lines of one side of a file of the take, as the page names them: where, and what they said.
 
-    A quote sent empty is filled in by the review from its diff.
+    A quote sent empty is filled in by the review from the take on screen.
     """
 
     kind: Literal[AnchorKind.LINE]
@@ -97,9 +97,10 @@ class LineAnchor(Schema):
 
 
 class PointedLines(Schema):
-    """Lines of one side of a file in the review's own diff, as the agent points at them: where, and no more.
+    """Lines of one side of a file of the take, as the agent points at them: where, and no more.
 
-    The review quotes them itself, from its diff, as it raises the thread.
+    The review quotes them itself, from its diff or the file as the take
+    holds it, as it raises the thread.
     """
 
     file: FilePath
@@ -113,7 +114,7 @@ class PointedLines(Schema):
         return self
 
     def to_domain(self) -> models.LineAnchor:
-        # Not quoted yet, and so not out of date: the review quotes it from the diff on screen
+        # Not quoted yet, and so not out of date: the review quotes it from the take on screen
         return models.LineAnchor(
             kind=AnchorKind.LINE,
             file=self.file,

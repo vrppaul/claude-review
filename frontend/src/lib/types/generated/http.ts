@@ -287,7 +287,8 @@ export interface paths {
          *     The page holds the threads and the review holds the content, so after a
          *     round the threads come here to be moved: one whose lines survived
          *     follows them, one whose lines are gone is marked outdated and keeps its
-         *     quote.
+         *     quote. A thread on a file the diff does not hold follows its lines in
+         *     the file as the take holds it.
          */
         post: operations["follow_anchors_api_anchors_follow_post"];
         delete?: never;
@@ -674,7 +675,8 @@ export interface paths {
          *     is about, not in a paragraph somewhere else. What arrives is an ordinary
          *     thread: the reader answers it and settles it. It is drawn as the
          *     author's, though, its words never the reader's to rewrite or delete, and
-         *     it is never counted as the reader's own work.
+         *     it is never counted as the reader's own work. A file the change did not
+         *     touch takes one too: the place the change forgot.
          */
         post: operations["raise_a_thread_api_point_post"];
         delete?: never;
@@ -1407,9 +1409,9 @@ export interface components {
         };
         /**
          * LineAnchor
-         * @description Lines of one side of a file in the review's own diff, as the page names them: where, and what they said.
+         * @description Lines of one side of a file of the take, as the page names them: where, and what they said.
          *
-         *     A quote sent empty is filled in by the review from its diff.
+         *     A quote sent empty is filled in by the review from the take on screen.
          */
         LineAnchor: {
             /**
@@ -1696,9 +1698,10 @@ export interface components {
         };
         /**
          * PointedLines
-         * @description Lines of one side of a file in the review's own diff, as the agent points at them: where, and no more.
+         * @description Lines of one side of a file of the take, as the agent points at them: where, and no more.
          *
-         *     The review quotes them itself, from its diff, as it raises the thread.
+         *     The review quotes them itself, from its diff or the file as the take
+         *     holds it, as it raises the thread.
          */
         PointedLines: {
             /** File */

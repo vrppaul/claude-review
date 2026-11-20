@@ -206,9 +206,10 @@ async def raise_a_thread(request: PointRequest, review: ReviewDep) -> PointRespo
     is about, not in a paragraph somewhere else. What arrives is an ordinary
     thread: the reader answers it and settles it. It is drawn as the
     author's, though, its words never the reader's to rewrite or delete, and
-    it is never counted as the reader's own work.
+    it is never counted as the reader's own work. A file the change did not
+    touch takes one too: the place the change forgot.
     """
-    raised = review.raise_thread(request.lines.to_domain(), body=request.body, severity=request.severity)
+    raised = await review.raise_thread(request.lines.to_domain(), body=request.body, severity=request.severity)
     return PointResponse(thread_id=raised)
 
 

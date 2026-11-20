@@ -22,7 +22,7 @@ from claude_review.services.round_formatter import RoundFormatter
 from tests.helpers import line_anchor, story_anchor, thread
 
 # What the threads hang on: a diff review files them by place, and needs none of it
-NO_CONTENT = AnchorService(lines=LineAnchorHandler([]), story=StoryAnchorHandler(None))
+NO_CONTENT = AnchorService(lines=LineAnchorHandler([], []), story=StoryAnchorHandler(None))
 # Words of the story's overview a thread was written on
 DOUBT_SAID = "Whether a cancelled upload gives its room back."
 

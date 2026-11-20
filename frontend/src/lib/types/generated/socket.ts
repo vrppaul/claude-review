@@ -260,9 +260,9 @@ export interface components {
         };
         /**
          * LineAnchor
-         * @description Lines of one side of a file in the review's own diff, as the page names them: where, and what they said.
+         * @description Lines of one side of a file of the take, as the page names them: where, and what they said.
          *
-         *     A quote sent empty is filled in by the review from its diff.
+         *     A quote sent empty is filled in by the review from the take on screen.
          */
         LineAnchor: {
             /**

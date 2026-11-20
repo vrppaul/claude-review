@@ -217,7 +217,8 @@ class TurnAuthor(StrEnum):
 class AnchorKind(StrEnum):
     """What a thread can hang on.
 
-    LINE — lines of one side of a file in the review's own diff.
+    LINE — lines of one side of a file of the take: in the review's own diff, or on
+    the new side of a file the diff does not hold.
     STORY — a block of the words of the story told of the change.
     """
 
@@ -316,10 +317,13 @@ def check_line_span(start_line: int, end_line: int) -> None:
 
 
 class LineAnchor(AnchorBase):
-    """Lines of one side of a file in the review's own diff.
+    """Lines of one side of a file of the take on screen.
 
     Line numbers are only meaningful together with the side: a hunk that
-    replaces a line has both an old line 42 and a new line 42.
+    replaces a line has both an old line 42 and a new line 42. A file the
+    review's own diff holds is read in the diff; one it does not — the change
+    leaves it as the base has it — is read whole as the take holds it,
+    its new side numbered as the diff would number it, and has no old side.
     """
 
     kind: Literal[AnchorKind.LINE] = AnchorKind.LINE

@@ -26,7 +26,7 @@ def _message(name: str, lines: list[str]) -> DiffFile:
 def _formatted(threads: list[Thread], body: str | None, files: list[DiffFile]) -> ReviewResult:
     """The round as the agent reads it, in its first round."""
     formatter = RoundFormatter.for_mode(ReviewMode.TRANSCRIPT)
-    anchors = AnchorService(lines=LineAnchorHandler(files), story=StoryAnchorHandler(None))
+    anchors = AnchorService(lines=LineAnchorHandler(files, []), story=StoryAnchorHandler(None))
     return formatter.format(threads, body, round_number=FIRST_ROUND, anchors=anchors)
 
 

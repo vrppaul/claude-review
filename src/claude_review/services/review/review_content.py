@@ -1,16 +1,15 @@
-"""One take of what is under review: its files, their lines as anchors read them, and the tree they were taken from."""
+"""One take of what is under review: its files, and the tree they were taken from."""
 
 from abc import ABC, abstractmethod
 
 from claude_review.domain.models import FIRST_TAKE, DiffFile, TreeState
-from claude_review.services.anchor_service import LineAnchorHandler
 
 
 class ReviewContent:
     """What the review holds between two takes of it, replaced whole by the next.
 
-    Whatever reads it reads one take: the files and the line anchors read
-    against them are never from two different ones. Takes are numbered as
+    Whatever reads it reads one take: the files and the tree they were
+    written down as are never from two different ones. Takes are numbered as
     they are made, by the take before: what is cut out of one and kept past
     it — the pieces a story shows — says which take it is of, and whoever
     holds it beside a later one can tell.
@@ -18,7 +17,6 @@ class ReviewContent:
 
     def __init__(self, files: list[DiffFile], tree: TreeState, *, take: int, written_as: str | None) -> None:
         self._files = files
-        self._line_anchors = LineAnchorHandler(files)
         # The working tree as it stood when these files were taken; what the
         # watcher compares against. Empty for content no repository holds.
         self._tree = tree
@@ -47,10 +45,6 @@ class ReviewContent:
     @property
     def paths(self) -> frozenset[str]:
         return frozenset(file.path for file in self._files)
-
-    @property
-    def line_anchors(self) -> LineAnchorHandler:
-        return self._line_anchors
 
     @property
     def tree(self) -> TreeState:

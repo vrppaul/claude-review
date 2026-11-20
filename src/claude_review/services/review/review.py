@@ -74,7 +74,7 @@ from claude_review.domain.page_events import (
     TreeMoved,
 )
 from claude_review.domain.story import Step, Story, StoryAsking, StoryHeld
-from claude_review.services.anchor_service import AnchorService, StoryAnchorHandler
+from claude_review.services.anchor_service import AnchorService, LineAnchorHandler, StoryAnchorHandler
 from claude_review.services.exit_report import exit_report
 from claude_review.services.file_window_service import FileWindow
 from claude_review.services.image_service import ImageService, StoredImage
@@ -270,9 +270,9 @@ class Review:
         """A file of the take on screen, whole: what the reader opens of a file the change did not touch."""
         return await self._source.file_of_take(path)
 
-    def follow(self, anchors: list[Anchor]) -> list[Anchor]:
+    async def follow(self, anchors: list[Anchor]) -> list[Anchor]:
         """Where each anchor is in the content and the story as they now stand, or marked outdated."""
-        found = self._anchors
+        found = await self._anchors_reading(anchors)
         return [found.follow(anchor) for anchor in anchors]
 
     async def open(self) -> None:
@@ -407,17 +407,18 @@ class Review:
         self._page.tell(FileShown(file=file))
         log.info("file_shown", file=file)
 
-    def raise_thread(self, anchor: LineAnchor, *, body: str, severity: CommentSeverity) -> str:
+    async def raise_thread(self, anchor: LineAnchor, *, body: str, severity: CommentSeverity) -> str:
         """Put the agent's own thread on the lines the anchor names, and say its id.
 
         The anchor is checked against the content on screen and quoted from
-        it, because the quote is what lets the thread find its code again.
+        it, because the quote is what lets the thread find its code again: a
+        file the change did not touch is quoted from the take whole.
 
         Raises:
             UnknownAnchorFileError, AnchorLinesNotShownError, AnchorTooLongError:
                 if the anchor names lines the content does not show.
         """
-        quoted = self._anchors.quote(anchor)
+        quoted = (await self._anchors_reading([anchor])).quote(anchor)
         thread_id = self._threads.raise_id()
         has = self._threads.raised(
             ThreadDraft(
@@ -468,7 +469,7 @@ class Review:
             self._hand_over(threads),
             body,
             round_number=number,
-            anchors=self._anchors,
+            anchors=self._anchors_of_the_diff,
         )
         submission = RoundSubmission(number=number, markdown=result.markdown, comment_count=result.comment_count)
         self._rounds.sent(submission)
@@ -630,18 +631,35 @@ class Review:
             AnchorLinesNotShownError: if one names lines it does not quote.
             HandedWordsChangedError: if one changes what the agent has of it.
         """
-        anchors = self._anchors
+        anchors = self._anchors_of_the_diff
         for thread in threads:
             anchors.check_quote(thread.anchor)
         self._threads.check_handed(threads)
 
     @property
-    def _anchors(self) -> AnchorService:
-        """Every kind of anchor, read against what the review holds now: the take of its content, and the story told."""
+    def _anchors_of_the_diff(self) -> AnchorService:
+        """Every kind of anchor, read against the diff on screen alone and the story told, with nothing awaited.
+
+        What reads no lines of a file the diff lacks reads these: a check of
+        quotes, and a round, which is sent before anything is awaited and
+        quotes lines only of a conversation, which has no take to read.
+        """
+        return AnchorService(lines=LineAnchorHandler(self._source.content.files, []), story=self._story_anchors)
+
+    async def _anchors_reading(self, anchors: list[Anchor]) -> AnchorService:
+        """Every kind of anchor, read against what the review holds now: the take on screen, and the story told.
+
+        Each file of the take these anchors name and its diff lacks is read
+        whole, all of them in one asking.
+        """
+        named = frozenset(anchor.file for anchor in anchors if isinstance(anchor, LineAnchor))
+        return AnchorService(lines=await self._source.line_anchors(named), story=self._story_anchors)
+
+    @property
+    def _story_anchors(self) -> StoryAnchorHandler:
+        """Anchors on the story's words, read against the story told: none while nobody has told one."""
         held = self._story.held
-        return AnchorService(
-            lines=self._source.content.line_anchors, story=StoryAnchorHandler(None if held is None else held.story)
-        )
+        return StoryAnchorHandler(None if held is None else held.story)
 
     def _hand_over(self, threads: list[ThreadDraft]) -> list[Thread]:
         """Threads as the agent is handed them, each one it may answer in from now on.

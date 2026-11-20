@@ -272,9 +272,10 @@ async def follow_anchors(request: FollowRequest, review: ReviewDep) -> FollowRes
     The page holds the threads and the review holds the content, so after a
     round the threads come here to be moved: one whose lines survived
     follows them, one whose lines are gone is marked outdated and keeps its
-    quote.
+    quote. A thread on a file the diff does not hold follows its lines in
+    the file as the take holds it.
     """
-    followed = review.follow([anchor.to_domain() for anchor in request.anchors])
+    followed = await review.follow([anchor.to_domain() for anchor in request.anchors])
     return FollowResponse(anchors=[anchor_from_domain(anchor) for anchor in followed])
 
 

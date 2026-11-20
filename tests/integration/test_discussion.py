@@ -6,6 +6,7 @@ separate processes, which is why a queue sits between them.
 """
 
 from http import HTTPStatus
+from pathlib import Path
 
 from fastapi.testclient import TestClient
 from httpx2 import AsyncClient
@@ -19,13 +20,17 @@ from tests.helpers import (
     REVIEWED_FILE,
     REVIEWED_LINE,
     WAIT_FOR_EVENT,
+    ReviewFactory,
+    http_client,
     line_json,
     next_push,
     open_session,
     pointed_json,
+    repository_opening,
     thread_json,
     turn_json,
     until_the_review_holds_threads,
+    write_files,
 )
 
 ASK_ROUTE = "/api/ask"
@@ -280,6 +285,23 @@ async def _raise_a_thread(client: AsyncClient) -> dict[str, object]:
     )
     anchor = {**line_json(REVIEWED_FILE, 1), "quote": [REVIEWED_LINE]}
     return thread_json(anchor, RAISED_BODY, thread_id=raised.json()["thread_id"], raised_by=TurnAuthor.AUTHOR)
+
+
+async def test_the_agent_points_at_a_file_the_change_did_not_touch_quoted_as_the_take_holds_it(
+    tmp_git_repo: Path, reviews: ReviewFactory
+) -> None:
+    """The place the change forgot is where the agent says so."""
+    write_files(tmp_git_repo, {"src/a.py": "x = 1\n"})
+
+    async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as client:
+        write_files(tmp_git_repo, {"initial.txt": "saved after the take\n"})
+        raised = await client.post(
+            "/api/point",
+            json={"lines": pointed_json("initial.txt", 1), "body": RAISED_BODY, "severity": CommentSeverity.NOTE},
+        )
+        [held] = (await client.get("/api/threads")).json()["threads"]
+
+    assert (raised.status_code, held["anchor"]["quote"]) == (HTTPStatus.OK, ["initial content"])
 
 
 async def test_the_agents_own_thread_is_asked_about_as_it_raised_it(client: AsyncClient) -> None:

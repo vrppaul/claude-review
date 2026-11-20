@@ -278,12 +278,12 @@ async def test_raised_threads_are_numbered_apart_from_the_readers(client: AsyncC
     assert second.json()["thread_id"] == "raised-2"
 
 
-async def test_a_thread_on_a_file_not_under_review_is_refused(client: AsyncClient) -> None:
+async def test_a_thread_on_a_file_the_take_holds_no_text_of_is_refused(client: AsyncClient) -> None:
     """Silently accepting it shows the reader a thread about nothing."""
     response = await client.post(POINT_ROUTE, json=_pointing(pointed_json("src/elsewhere.py", 1), "here"))
 
     assert response.status_code == HTTPStatus.NOT_FOUND
-    assert "not in this review" in response.json()["detail"]
+    assert "no text file of the take" in response.json()["detail"]
     assert REVIEWED_FILE in response.json()["detail"]
 
 

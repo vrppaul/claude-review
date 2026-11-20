@@ -225,16 +225,23 @@ def test_a_review_that_keeps_nothing_says_it_cannot_tell_what_changed(
 async def test_after_a_retake_each_thread_is_told_where_its_lines_went(
     tmp_git_repo: Path, reviews: ReviewFactory
 ) -> None:
-    """The browser holds the threads and the server holds the diff they hang on."""
+    """The browser holds the threads and the server holds the diff they hang on; a file the change reverted
+    still holds its lines."""
     (tmp_git_repo / "a.py").write_text("def run():\n    return 1\n")
+    (tmp_git_repo / "initial.txt").write_text("initial content\nadded, then reverted\n")
     on_run = {**line_json("a.py", 1), "quote": ["def run():"]}
     on_walk = {**on_run, "quote": ["def walk():"]}
+    on_reverted = {**line_json("initial.txt", 1), "quote": ["initial content"]}
 
     async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as client:
         (tmp_git_repo / "a.py").write_text("import sys\ndef run():\n    return 1\n")
+        (tmp_git_repo / "initial.txt").write_text("initial content\n")
         await client.post("/api/retake", json={}, headers=LOCAL_HEADERS)
-        response = await client.post("/api/anchors/follow", json={"anchors": [on_run, on_walk]}, headers=LOCAL_HEADERS)
+        response = await client.post(
+            "/api/anchors/follow", json={"anchors": [on_run, on_walk, on_reverted]}, headers=LOCAL_HEADERS
+        )
 
-    followed, gone = response.json()["anchors"]
+    followed, gone, reverted = response.json()["anchors"]
     assert (followed["start_line"], followed["outdated"]) == (2, False)
     assert (gone["start_line"], gone["outdated"]) == (1, True)
+    assert (reverted["start_line"], reverted["outdated"]) == (1, False)

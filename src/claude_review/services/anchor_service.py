@@ -27,6 +27,8 @@ from claude_review.domain.models import (
     ChapterBlock,
     ChapterText,
     DiffFile,
+    DiffHunk,
+    FileOfTake,
     ItemBlock,
     LineAnchor,
     LineSide,
@@ -90,35 +92,43 @@ class AnchorHandler[Kind: AnchorBase](ABC):
 
 
 class LineAnchorHandler(AnchorHandler[LineAnchor]):
-    """Line anchors, read against the review's own diff."""
+    """Line anchors, read against the review's own diff, and on a file it does not hold against the file whole.
 
-    def __init__(self, diff_files: list[DiffFile]) -> None:
-        self._files = {file.path: file for file in diff_files}
-        # Each side of each file, read off the diff once however many anchors ask
+    A file the change leaves as the base has it has the same lines on the new
+    side as the take holds it, numbered alike: read whole, it is one hunk of
+    them, and has no old side.
+    """
+
+    def __init__(self, diff_files: list[DiffFile], take_files: list[FileOfTake]) -> None:
+        # The diff's own files, which a refusal names
+        self._diff_paths = [file.path for file in diff_files]
+        # The hunks each file is read in: the diff's own, else the file of the take whole
+        self._hunks = {file.path: [file.hunk] for file in take_files} | {file.path: file.hunks for file in diff_files}
+        # Each side of each file, read off its hunks once however many anchors ask
         self._side_lines: dict[LineSide, dict[str, list[SideLine]]] = {side: {} for side in LineSide}
 
     @override
     def quote(self, anchor: LineAnchor) -> LineAnchor:
-        """The anchor with the lines it names read off the diff.
+        """The anchor with the lines it names read off the diff, or off the file of the take the diff lacks.
 
         Raises:
             AnchorTooLongError: if it names more lines than a thread may quote:
                 such a thread could never be sent in a round.
-            UnknownAnchorFileError: if the file is not in this review.
-            AnchorLinesNotShownError: if the diff does not show those lines of it.
+            UnknownAnchorFileError: if the review holds no lines of the file: not in the diff, nor a text file of
+                the take.
+            AnchorLinesNotShownError: if the review does not show those lines of it.
         """
         line_count = anchor.end_line - anchor.start_line + 1
         if line_count > MAX_QUOTE_LINES:
             msg = f"a thread may hang on at most {MAX_QUOTE_LINES} lines, not {line_count}"
             raise AnchorTooLongError(msg)
 
-        shown = self._files.get(anchor.file)
-        if shown is None:
-            listed = FILES_SEPARATOR.join(list(self._files)[:FILES_NAMED_IN_REFUSAL])
-            msg = f"{anchor.file} is not in this review. It has: {listed}"
+        if anchor.file not in self._hunks:
+            listed = FILES_SEPARATOR.join(self._diff_paths[:FILES_NAMED_IN_REFUSAL])
+            msg = f"{anchor.file} is no text file of the take on screen. The change touches: {listed}"
             raise UnknownAnchorFileError(msg)
 
-        on_screen = {line.number: line.content for line in self._lines_of(shown, anchor.side)}
+        on_screen = {line.number: line.content for line in self._lines_of(anchor.file, anchor.side)}
         wanted = range(anchor.start_line, anchor.end_line + 1)
         missing = [number for number in wanted if number not in on_screen]
         if missing:
@@ -151,18 +161,15 @@ class LineAnchorHandler(AnchorHandler[LineAnchor]):
     def excerpt(self, anchor: LineAnchor) -> list[str]:
         """The anchor's lines and `EXCERPT_REACH` more either side, from the side of the file it is on.
 
-        A file the review does not hold has nothing to show: a thread may
+        A file the review holds no lines of has nothing to show: a thread may
         outlive the content it was written on.
         """
-        shown = self._files.get(anchor.file)
-        if shown is None:
-            return []
         around = range(anchor.start_line - EXCERPT_REACH, anchor.end_line + EXCERPT_REACH + 1)
-        return [line.content for line in self._lines_of(shown, anchor.side) if line.number in around]
+        return [line.content for line in self._lines_of(anchor.file, anchor.side) if line.number in around]
 
     @override
     def follow(self, anchor: LineAnchor) -> LineAnchor:
-        """Where the anchor's lines are in the diff as it now stands.
+        """Where the anchor's lines are in the diff as it now stands, or in the file of the take the diff lacks.
 
         The lines it quotes are looked for and the anchor follows them; when
         they are gone it stays on its old numbers and says so, rather than
@@ -172,22 +179,19 @@ class LineAnchorHandler(AnchorHandler[LineAnchor]):
         if not anchor.quote:
             return anchor.current_at(anchor.start_line, anchor.end_line)
 
-        shown = self._files.get(anchor.file)
-        if shown is None:
-            return anchor.lost()
-
-        lines = self._lines_of(shown, anchor.side)
+        lines = self._lines_of(anchor.file, anchor.side)
         found = find_run(lines, anchor.quote, near=anchor.start_line)
         if found is None:
             return anchor.lost()
 
         return anchor.current_at(lines[found].number, lines[found + len(anchor.quote) - 1].number)
 
-    def _lines_of(self, file: DiffFile, side: LineSide) -> list[SideLine]:
+    def _lines_of(self, path: str, side: LineSide) -> list[SideLine]:
+        """Every line of one side of a file, none where the review holds no lines of the file."""
         known = self._side_lines[side]
-        if file.path not in known:
-            known[file.path] = side_lines(file, side)
-        return known[file.path]
+        if path not in known:
+            known[path] = side_lines(self._hunks.get(path, []), side)
+        return known[path]
 
 
 class StoryAnchorHandler(AnchorHandler[StoryAnchor]):
@@ -350,8 +354,8 @@ def _chapter_said(chapter: Chapter[FollowedStep]) -> dict[StoryBlock, str | None
     }
 
 
-def side_lines(file: DiffFile, side: LineSide) -> list[SideLine]:
-    """Every line of one side of a file, in order: what a thread's lines are looked for in.
+def side_lines(hunks: list[DiffHunk], side: LineSide) -> list[SideLine]:
+    """Every line of one side of a file's hunks, in order: what a thread's lines are looked for in.
 
     A removed line exists only on the old side; everything else, context
     included, is read as the new file.
@@ -359,7 +363,7 @@ def side_lines(file: DiffFile, side: LineSide) -> list[SideLine]:
     removed_side = side == LineSide.OLD
     return [
         SideLine(number=number, content=line.content)
-        for hunk in file.hunks
+        for hunk in hunks
         for line in hunk.lines
         if (line.kind == LineType.DELETE) == removed_side
         and (number := line.old_number if removed_side else line.new_number) is not None

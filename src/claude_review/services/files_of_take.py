@@ -39,3 +39,16 @@ class FilesOfTake:
             msg = f"not text: {path}"
             raise FileUnreadableError(msg)
         return FileOfTake(path=path, hunk=whole_hunk(content))
+
+    async def text_files(self, tree: str, paths: list[str]) -> list[FileOfTake]:
+        """Each of these files of the take written down as `tree` that the review reads line by line, whole.
+
+        Read in one asking however many: a path the tree holds no text file
+        at, or one too large to read, is left out.
+        """
+        read = await self._repository.files_of(self._root, tree, paths)
+        return [
+            FileOfTake(path=path, hunk=whole_hunk(content))
+            for path, content in read.contents.items()
+            if is_text(content)
+        ]
