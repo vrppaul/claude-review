@@ -23,9 +23,9 @@ async def read_text_files(paths: list[Path], *, named_from: Path) -> list[DiffFi
 def _read_all(paths: list[Path], named_from: Path) -> list[DiffFile]:
     files: list[DiffFile] = []
     for path in paths:
-        text = _read_text(path)
-        if text:
-            files.append(whole_file(_name_of(path, named_from), text))
+        content = _read_text(path)
+        if content:
+            files.append(whole_file(_name_of(path, named_from), content))
     return files
 
 
@@ -42,15 +42,18 @@ def _name_of(path: Path, named_from: Path) -> str:
         return str(path)
 
 
-def _read_text(path: Path) -> str:
-    """The file's content as UTF-8 text.
+def _read_text(path: Path) -> bytes:
+    """The file's bytes, which are UTF-8 text.
 
     Raises:
         UnreadableContentError: If the path is missing, is a directory,
             cannot be read, or is not UTF-8 text.
     """
     try:
-        return path.read_text(encoding=TEXT_ENCODING)
+        content = path.read_bytes()
+        # Decoded only to refuse what is not text: its lines are read from the bytes, as git numbers them
+        content.decode(TEXT_ENCODING)
     except (OSError, UnicodeDecodeError) as error:
         msg = f"Not a readable text file: {path}"
         raise UnreadableContentError(msg) from error
+    return content

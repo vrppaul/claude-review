@@ -15,12 +15,12 @@ from claude_review.domain.models import (
     FileStatus,
     LineType,
 )
-from claude_review.services.file_lines import TEXT_ENCODING, line_text, lines_of
+from claude_review.services.file_lines import line_text, lines_of
 
 
-def whole_file(path: str, text: str) -> DiffFile:
-    """The text as a file of the review with no version before it."""
-    return DiffFile(path=path, status=FileStatus.ADDED, hunks=[whole_hunk(text.encode(TEXT_ENCODING))])
+def whole_file(path: str, content: bytes) -> DiffFile:
+    """A file's bytes as a file of the review with no version before it."""
+    return DiffFile(path=path, status=FileStatus.ADDED, hunks=[whole_hunk(content)])
 
 
 def whole_hunk(content: bytes) -> DiffHunk:

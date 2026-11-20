@@ -20,7 +20,7 @@ from tests.helpers import line_anchor, thread
 
 def _message(name: str, lines: list[str]) -> DiffFile:
     """One message of the conversation, as the review holds it."""
-    return whole_file(name, "\n".join(lines))
+    return whole_file(name, "\n".join(lines).encode())
 
 
 def _formatted(threads: list[Thread], body: str | None, files: list[DiffFile]) -> ReviewResult:

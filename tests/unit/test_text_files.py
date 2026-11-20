@@ -20,7 +20,7 @@ FIRST_LINE = 1
 
 def test_a_file_read_whole_starts_both_sides_of_its_hunk_at_its_first_line() -> None:
     """Its old side has no lines, and starts where they would, as any side with none does."""
-    [hunk] = whole_file("plan.md", "Step 1\n").hunks
+    [hunk] = whole_file("plan.md", b"Step 1\n").hunks
 
     assert (hunk.old_start, hunk.new_start) == (FIRST_LINE, FIRST_LINE)
 
@@ -87,6 +87,15 @@ class TestReadFiles:
         result = await read_text_files([text_file], named_from=tmp_path)
 
         assert [line.content for line in result[0].hunks[0].lines] == ["line one", "line two"]
+
+    async def test_a_lone_carriage_return_stays_in_its_line_as_git_numbers_lines(self, tmp_path: Path) -> None:
+        """So a file's numbers here are those its diff would give it."""
+        text_file = tmp_path / "doc.md"
+        text_file.write_bytes(b"one\rstill one\ntwo\n")
+
+        result = await read_text_files([text_file], named_from=tmp_path)
+
+        assert [line.content for line in result[0].hunks[0].lines] == ["one\rstill one", "two"]
 
 
 async def test_a_file_under_the_directory_it_is_named_from_reads_relatively(tmp_path: Path) -> None:

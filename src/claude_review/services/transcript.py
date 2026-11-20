@@ -16,6 +16,7 @@ from pathlib import Path
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from claude_review.domain.models import FIRST_LINE, DiffFile
+from claude_review.services.file_lines import TEXT_ENCODING
 from claude_review.services.unreadable_content import UnreadableContentError
 from claude_review.services.whole_file import whole_file
 
@@ -144,7 +145,10 @@ def _transcript_of(path: Path) -> Transcript:
     labels = _labels(turns)
     return Transcript(
         session_id=_session_of(entries),
-        turns=[whole_file(label, turn.text) for turn, label in reversed(list(zip(turns, labels, strict=True)))],
+        turns=[
+            whole_file(label, turn.text.encode(TEXT_ENCODING))
+            for turn, label in reversed(list(zip(turns, labels, strict=True)))
+        ],
     )
 
 
