@@ -132,6 +132,24 @@ tests. Remove items when done — don't check them off.
       window with both columns as rails), and Add to review drops alone to a
       second line; the shorter hint wrapped below 460 px. The owner's call,
       2026-11-10: left as is until the page is made for small screens.
+- [ ] `fix(server)`: not everything on screen is of the take. The lines
+      read in around a hunk come from the disk (`FileWindowService` opens
+      the path), and a diff against another base, or with whitespace left
+      out, is taken of the working tree staged afresh
+      (`RepositorySource.view`); the review's own diff, a file read whole
+      and the name lookup read the tree the take was written down as. Once
+      the tree moves, the same file is numbered two ways on one screen.
+      Read all of them from the take's tree.
+- [ ] `fix(anchors)`: a thread on a file the change then renames loses its
+      file. Following looks for the thread's path, which the take holds no
+      more, though the diff holds the file under its new name with
+      `old_path` saying where it was: the thread should go with the file.
+- [ ] `refactor(server)`: a plain file of a review of files, and a
+      transcript's entry, is a `DiffFile` with `status=ADDED`
+      (`services/whole_file.py`): what became of it in a change, said of a
+      file no change made. The page hides it (`FileRow` is handed no status
+      outside a diff). What is read whole wants a model that says only what
+      it is, as `FileOfTake` does.
 
 ## The story, from the reviews of its server side
 
