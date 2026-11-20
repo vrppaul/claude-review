@@ -40,6 +40,7 @@ import { Submission } from '$lib/review/submission.svelte';
 import { Telling } from '$lib/review/telling.svelte';
 import { Navigator } from '$lib/review/navigator';
 import { Threads } from '$lib/review/threads.svelte';
+import { WayBack } from '$lib/review/way-back.svelte';
 import { WayIntoStory } from '$lib/review/way-into-story.svelte';
 import type {
 	ChangesSince,
@@ -133,6 +134,8 @@ export class Review {
 	/** Every way the reader comes to read the review as its story. */
 	readonly wayIntoStory: WayIntoStory;
 	readonly navigator: Navigator;
+	/** The places the reader left as the page took them to a line, which Back takes them to; written by the navigator. */
+	readonly wayBack: WayBack;
 	readonly commentFields = new CommentFields();
 	/** The time now, for whatever says how long ago something was. */
 	readonly clock = new Clock();
@@ -221,7 +224,8 @@ export class Review {
 			writeStory: () => this.story.askFor(),
 			writeStoriesWithoutAsking: () => this.settings.change({ story_writing: WITHOUT_ASKING })
 		});
-		this.navigator = new Navigator(this.threads, this.sections, this.wayIntoStory);
+		this.wayBack = new WayBack(this.diff);
+		this.navigator = new Navigator(this.threads, this.sections, this.wayIntoStory, this.wayBack);
 		// What the draft kept that had not gone out: the header's "unsent" counts the same
 		this.draftNotices = new DraftNotices(draft === null ? 0 : this.threads.unsent.length, draftSetAside);
 		this.#diffCharacters = $derived(diffCharacters(this.diff.files));

@@ -23,7 +23,7 @@ import { Announced, type Announcement } from '$lib/dom/announced';
 import { ArrivedLine } from '$lib/dom/arrived-line.svelte';
 import { firstInDocument } from '$lib/dom/document-order';
 import type { Jumps } from '$lib/dom/jump';
-import { focusWhatRemains, moveByLine } from '$lib/dom/keyboard';
+import { focusWhatRemains, lineNumbersIn, moveByLine, seenWhole } from '$lib/dom/keyboard';
 import { bringBack, type ReadingPlace, readingPlaceIn } from '$lib/dom/reading-place';
 
 /**
@@ -53,6 +53,14 @@ interface AwaitedThread {
 /** A section as it announced itself: what it is known by and where it is, and the file it draws lines of. */
 interface Section extends Announcement {
 	path: string;
+}
+
+/** Where the reader reads from: a section, by its key, the file it draws lines of, and a line of it. */
+export interface ReadFrom {
+	section: string;
+	path: string;
+	/** The line, by the key its place is known by; null for the section's top. */
+	line: string | null;
 }
 
 /** A section marked as the one pointed at, and the timer that takes the mark off. */
@@ -140,6 +148,17 @@ export class FileSections {
 	readingPlace(root: HTMLElement): ReadingPlace | null {
 		const section = this.#sections.beingRead;
 		return section === null ? null : readingPlaceIn(section.key, section.element, root);
+	}
+
+	/**
+	 * Where the reader reads from, while the reading area is watched: the
+	 * line whose number holds the keyboard, where they see it whole; or else
+	 * the first line they see whole in the section being read, or that
+	 * section's top where it draws none. Null while no section is being read.
+	 */
+	readFrom(): ReadFrom | null {
+		const area = this.#sections.area;
+		return area === null ? null : (this.#lineHoldingKeyboard(area) ?? this.#lineAtTheTop(area));
 	}
 
 	/** Put the reader back where they were reading, as near as what is drawn now allows; nowhere, if the section left. */
@@ -389,6 +408,23 @@ export class FileSections {
 	/** The section the reader is in: the one holding the focus, if one does, or else the one being read. */
 	#current(): Section | null {
 		return this.#focused() ?? this.#sections.beingRead;
+	}
+
+	/** The line whose number holds the keyboard, in the section it is drawn in, where the reader sees it whole. */
+	#lineHoldingKeyboard(area: HTMLElement): ReadFrom | null {
+		const holding = this.#focused();
+		const number = document.activeElement;
+		if (holding === null || !(number instanceof HTMLElement) || !seenWhole(number, area)) return null;
+		const line = number.dataset.place;
+		return line === undefined ? null : { section: holding.key, path: holding.path, line };
+	}
+
+	/** The first line the reader sees whole in the section being read, or that section's top where it draws none. */
+	#lineAtTheTop(area: HTMLElement): ReadFrom | null {
+		const read = this.#sections.beingRead;
+		if (read === null) return null;
+		const first = lineNumbersIn(read.element).find((number) => seenWhole(number, area));
+		return { section: read.key, path: read.path, line: first?.dataset.place ?? null };
 	}
 
 	/** The section holding the focus, if any does. */

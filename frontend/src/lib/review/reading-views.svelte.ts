@@ -65,6 +65,11 @@ export class ReadingViews implements ViewsOnScreen {
 		this.#nameOnScreen = FILES;
 	}
 
+	/** Bring back on screen the view the reader read in before the page took them elsewhere: the choice stays as they made it. */
+	bringBack(name: ReadingViewName): void {
+		this.#nameOnScreen = name;
+	}
+
 	/** Bring the story on screen for a thread only it draws, and hand its view over: the choice stays as the reader made it. */
 	showStory(): ReadingView {
 		this.#nameOnScreen = STORY;

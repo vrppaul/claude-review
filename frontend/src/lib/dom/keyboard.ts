@@ -79,6 +79,11 @@ function outOfSightBy(line: Element, area: HTMLElement): number {
 	return hiddenBelow >= TOUCHING_WITHIN ? hiddenBelow : 0;
 }
 
+/** Whether the reader sees the whole of a line in its area: none of it under what is kept in sight, nor past the foot. */
+export function seenWhole(line: Element, area: HTMLElement): boolean {
+	return outOfSightBy(line, area) === 0;
+}
+
 /**
  * The line a step lands on from whatever has the keyboard. From a line in
  * sight, the next or the previous. From anything else in the reading area —
@@ -98,7 +103,7 @@ function steppedTo(
 ): HTMLElement | undefined {
 	if (focused === null || !area.contains(focused)) return lineReadFrom(lines, area);
 	const at = lines.findIndex((line) => line === focused);
-	if (at !== -1 && outOfSightBy(focused, area) !== 0) return lineReadFrom(lines, area);
+	if (at !== -1 && !seenWhole(focused, area)) return lineReadFrom(lines, area);
 	if (at !== -1) return lines[Math.min(lines.length - 1, Math.max(0, at + step))];
 	const beyond =
 		step === 1 ? lines.find((line) => follows(line, focused)) : lines.findLast((line) => follows(focused, line));

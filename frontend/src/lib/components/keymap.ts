@@ -130,6 +130,8 @@ const WHILE_THREADS_ARE_DRAWN: Live = (review) => review.views.onScreen.drawn().
 // While a comment can be written and asked about: an agent can be asked, which is when a field offers Ask agent
 // now, and threads are drawn, there being lines to comment on or a thread to reply in
 const WHILE_A_COMMENT_CAN_BE_ASKED: Live = (review) => review.canAsk && review.views.onScreen.drawn().threads;
+// While the page has taken the reader from a place in the diff on screen, which Back takes them to
+const WHILE_THERE_IS_A_WAY_BACK: Live = (review) => review.wayBack.top !== null;
 
 /** A key pressed on its own. */
 function alone(key: string, run: (review: Review) => void): Press {
@@ -224,6 +226,13 @@ const KEYMAP: readonly KeyRow[] = [
 		does: 'Next unread reply',
 		views: EVERY_VIEW,
 		live: ALWAYS
+	},
+	// The place left is gone back to in the view it was left in, whatever is on screen
+	{
+		presses: [alone('b', (review) => review.navigator.goBack())],
+		does: 'Back to where you were',
+		views: EVERY_VIEW,
+		live: WHILE_THERE_IS_A_WAY_BACK
 	},
 	{
 		presses: [{ chord: TALK_CHORD, run: talkToAgent }],

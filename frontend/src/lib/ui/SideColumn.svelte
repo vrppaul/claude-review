@@ -40,8 +40,10 @@
 		/** What its rail says is behind it, once it is put away. */
 		marks?: Snippet | undefined;
 		children: Snippet;
-		/** What stands at its foot, ruled off from what is above it: what the reader writes there. */
+		/** What stands at its foot, ruled off from what is above it: what the reader writes there, or a way back. */
 		foot?: Snippet | undefined;
+		/** What stands at the foot of its rail once it is put away: the foot's act, as its icon alone. */
+		railFoot?: Snippet | undefined;
 	}
 
 	let {
@@ -58,7 +60,8 @@
 		heading,
 		marks,
 		children,
-		foot
+		foot,
+		railFoot
 	}: Props = $props();
 
 	const drawn = $derived(COLUMN_SIDES[side]);
@@ -154,5 +157,9 @@
 			marksComeIn={movedByReader}
 			onclick={() => column.toggle()}
 		/>
+		<!-- Under the rail, not in it: the rail is one button, and a button holds none -->
+		{#if railFoot}
+			<div class="cr-ui-column-rail-foot">{@render railFoot()}</div>
+		{/if}
 	{/if}
 </div>

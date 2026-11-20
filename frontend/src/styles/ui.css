@@ -153,6 +153,19 @@
 		padding-inline: 0;
 	}
 }
+/*
+ * Where a way back leads (BackTo): its words cut where the button's room ends, so a long name never pushes the
+ * button past its column; the place in the code's face, read rather than heading
+ */
+.cr-ui-back-to {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.cr-ui-back-to-place {
+	font-family: var(--font-mono);
+	font-weight: var(--font-weight-normal);
+}
 /* An icon alone: as wide as it is tall */
 .cr-ui-icon-button {
 	aspect-ratio: 1;
@@ -1046,7 +1059,9 @@
 	min-width: var(--cr-panel-least-width);
 	border-left: var(--cr-line) solid var(--cr-pane-edge);
 }
+/* Put away, its rail stands above the rail's foot, where it has one */
 .cr-ui-side-column-away {
+	flex-direction: column;
 	flex-shrink: 0;
 	width: var(--cr-column-rail-width);
 	min-width: var(--cr-column-rail-width);
@@ -1112,6 +1127,13 @@
 	flex-shrink: 0;
 	padding: --spacing(2) --spacing(3);
 	border-top: var(--cr-line) solid var(--color-base-300);
+}
+/* The foot's act on the rail of a column put away: its icon under the rail, centred as the rail's marks are */
+.cr-ui-column-rail-foot {
+	display: flex;
+	flex-shrink: 0;
+	justify-content: center;
+	padding-block: --spacing(2);
 }
 /* A column's edge, there to be dragged (EdgeGrip): on the edge the column grows towards, centred on it */
 .cr-ui-grip {
@@ -2280,9 +2302,9 @@
 
 /*
  * What a column beside what is read leaves standing where it stood, put
- * away (ColumnRail): the column narrowed, from its head to its foot, so the
- * way back is wherever the reader reaches for it, the pointer lighting all
- * of it. Its head is the column's own height, ruled off as the column's is,
+ * away (ColumnRail): the column narrowed, from its head to its foot or to
+ * the rail's own foot, so the way back is wherever the reader reaches for
+ * it, the pointer lighting all of it. Its head is the column's own height, ruled off as the column's is,
  * its toggle in the middle, where it stood in the open column's head; under
  * it what is behind it, coming in once the column has narrowed, in muted ink
  */

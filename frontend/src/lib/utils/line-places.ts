@@ -5,7 +5,12 @@
  * place.
  */
 
-import type { LinePlace } from '$lib/types';
+import type { LinePlace, LineSide } from '$lib/types';
+
+// What stands between a place's side and its number in the key it is known by
+const KEY_JOINER = ':';
+// Every side a key may name
+const SIDES: readonly LineSide[] = ['old', 'new'];
 
 /** Whether two places are the same line. */
 export function samePlace(one: LinePlace, other: LinePlace): boolean {
@@ -14,5 +19,16 @@ export function samePlace(one: LinePlace, other: LinePlace): boolean {
 
 /** What a place is known by wherever lines are looked up by where they are. */
 export function placeKey(place: LinePlace): string {
-	return `${place.side}:${place.number}`;
+	return `${place.side}${KEY_JOINER}${place.number}`;
+}
+
+/**
+ * The place a key names, as a line's number on the page carries it: what
+ * is known of a line read off the page. Null for a string no place is known by.
+ */
+export function placeOfKey(key: string): LinePlace | null {
+	const [sideNamed, numberNamed] = key.split(KEY_JOINER);
+	const side = SIDES.find((named) => named === sideNamed);
+	const number = Number(numberNamed);
+	return side === undefined || !Number.isInteger(number) ? null : { side, number };
 }
