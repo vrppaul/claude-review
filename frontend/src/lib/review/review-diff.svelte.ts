@@ -60,6 +60,11 @@ export class ReviewDiff {
 		return this.#onScreen.own_paths.includes(path);
 	}
 
+	/** Whether the diff on screen shows a file: it leaves out what its base, or whitespace left out, has nothing to say of. */
+	shows(path: string): boolean {
+		return this.files.some((file) => file.path === path);
+	}
+
 	/** Lines revealed above the hunks of the diff on screen. */
 	get revealed(): RevealedContext {
 		return this.#revealed;

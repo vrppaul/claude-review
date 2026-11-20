@@ -12,17 +12,20 @@
 
 	const review = useReview();
 
-	// Threads on a file gone from the take, drawn above the files so none
+	// Why a thread's file is not among the files drawn: the review's own change holds it still where its change is
+	// whitespace alone and whitespace is left out; it holds it no more where the file is gone
+	const CHANGED_IN_WHITESPACE_ALONE = 'a file changed in whitespace alone';
+	const NO_LONGER_IN_THE_DIFF = 'a file no longer in the diff';
+
+	// Threads on a file the diff on screen draws none of, drawn above the files so none
 	// leaves the screen. Under a narrower base the notice above the diff names
 	// every thread it cannot draw, and takes the reader to it on the whole diff.
 	const offTheDiff = $derived(threadsAboveTheFiles(review.threads, review.diff));
 
-	/** Why threads are drawn above every file, of one and of several: the file they hang on is not in the diff. */
+	/** Why threads are drawn above every file, of one and of several. */
 	function offTheDiffWords(file: string): CountedWords {
-		return {
-			one: `comment on ${file}, a file no longer in the diff`,
-			many: `comments on ${file}, a file no longer in the diff`
-		};
+		const why = review.diff.holds(file) ? CHANGED_IN_WHITESPACE_ALONE : NO_LONGER_IN_THE_DIFF;
+		return { one: `comment on ${file}, ${why}`, many: `comments on ${file}, ${why}` };
 	}
 
 	let container: HTMLElement | undefined = $state();

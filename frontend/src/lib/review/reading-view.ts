@@ -169,7 +169,7 @@ export class FilesReading implements ReadingView {
 	}
 
 	sectionOfFile(path: string): string | null {
-		return this.#diff.files.some((file) => file.path === path) ? fileSectionKey(path) : null;
+		return this.#diff.shows(path) ? fileSectionKey(path) : null;
 	}
 
 	/** A folded file draws no line, and no thread: it is opened. */

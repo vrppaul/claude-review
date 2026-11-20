@@ -344,6 +344,20 @@ describe('files with no lines to show', () => {
 	});
 });
 
+describe('a comment on a file changed in whitespace alone, while whitespace is left out', () => {
+	it('is drawn above the files, which leave its file out, and says why', () => {
+		// The review's own change holds both files; with whitespace left out, the diff on screen shows one
+		review = openReview({ files: [changedFile], diff: { own_paths: [changedFile.path, 'src/spaced.py'] } });
+		review.threads.add(newComment({ file: 'src/spaced.py', body: 'why reindent this' }));
+
+		const { getByTestId } = render(DiffView, inReview(review));
+
+		const above = getByTestId('unplaced-threads');
+		expect(above.textContent).toContain('1 comment on src/spaced.py, a file changed in whitespace alone');
+		expect(above.textContent).toContain('why reindent this');
+	});
+});
+
 describe('a comment on a file the diff no longer has', () => {
 	// The agent added the file and removed it again, and the diff was taken again without it
 	const onTheRevertedFile = {

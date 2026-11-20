@@ -16,8 +16,9 @@ import type { Thread } from '$lib/types';
 
 /**
  * Where a thread on lines is read among the files:
- * - in-the-change: in its file, which the review's own diff holds
- * - above-the-files: above the change's files, its file gone from the take
+ * - in-the-change: in its file among the change's files, which the review's own diff holds
+ * - above-the-files: above the change's files, which draw no file for it: its file is gone from the take, or its
+ *   change is whitespace alone and the diff on screen, with whitespace left out, leaves the file out
  * - in-its-file-alone: in its file read alone, which the change did not touch and the take holds
  */
 export type ReadAmongTheFiles = 'in-the-change' | 'above-the-files' | 'in-its-file-alone';
@@ -25,10 +26,14 @@ export type ReadAmongTheFiles = 'in-the-change' | 'above-the-files' | 'in-its-fi
 // Where in a file read alone a thread whose lines it does not draw hangs: at the file's head, before its first line
 const HEAD_OF_THE_FILE = 0;
 
-/** Where a thread on these lines is read among the files. */
+/**
+ * Where a thread on these lines is read among the files. Under a narrower
+ * base a file the change holds and the diff on screen leaves out is the
+ * base's to say (`drawnByTheChange`), and its threads are the change's still.
+ */
 export function whereRead(lines: ThreadLines, diff: ReviewDiff): ReadAmongTheFiles {
-	if (diff.holds(lines.file)) return 'in-the-change';
-	return lines.standing === 'file_gone' ? 'above-the-files' : 'in-its-file-alone';
+	if (!diff.holds(lines.file)) return lines.standing === 'file_gone' ? 'above-the-files' : 'in-its-file-alone';
+	return diff.narrowed || diff.shows(lines.file) ? 'in-the-change' : 'above-the-files';
 }
 
 /**
