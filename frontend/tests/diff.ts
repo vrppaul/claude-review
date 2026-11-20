@@ -77,10 +77,14 @@ export const FIRST_TAKE = 1;
 /** A take after it: what the review holds once its diff was taken again. */
 export const A_LATER_TAKE = 2;
 
-/** What the server answers a request for the diff with, around these files. */
-export function diffResponse(given: Partial<DiffResponse> = {}): DiffResponse {
+/**
+ * What the server answers a request for the diff with, around these files:
+ * the review's own diff, holding them alone, unless it says otherwise.
+ */
+export function diffResponse({ files = [], ...given }: Partial<DiffResponse> = {}): DiffResponse {
 	return {
-		files: [],
+		files,
+		own_paths: files.map((file) => file.path),
 		base: REVIEW_BASE,
 		moved: 0,
 		take: FIRST_TAKE,

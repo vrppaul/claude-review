@@ -1,5 +1,5 @@
 import { beforeEach, describe, it, expect } from 'vitest';
-import { contextLine, addedLine, diffFile, diffResponse, hunk } from './diff';
+import { contextLine, addedLine, diffFile, diffResponse, hunk, sinceRound } from './diff';
 import { fakeServer, keepingSettings, SERVER_ERROR } from './fake-server';
 import type { Review } from '$lib/review/review.svelte';
 import { openReview } from './review';
@@ -54,6 +54,30 @@ describe('the diff on screen', () => {
 		fakeServer().fail('GET /api/diff', SERVER_ERROR);
 
 		await expect(review.diff.take()).rejects.toThrow(`Could not take the diff: ${SERVER_ERROR}`);
+	});
+});
+
+describe("which files the review's own change holds", () => {
+	it('is what the server says, though whitespace left out takes a file off the screen', async () => {
+		const server = fakeServer();
+		keepingSettings(server);
+		server.answer('GET /api/diff', diffResponse({ files: [], own_paths: ['src/a.ts'] }));
+
+		await review.setIgnoreWhitespace(true);
+
+		expect(review.diff.holds('src/a.ts')).toBe(true);
+	});
+
+	it('leaves out a file a retake under a narrower base took out of the change', async () => {
+		review = openReview({ files });
+		const server = fakeServer();
+		server.answer('GET /api/diff', diffResponse({ files, base: sinceRound(1) }));
+		await review.diff.setBase('round:1');
+		server.answer('GET /api/diff', diffResponse({ files: [], own_paths: ['src/b.ts'], base: sinceRound(1) }));
+
+		await review.diff.take();
+
+		expect(review.diff.holds('src/a.ts')).toBe(false);
 	});
 });
 

@@ -772,7 +772,7 @@ describe('a file the agent names', () => {
 		const server = fakeServer();
 		server.answerWith('GET /api/diff', (request) =>
 			request.query.base === 'round:1'
-				? diffResponse({ files: [file], base: sinceRound(1) })
+				? diffResponse({ files: [file], own_paths: [file.path, other.path], base: sinceRound(1) })
 				: diffResponse({ files: [file, other], base: REVIEW_BASE })
 		);
 		await review.diff.take();

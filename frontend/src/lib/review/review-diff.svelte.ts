@@ -28,9 +28,6 @@ export class ReviewDiff {
 	#onScreen: DiffResponse;
 	// Lines revealed above the hunks of the diff on screen; every diff starts with none
 	#revealed = $state.raw(new RevealedContext());
-	// The files of the review's own diff, as it was last taken: a narrower
-	// base shows fewer of them, and the review holds them all the same
-	#ownFiles = $state.raw<DiffFile[]>([]);
 	// Which base the reader last asked for, null for the review's own. Set the
 	// moment they ask, so a diff taken again while theirs is on its way — a
 	// round landing — is taken against what they picked, not against what is
@@ -58,9 +55,9 @@ export class ReviewDiff {
 		return this.#onScreen.files;
 	}
 
-	/** Whether the review's own diff holds a file, whatever base is on screen. */
+	/** Whether the review's own diff holds a file, whatever base or whitespace the diff on screen is taken with. */
 	holds(path: string): boolean {
-		return this.#ownFiles.some((file) => file.path === path);
+		return this.#onScreen.own_paths.includes(path);
 	}
 
 	/** Lines revealed above the hunks of the diff on screen. */
@@ -205,13 +202,11 @@ export class ReviewDiff {
 	/**
 	 * Take in what the diff now on screen brings beside itself: nothing read
 	 * in around its hunks yet, no failure to put the whole review back left
-	 * to say, the review's own files where it is of the review's own base,
-	 * and how far the tree has moved since it was taken.
+	 * to say, and how far the tree has moved since it was taken.
 	 */
 	#noteWhatCameWithIt(): void {
 		this.#revealed = new RevealedContext();
 		this.#wholeReviewFailed = null;
-		if (!this.narrowed) this.#ownFiles = this.files;
 		// Said with the diff as well as pushed: a review reloaded while the tree
 		// was moving heard the push and lost it, and one opened later never
 		// heard it at all
