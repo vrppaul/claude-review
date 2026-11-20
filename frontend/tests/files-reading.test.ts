@@ -60,7 +60,10 @@ describe('the files read against a narrower base', () => {
 	beforeEach(async () => {
 		review = openReview({ files });
 		// Since round one, a.py alone; whatever diff is asked for after that is the review's own
-		fakeServer().answer('GET /api/diff', diffResponse({ files: [A_PY], base: sinceRound(1) }));
+		fakeServer().answer(
+			'GET /api/diff',
+			diffResponse({ files: [A_PY], own_paths: ['a.py', 'b.py'], base: sinceRound(1) })
+		);
 		await review.diff.setBase('round:1');
 		fakeServer().answer('GET /api/diff', diffResponse({ files, base: REVIEW_BASE }));
 	});
@@ -161,7 +164,7 @@ describe('the files read against a narrower base', () => {
 		server.refuse('GET /api/diff', SERVER_ERROR, 'The diff could not be read');
 		await review.diff.showWholeReview();
 
-		server.answer('GET /api/diff', diffResponse({ files: [A_PY], base: sinceRound(1) }));
+		server.answer('GET /api/diff', diffResponse({ files: [A_PY], own_paths: ['a.py', 'b.py'], base: sinceRound(1) }));
 		await review.diff.take();
 
 		expect(review.diff.wholeReviewFailed).toBeNull();

@@ -638,7 +638,10 @@ describe('a review read as its story', () => {
 
 	it('takes the reader to a thread it does not draw though the files are read against a narrower base, which is put back whole for it', async () => {
 		// Since round one, the first file alone; the diff asked for after that is the review's own
-		fakeServer().answer('GET /api/diff', diffResponse({ files: files.slice(0, 1), base: sinceRound(1) }));
+		fakeServer().answer(
+			'GET /api/diff',
+			diffResponse({ files: files.slice(0, 1), own_paths: ['a.py', 'b.py', 'uv.lock'], base: sinceRound(1) })
+		);
 		await review.diff.setBase('round:1');
 		fakeServer().answer('GET /api/diff', diffResponse({ files }));
 		review.threads.add(newComment({ file: 'uv.lock', startLine: 1, body: 'about the lock file' }));
@@ -653,7 +656,10 @@ describe('a review read as its story', () => {
 	});
 
 	it("leaves the files' narrower base as it is when the reader is taken to a file the story draws", async () => {
-		fakeServer().answer('GET /api/diff', diffResponse({ files: files.slice(0, 1), base: sinceRound(1) }));
+		fakeServer().answer(
+			'GET /api/diff',
+			diffResponse({ files: files.slice(0, 1), own_paths: ['a.py', 'b.py', 'uv.lock'], base: sinceRound(1) })
+		);
 		await review.diff.setBase('round:1');
 		render(ReviewScreen, { props: { review } });
 
@@ -666,7 +672,10 @@ describe('a review read as its story', () => {
 
 	it('brings the files on screen when the reader asks to see what changed since the last retake', async () => {
 		const user = userEvent.setup();
-		fakeServer().answer('GET /api/diff', diffResponse({ files: files.slice(0, 1), base: sinceRound(1) }));
+		fakeServer().answer(
+			'GET /api/diff',
+			diffResponse({ files: files.slice(0, 1), own_paths: ['a.py', 'b.py', 'uv.lock'], base: sinceRound(1) })
+		);
 		review.noteRetake({ followed: 0, outdated: 0 }, { since_round: 1, base_key: 'round:1', paths: ['a.py'] });
 		render(ReviewScreen, { props: { review } });
 

@@ -123,7 +123,7 @@ describe('every control that takes the reader to a thread', () => {
 		// The narrower base shows a.py alone; the review's own base shows all three
 		server.answerWith('GET /api/diff', (request) =>
 			request.query.base === 'round:1'
-				? diffResponse({ files: files.slice(0, 1), base: sinceRound(1) })
+				? diffResponse({ files: files.slice(0, 1), own_paths: PATHS, base: sinceRound(1) })
 				: diffResponse({ files, base: REVIEW_BASE })
 		);
 		await review.diff.setBase('round:1');
