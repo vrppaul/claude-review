@@ -166,6 +166,17 @@ describe('going back to where the reader was before going to a line', () => {
 		expect(document.activeElement?.getAttribute('aria-label')).toContain('app.py');
 	});
 
+	it('leaves a file the reader folded folded, going back to its top', async () => {
+		const review = onScreenFailing([]);
+		review.reading.toggleFolded('src/app.py');
+		review.wayBack.note(leftAt('files', 'src/app.py', null, 'app.py'));
+		flushSync();
+
+		await press('go-back');
+
+		expect(review.reading.isFolded('src/app.py')).toBe(true);
+	});
+
 	it('goes back through every place left, the last first', async () => {
 		const review = onScreenFailing([]);
 		review.wayBack.note(leftAt('files', 'src/app.py', 'new:2', 'app.py:2'));

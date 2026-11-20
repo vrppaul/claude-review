@@ -16,11 +16,6 @@
 	import Icon from './Icon.svelte';
 	import IconButton from './IconButton.svelte';
 
-	// What the tests know the way back by, at the column's foot and at its rail's: one column with a way back stands
-	// on screen at a time, the one beside what is read
-	const BACK_TEST_ID = 'go-back';
-	const BACK_ON_RAIL_TEST_ID = 'go-back-on-rail';
-
 	/** What the tests know each part of the column by, written whole where the column is drawn. */
 	interface TestIds {
 		column: string;
@@ -28,6 +23,9 @@
 		resize: string;
 		putAway: string;
 		bringBack: string;
+		/** The way back, at its foot and at its rail's, where it offers one. */
+		back: string;
+		backOnRail: string;
 	}
 
 	interface Props {
@@ -162,7 +160,7 @@
 			{/if}
 			{#if back}
 				<div class="cr-ui-column-foot">
-					<BackTo place={back.called} whole={back.calledInFull} testId={BACK_TEST_ID} onclick={back.go} />
+					<BackTo place={back.called} whole={back.calledInFull} testId={testIds.back} onclick={back.go} />
 				</div>
 			{/if}
 		</svelte:element>
@@ -186,7 +184,7 @@
 					size="xs"
 					shape="square"
 					label="Back to {back.called}"
-					testId={BACK_ON_RAIL_TEST_ID}
+					testId={testIds.backOnRail}
 					onclick={back.go}
 				>
 					<Icon name="chevron" size="sm" pointing="left" />

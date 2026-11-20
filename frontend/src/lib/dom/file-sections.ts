@@ -142,14 +142,15 @@ export class FileSections {
 	}
 
 	/**
-	 * Where the reader is reading, while the reading area is watched: the
-	 * first line still showing at its top, in the section being read. None
-	 * while no section is being read.
+	 * Where the reader is reading in the section being read, while the
+	 * reading area is watched, as `readingPlaceIn` reads it. None while no
+	 * section is being read.
 	 */
-	readingPlace(): ReadingPlace | null {
+	readingPlace(standsAlike: (lineKey: string) => boolean): ReadingPlace | null {
 		const section = this.#sections.beingRead;
 		const area = this.#sections.area;
-		return section === null || area === null ? null : readingPlaceIn(section.key, section.element, area);
+		if (section === null || area === null) return null;
+		return readingPlaceIn(section.key, section.element, area, standsAlike);
 	}
 
 	/** Whether the reader sees a line's number whole in a section now, by the key its place is known by. */

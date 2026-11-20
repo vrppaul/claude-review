@@ -11,7 +11,7 @@
 
 import type { Announced, Announcement } from '$lib/dom/announced';
 import type { Jumps } from '$lib/dom/jump';
-import { lineNumbersIn } from '$lib/dom/keyboard';
+import { lineNumbersIn, seenWhole } from '$lib/dom/keyboard';
 
 /** Where the reader is reading: a line of what they read in, and how far below the top of the reading area it stands. */
 export interface ReadingPlace {
@@ -23,15 +23,28 @@ export interface ReadingPlace {
 	offset: number;
 }
 
-/** Where the reader is reading in what they read: its first line still showing at the top of the area, or its top. */
-export function readingPlaceIn(key: string, readIn: HTMLElement, root: HTMLElement): ReadingPlace {
-	const top = root.getBoundingClientRect().top;
-	const line = lineNumbersIn(readIn).find((number) => number.getBoundingClientRect().bottom > top);
+/**
+ * Where the reader is reading in what they read: of its lines they see
+ * whole, past what is kept in sight at the top of the area, the first that
+ * `standsAlike` keeps, or else the first; or its top, where they see none.
+ *
+ * @param standsAlike whether a line, by the key its place is known by, is numbered alike in whatever is drawn
+ *   when the reader comes back to it
+ */
+export function readingPlaceIn(
+	key: string,
+	readIn: HTMLElement,
+	root: HTMLElement,
+	standsAlike: (lineKey: string) => boolean
+): ReadingPlace {
+	const seen = lineNumbersIn(readIn).filter((number) => seenWhole(number, root));
+	const alike = seen.find((number) => number.dataset.place !== undefined && standsAlike(number.dataset.place));
+	const line = alike ?? seen.at(0);
 	const standing = line ?? readIn;
 	return {
 		within: key,
 		line: line?.dataset.place ?? null,
-		offset: standing.getBoundingClientRect().top - top
+		offset: standing.getBoundingClientRect().top - root.getBoundingClientRect().top
 	};
 }
 

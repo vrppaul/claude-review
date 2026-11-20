@@ -23,6 +23,15 @@ export function placeKey(place: LinePlace): string {
 }
 
 /**
+ * Whether a key names a line of the file as it stands, a new-side line:
+ * numbered alike under every base, where a removed line's number under a
+ * narrower base is that base's own.
+ */
+export function namesTheFileAsItStands(key: string): boolean {
+	return placeOfKey(key)?.side === 'new';
+}
+
+/**
  * The place a key names, as a line's number on the page carries it: what
  * is known of a line read off the page. Null for a string no place is known by.
  */

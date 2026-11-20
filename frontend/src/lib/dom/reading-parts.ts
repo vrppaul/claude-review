@@ -116,15 +116,15 @@ export class ReadingParts {
 	}
 
 	/**
-	 * Where the reader is reading, while the reading area is watched: the
-	 * first line still showing at its top in the part being read, or the
-	 * part's top where it draws none, as over the overview. None while no
-	 * part is being read.
+	 * Where the reader is reading in the part being read, while the reading
+	 * area is watched, as `readingPlaceIn` reads it: the part's top where
+	 * they see no line of it, as over the overview. None while no part is
+	 * being read.
 	 */
-	readingPlace(): ReadingPlace | null {
+	readingPlace(standsAlike: (lineKey: string) => boolean): ReadingPlace | null {
 		const part = this.#parts.beingRead;
 		const area = this.#parts.area;
-		return part === null || area === null ? null : readingPlaceIn(part.key, part.element, area);
+		return part === null || area === null ? null : readingPlaceIn(part.key, part.element, area, standsAlike);
 	}
 
 	/**

@@ -70,7 +70,9 @@
 			head: 'contents-head',
 			resize: 'contents-resize',
 			putAway: 'hide-contents',
-			bringBack: 'show-contents'
+			bringBack: 'show-contents',
+			back: 'go-back',
+			backOnRail: 'go-back-on-rail'
 		}}
 	>
 		{#snippet heading()}

@@ -41,10 +41,10 @@ tests. Remove items when done — don't check them off.
 
 ## Bugs
 
-- [ ] `fix(ui)`: with the keyboard on a thread's fold toggle, `u` folds the
-      file it stands in and leaves the keyboard on nothing (BODY), with
-      less motion asked for or not; page.md says what remains takes it.
-      Found by the review of chunk 8's last motion, older.
+- [ ] `fix(ui)`: with the keyboard on a thread's fold toggle, or on a line's
+      number, `u` folds the file it stands in and leaves the keyboard on
+      nothing (BODY), with less motion asked for or not; page.md says what
+      remains takes it. Found by the review of chunk 8's last motion, older.
 - [ ] `fix(server)`: two reviews running at once can lose one another's
       change to a record about the reader. The lock that makes changes to
       a record one after the other is each review's own

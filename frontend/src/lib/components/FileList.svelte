@@ -159,7 +159,9 @@
 		head: 'sidebar-head',
 		resize: 'sidebar-resize',
 		putAway: 'hide-sidebar',
-		bringBack: 'show-sidebar'
+		bringBack: 'show-sidebar',
+		back: 'go-back',
+		backOnRail: 'go-back-on-rail'
 	}}
 >
 	{#snippet heading()}

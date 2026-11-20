@@ -38,7 +38,9 @@
 		head: 'panel-status',
 		resize: 'panel-resize',
 		putAway: 'close-panel',
-		bringBack: 'show-panel'
+		bringBack: 'show-panel',
+		back: 'panel-go-back',
+		backOnRail: 'panel-go-back-on-rail'
 	}}
 	{heading}
 	{marks}

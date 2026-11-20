@@ -4,6 +4,7 @@
 	import { provideScrollArea } from '$lib/dom/scroll-area';
 	import { useReview } from '$lib/review/context';
 	import EmptyNote from '$lib/ui/EmptyNote.svelte';
+	import { namesTheFileAsItStands } from '$lib/utils/line-places';
 	import type { CountedWords } from '$lib/utils/words';
 	import { reportBroken } from './broken-parts';
 	import FileSection from './FileSection.svelte';
@@ -42,7 +43,7 @@
 	// back once it is; nothing but the diff itself starts it.
 	$effect.pre(() => {
 		void review.diff.files;
-		const place = untrack(() => review.sections.readingPlace());
+		const place = untrack(() => review.sections.readingPlace(namesTheFileAsItStands));
 		if (place === null) return;
 		void tick().then(() => review.sections.returnTo(place));
 	});

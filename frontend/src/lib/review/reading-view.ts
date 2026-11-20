@@ -18,7 +18,7 @@ import type { ReadingProgress } from '$lib/review/reading-progress.svelte';
 import type { ReviewDiff } from '$lib/review/review-diff.svelte';
 import type { Threads } from '$lib/review/threads.svelte';
 import type { LinePlace, Thread } from '$lib/types';
-import { placeOfKey } from '$lib/utils/line-places';
+import { namesTheFileAsItStands, placeOfKey } from '$lib/utils/line-places';
 import { fileName } from '$lib/utils/paths';
 
 /**
@@ -193,14 +193,15 @@ export class FilesReading implements ReadingView {
 	}
 
 	placeRead(): PlaceRead | null {
-		const place = this.#sections.readingPlace();
+		const place = this.#sections.readingPlace(namesTheFileAsItStands);
 		return place === null ? null : placeInLines(this.#sections, place);
 	}
 
 	/**
-	 * Its file unfolded, and a line of the file as it stands read in where
-	 * the diff on screen leaves it out; a file the diff on screen holds none
-	 * of is not drawn.
+	 * A line read from is drawn first: its file unfolded, and a line of the
+	 * file as it stands read in where the diff on screen leaves it out. The
+	 * top of a file is gone back to as the reader left the file, folded or
+	 * not. A file the diff on screen holds none of is not drawn.
 	 */
 	async returnTo(place: ReadingPlace): Promise<boolean> {
 		// What the files' own view knows a section by is its file's path
@@ -208,7 +209,7 @@ export class FilesReading implements ReadingView {
 		if (this.sectionOfFile(path) === null) return false;
 		const line = place.line === null ? null : placeOfKey(place.line);
 		if (line?.side === 'new') await this.drawLine(path, line.number);
-		else this.#reading.unfold(path);
+		else if (line !== null) this.#reading.unfold(path);
 		this.#sections.goBackTo(place);
 		return true;
 	}

@@ -40,6 +40,7 @@ import type { ChapterListed, FileListed } from '$lib/review/story-contents';
 import { OVERVIEW_PART } from '$lib/review/story-keys';
 import type { Threads } from '$lib/review/threads.svelte';
 import type { StoryBlock, Thread, ToldStory } from '$lib/types';
+import { namesTheFileAsItStands } from '$lib/utils/line-places';
 
 // What the way back calls the parts of a story that are no chapter: its overview, and what no step tells
 const OVERVIEW_CALLED = 'the overview';
@@ -199,9 +200,9 @@ export class StoryReading implements ReadingView {
 	 * the story, its overview or a chapter, called by its title.
 	 */
 	placeRead(): PlaceRead | null {
-		const inAPiece = this.#sections.readingPlace();
+		const inAPiece = this.#sections.readingPlace(namesTheFileAsItStands);
 		if (inAPiece !== null) return placeInLines(this.#sections, inAPiece);
-		const inAPart = this.#parts.readingPlace();
+		const inAPart = this.#parts.readingPlace(namesTheFileAsItStands);
 		if (inAPart === null) return null;
 		const called = this.#partCalled(inAPart.within);
 		return { place: inAPart, called, calledInFull: called };
