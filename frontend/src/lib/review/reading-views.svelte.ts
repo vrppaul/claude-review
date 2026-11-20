@@ -110,6 +110,23 @@ export class ReadingViews implements ViewsOnScreen {
 		return alone;
 	}
 
+	/**
+	 * Keep a reader in a file read alone as the change is taken again: in
+	 * it, read anew for the take, where the change still leaves it; among
+	 * the change's files, on the line they read, where it now touches it.
+	 */
+	async followTheTake(): Promise<void> {
+		const path = this.fileReadAlone;
+		if (path === null) return;
+		if (!this.#diff.holds(path)) {
+			await this.fileAlone.open(path);
+			return;
+		}
+		const read = this.onScreen.placeRead();
+		const files = this.show(FILES);
+		if (read !== null) await files.returnTo(read.place);
+	}
+
 	/** Bring on screen the view of the Files way of reading that draws a thread on these lines, and hand it over. */
 	showWhereRead(lines: ThreadLines): Promise<ReadingView> {
 		return whereRead(lines, this.#diff) === 'in-its-file-alone' ? this.readAlone(lines.file) : this.showTheChange();

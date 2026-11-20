@@ -373,7 +373,8 @@ export class Review {
 	 * was of the take before. One retake is taken in at a time, so threads
 	 * never follow onto a diff older than the one on screen. Whatever had
 	 * moved on disk is in the diff taken, so the tree has nothing more to
-	 * say — unless it moves again meanwhile.
+	 * say — unless it moves again meanwhile. A reader in a file read alone
+	 * is kept there, or among the change's files where it now touches it.
 	 */
 	takeRetakenDiff(): Promise<FollowOutcome> {
 		return this.#oneAtATime(() => this.#followAndTake());
@@ -441,6 +442,8 @@ export class Review {
 		const [holdDiff, holdStory] = await Promise.all([this.diff.read(), this.story.read()]);
 		holdDiff();
 		holdStory();
+		// Taking the reader where the take leaves them is no part of taking it in, which it never holds up
+		void this.views.followTheTake();
 		return moved;
 	}
 

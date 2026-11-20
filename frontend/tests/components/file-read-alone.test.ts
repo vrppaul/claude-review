@@ -4,13 +4,14 @@ import { render, screen, within } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import ReviewScreen from '$lib/components/ReviewScreen.svelte';
 import type { Review } from '$lib/review/review.svelte';
-import type { FileOfTakeResponse } from '$lib/types';
-import { addedLine, contextLine, diffFile, hunk } from '../diff';
+import type { Anchor, DiffFile, FileOfTakeResponse } from '$lib/types';
+import { A_LATER_TAKE, addedLine, contextLine, diffFile, diffResponse, hunk } from '../diff';
 import { type FakeServer, fakeServer } from '../fake-server';
 import { frames } from '../frames';
 import { newComment, onAFileGone } from '../new-comment';
 import { openReview } from '../review';
 import { settled } from '../settled';
+import { storyResponse } from '../story';
 
 // The change touches a.py; src/caller.py, which calls into it, the change left as it was
 const A_PY = diffFile({ path: 'a.py', hunks: [hunk([addedLine(1, 'in a.py')])] });
@@ -141,6 +142,54 @@ describe('a file the change did not touch, read alone', () => {
 
 		expect(screen.queryByTestId('file-alone-failed')).toBeNull();
 		expect(screen.getByTestId('file-lines').textContent).toContain('def caller():');
+	});
+});
+
+describe('a file read alone, as the change is taken again', () => {
+	// What the server says of a file the take holds none of
+	const NO_SUCH_FILE = 404;
+
+	/** Take the change again, as a round landing does: the threads followed to these anchors, the diff these files. */
+	async function retakenWith(files: DiffFile[], anchors: Anchor[]): Promise<void> {
+		server.answer('POST /api/anchors/follow', { anchors });
+		server.answer('GET /api/diff', diffResponse({ files, take: A_LATER_TAKE }));
+		server.answer('GET /api/story', storyResponse());
+		await review.takeRetakenDiff();
+		await cameToRest();
+	}
+
+	beforeEach(async () => {
+		await goneToAThreadOnTheCaller();
+	});
+
+	it('is read anew for the take, as it stands now', async () => {
+		server.answer('GET /api/file-of-take', {
+			...CALLER_OF_THE_TAKE,
+			hunk: hunk([contextLine(null, 1, 'def caller_renamed():')], { header: '' })
+		});
+
+		await retakenWith([A_PY], [review.threads.all[0].anchor]);
+
+		expect(screen.getByTestId('file-lines').textContent).toContain('def caller_renamed():');
+	});
+
+	it('gives way to the change’s files once the change touches it', async () => {
+		const callerChanged = diffFile({ path: CALLER, hunks: [hunk([addedLine(1, 'import lock')])] });
+
+		await retakenWith([A_PY, callerChanged], [review.threads.all[0].anchor]);
+
+		expect(screen.queryByTestId('file-alone-view')).toBeNull();
+		expect(screen.getAllByTestId('file-section').map((section) => section.dataset.path)).toEqual(['a.py', CALLER]);
+	});
+
+	it('says in place that the take holds it no more, and its thread is drawn above the change’s files', async () => {
+		server.refuse('GET /api/file-of-take', NO_SUCH_FILE, `no file of the take on screen at ${CALLER}`);
+
+		await retakenWith([A_PY], [{ ...review.threads.all[0].anchor, standing: 'file_gone' }]);
+		expect(screen.getByTestId('file-alone-failed').textContent).toBe(`no file of the take on screen at ${CALLER}`);
+		await press('put-file-away');
+
+		expect(screen.getByTestId('unplaced-threads').textContent).toContain('the agent forgot this call');
 	});
 });
 
