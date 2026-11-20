@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { DiffFile } from '$lib/types';
+	import type { FileToDraw } from '$lib/types';
 	import { assembleText } from '$lib/utils/renderable';
 	import { COMMENTS, counted } from '$lib/utils/words';
 	import { useReview } from '$lib/review/context';
@@ -7,7 +7,7 @@
 	import MarkdownRenderer from './MarkdownRenderer.svelte';
 
 	interface Props {
-		file: DiffFile;
+		file: FileToDraw;
 	}
 
 	let { file }: Props = $props();

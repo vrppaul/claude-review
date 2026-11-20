@@ -1,4 +1,4 @@
-import type { DiffFile, ReviewMode } from '$lib/types';
+import type { FileToDraw, ReviewMode } from '$lib/types';
 
 /**
  * Languages that support rendered preview (Preview / Side-by-side modes).
@@ -15,7 +15,7 @@ export function isRenderable(language: string | null): boolean {
  * The file's text as it reads now: in a diff the removed lines are left out,
  * since they are not in the file any more.
  */
-export function assembleText(file: DiffFile, mode: ReviewMode): string {
+export function assembleText(file: FileToDraw, mode: ReviewMode): string {
 	return file.hunks
 		.flatMap((hunk) => hunk.lines)
 		.filter((line) => mode !== 'diff' || line.kind !== 'delete')

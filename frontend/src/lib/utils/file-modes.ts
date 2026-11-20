@@ -8,7 +8,7 @@
  * is a change of its permissions, said by the modes themselves.
  */
 
-import type { DiffFile } from '$lib/types';
+import type { FileToDraw } from '$lib/types';
 
 /** What changed about a path's mode: what it is, or who may run it. */
 type ModeChangeKind = 'Type' | 'Permission';
@@ -30,7 +30,7 @@ function kindOf(mode: string): string {
 }
 
 /** How a file's mode changed, if it did. */
-export function modeChangeOf(file: DiffFile): ModeChange | null {
+export function modeChangeOf(file: FileToDraw): ModeChange | null {
 	if (file.old_mode === null || file.new_mode === null) return null;
 	const [before, after] = [kindOf(file.old_mode), kindOf(file.new_mode)];
 	if (before !== after) return { what: 'Type', from: before, to: after };

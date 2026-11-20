@@ -39,6 +39,11 @@ export type GuideState = Schemas['GuideState'];
 export type DiffLine = Schemas['DiffLine'];
 export type DiffHunk = Schemas['DiffHunk'];
 export type DiffFile = Schemas['DiffFile'];
+/**
+ * A file as a section of its lines draws it: its path, its hunks, whether a thread may hang on it, and why it
+ * shows no lines. What became of it in a change is said by its header, and only of a file the change touched.
+ */
+export type FileToDraw = Omit<DiffFile, 'status' | 'old_path'>;
 /** Why a file whose content changed shows none of its lines: not text, or too large to read. */
 export type Unshown = Schemas['Unshown'];
 /** What the review is and where it stands, read as the page opens. */

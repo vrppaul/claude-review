@@ -18,7 +18,7 @@ import { type DrawnFile, LineCommenting } from '$lib/components/line-commenting.
 import type { RevealedContext } from '$lib/review/revealed-context.svelte';
 import type { Review } from '$lib/review/review.svelte';
 import { type FailureFound, NO_FAILURES } from '$lib/review/checks.svelte';
-import type { DiffFile, DiffLayout, DiffLine, LinePlace } from '$lib/types';
+import type { DiffLayout, DiffLine, FileToDraw, LinePlace } from '$lib/types';
 import { type DrawnHunk, type DrawnLine, drawnHunks } from '$lib/utils/drawn-file';
 import {
 	type ContextGap,
@@ -37,7 +37,7 @@ import type { CountedWords } from '$lib/utils/words';
 export type FileView = 'preview' | 'side-by-side' | 'split' | 'raw';
 
 /** How a change's lines are laid out as the reader chose: in two columns where there are lines to set side by side. */
-export function linesView(layout: DiffLayout, file: DiffFile): 'split' | 'raw' {
+export function linesView(layout: DiffLayout, file: FileToDraw): 'split' | 'raw' {
 	return layout === 'split' && file.hunks.length > 0 ? 'split' : 'raw';
 }
 
@@ -149,7 +149,7 @@ function revealedIn(extent: Extent): RevealedContext | null {
 }
 
 /** A file as it is drawn: with the lines revealed around its hunks, where they may be. */
-function shownFile(file: DiffFile, extent: Extent): DiffFile {
+function shownFile(file: FileToDraw, extent: Extent): FileToDraw {
 	const revealed = revealedIn(extent);
 	return revealed ? withRevealed(file, revealed.forFile(file.path)) : file;
 }
@@ -158,7 +158,7 @@ function shownFile(file: DiffFile, extent: Extent): DiffFile {
  * The gap below the last hunk of a file as drawn, as far as a read has said
  * how long the file is, where the drawing draws it.
  */
-function gapAtTheEnd(shown: DiffFile, extent: Extent): ContextGap | null {
+function gapAtTheEnd(shown: FileToDraw, extent: Extent): ContextGap | null {
 	const last = shown.hunks.at(-1);
 	if (last === undefined) return null;
 	const end = gapBelow(last, revealedIn(extent)?.forFile(shown.path).length ?? null);
@@ -180,7 +180,7 @@ function drawsGap(extent: Extent, gap: ContextGap): boolean {
  * hunk under the bar for what was left out above it, headed by the hunk's
  * header, and below the last hunk a bar headed by nothing.
  */
-export function roomOf(file: DiffFile, extent: Extent, view: FileView): LinesRoom {
+export function roomOf(file: FileToDraw, extent: Extent, view: FileView): LinesRoom {
 	const shown = shownFile(file, extent);
 	const { hunks } = shown;
 	const barred = hunks.filter((hunk, index) => drawsGap(extent, gapAbove(hunk, hunks[index - 1])));
@@ -199,7 +199,7 @@ export function roomOf(file: DiffFile, extent: Extent, view: FileView): LinesRoo
 export interface DrawingSource {
 	/** The section it is drawn in, by the key its view knows it by. */
 	section: () => string;
-	file: () => DiffFile;
+	file: () => FileToDraw;
 	/** What it is highlighted as, if anything. */
 	language: () => string | null;
 	/** How much of the file is drawn. */
@@ -210,7 +210,7 @@ export class FileDrawing implements DrawnFile {
 	readonly commenting: LineCommenting;
 	readonly #review: Review;
 	readonly #source: DrawingSource;
-	readonly #shownFile: DiffFile;
+	readonly #shownFile: FileToDraw;
 	readonly #hunks: DrawnHunk[];
 	readonly #end: ContextGap | null;
 	// Where the checks failed in the file, by the line of it as it stands: asked of every line drawn

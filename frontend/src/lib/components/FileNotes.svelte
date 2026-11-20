@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { DiffFile, Thread, Unshown } from '$lib/types';
+	import type { FileToDraw, Thread, Unshown } from '$lib/types';
 	import { useReview } from '$lib/review/context';
 	import EmptyNote from '$lib/ui/EmptyNote.svelte';
 	import NoticeBar from '$lib/ui/NoticeBar.svelte';
@@ -9,7 +9,7 @@
 	import UnplacedThreads from './UnplacedThreads.svelte';
 
 	interface Props {
-		file: DiffFile;
+		file: FileToDraw;
 		/** Threads that no line drawn here can hang under. */
 		unplaced: readonly Thread[];
 	}

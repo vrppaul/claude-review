@@ -4,7 +4,7 @@
  * once, as GitHub does.
  */
 
-import type { DiffFile, DiffHunk, DiffLine } from '$lib/types';
+import type { DiffHunk, DiffLine, FileToDraw } from '$lib/types';
 
 /**
  * How many lines one step up or down reads: GitHub's step, enough to see
@@ -146,7 +146,7 @@ export function readOf(gap: ContextGap, widening: Widening, longestRead: number)
  * by reading again. Null where no gap hides the line.
  */
 export function readReaching(
-	file: DiffFile,
+	file: FileToDraw,
 	revealed: RevealedLines,
 	line: number,
 	longestRead: number
@@ -233,7 +233,7 @@ const READS: Record<Widening, (gap: ContextGap, longestRead: number) => GapRead 
  * sit beside means line numbering, highlighting and comment anchoring all
  * treat them like any other context line, with nothing to special-case.
  */
-export function withRevealed(file: DiffFile, revealed: RevealedLines): DiffFile {
+export function withRevealed(file: FileToDraw, revealed: RevealedLines): FileToDraw {
 	if (revealed.above.size === 0 && revealed.below.size === 0) return file;
 
 	return { ...file, hunks: file.hunks.map((hunk) => withLinesBeside(hunk, revealed)) };

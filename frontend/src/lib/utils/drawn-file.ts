@@ -8,7 +8,7 @@
  * taking the threads and the comment field under it along.
  */
 
-import type { DiffFile, DiffHunk, DiffLine, LinePlace } from '$lib/types';
+import type { DiffHunk, DiffLine, FileToDraw, LinePlace } from '$lib/types';
 import { type ContextGap, gapAbove, hunkKey } from '$lib/utils/expansions';
 import { type HighlightedLine, highlightHunk } from '$lib/utils/highlight';
 import { placeKey } from '$lib/utils/line-places';
@@ -51,7 +51,7 @@ function placeOf(line: DiffLine): LinePlace {
  * @param language what to highlight it as, if anything
  * @param marksWords whether what changed inside a replaced line is marked: in a diff, where lines are replaced
  */
-export function drawnHunks(file: DiffFile, language: string | null, marksWords: boolean): DrawnHunk[] {
+export function drawnHunks(file: FileToDraw, language: string | null, marksWords: boolean): DrawnHunk[] {
 	return file.hunks.map((hunk, index) => drawnHunk(hunk, file.hunks[index - 1], language, marksWords));
 }
 

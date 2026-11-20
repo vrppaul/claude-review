@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { DiffFile } from '$lib/types';
+	import type { FileToDraw } from '$lib/types';
 	import { useReview } from '$lib/review/context';
 	import { type Extent, FileDrawing, type FileView } from './file-drawing.svelte';
 	import FileNotes from './FileNotes.svelte';
@@ -11,7 +11,7 @@
 	interface Props {
 		/** The section it is drawn in, by the key its view knows it by. */
 		sectionKey: string;
-		file: DiffFile;
+		file: FileToDraw;
 		/** What it is highlighted and rendered as, if anything. */
 		language: string | null;
 		view: FileView;

@@ -4,7 +4,7 @@
 	import { BuiltWhenNear } from '$lib/dom/built-when-near.svelte';
 	import { useScrollArea } from '$lib/dom/scroll-area';
 	import { useReview } from '$lib/review/context';
-	import type { DiffFile } from '$lib/types';
+	import type { FileToDraw } from '$lib/types';
 	import FileBody from './FileBody.svelte';
 	import { type Extent, type FileView, roomOf } from './file-drawing.svelte';
 
@@ -12,7 +12,7 @@
 		/** What the section is known by among those its view draws. */
 		sectionKey: string;
 		/** The file it draws lines of, or the piece of one cut out for a story. */
-		file: DiffFile;
+		file: FileToDraw;
 		/** What its lines are highlighted and rendered as, if anything. */
 		language: string | null;
 		/** How its lines are drawn. */

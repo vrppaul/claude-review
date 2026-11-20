@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { DiffFile } from '$lib/types';
+	import type { FileToDraw } from '$lib/types';
 	import { assembleText } from '$lib/utils/renderable';
 	import { useReview } from '$lib/review/context';
 	import type { FileDrawing } from './file-drawing.svelte';
@@ -7,7 +7,7 @@
 	import RawView from './RawView.svelte';
 
 	interface Props {
-		file: DiffFile;
+		file: FileToDraw;
 		/** Its lines made ready to draw, by whoever draws it. */
 		drawing: FileDrawing;
 	}
