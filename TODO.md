@@ -292,7 +292,10 @@ What a thing is:
       set apart, which are what the agent may have forgotten.
 - [ ] `feat(ui)`: a file outside the change, opened from a place the
       lookup found: the lookup takes the reader into the file read alone,
-      on the line it names, as a thread on it already does.
+      on the line it names, as a thread on it already does. Going to a line
+      of such a file (`Navigator.goToLine`) and the agent's chip of one
+      (`Navigator.showFile`: an answer's file, a file a check names, the
+      agent's work) still go to the change's files, and show nothing.
 - [ ] `feat`: what the server does not find yet. A Svelte component is
       defined by its file, which the lookup reports as no definition
       (`CommentThread` gave 13 places and none defining it); a loop's
