@@ -311,9 +311,12 @@ def check_line_span(start_line: int, end_line: int) -> None:
 class LineStanding(StrEnum):
     """How a line anchor stands in what the review holds.
 
+    The review holds its file where the diff holds it, or, on the new side,
+    where the take holds it as text.
+
     ON_ITS_LINES — its lines stand where it says.
-    LINES_GONE — the review reads that side of its file, and its lines are not there.
-    FILE_GONE — the review reads no lines of that side of its file: the file left the take, or its old side the diff.
+    LINES_GONE — the review holds its file, and its lines are not found there.
+    FILE_GONE — the review holds no such file: not in the diff, nor, on the new side, as text in the take.
     """
 
     ON_ITS_LINES = auto()
@@ -367,7 +370,7 @@ class LineAnchor(AnchorBase):
         )
 
     def lost_its_lines(self) -> LineAnchor:
-        """The anchor where it was, its lines gone from the side of the file the review reads."""
+        """The anchor where it was, its lines not found in the file the review holds."""
         return LineAnchor(
             kind=self.kind,
             file=self.file,
@@ -379,7 +382,7 @@ class LineAnchor(AnchorBase):
         )
 
     def lost_its_file(self) -> LineAnchor:
-        """The anchor where it was, on a side of a file the review reads no lines of."""
+        """The anchor where it was, on a file the review does not hold on its side."""
         return LineAnchor(
             kind=self.kind,
             file=self.file,

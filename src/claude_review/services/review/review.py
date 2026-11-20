@@ -272,7 +272,7 @@ class Review:
         return await self._source.file_of_take(path)
 
     async def follow(self, anchors: list[Anchor]) -> list[Anchor]:
-        """Where each anchor is in the content and the story as they now stand, or marked outdated."""
+        """Where each anchor is in the content and the story as they now stand, or that what it was on is gone."""
         found = await self._anchors_reading(anchors)
         return [found.follow(anchor) for anchor in anchors]
 

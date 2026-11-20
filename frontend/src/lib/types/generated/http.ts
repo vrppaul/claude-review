@@ -283,9 +283,10 @@ export interface paths {
          *
          *     The page holds the threads and the review holds the content, so after a
          *     round the threads come here to be moved: one whose lines survived
-         *     follows them; one whose lines are gone, or whose side of its file the
-         *     review reads no lines of, stays where it was, says which, and keeps its
-         *     quote. New lines are followed in their file as the take holds it whole.
+         *     follows them; one whose lines are not found in its file, or whose file
+         *     the review does not hold, stays where it was, says which, and keeps its
+         *     quote. New lines are followed in their file as the take holds it whole,
+         *     and stand as they stood where the take could not be read.
          */
         post: operations["follow_anchors_api_anchors_follow_post"];
         delete?: never;
@@ -1462,9 +1463,12 @@ export interface components {
          * LineStanding
          * @description How a line anchor stands in what the review holds.
          *
+         *     The review holds its file where the diff holds it, or, on the new side,
+         *     where the take holds it as text.
+         *
          *     ON_ITS_LINES — its lines stand where it says.
-         *     LINES_GONE — the review reads that side of its file, and its lines are not there.
-         *     FILE_GONE — the review reads no lines of that side of its file: the file left the take, or its old side the diff.
+         *     LINES_GONE — the review holds its file, and its lines are not found there.
+         *     FILE_GONE — the review holds no such file: not in the diff, nor, on the new side, as text in the take.
          * @enum {string}
          */
         LineStanding: "on_its_lines" | "lines_gone" | "file_gone";

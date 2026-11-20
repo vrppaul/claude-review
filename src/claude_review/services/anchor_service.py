@@ -195,7 +195,7 @@ class LineAnchorHandler(AnchorHandler[LineAnchor]):
         they are gone it stays on its old numbers and says so, rather than
         pointing at whatever has slid into their place. One that never kept
         its lines has nothing to search for, and is left where it is. Either
-        has lost its file where the review holds no such file on its side.
+        has lost its file where the review does not hold the file on its side.
         On a side the review did not read all of, what is not found is not
         known gone, and the anchor stands as it stood.
         """

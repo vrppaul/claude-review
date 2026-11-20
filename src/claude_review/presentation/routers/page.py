@@ -267,9 +267,10 @@ async def follow_anchors(request: FollowRequest, review: ReviewDep) -> FollowRes
 
     The page holds the threads and the review holds the content, so after a
     round the threads come here to be moved: one whose lines survived
-    follows them; one whose lines are gone, or whose side of its file the
-    review reads no lines of, stays where it was, says which, and keeps its
-    quote. New lines are followed in their file as the take holds it whole.
+    follows them; one whose lines are not found in its file, or whose file
+    the review does not hold, stays where it was, says which, and keeps its
+    quote. New lines are followed in their file as the take holds it whole,
+    and stand as they stood where the take could not be read.
     """
     followed = await review.follow([anchor.to_domain() for anchor in request.anchors])
     return FollowResponse(anchors=[anchor_from_domain(anchor) for anchor in followed])
