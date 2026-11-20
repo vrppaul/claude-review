@@ -106,6 +106,10 @@ class NoWordHereError(NotFoundError):
     """Raised when a place in the code is asked about that holds no word: a blank, punctuation, or past a line's end."""
 
 
+class TakeNotWrittenError(ConflictError):
+    """Raised when the take on screen is asked about where git wrote down no tree of it: nothing to read it from."""
+
+
 class UnknownVersionError(InvalidRequestError):
     """Raised when a base is asked for that this review never offered."""
 

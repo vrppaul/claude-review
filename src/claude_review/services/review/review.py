@@ -33,6 +33,7 @@ import structlog
 from pydantic import BaseModel
 
 from claude_review.domain.checks import CheckReport
+from claude_review.domain.code_names import CodePlace, NameFound
 from claude_review.domain.exceptions import ReviewEndedError, UnknownFileError
 from claude_review.domain.interfaces import Clock, PageChannel
 from claude_review.domain.kept_review import KeptReview
@@ -259,6 +260,10 @@ class Review:
     async def file_window(self, path: str, start: int, end: int) -> FileWindow:
         """Lines a hunk left out, so the reader can widen its context."""
         return await self._source.file_window(path, start, end)
+
+    async def name_at(self, place: CodePlace) -> NameFound:
+        """The name at a place the reader points at, and every place it stands in the take on screen."""
+        return await self._source.name_at(place)
 
     def follow(self, anchors: list[Anchor]) -> list[Anchor]:
         """Where each anchor is in the content and the story as they now stand, or marked outdated."""

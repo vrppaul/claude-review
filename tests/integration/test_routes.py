@@ -56,6 +56,9 @@ CHANGED_APP_TEXT = "changed"
 WIDENED_FROM = 4
 WIDENED_TO = 6
 
+# Where the page asks what name stands at a place in the code
+NAME_ROUTE = "/api/name"
+
 # An image no review keeps: its path is reached, whatever it then answers
 NO_SUCH_IMAGE = "never-pasted"
 
@@ -389,6 +392,73 @@ async def test_file_window_rejects_a_line_number_below_one(repo_backed_client: A
     response = await repo_backed_client.get("/api/file-window", params={"path": APP_FILE, "start": 0, "end": 3})
 
     assert response.status_code == HTTPStatus.UNPROCESSABLE_CONTENT
+
+
+async def test_a_name_is_answered_with_every_place_it_stands_in_the_take_on_screen(
+    tmp_git_repo: Path, reviews: ReviewFactory
+) -> None:
+    """Read from the tree the take was written down as: a file saved after it is not there, and each place says
+    whether the change wrote its line."""
+    write_files(tmp_git_repo, {"src/flags.py": "def shown() -> bool:\n    return True\n"})
+    git(tmp_git_repo, "add", ".")
+    git(tmp_git_repo, "commit", "-m", "flags")
+    write_files(tmp_git_repo, {"src/pane.py": "from src.flags import shown\n\nvisible = shown()\n"})
+
+    async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as client:
+        write_files(tmp_git_repo, {"src/later.py": "shown()\n"})
+        response = await client.get(NAME_ROUTE, params={"path": "src/pane.py", "side": "new", "line": 3, "column": 11})
+
+    assert response.json() == {
+        "name": "shown",
+        "places": [
+            {
+                "path": "src/flags.py",
+                "line": 1,
+                "column": 4,
+                "text": "def shown() -> bool:",
+                "defined_as": "function",
+                "inside": None,
+                "added": False,
+                "found_as": "name",
+            },
+            {
+                "path": "src/pane.py",
+                "line": 1,
+                "column": 22,
+                "text": "from src.flags import shown",
+                "defined_as": None,
+                "inside": None,
+                "added": True,
+                "found_as": "name",
+            },
+            {
+                "path": "src/pane.py",
+                "line": 3,
+                "column": 10,
+                "text": "visible = shown()",
+                "defined_as": None,
+                "inside": "visible",
+                "added": True,
+                "found_as": "name",
+            },
+        ],
+    }
+
+
+async def test_a_name_is_not_looked_up_in_a_take_git_wrote_no_tree_of(
+    tmp_git_repo: Path, reviews: ReviewFactory
+) -> None:
+    async with http_client(reviews.app(await repository_opening(tmp_git_repo), keeps_marks=False)) as client:
+        response = await client.get(NAME_ROUTE, params={"path": "initial.txt", "side": "new", "line": 1, "column": 0})
+
+    assert response.status_code == HTTPStatus.CONFLICT
+
+
+async def test_a_name_is_not_looked_up_without_a_repository(files_client: AsyncClient) -> None:
+    response = await files_client.get(NAME_ROUTE, params={"path": "a.py", "side": "new", "line": 1, "column": 0})
+
+    assert response.status_code == HTTPStatus.NOT_FOUND
+    assert "No repository" in Refusal.model_validate_json(response.content).detail
 
 
 async def test_file_window_is_absent_without_a_repository(files_client: AsyncClient) -> None:

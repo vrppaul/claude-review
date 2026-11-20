@@ -224,6 +224,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/name": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Name
+         * @description Say what name stands at a place in the code, and every place it stands in the take on screen.
+         *
+         *     The review decides what a name is, by the language's grammar: a word a
+         *     comment or a string holds is answered with no place, as nothing in the
+         *     code is called so.
+         */
+        get: operations["get_name_api_name_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/anchors/follow": {
         parameters: {
             query?: never;
@@ -989,6 +1013,12 @@ export interface components {
             said: components["schemas"]["SaidInPanel"][];
         };
         /**
+         * DefinitionKind
+         * @description What a definition of a name defines, as the grammars tell them apart.
+         * @enum {string}
+         */
+        DefinitionKind: "class" | "interface" | "type" | "enum" | "function" | "method" | "field" | "variable";
+        /**
          * Diagram
          * @description The change drawn, as Mermaid writes one, and the chapter each part of the drawing leads to.
          */
@@ -1221,6 +1251,16 @@ export interface components {
             commentable: boolean;
         };
         /**
+         * FoundAs
+         * @description How a place was found.
+         *
+         *     NAME — its language's grammar read it as the name it is.
+         *     TEXT — it is a whole word in text no grammar reads: a file of no grammar,
+         *     or a Svelte component's markup.
+         * @enum {string}
+         */
+        FoundAs: "name" | "text";
+        /**
          * GoesWithIt
          * @description What may go with the words, each a row the reader ticks or not.
          * @enum {string}
@@ -1417,6 +1457,39 @@ export interface components {
             message_id: string;
             /** Threads */
             threads: components["schemas"]["ThreadDraft-Input"][];
+        };
+        /**
+         * NamePlace
+         * @description One place a name stands in the take on screen: where, the line it is on, and what it does there.
+         */
+        NamePlace: {
+            /** Path */
+            path: string;
+            /** Line */
+            line: number;
+            /** Column */
+            column: number;
+            /** Text */
+            text: string;
+            defined_as: components["schemas"]["DefinitionKind"] | null;
+            /** Inside */
+            inside: string | null;
+            /** Added */
+            added: boolean;
+            found_as: components["schemas"]["FoundAs"];
+        };
+        /**
+         * NameResponse
+         * @description Response for GET /api/name — the name at a place, and every place it stands in the take on screen.
+         *
+         *     No place for a word a comment, a string or the language itself holds:
+         *     nothing in the code is called so.
+         */
+        NameResponse: {
+            /** Name */
+            name: string;
+            /** Places */
+            places: components["schemas"]["NamePlace"][];
         };
         /**
          * OfConversation
@@ -2836,6 +2909,67 @@ export interface operations {
             };
             /** @description Not Found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Refusal"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Refusal"];
+                };
+            };
+        };
+    };
+    get_name_api_name_get: {
+        parameters: {
+            query: {
+                path: string;
+                side: components["schemas"]["LineSide"];
+                line: number;
+                column: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NameResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Refusal"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Refusal"];
+                };
+            };
+            /** @description Conflict */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

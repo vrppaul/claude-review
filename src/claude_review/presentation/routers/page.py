@@ -6,6 +6,7 @@ from typing import Annotated
 from fastapi import APIRouter, Query, Request
 from fastapi.responses import FileResponse
 
+from claude_review.domain.code_names import FIRST_COLUMN, CodePlace
 from claude_review.domain.exceptions import (
     AnchorLinesNotShownError,
     FileNotInReviewError,
@@ -18,13 +19,15 @@ from claude_review.domain.exceptions import (
     LineRangeError,
     MessageAnsweredError,
     NoRepositoryError,
+    NoWordHereError,
     PathOutsideRepositoryError,
     QuestionNotInThreadError,
     ReviewEndedError,
+    TakeNotWrittenError,
     UnknownImageError,
     UnknownVersionError,
 )
-from claude_review.domain.models import FIRST_LINE, MAX_ID_LENGTH, MAX_PATH_LENGTH
+from claude_review.domain.models import FIRST_LINE, MAX_ID_LENGTH, MAX_PATH_LENGTH, LineSide
 from claude_review.presentation.dependencies import BroadcastDep, ReleaseDep, ReviewDep
 from claude_review.presentation.errors import Takes, refusals
 from claude_review.presentation.schemas.agent import (
@@ -38,6 +41,7 @@ from claude_review.presentation.schemas.agent import (
 )
 from claude_review.presentation.schemas.base import SafeId, made_or_none
 from claude_review.presentation.schemas.checks import Check
+from claude_review.presentation.schemas.code_names import NameResponse
 from claude_review.presentation.schemas.content import (
     SEND_LIMITS,
     DiffFile,
@@ -216,6 +220,31 @@ async def get_file_window(
     """Serve lines a hunk left out, so the reader can widen its context."""
     window = await review.file_window(path, start, end)
     return FileWindowResponse.from_domain(window)
+
+
+@router.get(
+    "/name",
+    responses=refusals(
+        NoRepositoryError, TakeNotWrittenError, FileNotInReviewError, NoWordHereError, takes=Takes.PARAMETERS
+    ),
+)
+async def get_name(
+    # The file as the review names it: on the old side, the review finds where it stood before the change
+    path: Annotated[str, Query(min_length=1, max_length=MAX_PATH_LENGTH)],
+    side: LineSide,
+    line: Annotated[int, Query(ge=FIRST_LINE)],
+    # Counted in characters, the line's first being 0
+    column: Annotated[int, Query(ge=FIRST_COLUMN)],
+    review: ReviewDep,
+) -> NameResponse:
+    """Say what name stands at a place in the code, and every place it stands in the take on screen.
+
+    The review decides what a name is, by the language's grammar: a word a
+    comment or a string holds is answered with no place, as nothing in the
+    code is called so.
+    """
+    found = await review.name_at(CodePlace(path=path, side=side, line=line, column=column))
+    return NameResponse.from_domain(found)
 
 
 @router.post("/anchors/follow", responses=refusals(takes=Takes.JSON_BODY))

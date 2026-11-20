@@ -1,7 +1,8 @@
 """Where a review's content comes from: a repository, taken again whenever asked, or files read once.
 
 A review of a repository can be read against other bases, widened past its
-hunks, taken again after a round and watched for the tree moving under it.
+hunks, taken again after a round, watched for the tree moving under it, and
+asked where a name in it stands.
 Files and a conversation can do none of that. Each kind of review answers
 for itself here, and its host picks the kind by what was opened
 (`content_source`). The one thing the review asks a source about its kind
@@ -24,7 +25,8 @@ from typing import assert_never, override
 import structlog
 from pydantic import BaseModel
 
-from claude_review.domain.exceptions import NoRepositoryError
+from claude_review.domain.code_names import CodePlace, NameFound
+from claude_review.domain.exceptions import NoRepositoryError, TakeNotWrittenError
 from claude_review.domain.interfaces import Clock, GitError, ReviewedRepository, StagedTree
 from claude_review.domain.models import (
     ChangedSinceRound,
@@ -35,6 +37,7 @@ from claude_review.domain.models import (
     VersionKey,
     VersionOnOffer,
 )
+from claude_review.services.code_names.lookup import NameLookup
 from claude_review.services.diff_reading import read_diff
 from claude_review.services.file_window_service import FileWindow, FileWindowService
 from claude_review.services.review.review_checks import TreesWritten
@@ -117,6 +120,10 @@ class ContentSource(TakesCompared, TreesWritten):
         """Lines a hunk left out, so the reader can widen its context."""
 
     @abstractmethod
+    async def name_at(self, place: CodePlace) -> NameFound:
+        """The name at a place the reader points at, and every place it stands in the take on screen."""
+
+    @abstractmethod
     def tree_moves(self, lifetime: ReviewLifetime) -> AsyncIterator[int]:
         """How many files stand otherwise than in the take on screen, each time the tree changes, until the review ends.
 
@@ -136,6 +143,7 @@ class RepositorySource(ContentSource):
         self._repository = repository
         self._watcher = TreeWatcherService(repository)
         self._windows = FileWindowService(repository)
+        self._names = NameLookup(repository, opened.root)
         self._versions = ReviewVersions(repository, clock, opened)
         # Held while the diff is taken again, so two retakes never interleave
         self._retaking = asyncio.Lock()
@@ -257,6 +265,23 @@ class RepositorySource(ContentSource):
         return await self._windows.read_window(self._root, path, start, end, in_review=self._content.paths)
 
     @override
+    async def name_at(self, place: CodePlace) -> NameFound:
+        """Read from the tree the take on screen was written down as, never the disk, so its lines are the diff's.
+
+        Raises:
+            TakeNotWrittenError: if git wrote down no tree of the take.
+            FileNotInReviewError: if the side asked about has no file to read there.
+            NoWordHereError: if the place holds no word.
+        """
+        content = self._content
+        if content.written_as is None:
+            msg = "git wrote down no tree of the take on screen: no name in it can be looked up"
+            raise TakeNotWrittenError(msg)
+        return await self._names.name_at(
+            place, tree=content.written_as, base=self._versions.pinned_base, files=content.files
+        )
+
+    @override
     async def tree_moves(self, lifetime: ReviewLifetime) -> AsyncIterator[int]:
         """Measured against the take on screen as each change is heard, so a retake settles the tree unrestarted."""
         async for tree in self._watcher.changes(self._root, since=self._content.tree, lifetime=lifetime):
@@ -336,6 +361,12 @@ class FixedSource(ContentSource):
     async def file_window(self, path: str, start: int, end: int) -> FileWindow:
         """Raises: NoRepositoryError, always."""
         msg = "No repository to read from"
+        raise NoRepositoryError(msg)
+
+    @override
+    async def name_at(self, place: CodePlace) -> NameFound:
+        """Raises: NoRepositoryError, always: what was read once has no tree to look a name up in."""
+        msg = "No repository to look a name up in"
         raise NoRepositoryError(msg)
 
     @override
