@@ -78,6 +78,14 @@ describe('a file the change did not touch, read alone', () => {
 		expect(document.activeElement?.textContent).toContain('the agent forgot this call');
 	});
 
+	it('heads a thread on it by its line and no side, as its lines are of no change', async () => {
+		await goneToAThreadOnTheCaller();
+
+		const bar = within(screen.getByTestId('file-alone-view')).getByTestId('thread-bar');
+		expect(bar.textContent).toContain('Line 2');
+		expect(bar.textContent).not.toContain('+');
+	});
+
 	it('takes a comment on its line, as any line does', async () => {
 		const user = userEvent.setup();
 		await goneToAThreadOnTheCaller();
