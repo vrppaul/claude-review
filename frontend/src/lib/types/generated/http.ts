@@ -233,11 +233,11 @@ export interface paths {
         };
         /**
          * Get Name
-         * @description Say what name stands at a place in the code, and every place it stands in the take on screen.
+         * @description Say what word stands at a place in the code, and every place it stands as a name in the take on screen.
          *
-         *     The review decides what a name is, by the language's grammar: a word a
-         *     comment or a string holds is answered with no place, as nothing in the
-         *     code is called so.
+         *     The review decides what a name is, by the language's grammar. The word
+         *     is looked for wherever the reader points, a comment or a string too;
+         *     no place means nothing in the code is called so.
          */
         get: operations["get_name_api_name_get"];
         put?: never;
@@ -1480,10 +1480,9 @@ export interface components {
         };
         /**
          * NameResponse
-         * @description Response for GET /api/name — the name at a place, and every place it stands in the take on screen.
+         * @description Response for GET /api/name — the word at a place, and every place it stands as a name in the take on screen.
          *
-         *     No place for a word a comment, a string or the language itself holds:
-         *     nothing in the code is called so.
+         *     No place means nothing in the code is called so.
          */
         NameResponse: {
             /** Name */

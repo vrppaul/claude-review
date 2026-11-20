@@ -22,7 +22,7 @@ BASE = "base-commit"
 
 TAKE_FILES = {
     "src/flags.py": b"def shown() -> bool:\n    return True\n",
-    "src/pane.py": b"from src.flags import shown\n\nvisible = shown()\n",
+    "src/pane.py": b"from src.flags import shown\n# what is shown\nvisible = shown()\n",
 }
 BASE_FILES = {
     "src/visible.py": b"def shown() -> bool:\n    return False\n",
@@ -31,7 +31,11 @@ BASE_FILES = {
 TAKE_DIFF = [
     diff_file(
         "src/pane.py",
-        [context_line(1, 1, "from src.flags import shown"), context_line(2, 2, ""), added_line(3, "visible = shown()")],
+        [
+            context_line(1, 1, "from src.flags import shown"),
+            context_line(2, 2, "# what is shown"),
+            added_line(3, "visible = shown()"),
+        ],
     ),
     DiffFile(
         path="src/flags.py",
@@ -127,12 +131,20 @@ async def test_a_name_on_the_old_side_is_read_where_its_file_stood_and_looked_fo
     )
 
 
-async def test_a_word_that_is_no_name_is_answered_with_no_place() -> None:
-    found = await lookup().name_at(
-        CodePlace(path="src/flags.py", side=LineSide.NEW, line=2, column=6), tree=TAKE, base=BASE, files=TAKE_DIFF
-    )
+@pytest.mark.parametrize(
+    ("place", "name", "lines"),
+    [
+        (CodePlace(path="src/pane.py", side=LineSide.NEW, line=2, column=12), "shown", [1, 1, 3]),
+        (CodePlace(path="src/flags.py", side=LineSide.NEW, line=2, column=6), "return", []),
+    ],
+    ids=["a-comment-word-a-function-is-called-by", "a-word-nothing-is-called-by"],
+)
+async def test_a_word_is_looked_up_wherever_it_stands_and_one_nothing_is_called_by_has_no_place(
+    place: CodePlace, name: str, lines: list[int]
+) -> None:
+    found = await lookup().name_at(place, tree=TAKE, base=BASE, files=TAKE_DIFF)
 
-    assert found == NameFound(name="return", places=[])
+    assert (found.name, [found_place.line for found_place in found.places]) == (name, lines)
 
 
 @pytest.mark.parametrize(

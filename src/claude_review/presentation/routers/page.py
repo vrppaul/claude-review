@@ -237,11 +237,11 @@ async def get_name(
     column: Annotated[int, Query(ge=FIRST_COLUMN)],
     review: ReviewDep,
 ) -> NameResponse:
-    """Say what name stands at a place in the code, and every place it stands in the take on screen.
+    """Say what word stands at a place in the code, and every place it stands as a name in the take on screen.
 
-    The review decides what a name is, by the language's grammar: a word a
-    comment or a string holds is answered with no place, as nothing in the
-    code is called so.
+    The review decides what a name is, by the language's grammar. The word
+    is looked for wherever the reader points, a comment or a string too;
+    no place means nothing in the code is called so.
     """
     found = await review.name_at(CodePlace(path=path, side=side, line=line, column=column))
     return NameResponse.from_domain(found)

@@ -1,7 +1,7 @@
 """What a name is at a place in a file, and every place a name stands in one, as the file's grammar reads them.
 
-Code is read by its language's grammar (`languages.py`): a word a comment, a
-string or the language itself holds is no name. What no grammar reads — a
+Code is read by its language's grammar (`languages.py`): a word a comment or
+a string holds is never a place a name stands. What no grammar reads — a
 file of no language here, a Svelte component's markup — is read as text,
 each whole word in it taken for a name. Parsing is the CPU's work: whoever
 asks runs this off the event loop.
@@ -35,16 +35,6 @@ NOT_TEXT = "replace"
 # A word of text no grammar reads, and the same word standing whole, as git matches one
 WORD = re.compile(r"\w+")
 WHOLE_WORD = r"(?<!\w){word}(?!\w)"
-
-
-class AskedWord(BaseModel):
-    """The word at a place the reader asked about, and whether the code calls anything by it."""
-
-    model_config = ConfigDict(frozen=True)
-
-    word: str
-    # False for a word a comment, a string or the language itself holds: nothing is called so
-    is_name: bool
 
 
 class LinePosition(BaseModel):
@@ -134,8 +124,8 @@ class Definition(BaseModel):
     end: int
 
 
-def word_at(path: str, content: bytes, line: int, column: int) -> AskedWord:
-    """The word at a place in a file: the name the grammar reads there, or the word of text the place is in.
+def word_at(path: str, content: bytes, line: int, column: int) -> str:
+    """The word at a place in a file: the name the grammar reads there, or else the word of text the place is in.
 
     Raises:
         NoWordHereError: if the place holds no word, or the file has no such place.
@@ -151,9 +141,8 @@ def word_at(path: str, content: bytes, line: int, column: int) -> AskedWord:
     if code is not None and code.holds(start):
         name = code.name_around(start, start + len(text[column].encode(TEXT_ENCODING)))
         if name is not None:
-            return AskedWord(word=_text_of(name), is_name=True)
-        return AskedWord(word=_word_around(text, position, path), is_name=False)
-    return AskedWord(word=_word_around(text, position, path), is_name=True)
+            return _text_of(name)
+    return _word_around(text, position, path)
 
 
 def places_of(path: str, content: bytes, name: str, added_lines: frozenset[int]) -> list[NamePlace]:

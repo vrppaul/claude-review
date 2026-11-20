@@ -56,16 +56,14 @@ class NameLookup:
         if asked is None:
             msg = f"no file to read at {path} on the {place.side} side"
             raise FileNotInReviewError(msg)
-        word = await asyncio.to_thread(word_at, path, asked, place.line, place.column)
-        if not word.is_name:
-            return NameFound(name=word.word, places=[])
+        name = await asyncio.to_thread(word_at, path, asked, place.line, place.column)
 
         named = time.perf_counter()
-        holding = await self._repository.paths_holding(self._root, tree, word.word)
+        holding = await self._repository.paths_holding(self._root, tree, name)
         searched = time.perf_counter()
         contents = await self._repository.files_of(self._root, tree, holding)
         read = time.perf_counter()
-        places = await asyncio.to_thread(_places_in, contents, word.word, _added_lines(files))
+        places = await asyncio.to_thread(_places_in, contents, name, _added_lines(files))
         log.debug(
             "name_looked_up",
             files=len(holding),
@@ -75,7 +73,7 @@ class NameLookup:
             read_ms=_milliseconds(searched, read),
             parsed_ms=_milliseconds(read, time.perf_counter()),
         )
-        return NameFound(name=word.word, places=places)
+        return NameFound(name=name, places=places)
 
 
 def _old_path_of(path: str, files: list[DiffFile]) -> str:

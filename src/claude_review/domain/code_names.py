@@ -78,10 +78,10 @@ class NamePlace(BaseModel):
 
 
 class NameFound(BaseModel):
-    """The name at the place the reader asked about, and every place it stands in the take on screen.
+    """The word at the place the reader asked about, and every place the code of the take calls something so.
 
-    No place for a word a comment, a string or the language itself holds:
-    nothing in the code is called so.
+    The word is looked for wherever it stands, a comment or a string too: no
+    place means nothing in the code is called so.
     """
 
     model_config = ConfigDict(frozen=True)

@@ -8,7 +8,7 @@ import pytest
 
 from claude_review.domain.code_names import DefinitionKind, FoundAs, NamePlace
 from claude_review.domain.exceptions import NoWordHereError
-from claude_review.services.code_names.reading import AskedWord, places_of, word_at
+from claude_review.services.code_names.reading import places_of, word_at
 
 PYTHON_FILE = b'''"""Reviews and their lookup."""
 
@@ -68,17 +68,17 @@ nothing here
 
 
 @pytest.mark.parametrize(
-    ("path", "content", "line", "column", "asked"),
+    ("path", "content", "line", "column", "word"),
     [
-        ("review.py", PYTHON_FILE, 12, 16, AskedWord(word="lookup", is_name=True)),
-        ("review.py", PYTHON_FILE, 11, 12, AskedWord(word="lookup", is_name=False)),
-        ("review.py", PYTHON_FILE, 7, 19, AskedWord(word="lookup", is_name=False)),
-        ("review.py", PYTHON_FILE, 15, 1, AskedWord(word="def", is_name=False)),
-        ("pane.ts", TYPESCRIPT_FILE, 6, 22, AskedWord(word="Shown", is_name=True)),
-        ("Pane.svelte", SVELTE_FILE, 2, 9, AskedWord(word="open", is_name=True)),
-        ("Pane.svelte", SVELTE_FILE, 2, 25, AskedWord(word="$props", is_name=True)),
-        ("Pane.svelte", SVELTE_FILE, 6, 7, AskedWord(word="open", is_name=True)),
-        ("notes.md", TEXT_FILE, 1, 6, AskedWord(word="lookup", is_name=True)),
+        ("review.py", PYTHON_FILE, 12, 16, "lookup"),
+        ("review.py", PYTHON_FILE, 11, 12, "lookup"),
+        ("review.py", PYTHON_FILE, 7, 19, "lookup"),
+        ("review.py", PYTHON_FILE, 15, 1, "def"),
+        ("pane.ts", TYPESCRIPT_FILE, 6, 22, "Shown"),
+        ("Pane.svelte", SVELTE_FILE, 2, 9, "open"),
+        ("Pane.svelte", SVELTE_FILE, 2, 25, "$props"),
+        ("Pane.svelte", SVELTE_FILE, 6, 7, "open"),
+        ("notes.md", TEXT_FILE, 1, 6, "lookup"),
     ],
     ids=[
         "a-name",
@@ -92,10 +92,10 @@ nothing here
         "a-word-of-a-file-of-no-grammar",
     ],
 )
-def test_the_word_at_a_place_is_a_name_where_the_grammar_reads_one_or_no_grammar_reads_it(
-    path: str, content: bytes, line: int, column: int, asked: AskedWord
+def test_the_word_at_a_place_is_the_name_the_grammar_reads_there_or_the_word_of_text_it_stands_in(
+    path: str, content: bytes, line: int, column: int, word: str
 ) -> None:
-    assert word_at(path, content, line, column) == asked
+    assert word_at(path, content, line, column) == word
 
 
 @pytest.mark.parametrize(
@@ -221,7 +221,4 @@ def test_a_column_counts_characters_not_bytes() -> None:
 
     [place] = places_of("labels.py", content, "lookup", frozenset())
 
-    assert (place.column, word_at("labels.py", content, 1, place.column)) == (
-        16,
-        AskedWord(word="lookup", is_name=True),
-    )
+    assert (place.column, word_at("labels.py", content, 1, place.column)) == (16, "lookup")

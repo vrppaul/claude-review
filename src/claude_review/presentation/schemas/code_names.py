@@ -41,10 +41,9 @@ class NamePlace(Schema):
 
 
 class NameResponse(Schema):
-    """Response for GET /api/name — the name at a place, and every place it stands in the take on screen.
+    """Response for GET /api/name — the word at a place, and every place it stands as a name in the take on screen.
 
-    No place for a word a comment, a string or the language itself holds:
-    nothing in the code is called so.
+    No place means nothing in the code is called so.
     """
 
     name: str
