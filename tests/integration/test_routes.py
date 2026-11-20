@@ -437,7 +437,7 @@ async def test_a_name_is_answered_with_every_place_it_stands_in_the_take_on_scre
                 "column": 10,
                 "text": "visible = shown()",
                 "defined_as": None,
-                "inside": "visible",
+                "inside": None,
                 "added": True,
                 "found_as": "name",
             },

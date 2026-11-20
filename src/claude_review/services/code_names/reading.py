@@ -14,7 +14,7 @@ from itertools import accumulate
 from pydantic import BaseModel, ConfigDict
 from tree_sitter import Node, Parser, QueryCursor, Range
 
-from claude_review.domain.code_names import FIRST_COLUMN, DefinitionKind, FoundAs, NamePlace
+from claude_review.domain.code_names import FIRST_COLUMN, HOLDS_CODE, DefinitionKind, FoundAs, NamePlace
 from claude_review.domain.exceptions import NoWordHereError
 from claude_review.domain.models import FIRST_LINE
 from claude_review.services.code_names.languages import (
@@ -178,9 +178,9 @@ def _stretches(embedded: EmbeddedCode, content: bytes) -> list[Range]:
 def _named_places(
     path: str, source: SourceLines, code: ReadCode, name: str, added_lines: frozenset[int]
 ) -> list[NamePlace]:
-    """Every place the grammar reads the name at, each with what it defines and the definition it stands inside."""
+    """Every place the grammar reads the name at, each with what it defines and the code it stands inside."""
     definitions = _definitions(code)
-    every_definition = list(definitions.values())
+    holding_code = [definition for definition in definitions.values() if definition.kind in HOLDS_CODE]
     wanted = name.encode(TEXT_ENCODING)
     places = []
     for start in _occurrences(source.content, wanted):
@@ -195,7 +195,7 @@ def _named_places(
                 column=position.column,
                 text=source.text(position.line),
                 defined_as=None if defined is None else defined.kind,
-                inside=_inside(every_definition, start),
+                inside=_inside(holding_code, start),
                 added=position.line in added_lines,
                 found_as=FoundAs.NAME,
             )
@@ -269,7 +269,7 @@ def _definition_of(captures: dict[str, list[Node]]) -> Definition:
 
 
 def _inside(definitions: list[Definition], offset: int) -> str | None:
-    """The name of the innermost definition a place stands inside, other than one it names."""
+    """The name of the innermost of these definitions a place stands inside, other than one it names."""
     around = [
         definition
         for definition in definitions

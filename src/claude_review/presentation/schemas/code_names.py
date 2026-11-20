@@ -20,7 +20,8 @@ class NamePlace(Schema):
     text: str
     # What the place defines the name as; null where it uses the name, or was found as text
     defined_as: DefinitionKind | None
-    # The name of the definition the place stands inside; null at a file's top level, or found as text
+    # The name of the innermost class, interface, enum, function or method the place stands inside; null
+    # outside any, or found as text
     inside: str | None
     # Whether the change wrote the line: one the review's own diff shows added
     added: StrictBool

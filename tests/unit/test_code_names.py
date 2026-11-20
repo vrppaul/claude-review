@@ -216,6 +216,14 @@ def test_a_file_of_no_grammar_is_searched_for_the_whole_word_a_line_to_each_plac
     ]
 
 
+def test_a_place_stands_inside_what_holds_code_never_inside_a_value() -> None:
+    content = b"VISIBLE = shown()\n\n\nclass Pane:\n    shown_at = shown()\n"
+
+    places = places_of("pane.py", content, "shown", frozenset())
+
+    assert [(place.line, place.inside) for place in places] == [(1, None), (5, "Pane")]
+
+
 def test_a_column_counts_characters_not_bytes() -> None:
     content = "label = 'café'; lookup = 1\n".encode()
 

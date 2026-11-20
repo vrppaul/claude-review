@@ -112,7 +112,7 @@ async def test_a_name_is_found_in_every_file_of_the_take_the_uses_the_change_wro
                 column=10,
                 text="visible = shown()",
                 defined_as=None,
-                inside="visible",
+                inside=None,
                 added=True,
                 found_as=FoundAs.NAME,
             ),

@@ -46,6 +46,18 @@ class DefinitionKind(StrEnum):
     VARIABLE = auto()
 
 
+# What a place can stand inside: a definition that holds code, never one that names a value or a type
+HOLDS_CODE = frozenset(
+    {
+        DefinitionKind.CLASS,
+        DefinitionKind.INTERFACE,
+        DefinitionKind.ENUM,
+        DefinitionKind.FUNCTION,
+        DefinitionKind.METHOD,
+    }
+)
+
+
 class FoundAs(StrEnum):
     """How a place was found.
 
@@ -70,7 +82,8 @@ class NamePlace(BaseModel):
     text: str
     # What the place defines the name as; None where it uses the name, or was found as text
     defined_as: DefinitionKind | None
-    # The name of the definition the place stands inside; None at a file's top level, or found as text
+    # The name of the innermost definition holding code the place stands inside (`HOLDS_CODE`); None outside
+    # any, or found as text
     inside: str | None
     # Whether the change wrote the line: one the review's own diff shows added
     added: bool
