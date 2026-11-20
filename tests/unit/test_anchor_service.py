@@ -169,11 +169,14 @@ def test_a_thread_on_a_side_of_a_file_the_review_reads_no_lines_of_has_lost_its_
 
 
 @pytest.mark.parametrize("standing", list(LineStanding), ids=[standing.value for standing in LineStanding])
-def test_a_thread_on_new_lines_of_a_file_the_diff_does_not_hold_stays_as_it_stood_where_the_take_was_not_read(
-    standing: LineStanding,
+@pytest.mark.parametrize(
+    "file", ["elsewhere.py", FILE], ids=["on-a-file-the-diff-does-not-hold", "on-lines-the-diff-does-not-show"]
+)
+def test_a_thread_on_new_lines_not_found_where_the_take_was_not_read_stays_as_it_stood(
+    file: str, standing: LineStanding
 ) -> None:
-    """Nothing of the file was looked at: neither its lines, nor whether it is there."""
-    stood = line_anchor("elsewhere.py", 2, quote=[RUN], standing=standing)
+    """Only the diff's hunks of the new side were looked at: what they do not show may stand in the file still."""
+    stood = line_anchor(file, 2, quote=["def walk():"], standing=standing)
 
     assert LineAnchorHandler(MOVED_DOWN, TakeUnread()).follow(stood) == stood
 

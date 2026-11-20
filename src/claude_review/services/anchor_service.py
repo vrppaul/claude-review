@@ -110,15 +110,15 @@ class LineAnchorHandler(AnchorHandler[LineAnchor]):
         in_the_diff = {file.path: file.hunks for file in diff_files}
         match take:
             case TakeRead(files=take_files):
-                sides_read_whole = frozenset(LineSide)
+                sides_known = frozenset(LineSide)
             case TakeUnread():
                 take_files = []
-                sides_read_whole = frozenset({LineSide.OLD})
+                sides_known = frozenset({LineSide.OLD})
             case _:
                 assert_never(take)
-        # The sides of which the review read every file named, the old always, as the diff holds it whole:
-        # a file missing from one of these is gone, and from another only unread
-        self._sides_read_whole = sides_read_whole
+        # Where what the review holds is all it can hold: the old side, read only in the diff, and the new where
+        # the take was read. Elsewhere a file or lines not found may stand all the same.
+        self._sides_known = sides_known
         # The diff's new side is a part of its file whole, numbered alike: a new line no hunk shows is a line still
         self._hunks: dict[LineSide, dict[str, list[DiffHunk]]] = {
             LineSide.OLD: in_the_diff,
@@ -195,18 +195,20 @@ class LineAnchorHandler(AnchorHandler[LineAnchor]):
         they are gone it stays on its old numbers and says so, rather than
         pointing at whatever has slid into their place. One that never kept
         its lines has nothing to search for, and is left where it is. Either
-        has lost its file where the review reads no lines of that side of it,
-        and stands as it stood where the review did not read that side.
+        has lost its file where the review holds no such file on its side.
+        On a side the review did not read all of, what is not found is not
+        known gone, and the anchor stands as it stood.
         """
+        side_known = anchor.side in self._sides_known
         if anchor.file not in self._hunks[anchor.side]:
-            return anchor.lost_its_file() if anchor.side in self._sides_read_whole else anchor
+            return anchor.lost_its_file() if side_known else anchor
         if not anchor.quote:
             return anchor.current_at(anchor.start_line, anchor.end_line)
 
         lines = self._lines_of(anchor.file, anchor.side)
         found = find_run(lines, anchor.quote, near=anchor.start_line)
         if found is None:
-            return anchor.lost_its_lines()
+            return anchor.lost_its_lines() if side_known else anchor
 
         return anchor.current_at(lines[found].number, lines[found + len(anchor.quote) - 1].number)
 
