@@ -14,18 +14,18 @@
  * walked, and where a thread or a file is drawn, is asked of the view the
  * review is read in (`ReadingView`). No view draws everything by itself: a
  * story draws what it tells and leaves out, the files under a narrower base
- * what that base shows. What the view on screen does not draw is gone to
- * where everything is drawn — the files, read against the review's own
- * base — which the views bring on screen for it (`showEverything`). The
- * page itself is moved by `FileSections`. j and k move the keyboard line by
- * line there (`FileSections.stepLine`), and have no place among the threads
- * to keep.
+ * what that base shows, the change's files no file the change did not
+ * touch. What the view on screen does not draw is gone to in the view of
+ * the Files way of reading that draws it — the change's files, read
+ * against the review's own base, or a file read alone — which the views
+ * bring on screen for it. The page itself is moved by `FileSections`. j and
+ * k move the keyboard line by line there (`FileSections.stepLine`), and
+ * have no place among the threads to keep.
  */
 
-import { type FileLines, threadPlaceOf } from '$lib/anchors/views';
+import { threadPlaceOf, type ThreadLines } from '$lib/anchors/views';
 import type { FileSections } from '$lib/dom/file-sections';
-import type { ReadingViewName } from '$lib/reader/page-layout.svelte';
-import type { ReadingView } from '$lib/review/reading-view';
+import { fileSectionKey, type ReadingView, type ReadingViewName } from '$lib/review/reading-view';
 import type { Threads } from '$lib/review/threads.svelte';
 import type { PlaceLeft, WayBack } from '$lib/review/way-back.svelte';
 import type { Thread } from '$lib/types';
@@ -36,18 +36,28 @@ export interface ViewsOnScreen {
 	/** The view the review is read in now. */
 	readonly onScreen: ReadingView;
 	/**
-	 * Bring on screen what draws every thread and file the review holds, and
-	 * hand its view over: as it is, where that could not be brought, and
-	 * then it may draw less. It need not be drawn yet: the page waits for a
-	 * section asked for before it is.
+	 * Bring on screen the change's files, read against the review's own base,
+	 * and hand their view over: as it is, where that base could not be
+	 * brought back, and then it may draw less. It need not be drawn yet: the
+	 * page waits for a section asked for before it is.
 	 */
-	showEverything: () => Promise<ReadingView>;
+	showTheChange: () => Promise<ReadingView>;
+	/** Bring on screen the view of the Files way of reading that draws a thread on these lines, and hand it over. */
+	showWhereRead: (lines: ThreadLines) => Promise<ReadingView>;
 	/** Bring a view on screen, as it draws the review now, and hand it over: how the reader chose to read stays. */
 	show: (name: ReadingViewName) => ReadingView;
 }
 
-// The view that alone draws the threads on the story's words
+// The view that alone draws the threads on the story's words; the one a file the change did not touch is read
+// alone in; and the one it is put away to, where the reader came to it from nowhere
 const STORY: ReadingViewName = 'story';
+const FILE_ALONE: ReadingViewName = 'file-alone';
+const FILES: ReadingViewName = 'files';
+
+/** Whether a place was left in a file read alone. */
+function leftIn(path: string, left: PlaceLeft): boolean {
+	return left.view === FILE_ALONE && left.place.within === fileSectionKey(path);
+}
 
 /** Where the reader is among the threads: the one they were last brought to, among the threads as they stood then. */
 interface ReaderAt {
@@ -109,10 +119,12 @@ export class Navigator {
 	 * Bring a thread into view with the keyboard on it, and go on from it the
 	 * next time the reader steps. Whatever folds its lines away is opened
 	 * first, and the thread is gone to once it is drawn. A thread the view on
-	 * screen does not draw is gone to where every thread is drawn, which
-	 * comes on screen for it: the reader asked for the thread. Where the
-	 * whole review cannot be put back for it, the files are on screen as
-	 * their base has them, their bar says why, and the thread is not gone to.
+	 * screen does not draw is gone to in the view of the Files way of
+	 * reading that draws it, which comes on screen for it: the reader asked
+	 * for the thread. Coming into a file read alone notes the place left for
+	 * Back. Where the whole review cannot be put back for it, the files are
+	 * on screen as their base has them, their bar says why, and the thread
+	 * is not gone to.
 	 * A thread on the story's words is drawn by the story alone, which comes
 	 * on screen for it.
 	 */
@@ -158,23 +170,33 @@ export class Navigator {
 	/**
 	 * Bring a file somebody named into view — the agent, in what it said or
 	 * showed — and mark it once it gets there. A file the view on screen
-	 * draws none of is shown where every file the review holds is drawn,
-	 * which comes on screen for it; one not drawn there either is shown
-	 * nowhere.
+	 * draws none of is shown among the change's files, which come on screen
+	 * for it; one not drawn there either is shown nowhere.
 	 */
 	showFile(path: string): void {
 		const section = this.#views.onScreen.sectionOfFile(path);
 		if (section !== null) this.#sections.show(section);
-		else void this.#views.showEverything().then((drawingAll) => this.#showIn(drawingAll, path));
+		else void this.#views.showTheChange().then((files) => this.#showIn(files, path));
+	}
+
+	/**
+	 * Take the reader out of a file read alone: back to where they were
+	 * before they came into it, past every place they left within it, or,
+	 * where they came from nowhere, to the change's files.
+	 */
+	async putAway(path: string): Promise<void> {
+		while (this.#wayBack.top !== null && leftIn(path, this.#wayBack.top)) this.#wayBack.takeTop();
+		if (this.#wayBack.top === null) this.#views.show(FILES);
+		else await this.goBack();
 	}
 
 	/**
 	 * Take the reader to a line of a file as it stands, with the keyboard on
 	 * its number, in the middle of the reading area: where the view on
 	 * screen draws it, its file unfolded and what the diff left out around
-	 * it read in, or else where every file is drawn, which comes on screen
-	 * for it. A line drawn nowhere is not gone to. Where the reader was is
-	 * read first, and noted for Back once they are taken somewhere else.
+	 * it read in, or else among the change's files, which come on screen for
+	 * it. A line drawn nowhere is not gone to. Where the reader was is read
+	 * first, and noted for Back once they are taken somewhere else.
 	 */
 	async goToLine(path: string, line: number): Promise<void> {
 		const left = this.#placeRead();
@@ -184,15 +206,15 @@ export class Navigator {
 			this.#goToLineFrom(left, onScreen, lineKey);
 			return;
 		}
-		const drawingAll = await this.#views.showEverything();
-		const section = await drawingAll.drawLine(path, line);
+		const files = await this.#views.showTheChange();
+		const section = await files.drawLine(path, line);
 		if (section !== null) this.#goToLineFrom(left, section, lineKey);
 	}
 
 	/**
 	 * Take the reader back to the last place they left in the take on
 	 * screen, as they saw it: in the view they read it in, how they chose
-	 * to read left as it is, or where every file is drawn where that view
+	 * to read left as it is, or among the change's files where that view
 	 * cannot draw the place now. The place is taken off the way back, and
 	 * going there notes none.
 	 */
@@ -200,8 +222,8 @@ export class Navigator {
 		const left = this.#wayBack.takeTop();
 		if (left === null) return;
 		if (await this.#views.show(left.view).returnTo(left.place)) return;
-		const drawingAll = await this.#views.showEverything();
-		await drawingAll.returnTo(left.place);
+		const files = await this.#views.showTheChange();
+		await files.returnTo(left.place);
 	}
 
 	/** Where the reader reads, in the view on screen. */
@@ -221,11 +243,24 @@ export class Navigator {
 		this.#sections.goToLine(section, lineKey);
 	}
 
-	/** Bring a thread on lines of a file into view, where the view on screen draws them or where every thread is drawn. */
-	#revealOnLines(thread: Thread, lines: FileLines): void {
+	/** Bring a thread on lines of a file into view, where the view on screen draws them or else where Files does. */
+	#revealOnLines(thread: Thread, lines: ThreadLines): void {
 		const onScreen = this.#views.onScreen;
 		if (onScreen.sectionOf(lines) !== null) this.#revealIn(onScreen, thread, lines);
-		else void this.#views.showEverything().then((drawingAll) => this.#revealIn(drawingAll, thread, lines));
+		else void this.#revealWhereRead(thread, lines);
+	}
+
+	/** Bring a thread on lines into view in the view of the Files way of reading that draws it, brought on screen for it. */
+	async #revealWhereRead(thread: Thread, lines: ThreadLines): Promise<void> {
+		const left = this.#placeRead();
+		const drawing = await this.#views.showWhereRead(lines);
+		this.#noteComingInto(left, drawing, lines.file);
+		this.#revealIn(drawing, thread, lines);
+	}
+
+	/** Note the place left for Back where the reader comes into a file read alone from anywhere else. */
+	#noteComingInto(left: PlaceLeft | null, view: ReadingView, path: string): void {
+		if (left !== null && view.name === FILE_ALONE && !leftIn(path, left)) this.#wayBack.note(left);
 	}
 
 	/** Bring a thread on the story's words into view in the story, which comes on screen for it. */
@@ -236,7 +271,7 @@ export class Navigator {
 	}
 
 	/** Go to a thread on lines in a view, if the view draws them. */
-	#revealIn(view: ReadingView, thread: Thread, lines: FileLines): void {
+	#revealIn(view: ReadingView, thread: Thread, lines: ThreadLines): void {
 		const section = view.sectionOf(lines);
 		if (section === null) return;
 		this.#at = { thread: thread.id, among: view.threadsInOrder() };

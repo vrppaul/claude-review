@@ -6,7 +6,7 @@ import ReviewScreen from '$lib/components/ReviewScreen.svelte';
 import type { Review } from '$lib/review/review.svelte';
 import { contextLine, diffFile, diffResponse, hunk, REVIEW_BASE, sinceRound } from '../diff';
 import { fakeServer } from '../fake-server';
-import { newComment } from '../new-comment';
+import { newComment, onAFileGone } from '../new-comment';
 import { handOverNext } from '../pushes';
 import { openReview } from '../review';
 import { settled } from '../settled';
@@ -106,9 +106,8 @@ describe('every control that takes the reader to a thread', () => {
 
 	it('takes the reader to the thread a retake left outdated on a file the diff no longer has', async () => {
 		const user = userEvent.setup();
-		// The agent put the file back as it was, and the retake left it out
-		const anchor = { ...newComment({ file: 'gone.py' }).anchor, standing: 'lines_gone' };
-		review.threads.add({ ...newComment({ file: 'gone.py', body: 'about gone.py' }), anchor });
+		// The agent added the file and removed it again, and the retake left it out
+		review.threads.add(onAFileGone({ file: 'gone.py', body: 'about gone.py' }));
 		review.noteRetake({ followed: 0, outdated: 1 }, null);
 		render(ReviewScreen, { props: { review } });
 

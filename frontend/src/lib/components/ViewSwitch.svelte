@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { focusWhatRemains } from '$lib/dom/keyboard';
 	import { tourStop } from '$lib/guide/tour';
-	import type { ReadingViewName } from '$lib/reader/page-layout.svelte';
+	import type { ReadingChoice } from '$lib/reader/page-layout.svelte';
 	import { useReview } from '$lib/review/context';
 	import BreathingDots from '$lib/ui/BreathingDots.svelte';
 	import Dot from '$lib/ui/Dot.svelte';
@@ -23,10 +23,12 @@
 
 	// The button of each view, as it is drawn: the keyboard goes to the one on screen, and the note of a
 	// story's arrival and Story's introduction point at Story's
-	const buttons: Partial<Record<ReadingViewName, HTMLButtonElement>> = $state({});
+	const buttons: Partial<Record<ReadingChoice, HTMLButtonElement>> = $state({});
 
-	const onScreen = $derived(review.views.onScreen.name);
-	const readingFiles = $derived(onScreen === 'files');
+	// The view on screen, and the way of reading it is one of: a file read alone is read as Files
+	const onScreen = $derived(review.views.onScreen);
+	const readAs = $derived(onScreen.readAs);
+	const readingFiles = $derived(readAs === 'files');
 	// What Story says beyond its name. It says it only while the files are read, where the story's own view is
 	// not there to say it: that the agent is writing the story, or that one arrived and is unread until the
 	// reader reads it, whether or not they put its note away
@@ -52,7 +54,7 @@
 	// button of the view now on screen takes it. As the switch is first drawn nothing has gone
 	$effect.pre(() => {
 		const shown = onScreen;
-		if (document.activeElement !== document.body) focusWhatRemains(() => buttons[shown]);
+		if (document.activeElement !== document.body) focusWhatRemains(() => buttons[shown.readAs]);
 	});
 
 	// The note of a story that arrived takes the introduction's place from elsewhere, and whatever held the
@@ -83,7 +85,7 @@
 			<Segment
 				bind:element={buttons.story}
 				testId="read-as-story"
-				pressed={onScreen === 'story'}
+				pressed={readAs === 'story'}
 				written={storySays === 'writing'}
 				calling={storyCalling}
 				title={storySays === 'writing' ? STORY_BEING_WRITTEN : STORY}

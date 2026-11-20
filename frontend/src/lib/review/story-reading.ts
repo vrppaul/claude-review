@@ -8,8 +8,8 @@
  * A story draws a file in pieces — a step's lines, and whatever of the file
  * no step tells — so a file may stand in several sections, and a line of it
  * in at most one: the review refuses a story that tells a line twice. A
- * thread on a line no piece shows is not drawn here at all; the files,
- * read against the review's own base, draw every thread.
+ * thread on a line no piece shows is not drawn here at all; read as Files,
+ * against the review's own base, every thread is drawn.
  */
 
 import { inDrawnOrder } from '$lib/anchors/placement';
@@ -23,7 +23,7 @@ import {
 	stepReason
 } from '$lib/anchors/story';
 import { tick } from 'svelte';
-import type { FileLines } from '$lib/anchors/views';
+import type { ThreadLines } from '$lib/anchors/views';
 import type { FileSections } from '$lib/dom/file-sections';
 import type { ReadingPlace } from '$lib/dom/reading-place';
 import type { ReadingParts } from '$lib/dom/reading-parts';
@@ -139,6 +139,7 @@ function drawnBy<Piece extends { key: string }>(section: string, drawn: Piece | 
 
 export class StoryReading implements ReadingView {
 	readonly name = 'story';
+	readonly readAs = 'story';
 	readonly #story: ReviewStory;
 	readonly #threads: Threads;
 	// The sections its pieces are drawn in, and its parts: where the reader reads in it is in one or the other
@@ -176,7 +177,7 @@ export class StoryReading implements ReadingView {
 		return [...offTheStoryAmong(placed, this.#threads), ...placed];
 	}
 
-	sectionOf(lines: FileLines): string | null {
+	sectionOf(lines: ThreadLines): string | null {
 		return this.#story.pieces.drawing(lines)?.key ?? null;
 	}
 
@@ -187,7 +188,8 @@ export class StoryReading implements ReadingView {
 
 	/** A line a piece draws: a piece reads nothing in around what it tells. */
 	drawLine(path: string, line: number): Promise<string | null> {
-		return Promise.resolve(this.sectionOf({ file: path, side: 'new', start_line: line, end_line: line }));
+		const drawing = this.#story.pieces.drawing({ file: path, side: 'new', start_line: line, end_line: line });
+		return Promise.resolve(drawing?.key ?? null);
 	}
 
 	/** A story folds nothing away. */

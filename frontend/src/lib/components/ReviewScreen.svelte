@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Component } from 'svelte';
-	import type { ReadingViewName } from '$lib/reader/page-layout.svelte';
+	import type { ReadingViewName } from '$lib/review/reading-view';
 	import type { Review } from '$lib/review/review.svelte';
 	import { provideReview } from '$lib/review/context';
 	import { markTab } from '$lib/dom/tab';
@@ -13,6 +13,7 @@
 	import { reportBroken } from './broken-parts';
 	import DiffNotice from './DiffNotice.svelte';
 	import DiffView from './DiffView.svelte';
+	import FileAloneView from './FileAloneView.svelte';
 	import FileList from './FileList.svelte';
 	import Guide from './Guide.svelte';
 	import { pressKey } from './keymap';
@@ -30,7 +31,8 @@
 	// way through it. Another way of reading is another row here, never a longer chain in the markup
 	const DRAWN_AS: Record<ReadingViewName, { beside: Component; reading: Component }> = {
 		files: { beside: FileList, reading: DiffView },
-		story: { beside: StoryContents, reading: StoryView }
+		story: { beside: StoryContents, reading: StoryView },
+		'file-alone': { beside: FileList, reading: FileAloneView }
 	};
 
 	let { review }: Props = $props();

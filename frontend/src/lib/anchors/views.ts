@@ -22,15 +22,18 @@ import type { Anchor, AnchorKind, LineAnchor, StoryBlock, Thread } from '$lib/ty
 import { lineAnchorView } from '$lib/anchors/line';
 import { storyAnchorView } from '$lib/anchors/story';
 
-/** The lines of a file a thread hangs on, whichever kind of anchor says so. */
+/** Lines of a file, on one side of it. */
 export type FileLines = Pick<LineAnchor, 'file' | 'side' | 'start_line' | 'end_line'>;
+
+/** The lines of a file a thread hangs on, and how they stand in what the review holds. */
+export type ThreadLines = FileLines & Pick<LineAnchor, 'standing'>;
 
 /**
  * Where a thread is drawn: under lines of a file, or under a block of the
  * story's words. Every part of the page that draws threads, or goes to one,
  * says what it does with each.
  */
-export type ThreadPlace = { on: 'lines'; lines: FileLines } | { on: 'story'; block: StoryBlock };
+export type ThreadPlace = { on: 'lines'; lines: ThreadLines } | { on: 'story'; block: StoryBlock };
 
 /**
  * How what a thread was written against reads: as lines of code, each kept
@@ -41,7 +44,7 @@ export type QuoteReads = 'code' | 'prose';
 /** A thread, with the lines of a file it hangs on. */
 export interface ThreadOnLines {
 	thread: Thread;
-	lines: FileLines;
+	lines: ThreadLines;
 }
 
 export interface AnchorView<Kind extends Anchor> {

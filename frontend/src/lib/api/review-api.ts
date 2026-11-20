@@ -15,6 +15,7 @@ import type {
 	DiffResponse,
 	FeedbackIssue,
 	FeedbackRequest,
+	FileOfTakeResponse,
 	FileWindowResponse,
 	FollowRequest,
 	FollowResponse,
@@ -98,6 +99,11 @@ export function offeredVersions(): Promise<VersionsResponse> {
 /** Lines of a file a hunk left out, from `start` to `end`. */
 export function readFileWindow(path: string, start: number, end: number): Promise<FileWindowResponse> {
 	return read('get', '/api/file-window', { query: { path, start, end }, doing: `Could not read ${path}` });
+}
+
+/** A file of the take on screen whole, as the tree the take was written down as holds it. */
+export function readFileOfTake(path: string): Promise<FileOfTakeResponse> {
+	return read('get', '/api/file-of-take', { query: { path }, doing: `Could not read ${path}` });
 }
 
 /** Where each anchor now hangs on the review's diff, in the order asked. */

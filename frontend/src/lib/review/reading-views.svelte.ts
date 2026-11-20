@@ -4,28 +4,39 @@
  * How the reader likes to read is theirs and outlives a review: it is kept
  * with the page's layout, and a review opens the way it says. What is on
  * screen is the review's own. The reader choosing a view changes both;
- * being taken to something only the files draw changes what is on screen,
+ * being taken to something only one view draws changes what is on screen,
  * and leaves the choice as the reader made it.
  *
- * Only the files read against the review's own base draw every thread and
- * file the review holds: a story draws what it tells and what it leaves
- * out, and a narrower base the lines it shows. Whatever takes the reader to
- * something neither draws asks for everything here, in one place.
+ * Read as Files, against the review's own base, every thread and file the
+ * review holds is drawn: in the change's files, above them where its file
+ * is gone, or in a file the change did not touch, read alone. A story draws
+ * what it tells and what it leaves out, and a narrower base the lines it
+ * shows. Whatever takes the reader to something the view on screen does not
+ * draw asks here for the view that does, in one place.
  */
 
-import type { PageLayout, ReadingViewName } from '$lib/reader/page-layout.svelte';
+import type { ThreadLines } from '$lib/anchors/views';
+import type { PageLayout, ReadingChoice } from '$lib/reader/page-layout.svelte';
+import type { FileAloneReading } from '$lib/review/file-alone-reading.svelte';
+import { whereRead } from '$lib/review/files-way';
 import type { ViewsOnScreen } from '$lib/review/navigator';
-import type { ReadingView } from '$lib/review/reading-view';
+import type { ReadingView, ReadingViewName } from '$lib/review/reading-view';
 import type { ReviewDiff } from '$lib/review/review-diff.svelte';
 
-/** Each way a review is read, by its name. */
-type Views = Record<ReadingViewName, ReadingView>;
+/** Each view a review is read in, by its name: a file read alone by what only it does. */
+interface Views {
+	files: ReadingView;
+	story: ReadingView;
+	'file-alone': FileAloneReading;
+}
 
 /** How the reader chose to read last, as the page's layout keeps it. */
 type KeptChoice = PageLayout['readingView'];
 
-// The view every review can be read in, and the one that can draw every thread and file it holds
+// The view every review can be read in, which draws the change's files; and the one a file it did not touch is
+// read alone in
 const FILES: ReadingViewName = 'files';
+const FILE_ALONE = 'file-alone' satisfies ReadingViewName;
 
 export class ReadingViews implements ViewsOnScreen {
 	readonly #views: Views;
@@ -34,11 +45,12 @@ export class ReadingViews implements ViewsOnScreen {
 	#nameOnScreen: ReadingViewName;
 
 	/**
-	 * @param views each way this review is read
+	 * @param views each view this review is read in
 	 * @param kept how the reader chose to read last, in whichever review
 	 * @param mayOpenAsStory whether this review may open as its story: any other opens by its files,
 	 *   though the reader chose the story last
-	 * @param diff the diff the files are read from, which a narrower base may be in force on
+	 * @param diff the review's own diff, which says where a thread is read, and which a narrower base may be in
+	 *   force on
 	 */
 	constructor(views: Views, kept: KeptChoice, mayOpenAsStory: boolean, diff: ReviewDiff) {
 		this.#views = views;
@@ -52,8 +64,13 @@ export class ReadingViews implements ViewsOnScreen {
 		return this.#views[this.#nameOnScreen];
 	}
 
+	/** The view a file the change did not touch is read alone in, on screen or not. */
+	get fileAlone(): FileAloneReading {
+		return this.#views[FILE_ALONE];
+	}
+
 	/** Read the review the way the reader chooses, and the next review they open too. */
-	choose(name: ReadingViewName): void {
+	choose(name: ReadingChoice): void {
 		this.#nameOnScreen = name;
 		this.#kept.set(name);
 	}
@@ -69,14 +86,27 @@ export class ReadingViews implements ViewsOnScreen {
 	}
 
 	/**
-	 * Bring on screen what draws every thread and file the review holds — the
-	 * files, read against the review's own base — and hand their view over,
-	 * as it is if the whole review could not be put back: the diff keeps why,
-	 * and the files' bar says it.
+	 * Bring on screen the change's files read against the review's own base,
+	 * and hand their view over, as it is if the whole review could not be put
+	 * back: the diff keeps why, and the files' bar says it.
 	 */
-	async showEverything(): Promise<ReadingView> {
+	async showTheChange(): Promise<ReadingView> {
 		const files = this.show(FILES);
 		if (this.#diff.narrowed) await this.#diff.showWholeReview();
 		return files;
+	}
+
+	/** Bring a file the change did not touch on screen alone, and hand its view over once the file is read. */
+	async readAlone(path: string): Promise<ReadingView> {
+		const alone = this.fileAlone;
+		const reading = alone.open(path);
+		this.#nameOnScreen = FILE_ALONE;
+		await reading;
+		return alone;
+	}
+
+	/** Bring on screen the view of the Files way of reading that draws a thread on these lines, and hand it over. */
+	showWhereRead(lines: ThreadLines): Promise<ReadingView> {
+		return whereRead(lines, this.#diff) === 'in-its-file-alone' ? this.readAlone(lines.file) : this.showTheChange();
 	}
 }

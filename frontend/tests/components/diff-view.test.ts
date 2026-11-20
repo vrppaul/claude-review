@@ -17,7 +17,7 @@ import {
 	wholeFile
 } from '../diff';
 import { fakeServer, keepingSettings } from '../fake-server';
-import { newComment } from '../new-comment';
+import { newComment, onAFileGone } from '../new-comment';
 import type { Review } from '$lib/review/review.svelte';
 import { inReview, openReview } from '../review';
 import { areasWatching, scriptTheScroll, scrollTo } from '../scripted-scroll';
@@ -345,10 +345,10 @@ describe('files with no lines to show', () => {
 });
 
 describe('a comment on a file the diff no longer has', () => {
-	// The agent put the file back as it was, and the diff was taken again without it
+	// The agent added the file and removed it again, and the diff was taken again without it
 	const onTheRevertedFile = {
 		...newComment({ file: 'src/reverted.ts', body: 'why this change' }),
-		anchor: { ...lineAnchor('src/reverted.ts', 'new', 1, 1, ['const z = 1;']), standing: 'lines_gone' }
+		anchor: { ...lineAnchor('src/reverted.ts', 'new', 1, 1, ['const z = 1;']), standing: 'file_gone' }
 	};
 
 	it('is drawn above the files, whole, rather than nowhere', () => {
@@ -366,11 +366,20 @@ describe('a comment on a file the diff no longer has', () => {
 		expect(above.compareDocumentPosition(getByTestId('file-section'))).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
 	});
 
+	it('is never one on a file the change did not touch, which the take holds and the file is read alone for', () => {
+		review = openReview({ files: [changedFile] });
+		review.threads.add(newComment({ file: 'src/caller.ts', body: 'the agent forgot this call' }));
+
+		const { queryByTestId } = render(DiffView, inReview(review));
+
+		expect(queryByTestId('unplaced-threads')).toBeNull();
+	});
+
 	it('is drawn under the name of its file, each file apart', () => {
 		review = openReview({ files: [changedFile] });
 		review.threads.add(onTheRevertedFile);
-		review.threads.add(newComment({ file: 'src/also-reverted.ts', body: 'and this one' }));
-		review.threads.add(newComment({ file: 'src/reverted.ts', startLine: 4, body: 'and further down' }));
+		review.threads.add(onAFileGone({ file: 'src/also-reverted.ts', body: 'and this one' }));
+		review.threads.add(onAFileGone({ file: 'src/reverted.ts', startLine: 4, body: 'and further down' }));
 
 		const { getAllByTestId } = render(DiffView, inReview(review));
 

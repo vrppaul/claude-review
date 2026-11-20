@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { render, screen, within } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import ReviewScreen from '$lib/components/ReviewScreen.svelte';
-import type { ReadingViewName } from '$lib/reader/page-layout.svelte';
+import type { ReadingViewName } from '$lib/review/reading-view';
 import type { Review } from '$lib/review/review.svelte';
 import { OVERVIEW_PART } from '$lib/review/story-keys';
 import type { PlaceLeft } from '$lib/review/way-back.svelte';

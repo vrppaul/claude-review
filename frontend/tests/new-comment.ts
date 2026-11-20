@@ -35,6 +35,12 @@ export function newComment(written: Partial<Written> = {}): NewComment {
 	};
 }
 
+/** A comment on lines of a file the take no longer holds, as the server says of it once the threads are followed. */
+export function onAFileGone(written: Partial<Written> = {}): NewComment {
+	const comment = newComment(written);
+	return { ...comment, anchor: { ...comment.anchor, standing: 'file_gone' } };
+}
+
 /** A note as the reader writes one on a block of the story, which says these words. */
 export function storyComment(block: StoryBlock, body: string, words = 'What the story says there.'): NewComment {
 	return { anchor: storyAnchor(block, words), body, severity: 'note', images: [] };

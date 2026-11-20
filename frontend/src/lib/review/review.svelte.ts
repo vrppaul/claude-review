@@ -27,6 +27,7 @@ import { ReadingParts } from '$lib/dom/reading-parts';
 import { LastRetake } from '$lib/review/last-retake.svelte';
 import { diffNotTakenNote, introductionNotKeptNote } from '$lib/review/panel-notes';
 import { ReadingProgress } from '$lib/review/reading-progress.svelte';
+import { FileAloneReading } from '$lib/review/file-alone-reading.svelte';
 import { FilesReading } from '$lib/review/reading-view';
 import { ReadingViews } from '$lib/review/reading-views.svelte';
 import { ReviewDiff } from '$lib/review/review-diff.svelte';
@@ -129,7 +130,7 @@ export class Review {
 	readonly sections = new FileSections(this.#jumps);
 	/** The parts of the story on the page — its overview, each chapter, what it leaves out — and which is being read. */
 	readonly parts = new ReadingParts(this.#jumps);
-	/** The ways the review is read — file by file, or as the story told of it — and which is on screen. */
+	/** The ways the review is read — file by file, a file it did not touch alone, or as its story — and which is on screen. */
 	readonly views: ReadingViews;
 	/** Every way the reader comes to read the review as its story. */
 	readonly wayIntoStory: WayIntoStory;
@@ -202,7 +203,8 @@ export class Review {
 		this.views = new ReadingViews(
 			{
 				files: new FilesReading(this.diff, this.threads, this.reading, this.sections, this.limits.max_window_lines),
-				story: new StoryReading(this.story, this.threads, this.sections, this.parts)
+				story: new StoryReading(this.story, this.threads, this.sections, this.parts),
+				'file-alone': new FileAloneReading(this.diff, this.threads, this.sections)
 			},
 			this.layout.readingView,
 			this.story.canBeTold && this.storyViewOpens,
@@ -210,7 +212,7 @@ export class Review {
 		);
 		this.feedback = new Feedback({
 			reading: () => ({
-				view: this.views.onScreen.name,
+				view: this.views.onScreen.readAs,
 				theme: this.theme.resolved,
 				window_width: window.innerWidth,
 				window_height: window.innerHeight
@@ -356,7 +358,7 @@ export class Review {
 	 * away. The guide's introductions wait while it does.
 	 */
 	get storyOffered(): boolean {
-		return this.views.onScreen.name === 'files' && this.story.arrival === 'offered';
+		return this.views.onScreen.readAs === 'files' && this.story.arrival === 'offered';
 	}
 
 	/**

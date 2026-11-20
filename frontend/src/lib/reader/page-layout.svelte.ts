@@ -52,10 +52,10 @@ const CONTENT_VIEW_MODES = ['raw', 'preview', 'side-by-side'] as const;
 export type ContentViewMode = (typeof CONTENT_VIEW_MODES)[number];
 const FIRST_CONTENT_VIEW: ContentViewMode = 'raw';
 
-/** Every way a review can be read: file by file, or as the story the agent tells of it. */
-const READING_VIEWS = ['files', 'story'] as const;
-export type ReadingViewName = (typeof READING_VIEWS)[number];
-const FIRST_READING_VIEW: ReadingViewName = 'files';
+/** Every way the reader may choose to read a review: file by file, or as the story the agent tells of it. */
+const READING_CHOICES = ['files', 'story'] as const;
+export type ReadingChoice = (typeof READING_CHOICES)[number];
+const FIRST_READING_CHOICE: ReadingChoice = 'files';
 
 // Whether the reader has said if they want the agent panel: "unset" until
 // they open or shut it themselves
@@ -265,13 +265,13 @@ class ContentViewChoice {
 
 /** Which way the reader reads a review: the one they chose last, whether or not a review can be read that way. */
 class ReadingViewChoice {
-	#name = $state(readChoice(READING_VIEW_KEY, READING_VIEWS, FIRST_READING_VIEW));
+	#name = $state(readChoice(READING_VIEW_KEY, READING_CHOICES, FIRST_READING_CHOICE));
 
-	get name(): ReadingViewName {
+	get name(): ReadingChoice {
 		return this.#name;
 	}
 
-	set(name: ReadingViewName): void {
+	set(name: ReadingChoice): void {
 		this.#name = name;
 		writeChoice(READING_VIEW_KEY, name);
 	}

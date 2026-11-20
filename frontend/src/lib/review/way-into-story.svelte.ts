@@ -14,13 +14,14 @@
  * navigator's too, and nothing watches what is on screen to catch it after.
  */
 
-import type { ReadingViewName } from '$lib/reader/page-layout.svelte';
+import type { ThreadLines } from '$lib/anchors/views';
+import type { ReadingChoice } from '$lib/reader/page-layout.svelte';
 import type { ViewsOnScreen } from '$lib/review/navigator';
-import type { ReadingView } from '$lib/review/reading-view';
+import type { ReadingView, ReadingViewName } from '$lib/review/reading-view';
 import type { ReadingViews } from '$lib/review/reading-views.svelte';
 
-// The view that draws the story told of the change
-const STORY: ReadingViewName = 'story';
+// The view that draws the story told of the change, which the reader chooses by its name
+const STORY: ReadingChoice = 'story';
 
 /** Whoever keeps that Story was introduced to the reader. */
 export interface StoryIntroductions {
@@ -59,8 +60,12 @@ export class WayIntoStory implements ViewsOnScreen {
 		return this.#views.onScreen;
 	}
 
-	showEverything(): Promise<ReadingView> {
-		return this.#views.showEverything();
+	showTheChange(): Promise<ReadingView> {
+		return this.#views.showTheChange();
+	}
+
+	showWhereRead(lines: ThreadLines): Promise<ReadingView> {
+		return this.#views.showWhereRead(lines);
 	}
 
 	/** Bring a view on screen for something it draws, and hand it over: one brought the story is trying it. */

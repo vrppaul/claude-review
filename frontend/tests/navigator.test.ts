@@ -3,14 +3,15 @@ import { Navigator, type ViewsOnScreen } from '$lib/review/navigator';
 import type { ReadingView } from '$lib/review/reading-view';
 import type { Review } from '$lib/review/review.svelte';
 import { addedLine, contextLine, diffFile, hunk, removedLine } from './diff';
-import { newComment, storyComment } from './new-comment';
+import { newComment, onAFileGone, storyComment } from './new-comment';
 import { openReview } from './review';
 import { settled } from './settled';
 
 let review: Review;
 
 beforeEach(() => {
-	review = openReview();
+	// A change to the file a comment is written on, unless a test says another
+	review = openReview({ files: [diffFile()] });
 });
 
 /**
@@ -206,7 +207,7 @@ describe('the order the threads are stepped through', () => {
 	it('takes first the threads on a file the diff no longer holds, which are drawn above it', () => {
 		review = openReview({ files });
 		review.threads.add(newComment({ file: 'a.py', startLine: 2, body: 'on a.py' }));
-		review.threads.add(newComment({ file: 'gone.py', startLine: 7, body: 'on gone.py' }));
+		review.threads.add(onAFileGone({ file: 'gone.py', startLine: 7, body: 'on gone.py' }));
 		const brought = drawThreads();
 
 		review.navigator.step(1);
@@ -224,12 +225,18 @@ describe('moving the reader in whatever view the review is read in', () => {
 		threadsInOrder: () => [],
 		sectionOf: () => null,
 		sectionOfFile: () => null,
-		unfold: () => undefined
+		unfold: () => undefined,
+		placeRead: () => null
 	};
 
 	/** The review read in one view alone, with nothing else to bring on screen: what that view draws none of is nowhere. */
 	function onlyIn(view: ReadingView): ViewsOnScreen {
-		return { onScreen: view, showEverything: () => Promise.resolve(view), show: () => view };
+		return {
+			onScreen: view,
+			showTheChange: () => Promise.resolve(view),
+			showWhereRead: () => Promise.resolve(view),
+			show: () => view
+		};
 	}
 
 	/** A navigator of the review's threads and sections, moving the reader through these views. */
@@ -272,19 +279,19 @@ describe('moving the reader in whatever view the review is read in', () => {
 		expect(brought).toEqual([]);
 	});
 
-	it('goes to a thread the view on screen does not draw in the view that draws them all, brought on screen for it', async () => {
+	it('goes to a thread the view on screen does not draw in the view of Files that draws it, brought on screen for it', async () => {
 		review.threads.add(newComment({ file: 'a.py', startLine: 1, body: 'one' }));
 		const [thread] = review.threads.all;
 		const brought: string[] = [];
 		sectionKnownBy('in the files', brought);
-		const drawsAll = { ...DRAWS_NOTHING, sectionOf: () => 'in the files' };
-		const showEverything = vi.fn(() => Promise.resolve(drawsAll));
-		const navigator = navigatorOver({ ...onlyIn(DRAWS_NOTHING), showEverything });
+		const drawsIt = { ...DRAWS_NOTHING, sectionOf: () => 'in the files' };
+		const showWhereRead = vi.fn(() => Promise.resolve(drawsIt));
+		const navigator = navigatorOver({ ...onlyIn(DRAWS_NOTHING), showWhereRead });
 
 		navigator.reveal(thread);
 		await settled();
 
-		expect(showEverything).toHaveBeenCalledOnce();
+		expect(showWhereRead).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ file: 'a.py' }));
 		expect(brought).toEqual(['in the files']);
 	});
 
@@ -293,21 +300,21 @@ describe('moving the reader in whatever view the review is read in', () => {
 		const [thread] = review.threads.all;
 		sectionKnownBy('the piece that draws it', []);
 		const draws = { ...DRAWS_NOTHING, sectionOf: () => 'the piece that draws it' };
-		const showEverything = vi.fn(() => Promise.resolve(DRAWS_NOTHING));
-		const navigator = navigatorOver({ ...onlyIn(draws), showEverything });
+		const showWhereRead = vi.fn(() => Promise.resolve(DRAWS_NOTHING));
+		const navigator = navigatorOver({ ...onlyIn(draws), showWhereRead });
 
 		navigator.reveal(thread);
 
-		expect(showEverything).not.toHaveBeenCalled();
+		expect(showWhereRead).not.toHaveBeenCalled();
 	});
 
-	it('shows a file the view on screen draws none of in the view that draws every file, brought on screen for it', async () => {
+	it('shows a file the view on screen draws none of among the change’s files, brought on screen for it', async () => {
 		const brought: string[] = [];
 		sectionKnownBy('a.py in the files', brought);
 		const drawsAll = { ...DRAWS_NOTHING, sectionOfFile: () => 'a.py in the files' };
 		const navigator = navigatorOver({
 			...onlyIn(DRAWS_NOTHING),
-			showEverything: () => Promise.resolve(drawsAll)
+			showTheChange: () => Promise.resolve(drawsAll)
 		});
 
 		navigator.showFile('a.py');

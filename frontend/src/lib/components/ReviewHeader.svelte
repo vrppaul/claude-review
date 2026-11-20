@@ -64,9 +64,9 @@
 		<ViewSwitch />
 		<!-- What the agent's checks say of the change, whichever way it is read -->
 		<ChecksChip />
-		<!-- What the diff is compared against, as a control. A story is of the review's own diff whatever base the
-		files are read against, so it shows none -->
-		{#if review.views.onScreen.name === 'files' && review.diff.phrase}
+		<!-- What the diff is compared against, as a control, while the review is read as Files, a file read alone
+		among them. A story is of the review's own diff whatever base the files are read against, so it shows none -->
+		{#if review.views.onScreen.readAs === 'files' && review.diff.phrase}
 			<BasePicker />
 			{#if review.settings.current.ignore_whitespace}
 				<!-- Said here as well as in the settings, because it hides changes: in the reader's mark, as a

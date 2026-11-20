@@ -9,11 +9,11 @@
  * answer to these questions, not a branch in whoever asks them.
  */
 
-import { inDiffOrder, isDrawn } from '$lib/anchors/placement';
-import type { FileLines } from '$lib/anchors/views';
+import type { FileLines, ThreadLines } from '$lib/anchors/views';
 import type { FileSections } from '$lib/dom/file-sections';
 import type { ReadingPlace } from '$lib/dom/reading-place';
-import type { ReadingViewName } from '$lib/reader/page-layout.svelte';
+import type { ReadingChoice } from '$lib/reader/page-layout.svelte';
+import { drawnByTheChange, threadsInFilesOrder } from '$lib/review/files-way';
 import type { ReadingProgress } from '$lib/review/reading-progress.svelte';
 import type { ReviewDiff } from '$lib/review/review-diff.svelte';
 import type { Threads } from '$lib/review/threads.svelte';
@@ -40,17 +40,22 @@ export const NOTHING_DRAWN: Drawn = { lines: false, threads: false };
 /** What a view draws of the review's lines: they take comments, and carry the threads on them. */
 export const LINES_WITH_THEIR_THREADS: Drawn = { lines: true, threads: true };
 
+/** Every view the review is read in: one the reader chose, or a file the change did not touch, read alone. */
+export type ReadingViewName = ReadingChoice | 'file-alone';
+
 export interface ReadingView {
-	/** Which way of reading it is: the name the reader chooses it by, and the one its own keys and parts of the page are listed under. */
+	/** Which view it is: the name its own keys and parts of the page are listed under. */
 	readonly name: ReadingViewName;
+	/** The way of reading the reader chose that it is one of: what the header's switch shows while it is on screen. */
+	readonly readAs: ReadingChoice;
 	/** What it draws of the review as it stands. */
 	drawn: () => Drawn;
 	/** The sections it draws, by their keys, in the order it draws them: what ] and [ walk. */
 	sectionKeys: () => string[];
-	/** The threads it draws, in the order they stand in it: what n and p walk. */
+	/** The threads of its way of reading, in the order they stand in it: what n and p walk. */
 	threadsInOrder: () => Thread[];
 	/** The section a thread on these lines is drawn in, by its key; null where the view draws no such thread. */
-	sectionOf: (lines: FileLines) => string | null;
+	sectionOf: (lines: ThreadLines) => string | null;
 	/** The section the reader is taken to for a file, by its key; null where the view draws none of the file. */
 	sectionOfFile: (path: string) => string | null;
 	/** Bring out lines the view has folded away, so what hangs on them can be drawn. */
@@ -102,7 +107,7 @@ export function threadsNotDrawnIn(view: ReadingView, threads: Threads): Thread[]
 	return threads.onLines.filter(({ lines }) => view.sectionOf(lines) === null).map(({ thread }) => thread);
 }
 
-/** What the files' own view knows a file's section by: its path, since it draws each file once. */
+/** What a view that draws each file whole, once, knows the file's section by: its path. */
 export function fileSectionKey(path: string): string {
 	return path;
 }
@@ -110,6 +115,7 @@ export function fileSectionKey(path: string): string {
 /** The review read file by file: every file of the diff on screen in a section of its own, in the diff's order. */
 export class FilesReading implements ReadingView {
 	readonly name = 'files';
+	readonly readAs = 'files';
 	readonly #diff: ReviewDiff;
 	readonly #threads: Threads;
 	readonly #reading: ReadingProgress;
@@ -135,8 +141,8 @@ export class FilesReading implements ReadingView {
 	/**
 	 * While the diff on screen holds a file, lines that take a comment
 	 * whatever base they are read against: on the side that is the review's
-	 * own. Over a diff of no file, the threads on files it held, which are
-	 * drawn above it; and with none of those, nothing.
+	 * own. Over a diff of no file, the threads n and p walk, those above it
+	 * and those on files read alone; and with none of those, nothing.
 	 */
 	drawn(): Drawn {
 		if (this.#diff.files.length > 0) return LINES_WITH_THEIR_THREADS;
@@ -147,27 +153,18 @@ export class FilesReading implements ReadingView {
 		return this.#diff.files.map((file) => fileSectionKey(file.path));
 	}
 
-	/**
-	 * Down the diff, file by file and row by row; those on files it no longer
-	 * holds first, as they are drawn above it. Under a narrower base, only
-	 * the threads that base draws.
-	 */
+	/** As the Files way of reading walks them (`threadsInFilesOrder`). */
 	threadsInOrder(): Thread[] {
-		const drawn = this.#threads.onLines.filter(({ lines }) => this.sectionOf(lines) !== null);
-		return inDiffOrder(drawn, this.#diff.files);
+		return threadsInFilesOrder(this.#threads, this.#diff);
 	}
 
 	/**
-	 * Read against the review's own base, every thread is drawn somewhere
-	 * here: under its line, at the head of its file where the line is not
-	 * shown, or above the files where the diff no longer holds the file.
-	 * Each is found from the file's section. A narrower base draws only the
-	 * threads on lines it shows whose numbers are the review's own; the rest
-	 * are drawn once the whole review is put back.
+	 * Each thread the change's files draw (`drawnByTheChange`) is found from
+	 * its file's section: under its line, at the head of its file, or above
+	 * the files, where its file is gone.
 	 */
-	sectionOf(lines: FileLines): string | null {
-		const leftOut = this.#diff.narrowed && !isDrawn(lines, this.#diff.files, this.#diff.numbering);
-		return leftOut ? null : fileSectionKey(lines.file);
+	sectionOf(lines: ThreadLines): string | null {
+		return drawnByTheChange(lines, this.#diff) ? fileSectionKey(lines.file) : null;
 	}
 
 	sectionOfFile(path: string): string | null {

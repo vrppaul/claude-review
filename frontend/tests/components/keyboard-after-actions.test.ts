@@ -9,7 +9,7 @@ import ReviewHeader from '$lib/components/ReviewHeader.svelte';
 import { addedLine, contextLine, diffFile, diffResponse, hunk, removedLine } from '../diff';
 import { fakeServer } from '../fake-server';
 import { guideServer } from '../guide-server';
-import { newComment } from '../new-comment';
+import { newComment, onAFileGone } from '../new-comment';
 import type { Review } from '$lib/review/review.svelte';
 import { inReview, openReview } from '../review';
 import { settled } from '../settled';
@@ -172,7 +172,7 @@ describe('where the keyboard is after a thread drawn at the head of its file goe
 describe('where the keyboard is after a thread on a file the diff no longer has goes', () => {
 	it('is on the first file of the diff, which the thread was drawn above, however late that file came', async () => {
 		const user = userEvent.setup();
-		review.threads.add(newComment({ file: 'src/reverted.py', body: 'a file no longer here' }));
+		review.threads.add(onAFileGone({ file: 'src/reverted.py', body: 'a file no longer here' }));
 		render(DiffView, inReview(review));
 		// A retake brings a file that is drawn before the one already there
 		const first = diffFile({ path: 'src/aardvark.py', hunks: [hunk([addedLine(1, 'new = 1')])] });

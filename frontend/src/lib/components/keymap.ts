@@ -23,7 +23,7 @@
  */
 
 import { isComposingText, isTypingTarget } from '$lib/dom/keyboard';
-import type { ReadingViewName } from '$lib/reader/page-layout.svelte';
+import type { ReadingViewName } from '$lib/review/reading-view';
 import type { Review } from '$lib/review/review.svelte';
 import type { ListedKeys } from '$lib/ui/key-list';
 
@@ -103,9 +103,10 @@ interface KeyRow {
 	presses: readonly Press[];
 	does: string;
 	/**
-	 * The ways of reading the review the keys act in. A key that is one
-	 * view's own — the files have a tree to put away, and files to tick off
-	 * and fold; a story has none — is neither answered nor listed in the other.
+	 * The views the keys act in. A key that is some views' own — the
+	 * change's files have files to walk, tick off and fold, and the tree
+	 * beside them, as a file read alone has; a story has none of these — is
+	 * neither answered nor listed in the others.
 	 */
 	views: readonly ReadingViewName[];
 	/**
@@ -116,9 +117,11 @@ interface KeyRow {
 	live: Live;
 }
 
-// The keys of every view, of the files alone, and of the story alone
-const EVERY_VIEW: readonly ReadingViewName[] = ['files', 'story'];
+// The keys of every view; of the change's files alone; of the views the tree stands beside, those files and a file
+// read alone; and of the story alone
+const EVERY_VIEW: readonly ReadingViewName[] = ['files', 'story', 'file-alone'];
 const THE_FILES: readonly ReadingViewName[] = ['files'];
+const BESIDE_THE_TREE: readonly ReadingViewName[] = ['files', 'file-alone'];
 const THE_STORY: readonly ReadingViewName[] = ['story'];
 
 // When a row's keys do something: whatever is on screen; while the view on screen draws lines, which
@@ -244,7 +247,7 @@ const KEYMAP: readonly KeyRow[] = [
 	{
 		presses: [{ chord: COLUMN_CHORD, run: (review) => review.layout.fileTree.toggle() }],
 		does: 'Show or hide the file tree',
-		views: THE_FILES,
+		views: BESIDE_THE_TREE,
 		live: ALWAYS
 	},
 	// The same key in a story is its own column's: the contents, not the tree it does not draw.

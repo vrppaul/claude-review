@@ -9,8 +9,7 @@
  * the same, and keeps them.
  */
 
-import type { ReadingViewName } from '$lib/reader/page-layout.svelte';
-import type { PlaceRead } from '$lib/review/reading-view';
+import type { PlaceRead, ReadingViewName } from '$lib/review/reading-view';
 import type { ReviewDiff } from '$lib/review/review-diff.svelte';
 
 /** Where the reader was as the page took them elsewhere: the view they read in, and where in it. */

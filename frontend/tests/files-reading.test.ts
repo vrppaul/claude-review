@@ -5,7 +5,7 @@ import { threadsNotDrawnIn } from '$lib/review/reading-view';
 import type { Review } from '$lib/review/review.svelte';
 import { addedLine, diffFile, diffResponse, hunk, removedLine, REVIEW_BASE, sinceRound } from './diff';
 import { fakeServer, SERVER_ERROR } from './fake-server';
-import { newComment } from './new-comment';
+import { newComment, onAFileGone } from './new-comment';
 import { openReview } from './review';
 import { settled } from './settled';
 
@@ -33,10 +33,26 @@ describe("the files read against the review's own base", () => {
 	});
 
 	it('draw every thread: one on a file the diff does not hold too, above the files', () => {
-		review.threads.add(newComment({ file: 'gone.py', startLine: 1 }));
+		review.threads.add(onAFileGone({ file: 'gone.py', startLine: 1 }));
 		review.threads.add(newComment({ file: 'a.py', side: 'old', startLine: 1 }));
 
 		expect(threadsNotDrawnIn(review.views.onScreen, review.threads)).toEqual([]);
+	});
+
+	it('walk last the threads on the files the change did not touch, file by file by path, each down its lines', () => {
+		review.threads.add(newComment({ file: 'z.py', startLine: 1, body: 'z.py:1' }));
+		review.threads.add(newComment({ file: 'c.py', startLine: 9, body: 'c.py:9' }));
+		review.threads.add(newComment({ file: 'd.py', startLine: 5, body: 'd.py:5' }));
+		review.threads.add(newComment({ file: 'c.py', startLine: 2, body: 'c.py:2' }));
+		review.threads.add(newComment({ file: 'a.py', startLine: 1, body: 'a.py:1, in the change' }));
+
+		expect(review.views.onScreen.threadsInOrder().map((thread) => thread.body)).toEqual([
+			'a.py:1, in the change',
+			'c.py:2',
+			'c.py:9',
+			'd.py:5',
+			'z.py:1'
+		]);
 	});
 });
 

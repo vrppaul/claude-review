@@ -272,6 +272,8 @@ export type CancelRequest = Schemas['CancelRequest'];
 export type FollowRequest = Schemas['FollowRequest'];
 export type FollowResponse = Schemas['FollowResponse'];
 export type FileWindowResponse = Schemas['FileWindowResponse'];
+/** A file of the take on screen whole, every line on its new side: one the change may not have touched. */
+export type FileOfTakeResponse = Schemas['FileOfTakeResponse'];
 export type VersionsResponse = Schemas['VersionsResponse'];
 /** The diff taken again: how many files, which round, and what changed since it began. */
 export type RetakeResponse = Schemas['RetakeResponse'];

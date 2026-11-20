@@ -7,8 +7,10 @@ import { ASK_CHORD, chordName } from '$lib/components/keymap';
 import type { Review } from '$lib/review/review.svelte';
 import { contextLine, diffFile, hunk } from '../diff';
 import { broughtIntoView } from '../elements';
-import { newComment } from '../new-comment';
+import { fakeServer } from '../fake-server';
+import { newComment, onAFileGone } from '../new-comment';
 import { openReview } from '../review';
+import { settled } from '../settled';
 import { gainedPiece, storyHeld, toldChapter, toldStep } from '../story';
 
 // What each key does is asked as a reader presses it: the page is drawn whole, and its window hands
@@ -210,6 +212,36 @@ describe('the keys the review answers', () => {
 		]);
 	});
 
+	it('lists in the help no key of the change’s files while a file the change did not touch is read alone', async () => {
+		const user = userEvent.setup();
+		fakeServer().answer('GET /api/file-of-take', {
+			path: 'caller.py',
+			hunk: hunk([contextLine(null, 1, 'handler()')], { header: '' }),
+			commentable: true
+		});
+		review.threads.add(newComment({ file: 'caller.py', body: 'the agent forgot this call' }));
+		render(ReviewScreen, { props: { review } });
+		await user.keyboard('n');
+		await settled();
+
+		await user.keyboard('?');
+
+		expect(listedInTheHelp()).toEqual([
+			'j / k: Down / up a line',
+			'Enter: Comment on this line',
+			'Ctrl+Enter: Add the comment, or send the message, being written',
+			'Alt+Enter: Ask the agent now about the comment being written',
+			'n / p: Next / previous comment',
+			'a: Next unread reply',
+			'b: Back to where you were',
+			'c: Talk to the agent',
+			'f: Show or hide the file tree',
+			'Ctrl+Shift+Enter: Finish the review',
+			'?: Show this list',
+			'Esc: Close it'
+		]);
+	});
+
 	it('draws each key the help lists as a key of its own, the two of a pair apart', async () => {
 		const user = userEvent.setup();
 		render(ReviewScreen, { props: { review } });
@@ -245,7 +277,7 @@ describe('the keys the review answers', () => {
 	it('lists n / p over a diff of no file while a comment on a file it held is drawn above it', async () => {
 		const user = userEvent.setup();
 		review = openReview({ files: [], facts: { answerer_attached: true } });
-		review.threads.add(newComment({ file: 'gone.py', body: 'Why?' }));
+		review.threads.add(onAFileGone({ file: 'gone.py', body: 'Why?' }));
 		render(ReviewScreen, { props: { review } });
 
 		await user.keyboard('?');

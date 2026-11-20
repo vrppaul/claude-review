@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { tick, untrack } from 'svelte';
-	import { threadsOffTheDiff } from '$lib/anchors/placement';
 	import { provideScrollArea } from '$lib/dom/scroll-area';
 	import { useReview } from '$lib/review/context';
+	import { threadsAboveTheFiles } from '$lib/review/files-way';
 	import EmptyNote from '$lib/ui/EmptyNote.svelte';
 	import { namesTheFileAsItStands } from '$lib/utils/line-places';
 	import type { CountedWords } from '$lib/utils/words';
@@ -13,10 +13,10 @@
 
 	const review = useReview();
 
-	// Threads on a file the diff no longer has, drawn above the files so none
+	// Threads on a file gone from the take, drawn above the files so none
 	// leaves the screen. Under a narrower base the notice above the diff names
 	// every thread it cannot draw, and takes the reader to it on the whole diff.
-	const offTheDiff = $derived(review.diff.narrowed ? [] : threadsOffTheDiff(review.threads.onLines, review.diff.files));
+	const offTheDiff = $derived(threadsAboveTheFiles(review.threads, review.diff));
 
 	/** Why threads are drawn above every file, of one and of several: the file they hang on is not in the diff. */
 	function offTheDiffWords(file: string): CountedWords {
