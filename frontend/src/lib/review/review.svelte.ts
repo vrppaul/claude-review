@@ -296,11 +296,6 @@ export class Review {
 		return this.#weight;
 	}
 
-	/** The most lines one comment may cover. */
-	get longestQuotedRange(): number {
-		return this.limits.max_quoted_lines;
-	}
-
 	/**
 	 * Keep the server told what this page holds, for as long as it is open:
 	 * an agent that attaches later has no other way to learn the threads

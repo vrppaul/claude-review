@@ -172,7 +172,7 @@ export class LineCommenting {
 		// A range spans one side only: old line 42 and new line 42 are different
 		// places, so dragging across the other side must not extend the range.
 		if (drag === null || drawn.place.side !== drag.side || drawn.place.number === NO_NUMBER) return;
-		const furthest = reach(drag.startLine, drawn.place.number, this.#review.longestQuotedRange);
+		const furthest = reach(drag.startLine, drawn.place.number, this.#review.limits.max_quoted_lines);
 		// The field opens under the line the drag reached, following the drag
 		// back up rather than staying at the furthest point
 		const reached = furthestInRun(this.#drawn[drag.side], drag.startLine, furthest);
