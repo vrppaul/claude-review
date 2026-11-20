@@ -48,6 +48,10 @@
   runs, so the number read as a fault; the card still says which release
   it is of. The news is now 1.7.1's: Alt+Enter asks the agent, and PHP is
   highlighted.
+- **A thread on lines says how it stands.** Handed to the agent, its
+  anchor carries `standing` where it carried `outdated`: on its lines,
+  its lines gone, or its file gone. A thread's summary still says
+  `outdated`.
 
 ### Fixed
 - **The notice that files changed on disk goes once they are back.** A
