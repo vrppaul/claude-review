@@ -184,6 +184,17 @@ describe('a file the change did not touch, read alone', () => {
 		expect(document.activeElement).toBe(screen.getByTestId('read-file-again'));
 	});
 
+	it('leaves the keyboard on Put away after Try again where the reader opened the file by its row', async () => {
+		server.refuse('GET /api/file-of-take', SERVER_FAILED, 'the repository could not be read');
+		await review.navigator.readAlone(CALLER);
+		await cameToRest();
+
+		server.answer('GET /api/file-of-take', CALLER_OF_THE_TAKE);
+		await press('read-file-again');
+
+		expect(document.activeElement).toBe(screen.getByTestId('put-file-away'));
+	});
+
 	it('goes on at Try again to the thread n asked for, the keyboard on it', async () => {
 		const user = userEvent.setup();
 		server.refuse('GET /api/file-of-take', SERVER_FAILED, 'the repository could not be read');
