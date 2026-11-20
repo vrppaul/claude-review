@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 from claude_review.domain.interfaces import GitError
-from claude_review.domain.models import HEAD, FileStatus
+from claude_review.domain.models import HEAD, LARGEST_FILE_SHOWN_BYTES, FileStatus
 from claude_review.repositories.git_repository import GitRepository
 from claude_review.services.diff_reading import read_diff
 from tests.helpers import LOOK_EVERY_SECONDS, SETTLE_SECONDS, git
@@ -288,3 +288,55 @@ async def test_a_base_that_reads_as_an_option_is_never_taken_for_one(
         await _raw_diff(GitRepository(objects=None), tmp_git_repo, base=f"--output={target}")
 
     assert not target.exists()
+
+
+async def test_the_files_holding_a_word_are_those_of_the_tree_written_down(
+    tmp_git_repo: Path, tmp_path_factory: pytest.TempPathFactory
+) -> None:
+    """Whole words in text files the take holds: not a file written after it, nor one git ignores, nor a binary one."""
+    repo = GitRepository(objects=tmp_path_factory.mktemp("review-objects"))
+    (tmp_git_repo / ".gitignore").write_text("secret.env\n")
+    (tmp_git_repo / "src").mkdir()
+    (tmp_git_repo / "src" / "uses.py").write_text("lookup(needle)\n")
+    (tmp_git_repo / "longer.py").write_text("needles = 2\n")
+    (tmp_git_repo / "secret.env").write_text("needle=hidden\n")
+    (tmp_git_repo / "image.bin").write_bytes(b"needle\0\0")
+    tree = await _written_tree(repo, tmp_git_repo)
+    (tmp_git_repo / "after.py").write_text("needle = 3\n")
+
+    holding = await repo.paths_holding(tmp_git_repo, tree, "needle")
+    holding_none = await repo.paths_holding(tmp_git_repo, tree, "haystack")
+
+    assert (holding, holding_none) == (["src/uses.py"], [])
+
+
+async def test_a_file_of_a_tree_reads_as_written_down_and_one_too_large_or_missing_is_left_out(
+    tmp_git_repo: Path, tmp_path_factory: pytest.TempPathFactory
+) -> None:
+    repo = GitRepository(objects=tmp_path_factory.mktemp("review-objects"))
+    (tmp_git_repo / "work.py").write_bytes(b"caf\xc3\xa9 = 1\n")
+    (tmp_git_repo / "dump.log").write_bytes(b"x" * (LARGEST_FILE_SHOWN_BYTES + 1))
+    tree = await _written_tree(repo, tmp_git_repo)
+    (tmp_git_repo / "work.py").write_text("moved on\n")
+
+    read = await repo.files_of(tmp_git_repo, tree, ["work.py", "dump.log", "missing.py", "initial.txt"])
+
+    assert read == {"work.py": b"caf\xc3\xa9 = 1\n", "initial.txt": b"initial content\n"}
+
+
+async def test_a_commit_is_read_as_its_tree(tmp_git_repo: Path, tmp_path_factory: pytest.TempPathFactory) -> None:
+    """The base a review opened on is read from the store a staging lent the repository's own objects."""
+    repo = GitRepository(objects=tmp_path_factory.mktemp("review-objects"))
+    commit = git(tmp_git_repo, "rev-parse", HEAD).strip()
+    (tmp_git_repo / "initial.txt").write_text("changed since\n")
+    await _written_tree(repo, tmp_git_repo)
+
+    read = await repo.files_of(tmp_git_repo, commit, ["initial.txt"])
+    holding = await repo.paths_holding(tmp_git_repo, commit, "initial")
+
+    assert (read, holding) == ({"initial.txt": b"initial content\n"}, ["initial.txt"])
+
+
+async def test_no_tree_is_read_without_a_store_that_kept_it(tmp_git_repo: Path) -> None:
+    with pytest.raises(GitError):
+        await GitRepository(objects=None).files_of(tmp_git_repo, HEAD, ["initial.txt"])

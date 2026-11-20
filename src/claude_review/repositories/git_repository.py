@@ -170,6 +170,33 @@ SIZES_ASKED = ["cat-file", "--batch-check=%(objectsize)"]
 # base, `:<path>` in the index being staged
 BLOB_AT = ":"
 
+# How git is asked which of a tree's files hold a word: the files by name alone, each name unquoted; the word
+# whole, a fixed string and never a pattern; no binary file, nor a submodule's, whatever the reader's settings say
+WORD_SEARCHED = [
+    "grep",
+    "--no-color",
+    "--no-recurse-submodules",
+    "--files-with-matches",
+    "-z",
+    "--word-regexp",
+    "--fixed-strings",
+    "-I",
+    "-e",
+]
+# What `git grep` exits with when nothing matched: an answer, not a failure
+NOTHING_FOUND = 1
+# Ends the revisions a command reads, so whatever follows is a path
+END_OF_REVISIONS = "--"
+
+# How git is asked what stands at each of a tree's paths, a line to each: the type, the id and the size of
+# what is there, or the place asked and that nothing is; and how it is asked for blobs by id, each answered
+# with its size on a line, then that many bytes and a line end
+OBJECTS_DESCRIBED = ["cat-file", "--batch-check=%(objecttype) %(objectname) %(objectsize)"]
+DESCRIPTION_SEPARATOR = " "
+BLOB_TYPE = "blob"
+BLOBS_READ = ["cat-file", "--batch=%(objectsize)"]
+BLOB_END = b"\n"
+
 # Where in an object store git finds the other stores it reads objects from,
 # and what ends each one's line there
 ALTERNATES_FILE = Path("info") / "alternates"
@@ -177,11 +204,23 @@ ALTERNATES_LINE_END = b"\n"
 
 
 class GitRun(BaseModel):
-    """What one git command said, and how it ended."""
+    """What one git command said, and how it ended: its output as git wrote it, since a blob's size counts bytes."""
 
     exit_code: int
-    output: str
+    output: bytes
     errors: str
+
+    @property
+    def text(self) -> str:
+        """The output read as text."""
+        return self.output.decode(OUTPUT_ENCODING, errors=NOT_TEXT)
+
+
+class StoredBlob(BaseModel):
+    """A file's content as an object store keeps it: its id, and how many bytes it holds."""
+
+    object_id: str
+    size: int
 
 
 class OwnPaths(BaseModel):
@@ -379,7 +418,7 @@ class GitRepository(ReviewedRepository):
         pointed = await _execute(path, HEAD_POINTS_AT)
         if pointed.exit_code == NO_REF:
             return OnCommit(commit=(await _run(path, COMMIT_CHECKED_OUT)).strip())
-        return OnBranch(branch=_output_of(pointed, HEAD_POINTS_AT).strip().removeprefix(BRANCHES))
+        return OnBranch(branch=_succeeded(pointed, HEAD_POINTS_AT).text.strip().removeprefix(BRANCHES))
 
     @override
     async def commit_named(self, path: Path, revision: str) -> str | None:
@@ -409,11 +448,63 @@ class GitRepository(ReviewedRepository):
         Raises:
             GitError: if no object store was given, so no tree was ever written down, or git fails.
         """
+        arguments = [*DIFF_OF_TREES, END_OF_OPTIONS, earlier, later]
+        return await _run(path, arguments, self._reading_trees_written())
+
+    @override
+    async def paths_holding(self, root: Path, tree: str, word: str) -> list[str]:
+        """The paths of the tree's text files holding the word whole, as `git grep --word-regexp` matches one.
+
+        Raises:
+            GitError: if no object store was given, so no tree was ever written down, or git fails.
+        """
+        arguments = [*WORD_SEARCHED, word, tree, END_OF_REVISIONS]
+        run = await _execute(root, arguments, self._reading_trees_written())
+        if run.exit_code == NOTHING_FOUND:
+            return []
+        # Git names each file by the tree it was found in, then its path
+        found_in = f"{tree}{BLOB_AT}"
+        return [name.removeprefix(found_in) for name in _succeeded(run, arguments).text.split(NAME_END) if name]
+
+    @override
+    async def files_of(self, root: Path, tree: str, paths: list[str]) -> dict[str, bytes]:
+        """What each of these files of the tree holds, read in two commands whatever their number.
+
+        The first says what stands at each path, so a file the tree lacks, or
+        one too large to read, is never read; the second reads the rest. A
+        path holding a line break cannot be asked a line at a time, and is
+        left out.
+
+        Raises:
+            GitError: if no object store was given, so no tree was ever written down, or git fails.
+        """
+        variables = self._reading_trees_written()
+        asked = [path for path in paths if LINE_END not in path]
+        if not asked:
+            return {}
+        handed = "".join(f"{tree}{BLOB_AT}{path}{LINE_END}" for path in asked)
+        described = (await _run(root, OBJECTS_DESCRIBED, variables, handed=handed)).splitlines()
+        blobs = {
+            path: blob
+            for path, description in zip(asked, described, strict=True)
+            if (blob := _blob_described(description)) is not None and blob.size <= LARGEST_FILE_SHOWN_BYTES
+        }
+        if not blobs:
+            return {}
+        handed = "".join(f"{blob.object_id}{LINE_END}" for blob in blobs.values())
+        read = _succeeded(await _execute(root, BLOBS_READ, variables, handed=handed), BLOBS_READ).output
+        return dict(zip(blobs, _contents_of(read), strict=True))
+
+    def _reading_trees_written(self) -> dict[str, str]:
+        """What points a command at the object store trees are written down into, the only one that holds them.
+
+        Raises:
+            GitError: if no object store was given, so no tree was ever written down.
+        """
         if self._objects is None:
             msg = "no tree is written down without an object store of the review's own"
             raise GitError(msg)
-        arguments = [*DIFF_OF_TREES, END_OF_OPTIONS, earlier, later]
-        return await _run(path, arguments, {OBJECTS_VARIABLE: str(self._objects)})
+        return {OBJECTS_VARIABLE: str(self._objects)}
 
     @override
     async def changed_paths(self, path: Path) -> list[str]:
@@ -511,7 +602,7 @@ async def _commit_named(path: Path, revision: str) -> str | None:
         GitError: if git could not be started or ran out of time.
     """
     run = await _execute(path, ["rev-parse", "--verify", "--quiet", END_OF_OPTIONS, f"{revision}{AS_COMMIT}"])
-    return run.output.strip() if run.exit_code == 0 else None
+    return run.text.strip() if run.exit_code == 0 else None
 
 
 def _sides_stored(base: str, file: DiffFile) -> list[str]:
@@ -532,11 +623,11 @@ async def _run(
     Raises:
         GitError: if it could not run, ran out of time, or failed.
     """
-    return _output_of(await _execute(path, arguments, variables, handed=handed), arguments)
+    return _succeeded(await _execute(path, arguments, variables, handed=handed), arguments).text
 
 
-def _output_of(run: GitRun, arguments: list[str]) -> str:
-    """What a git command printed, once it succeeded.
+def _succeeded(run: GitRun, arguments: list[str]) -> GitRun:
+    """A git command's run, once it succeeded.
 
     Raises:
         GitError: if it failed.
@@ -545,7 +636,29 @@ def _output_of(run: GitRun, arguments: list[str]) -> str:
         log.warning("git_command_failed", command=arguments[0], exit_code=run.exit_code)
         msg = f"git command failed: {run.errors.strip()}"
         raise GitError(msg)
-    return run.output
+    return run
+
+
+def _blob_described(description: str) -> StoredBlob | None:
+    """The blob one line of `cat-file --batch-check` describes, or None where it says nothing stands, or no file."""
+    match description.split(DESCRIPTION_SEPARATOR):
+        case [object_type, object_id, size] if object_type == BLOB_TYPE and size.isdecimal():
+            return StoredBlob(object_id=object_id, size=int(size))
+        case _:
+            return None
+
+
+def _contents_of(read: bytes) -> list[bytes]:
+    """Each blob `cat-file --batch` read, in the order asked: a line with its size, that many bytes, a line end."""
+    contents: list[bytes] = []
+    position = 0
+    while position < len(read):
+        size_end = read.index(BLOB_END, position)
+        start = size_end + len(BLOB_END)
+        end = start + int(read[position:size_end])
+        contents.append(read[start:end])
+        position = end + len(BLOB_END)
+    return contents
 
 
 async def _execute(
@@ -587,11 +700,7 @@ async def _execute(
         await _stop(process)
         raise
 
-    return GitRun(
-        exit_code=await process.wait(),
-        output=output.decode(OUTPUT_ENCODING, errors=NOT_TEXT),
-        errors=errors.decode(OUTPUT_ENCODING, errors=NOT_TEXT),
-    )
+    return GitRun(exit_code=await process.wait(), output=output, errors=errors.decode(OUTPUT_ENCODING, errors=NOT_TEXT))
 
 
 def _git_environment(variables: dict[str, str]) -> dict[str, str]:

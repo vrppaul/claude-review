@@ -184,6 +184,14 @@ class RepositoryWithoutGit(ReviewedRepository):
     async def is_tracked(self, root: Path, relative_path: str) -> bool:
         return True
 
+    @override
+    async def paths_holding(self, root: Path, tree: str, word: str) -> list[str]:
+        return []
+
+    @override
+    async def files_of(self, root: Path, tree: str, paths: list[str]) -> dict[str, bytes]:
+        return {}
+
 
 class StagingHeldStill(StagedTree):
     """The tree of a repository held still, staged: the same files against whatever base, nothing moved since."""

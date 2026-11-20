@@ -92,7 +92,30 @@ class TrackedPaths(ABC):
         """Whether the repository tracks the file at this path."""
 
 
-class ReviewedRepository(Repository, TrackedPaths):
+class TreesRead(ABC):
+    """What a tree the review wrote down holds, read from the review's own object store and never from the disk.
+
+    A commit is read as its tree, so a base the review opened on is read the same way.
+    """
+
+    @abstractmethod
+    async def paths_holding(self, root: Path, tree: str, word: str) -> list[str]:
+        """The paths of the tree's text files that hold the word whole, as git matches a whole word.
+
+        Raises:
+            GitError: if git cannot say it.
+        """
+
+    @abstractmethod
+    async def files_of(self, root: Path, tree: str, paths: list[str]) -> dict[str, bytes]:
+        """What each of these files of the tree holds, by path; one it lacks, or larger than the review reads, left out.
+
+        Raises:
+            GitError: if git cannot say it.
+        """
+
+
+class ReviewedRepository(Repository, TrackedPaths, TreesRead):
     """Everything a review asks of the repository it reviews."""
 
 
