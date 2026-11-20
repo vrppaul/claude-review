@@ -483,7 +483,9 @@ class GitRepository(ReviewedRepository):
         if not asked:
             return {}
         handed = "".join(f"{tree}{BLOB_AT}{path}{LINE_END}" for path in asked)
-        described = (await _run(root, OBJECTS_DESCRIBED, variables, handed=handed)).splitlines()
+        answered = await _run(root, OBJECTS_DESCRIBED, variables, handed=handed)
+        # Parted at line feeds alone: a path git says is missing comes back in its line, whatever it holds
+        described = answered.removesuffix(LINE_END).split(LINE_END)
         blobs = {
             path: blob
             for path, description in zip(asked, described, strict=True)

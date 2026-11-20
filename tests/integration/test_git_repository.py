@@ -319,7 +319,9 @@ async def test_a_file_of_a_tree_reads_as_written_down_and_one_too_large_or_missi
     tree = await _written_tree(repo, tmp_git_repo)
     (tmp_git_repo / "work.py").write_text("moved on\n")
 
-    read = await repo.files_of(tmp_git_repo, tree, ["work.py", "dump.log", "missing.py", "initial.txt"])
+    read = await repo.files_of(
+        tmp_git_repo, tree, ["work.py", "dump.log", "missing.py", "missing\x1eseparated.py", "initial.txt"]
+    )
 
     assert read == {"work.py": b"caf\xc3\xa9 = 1\n", "initial.txt": b"initial content\n"}
 
