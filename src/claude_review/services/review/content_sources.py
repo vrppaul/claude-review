@@ -59,6 +59,8 @@ class DiffView(BaseModel):
     """The diff as the reader asked to see it, and how far the tree has moved since the review's own was taken."""
 
     files: list[DiffFile]
+    # The files the review's own diff holds: `files` shows fewer under a narrower base or with whitespace left out
+    own_paths: frozenset[str]
     # The base the diff was taken against. None in a review whose content did
     # not come from a repository: it is compared against nothing.
     shown: VersionKey | None
@@ -211,7 +213,7 @@ class RepositorySource(ContentSource):
             async with self._repository.staged(self._root) as staged:
                 files = await read_diff(staged, base=against, ignore_whitespace=ignore_whitespace)
         moved = await self._watcher.drift(self._root, content.tree)
-        return DiffView(files=files, shown=shown, moved=moved, take=content.take)
+        return DiffView(files=files, own_paths=content.paths, shown=shown, moved=moved, take=content.take)
 
     @override
     async def offer(self) -> list[VersionOnOffer]:
@@ -360,7 +362,8 @@ class FixedSource(ContentSource):
         if base is not None:
             msg = "This review is not compared against anything"
             raise NoRepositoryError(msg)
-        return DiffView(files=self._content.files, shown=None, moved=0, take=self._content.take)
+        content = self._content
+        return DiffView(files=content.files, own_paths=content.paths, shown=None, moved=0, take=content.take)
 
     @override
     async def offer(self) -> list[VersionOnOffer]:

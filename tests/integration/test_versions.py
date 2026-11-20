@@ -163,6 +163,7 @@ async def test_the_review_keeps_its_own_diff_whatever_is_being_looked_at(
         whole = (await client.get(DIFF_ROUTE, headers=LOCAL_HEADERS)).json()
 
     assert [served["path"] for served in narrowed["files"]] == ["later.py"]
+    assert narrowed["own_paths"] == ["from_the_start.py", "later.py"]
     assert sorted(served["path"] for served in whole["files"]) == ["from_the_start.py", "later.py"]
 
 

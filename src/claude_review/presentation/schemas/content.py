@@ -350,6 +350,9 @@ class DiffResponse(Schema):
     """Response for GET /api/diff — the review's content against one base."""
 
     files: list[DiffFile]
+    # The files the review's own diff holds, whatever `files` shows, in path
+    # order so the same files are said alike every time
+    own_paths: list[str]
     # None in a review whose content did not come from a repository: it is
     # compared against nothing
     base: ShownBase | None

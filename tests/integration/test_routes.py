@@ -540,7 +540,7 @@ async def test_ignoring_whitespace_leaves_the_real_change_visible(tmp_git_repo: 
 
 
 async def test_ignoring_whitespace_drops_a_reindent_only_change(tmp_git_repo: Path, reviews: ReviewFactory) -> None:
-    """A file whose only change is indentation disappears from the review."""
+    """A file whose only change is indentation leaves the diff on screen, and the review's own change holds it still."""
     opening = await _committed_then_changed(tmp_git_repo, "def f():\n    return 1\n", "def f():\n        return 1\n")
 
     async with http_client(reviews.app(opening)) as client:
@@ -549,6 +549,7 @@ async def test_ignoring_whitespace_drops_a_reindent_only_change(tmp_git_repo: Pa
 
     assert any(served["path"] == "app.py" for served in plain["files"])
     assert not any(served["path"] == "app.py" and served["hunks"] for served in ignored["files"])
+    assert ignored["own_paths"] == ["app.py"]
 
 
 async def test_ignoring_whitespace_can_be_turned_back_off(tmp_git_repo: Path, reviews: ReviewFactory) -> None:

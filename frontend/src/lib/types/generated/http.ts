@@ -171,9 +171,10 @@ export interface paths {
          *
          *     The page is told the key of the base in force, so it asks for it again
          *     without building a key itself, and whether it is narrower than the
-         *     review's own, which it goes back to by naming none. And which take of
-         *     the review it read, whatever the base: a story is of the code on screen
-         *     only while it says the same take.
+         *     review's own, which it goes back to by naming none. And, whatever the
+         *     base, which files the review's own diff holds and which take of the
+         *     review it read: a story is of the code on screen only while it says the
+         *     same take.
          */
         get: operations["get_diff_api_diff_get"];
         put?: never;
@@ -1135,6 +1136,8 @@ export interface components {
         DiffResponse: {
             /** Files */
             files: components["schemas"]["DiffFile"][];
+            /** Own Paths */
+            own_paths: string[];
             base: components["schemas"]["ShownBase"] | null;
             /** Moved */
             moved: number;
