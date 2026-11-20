@@ -4,11 +4,9 @@ import asyncio
 from pathlib import Path
 
 from claude_review.domain.models import DiffFile
+from claude_review.services.file_lines import TEXT_ENCODING
 from claude_review.services.unreadable_content import UnreadableContentError
 from claude_review.services.whole_file import whole_file
-
-# What a file reviewed whole is read as: a file that is not is refused, and named
-TEXT_ENCODING = "utf-8"
 
 
 async def read_text_files(paths: list[Path], *, named_from: Path) -> list[DiffFile]:

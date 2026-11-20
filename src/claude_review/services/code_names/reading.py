@@ -26,12 +26,8 @@ from claude_review.services.code_names.languages import (
     Grammar,
     code_files_of,
 )
+from claude_review.services.file_lines import LINE_END, NOT_TEXT, TEXT_ENCODING, line_text, lines_of
 
-# What ends a line, and nothing else does: git numbers a file's lines by it
-LINE_END = b"\n"
-# What a file's bytes are read as; a byte that is not is replaced, as the diff shows it
-TEXT_ENCODING = "utf-8"
-NOT_TEXT = "replace"
 # A word of text no grammar reads, and the same word standing whole, as git matches one
 WORD = re.compile(r"\w+")
 WHOLE_WORD = r"(?<!\w){word}(?!\w)"
@@ -57,15 +53,13 @@ class SourceLines(BaseModel):
 
     @classmethod
     def of(cls, content: bytes) -> SourceLines:
-        """The lines of a file's bytes; a final line feed ends the last line rather than starting an empty one."""
-        lines = content.split(LINE_END)
-        if not lines[-1]:
-            lines.pop()
+        """The lines of a file's bytes, each with the byte it starts at."""
+        lines = lines_of(content)
         starts = list(accumulate((len(line) + len(LINE_END) for line in lines), initial=0))
         return cls(content=content, lines=lines, starts=starts)
 
     def text(self, line: int) -> str:
-        return self.lines[line - FIRST_LINE].decode(TEXT_ENCODING, errors=NOT_TEXT)
+        return line_text(self.lines[line - FIRST_LINE])
 
     def offset_of(self, position: LinePosition) -> int:
         """The byte a character starts at."""

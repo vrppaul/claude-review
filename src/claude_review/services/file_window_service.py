@@ -20,6 +20,7 @@ from claude_review.domain.exceptions import (
 )
 from claude_review.domain.interfaces import TrackedPaths
 from claude_review.domain.models import FIRST_LINE, runs_backwards
+from claude_review.services.file_lines import BINARY_CHECK_BYTES, is_text, line_text
 
 MAX_WINDOW_LINES = 2000
 
@@ -27,17 +28,6 @@ MAX_WINDOW_LINES = 2000
 # lock file or a generated bundle stalled the server for seconds and took
 # hundreds of megabytes. Nothing a person reads is anywhere near this.
 MAX_FILE_BYTES = 32 * 1024 * 1024
-
-# How git tells a binary file from text: a NUL byte among the first it reads
-BINARY_CHECK_BYTES = 8000
-BINARY_MARK = b"\0"
-# What ends a line, and nothing else does: git numbers a file's lines by it,
-# so a lone carriage return is part of the line it is in
-LINE_END = b"\n"
-# What a file's bytes are read as; a byte that is not is replaced, as the diff
-# shows it, rather than the file refused
-TEXT_ENCODING = "utf-8"
-NOT_TEXT = "replace"
 
 
 class FileWindow(BaseModel):
@@ -99,17 +89,16 @@ class FileWindowService:
     def _read_window(self, path: Path, named: str, start: int, end: int) -> FileWindow:
         """Read the wanted lines without holding the whole file in memory.
 
-        Read as bytes and parted at line breaks alone, the way git numbers a
-        file's lines, so the lines widened in beside a hunk are the very
-        lines its numbers name.
+        Read as bytes a line at a time: a file opened so parts its lines at
+        line feeds alone, as `lines_of` does, so the lines widened in beside a
+        hunk are the very lines its numbers name.
         """
         self._check_readable(path, named)
 
         wanted = min(end - start + 1, MAX_WINDOW_LINES)
         try:
             with path.open("rb") as handle:
-                is_text = BINARY_MARK not in handle.read(BINARY_CHECK_BYTES)
-                window = _window_from(handle, start, wanted) if is_text else None
+                window = _window_from(handle, start, wanted) if is_text(handle.read(BINARY_CHECK_BYTES)) else None
         except OSError as error:
             msg = f"cannot read: {named}"
             raise FileUnreadableError(msg) from error
@@ -162,8 +151,5 @@ def _window_from(handle: BinaryIO, start: int, wanted: int) -> FileWindow:
     handle.seek(0)
     # How many lines stand above the window
     above = start - FIRST_LINE
-    window = [
-        line.removesuffix(LINE_END).decode(TEXT_ENCODING, errors=NOT_TEXT)
-        for line in islice(handle, above, above + wanted)
-    ]
+    window = [line_text(line) for line in islice(handle, above, above + wanted)]
     return FileWindow(start=start, lines=window, total=above + len(window) + sum(1 for _ in handle))
