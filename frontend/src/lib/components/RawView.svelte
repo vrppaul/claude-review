@@ -30,9 +30,14 @@
 	const columns = $derived(isDiffMode ? DIFF_COLUMNS : PLAIN_COLUMNS);
 	const commenting = $derived(drawing.commenting);
 
-	/** A row's tint, with the mark of lines being written about added to the change rather than replacing it. */
+	/** A row's tint, with the reader's own mark added to the change rather than replacing it. */
 	function rowClass(kind: DiffLine['kind'], marked: boolean): ClassValue {
 		return [isDiffMode && TINTS[kind], marked && 'cr-row-marked'];
+	}
+
+	/** Whether a line wears the reader's mark: it is being written about, or it is the one the page took them to. */
+	function marked(drawn: DrawnLine): boolean {
+		return commenting.isMarked(drawn.place) || drawing.arrivedAt(drawn);
 	}
 
 	/**
@@ -69,7 +74,7 @@
 				<tbody>
 					{#each hunk.lines as drawn (drawn.key)}
 						<tr
-							class={['cr-row', rowClass(drawn.line.kind, commenting.isMarked(drawn.place))]}
+							class={['cr-row', rowClass(drawn.line.kind, marked(drawn))]}
 							onmouseenter={() => commenting.enter(drawn)}
 						>
 							{#if isDiffMode}

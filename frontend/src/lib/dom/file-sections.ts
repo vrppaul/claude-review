@@ -20,6 +20,7 @@
 
 import { tick } from 'svelte';
 import { Announced, type Announcement } from '$lib/dom/announced';
+import { ArrivedLine } from '$lib/dom/arrived-line.svelte';
 import { firstInDocument } from '$lib/dom/document-order';
 import type { Jumps } from '$lib/dom/jump';
 import { focusWhatRemains, moveByLine } from '$lib/dom/keyboard';
@@ -61,6 +62,8 @@ interface Mark {
 }
 
 export class FileSections {
+	/** The line the reader was last taken to, lit while the keyboard stays on it. */
+	readonly arrived = new ArrivedLine();
 	// Every section on the page, and which of them the reader is in, while the reading area is watched
 	readonly #sections = new Announced<Section>();
 	readonly #threads = new Map<string, HTMLElement>();
@@ -213,8 +216,9 @@ export class FileSections {
 	/**
 	 * Take the reader to a line's number in a section, by the key its place
 	 * is known by, to the middle of the reading area with the keyboard on it,
-	 * once what is pending is drawn: lines just read in, a file unfolded, a
-	 * view just come on screen. Rows not built yet are built as their
+	 * the line lit while the keyboard stays there, once what is pending is
+	 * drawn: lines just read in, a file unfolded, a view just come on
+	 * screen. Rows not built yet are built as their
 	 * section is brought into view, and the line is gone to once that comes
 	 * to rest.
 	 */
@@ -289,14 +293,20 @@ export class FileSections {
 		const section = this.#sections.get(sectionKey);
 		if (taking !== this.#taken || section === undefined) return;
 		const line = lineIn(section.element, lineKey);
-		if (line) this.#arriveAt(line);
-		else this.#jumps.land(this.#sections.band, section.element, () => this.#arriveAtLineIn(section.element, lineKey));
+		if (line) this.#arriveAtLine(sectionKey, lineKey, line);
+		else this.#jumps.land(this.#sections.band, section.element, () => this.#arriveAtLineIn(section, lineKey));
 	}
 
 	/** Go to a line's number in a section, if it is drawn there. */
-	#arriveAtLineIn(section: HTMLElement, lineKey: string): void {
-		const line = lineIn(section, lineKey);
-		if (line) this.#arriveAt(line);
+	#arriveAtLineIn(section: Section, lineKey: string): void {
+		const line = lineIn(section.element, lineKey);
+		if (line) this.#arriveAtLine(section.key, lineKey, line);
+	}
+
+	/** Go to a line's number, and light the line arrived at. */
+	#arriveAtLine(sectionKey: string, lineKey: string, line: HTMLElement): void {
+		this.#arriveAt(line);
+		this.arrived.light(sectionKey, lineKey, line);
 	}
 
 	/**

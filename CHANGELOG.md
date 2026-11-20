@@ -27,6 +27,9 @@
   failure is drawn under its line, and its file's row in the tree counts
   them; both turn grey once their check is out of date. Pressing a failure takes
   you to its line, reading in what the diff left out around it.
+- **The line you are taken to is lit.** Going to where a check failed
+  lights the line in your colour, its half alone in two columns, until
+  the keyboard leaves it; a line you step to with j and k is not lit.
 
 ### Changed
 - **Help's "What's new" names no release.** The news it opens is of the

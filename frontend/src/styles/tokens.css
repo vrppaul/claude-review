@@ -435,8 +435,8 @@
 	--cr-coming-in: 120ms;
 	/*
 	 * What the reader marked in the code, the lines they picked to comment
-	 * on: theirs, so in their mark, on its tint with its edge at the row's
-	 * start
+	 * on, and the line the page took them to: theirs, so in their mark, on
+	 * its tint with its edge at the row's start
 	 */
 	--cr-marked: var(--cr-mark-tint);
 	--cr-marked-edge: var(--cr-mark);

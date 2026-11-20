@@ -18,7 +18,7 @@ import type { RevealedContext } from '$lib/review/revealed-context.svelte';
 import type { Review } from '$lib/review/review.svelte';
 import { type FailureFound, NO_FAILURES } from '$lib/review/checks.svelte';
 import type { DiffFile, DiffLayout, DiffLine, LinePlace } from '$lib/types';
-import { type DrawnHunk, drawnHunks } from '$lib/utils/drawn-file';
+import { type DrawnHunk, type DrawnLine, drawnHunks } from '$lib/utils/drawn-file';
 import {
 	type ContextGap,
 	gapAbove,
@@ -161,6 +161,8 @@ export function roomOf(file: DiffFile, extent: Extent, view: FileView): LinesRoo
 
 /** What a file is drawn from and by, read afresh each time it matters. */
 export interface DrawingSource {
+	/** The section it is drawn in, by the key its view knows it by. */
+	section: () => string;
 	file: () => DiffFile;
 	/** What it is highlighted as, if anything. */
 	language: () => string | null;
@@ -177,6 +179,9 @@ export class FileDrawing implements DrawnFile {
 	readonly #end: ContextGap | null;
 	// Where the checks failed in the file, by the line of it as it stands: asked of every line drawn
 	readonly #failuresByLine: ReadonlyMap<number, readonly FailureFound[]>;
+	// The line the page took the reader to in its section, by its key, while the keyboard stays on it: asked of
+	// every line drawn
+	readonly #arrivedLine: string | null;
 
 	constructor(review: Review, source: DrawingSource) {
 		this.#review = review;
@@ -190,7 +195,13 @@ export class FileDrawing implements DrawnFile {
 		this.#failuresByLine = $derived(
 			Map.groupBy(review.checks.failuresIn(source.file().path), ({ failure }) => failure.line)
 		);
+		this.#arrivedLine = $derived(review.sections.arrived.lineIn(source.section()));
 		this.commenting = new LineCommenting(review, this);
+	}
+
+	/** Whether a line is the one the page took the reader to, lit while the keyboard stays on it. */
+	arrivedAt(drawn: DrawnLine): boolean {
+		return drawn.key === this.#arrivedLine;
 	}
 
 	/**

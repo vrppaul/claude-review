@@ -24,7 +24,7 @@ const file = diffFile({
 });
 
 /** The file drawn as lines in one column: what is asked for whether the whole of it is drawn, or a piece. */
-const AS_LINES = { file, language: null, view: 'raw' } as const;
+const AS_LINES = { sectionKey: 'src/app.py', file, language: null, view: 'raw' } as const;
 
 /** How a story step draws a file: a piece cut out of it, of the take the page reads. */
 const AS_A_STEP = { ...AS_LINES, extent: { kind: 'piece', shows: 'a-step' } } as const;

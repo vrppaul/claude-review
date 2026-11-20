@@ -45,6 +45,33 @@ describe('going to where a check failed', () => {
 		expect(document.activeElement?.textContent?.trim()).toBe('2');
 	});
 
+	it('lights the line it takes the reader to', async () => {
+		const review = onScreenFailing([failure({ path: 'src/app.py', line: 2 })]);
+
+		await pressFailure();
+
+		expect(review.sections.arrived.lineIn('src/app.py')).toBe('new:2');
+	});
+
+	it('puts the light out once the keyboard leaves the line: a line gone to by j is not lit', async () => {
+		const review = onScreenFailing([failure({ path: 'src/app.py', line: 2 })]);
+		await pressFailure();
+
+		await userEvent.setup({ delay: null }).keyboard('j');
+
+		expect(review.sections.arrived.lineIn('src/app.py')).toBeNull();
+	});
+
+	it('keeps the line lit while the window alone loses the keyboard', async () => {
+		const review = onScreenFailing([failure({ path: 'src/app.py', line: 2 })]);
+		await pressFailure();
+
+		// A window the reader leaves blurs what holds the keyboard, which holds it still for the page
+		document.activeElement?.dispatchEvent(new FocusEvent('blur'));
+
+		expect(review.sections.arrived.lineIn('src/app.py')).toBe('new:2');
+	});
+
 	it('brings the files on screen from a story that tells nothing of the line, and goes to it there', async () => {
 		const review = onScreenFailing([failure({ path: 'src/app.py', line: 2 })], storyHeld());
 		review.views.showStory();

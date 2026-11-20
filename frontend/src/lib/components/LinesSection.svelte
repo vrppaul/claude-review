@@ -74,7 +74,7 @@
 				style:--cr-hunk-headers={room.hunkHeaders}
 			>
 				{#if nearness.built}
-					<FileBody {file} {language} {view} {extent} />
+					<FileBody {sectionKey} {file} {language} {view} {extent} />
 				{:else}
 					<div data-testid="file-placeholder" class="cr-file-placeholder"></div>
 				{/if}

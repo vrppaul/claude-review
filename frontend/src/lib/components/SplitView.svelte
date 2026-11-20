@@ -30,19 +30,29 @@
 	}
 
 	/**
-	 * A cell's tint. The mark of lines being written about is added to the
-	 * change rather than replacing it, so a line keeps showing what changed on
-	 * it while it is written about.
+	 * Whether a cell wears the reader's mark: its line is being written
+	 * about, or the page took them to it. The line taken to is marked in its
+	 * own half alone: a line the change kept stands in both, and is the new
+	 * side's.
+	 */
+	function marked(cell: DrawnLine, column: LineSide): boolean {
+		return commenting.isMarked(cell.place) || (cell.place.side === column && drawing.arrivedAt(cell));
+	}
+
+	/**
+	 * A cell's tint. The reader's mark is added to the change rather than
+	 * replacing it, so a line keeps showing what changed on it while it is
+	 * written about.
 	 */
 	function tint(cell: DrawnLine | null, column: LineSide): ClassValue {
 		if (cell === null) return 'cr-cell-absent';
-		return [changed(cell, column) && TINTS[column], commenting.isMarked(cell.place) && 'cr-cell-marked'];
+		return [changed(cell, column) && TINTS[column], marked(cell, column) && 'cr-cell-marked'];
 	}
 
-	/** A cell's edge: the mark of lines being written about outranks the change, as it does across a row. */
+	/** A cell's edge: the reader's mark outranks the change, as it does across a row. */
 	function edge(cell: DrawnLine | null, column: LineSide): ClassValue {
 		if (cell === null) return 'cr-edge';
-		if (commenting.isMarked(cell.place)) return ['cr-edge', 'cr-edge-marked'];
+		if (marked(cell, column)) return ['cr-edge', 'cr-edge-marked'];
 		return ['cr-edge', changed(cell, column) && EDGES[column]];
 	}
 

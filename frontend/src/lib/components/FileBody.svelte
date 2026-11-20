@@ -9,6 +9,8 @@
 	import SplitView from './SplitView.svelte';
 
 	interface Props {
+		/** The section it is drawn in, by the key its view knows it by. */
+		sectionKey: string;
 		file: DiffFile;
 		/** What it is highlighted and rendered as, if anything. */
 		language: string | null;
@@ -17,11 +19,12 @@
 		extent: Extent;
 	}
 
-	let { file, language, view, extent }: Props = $props();
+	let { sectionKey, file, language, view, extent }: Props = $props();
 	const review = useReview();
 
 	// Made once, whichever way the lines are laid out: switching layout prepares nothing again
 	const drawing = new FileDrawing(review, {
+		section: () => sectionKey,
 		file: () => file,
 		language: () => language,
 		extent: () => extent
