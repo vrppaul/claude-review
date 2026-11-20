@@ -195,6 +195,24 @@ export class Navigator {
 	}
 
 	/**
+	 * Read a file alone again after its read failed, and go on to where the
+	 * reader was being taken in it: the thread they were last brought to,
+	 * where it is read in this file, the keyboard on it once it is drawn;
+	 * else the file's head.
+	 */
+	async readAgain(path: string): Promise<void> {
+		const alone = await this.#views.readAlone(path);
+		const thread = this.#threads.all.find((held) => held.id === this.#at?.thread);
+		const place = thread === undefined ? null : threadPlaceOf(thread.anchor);
+		if (thread !== undefined && place?.on === 'lines' && alone.sectionOf(place.lines) !== null) {
+			this.#revealIn(alone, thread, place.lines);
+			return;
+		}
+		const section = alone.sectionOfFile(path);
+		if (section !== null) this.#sections.scrollTo(section);
+	}
+
+	/**
 	 * Take the reader out of a file read alone: back to where they were
 	 * before they came into it, past every place they left within it, or,
 	 * where they came from nowhere, to the change's files.

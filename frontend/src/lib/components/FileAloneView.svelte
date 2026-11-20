@@ -26,8 +26,11 @@
 	let container: HTMLElement | undefined = $state();
 	// The file's section scrolls in this area, and builds its rows as it comes near it
 	provideScrollArea(() => container ?? null);
-	// What takes the keyboard once a read asked for again is done, the button that asked for it gone
+	// What takes the keyboard once a read asked for again is done and nothing else took it, the button that asked
+	// for it gone
 	let putAwayButton: HTMLButtonElement | undefined = $state();
+	// The act a failed read offers, which takes the keyboard as the failure is said: the reader came to read the file
+	let tryAgainButton: HTMLButtonElement | undefined = $state();
 
 	// Where the reader reads is the section at the top of this area
 	$effect(() => {
@@ -38,9 +41,14 @@
 	// The file read anew for a take leaves the reader on the line they read
 	keepPlaceRead(review.sections, () => file);
 
-	/** Read the file again after a read that failed. */
-	async function readAgain(file: string) {
-		await alone.open(file);
+	// A failure's act takes the keyboard from wherever it was, as the failure takes the place of the file's lines
+	$effect(() => {
+		tryAgainButton?.focus();
+	});
+
+	/** Read the file again after a read that failed, going on to where the reader was being taken in it. */
+	async function readAgain(failed: string) {
+		await review.navigator.readAgain(failed);
 		focusWhatRemains(() => putAwayButton);
 	}
 </script>
@@ -101,7 +109,15 @@
 						<!-- Why, under the bar, and the act to read it again -->
 						<div class="flex flex-wrap items-center gap-2 px-4 py-3">
 							<Failure stands="inline" testId="file-alone-failed" said={failure} />
-							<Button tone="quiet" size="xs" testId="read-file-again" onclick={() => readAgain(path)}>Try again</Button>
+							<Button
+								bind:element={tryAgainButton}
+								tone="quiet"
+								size="xs"
+								testId="read-file-again"
+								onclick={() => readAgain(path)}
+							>
+								Try again
+							</Button>
 						</div>
 					{/if}
 				</section>

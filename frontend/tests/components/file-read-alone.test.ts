@@ -1,4 +1,4 @@
-import { beforeEach, describe, it, expect } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { flushSync } from 'svelte';
 import { render, screen, within } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
@@ -26,6 +26,8 @@ const CALLER_OF_THE_TAKE: FileOfTakeResponse = {
 };
 // What the server says of a file of the take it could not read
 const SERVER_FAILED = 500;
+// How long a reader takes to read why a file could not be read, in milliseconds
+const READING_THE_FAILURE = 10_000;
 
 let review: Review;
 let server: FakeServer;
@@ -149,6 +151,35 @@ describe('a file the change did not touch, read alone', () => {
 
 		expect(screen.queryByTestId('file-alone-failed')).toBeNull();
 		expect(screen.getByTestId('file-lines').textContent).toContain('def caller():');
+	});
+
+	it('hands the keyboard to Try again where n takes the reader into it and its read fails', async () => {
+		const user = userEvent.setup();
+		server.refuse('GET /api/file-of-take', SERVER_FAILED, 'the repository could not be read');
+		review.threads.add(newComment({ file: CALLER, startLine: 2, body: 'the agent forgot this call' }));
+		flushSync();
+
+		await user.keyboard('n');
+		await cameToRest();
+
+		expect(document.activeElement).toBe(screen.getByTestId('read-file-again'));
+	});
+
+	it('goes on at Try again to the thread n asked for, the keyboard on it', async () => {
+		const user = userEvent.setup();
+		server.refuse('GET /api/file-of-take', SERVER_FAILED, 'the repository could not be read');
+		review.threads.add(newComment({ file: CALLER, startLine: 2, body: 'the agent forgot this call' }));
+		flushSync();
+		await user.keyboard('n');
+		await cameToRest();
+		// The reader reads why before pressing Try again: longer than the page waits for a thread's rows to be built
+		const aWhileLater = performance.now() + READING_THE_FAILURE;
+		vi.spyOn(performance, 'now').mockReturnValue(aWhileLater);
+
+		server.answer('GET /api/file-of-take', CALLER_OF_THE_TAKE);
+		await press('read-file-again');
+
+		expect(document.activeElement?.textContent).toContain('the agent forgot this call');
 	});
 });
 
