@@ -14,6 +14,7 @@ from pathlib import Path
 import pytest
 from httpx2 import AsyncClient
 
+from claude_review.domain.models import LineStanding
 from claude_review.repositories.git_repository import GitRepository
 from claude_review.services.review_opening import open_diff
 from tests.helpers import (
@@ -322,7 +323,7 @@ async def test_a_commit_made_during_the_review_leaves_its_diff_and_its_threads_a
         ]
 
     assert on_screen == ["work.py"]
-    assert [anchor["outdated"] for anchor in followed] == [False]
+    assert [anchor["standing"] for anchor in followed] == [LineStanding.ON_ITS_LINES]
 
 
 async def test_a_review_against_an_earlier_commit_keeps_that_commit_on_screen_as_more_are_made(

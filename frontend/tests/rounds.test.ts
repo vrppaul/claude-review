@@ -222,18 +222,18 @@ describe('a thread meeting a diff that has been taken again', () => {
 	it('counts a thread whose lines are gone as outdated, not as followed', async () => {
 		const server = fakeServer();
 		server.answer('POST /api/anchors/follow', {
-			anchors: [{ ...lineAnchor('a.py', 'new', 2, 2, ['def walk():']), outdated: true }]
+			anchors: [{ ...lineAnchor('a.py', 'new', 2, 2, ['def walk():']), standing: 'lines_gone' }]
 		});
 		review.threads.add(newComment({ file: 'a.py', startLine: 2, quote: ['def walk():'] }));
 
 		const moved = await review.threads.follow();
 
-		expect(review.threads.all[0].anchor.outdated).toBe(true);
+		expect(review.threads.all[0].anchor.standing).toBe('lines_gone');
 		expect(moved).toEqual({ followed: 0, outdated: 1 });
 	});
 
 	it('counts a thread outdated once, when its lines go, and not again each time it is followed after', async () => {
-		const outdated = { ...lineAnchor('a.py', 'new', 2, 2, ['def walk():']), outdated: true };
+		const outdated = { ...lineAnchor('a.py', 'new', 2, 2, ['def walk():']), standing: 'lines_gone' };
 		fakeServer().answer('POST /api/anchors/follow', { anchors: [outdated] });
 		review.threads.add(newComment({ file: 'a.py', startLine: 2, quote: ['def walk():'] }));
 

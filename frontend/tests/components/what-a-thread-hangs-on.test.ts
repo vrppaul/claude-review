@@ -30,7 +30,7 @@ describe('a thread whatever it hangs on', () => {
 		const review = openReview({ files: [file] });
 		review.threads.add({
 			...newComment({ file: 'a.py', body: 'Rather:\n\n```suggestion\nx = 2\n```' }),
-			anchor: { ...lineAnchor('a.py', 'new', 1, 1, ['the quote on the anchor']), outdated: true }
+			anchor: { ...lineAnchor('a.py', 'new', 1, 1, ['the quote on the anchor']), standing: 'lines_gone' }
 		});
 		const [thread] = review.threads.all;
 		if (!thread) throw new Error('No thread was added');

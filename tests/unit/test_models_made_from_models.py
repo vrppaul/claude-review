@@ -21,6 +21,7 @@ from claude_review.domain.models import (
     GuideState,
     LineSide,
     LineSpan,
+    LineStanding,
     OverviewBlock,
     OverviewText,
     ReaderSettings,
@@ -63,11 +64,11 @@ FILE = DiffFile(
     new_mode="100755",
 )
 OTHER_ROWS = [hunk(3, 3, "+")]
-# An anchor on what the review holds, and the same one marked outdated: making one writes that mark anew,
-# and which of the two it is made from shows it
+# An anchor on what the review holds, and the same one with its lines gone: making one writes how it stands
+# anew, and which of the two it is made from shows it
 QUOTE = ["def walk():", "    run()"]
 ANCHOR = line_anchor("src/moved.py", 11, 12, side=LineSide.OLD, quote=QUOTE)
-OUTDATED_ANCHOR = line_anchor("src/moved.py", 11, 12, side=LineSide.OLD, quote=QUOTE, outdated=True)
+OUTDATED_ANCHOR = line_anchor("src/moved.py", 11, 12, side=LineSide.OLD, quote=QUOTE, standing=LineStanding.LINES_GONE)
 # An anchor on what a chapter of the story says of itself, and the same one marked outdated
 CHAPTER_DOUBT = ChapterBlock(chapter="ch-1", text=ChapterText.DOUBT)
 STORY_ANCHOR = story_anchor(CHAPTER_DOUBT, quote=["Whether a cancelled reply still closes it."])
@@ -159,15 +160,16 @@ MADE = [
         what="an anchor quoting its lines",
         source=OUTDATED_ANCHOR,
         made=OUTDATED_ANCHOR.quoting(["def run():"]),
-        replaced={"quote", "outdated"},
+        replaced={"quote", "standing"},
     ),
     MadeFrom(
         what="an anchor found again",
         source=OUTDATED_ANCHOR,
         made=OUTDATED_ANCHOR.current_at(14, 15),
-        replaced={"start_line", "end_line", "outdated"},
+        replaced={"start_line", "end_line", "standing"},
     ),
-    MadeFrom(what="an anchor lost", source=ANCHOR, made=ANCHOR.lost(), replaced={"outdated"}),
+    MadeFrom(what="an anchor that lost its lines", source=ANCHOR, made=ANCHOR.lost_its_lines(), replaced={"standing"}),
+    MadeFrom(what="an anchor that lost its file", source=ANCHOR, made=ANCHOR.lost_its_file(), replaced={"standing"}),
     MadeFrom(
         what="an anchor quoting the story's words",
         source=OUTDATED_STORY_ANCHOR,

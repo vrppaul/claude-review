@@ -283,7 +283,8 @@ export interface paths {
          *
          *     The page holds the threads and the review holds the content, so after a
          *     round the threads come here to be moved: one whose lines survived
-         *     follows them, one whose lines are gone is marked outdated and keeps its
+         *     follows them; one whose lines are gone, or whose side of its file the
+         *     review reads no lines of, stays where it was, says which, and keeps its
          *     quote. New lines are followed in their file as the take holds it whole.
          */
         post: operations["follow_anchors_api_anchors_follow_post"];
@@ -1421,8 +1422,7 @@ export interface components {
             end_line: number;
             /** Quote */
             quote: string[];
-            /** Outdated */
-            outdated: boolean;
+            standing: components["schemas"]["LineStanding"];
         };
         /**
          * LineSide
@@ -1458,6 +1458,16 @@ export interface components {
             /** Last */
             last: number;
         };
+        /**
+         * LineStanding
+         * @description How a line anchor stands in what the review holds.
+         *
+         *     ON_ITS_LINES — its lines stand where it says.
+         *     LINES_GONE — the review reads that side of its file, and its lines are not there.
+         *     FILE_GONE — the review reads no lines of that side of its file: the file left the take, or its old side the diff.
+         * @enum {string}
+         */
+        LineStanding: "on_its_lines" | "lines_gone" | "file_gone";
         /**
          * LineType
          * @description Type of a diff line.

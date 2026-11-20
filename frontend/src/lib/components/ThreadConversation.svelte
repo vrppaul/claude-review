@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Thread } from '$lib/types';
-	import { anchorQuoteReads, anchorReplaces, anchorWrittenAgainst } from '$lib/anchors/views';
+	import { anchorOutdated, anchorQuoteReads, anchorReplaces, anchorWrittenAgainst } from '$lib/anchors/views';
 	import { tourStop } from '$lib/guide/tour';
 	import { useReview } from '$lib/review/context';
 	import Button from '$lib/ui/Button.svelte';
@@ -119,7 +119,7 @@
 				<span>{howLongAgo(exchange.at)}</span>
 			{/if}
 		{/snippet}
-		{#if opening && thread.anchor.outdated && writtenAgainst.length > 0}
+		{#if opening && anchorOutdated(thread.anchor) && writtenAgainst.length > 0}
 			<!-- One that has lost its place keeps its own copy of what was there -->
 			<KeptQuote caption={WRITTEN_AGAINST} lines={writtenAgainst} reads={quoteReads} testId="written-against" />
 		{/if}

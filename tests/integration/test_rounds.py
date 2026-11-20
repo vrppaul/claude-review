@@ -16,7 +16,7 @@ from fastapi.testclient import TestClient
 from httpx2 import AsyncClient
 
 from claude_review.domain.interfaces import GitError
-from claude_review.domain.models import FIRST_ROUND, FilesRead
+from claude_review.domain.models import FIRST_ROUND, FilesRead, LineStanding
 from claude_review.presentation.schemas.pushes import AnswererPush, DiffPush, HandedPush
 from claude_review.services.review_opening import ReviewOpening
 from tests.helpers import (
@@ -249,9 +249,9 @@ async def test_after_a_retake_each_thread_is_told_where_its_lines_went(
         )
 
     followed, gone, reverted = response.json()["anchors"]
-    assert (followed["start_line"], followed["outdated"]) == (2, False)
-    assert (gone["start_line"], gone["outdated"]) == (1, True)
-    assert (reverted["start_line"], reverted["outdated"]) == (1, False)
+    assert (followed["start_line"], followed["standing"]) == (2, LineStanding.ON_ITS_LINES)
+    assert (gone["start_line"], gone["standing"]) == (1, LineStanding.LINES_GONE)
+    assert (reverted["start_line"], reverted["standing"]) == (1, LineStanding.ON_ITS_LINES)
 
 
 async def test_a_thread_on_a_place_the_change_forgot_follows_it_once_the_change_writes_above_it(
@@ -274,7 +274,7 @@ async def test_a_thread_on_a_place_the_change_forgot_follows_it_once_the_change_
         response = await client.post("/api/anchors/follow", json={"anchors": [raised["anchor"]]}, headers=LOCAL_HEADERS)
 
     [followed] = response.json()["anchors"]
-    assert (followed["start_line"], followed["outdated"]) == (21, False)
+    assert (followed["start_line"], followed["standing"]) == (21, LineStanding.ON_ITS_LINES)
 
 
 class TreesUnread(RepositoryHeldStill):
@@ -296,4 +296,4 @@ async def test_threads_follow_in_the_diff_alone_when_git_will_not_read_the_take(
         response = await client.post("/api/anchors/follow", json={"anchors": [on_the_line]}, headers=LOCAL_HEADERS)
 
     [followed] = response.json()["anchors"]
-    assert (followed["start_line"], followed["outdated"]) == (2, False)
+    assert (followed["start_line"], followed["standing"]) == (2, LineStanding.ON_ITS_LINES)

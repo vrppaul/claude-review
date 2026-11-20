@@ -117,6 +117,7 @@ export const storyAnchorView: AnchorView<StoryAnchor> = {
 	token,
 	mentionsIn: (text, anchor) => mentionStarts(text, token(anchor), CARRIES_ON),
 	sameSpot: (one, other) => blockKey(one.block) === blockKey(other.block),
+	outdated: (anchor) => anchor.outdated,
 	writtenAgainst: (anchor) => anchor.quote,
 	quoteReads: 'prose',
 	replaces: () => [],

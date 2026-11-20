@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { FollowOutcome } from '$lib/types';
+	import { anchorOutdated } from '$lib/anchors/views';
 	import { useReview } from '$lib/review/context';
 	import { followWords, PHRASE_BREAK } from '$lib/review/follow-words';
 	import Button from '$lib/ui/Button.svelte';
@@ -23,7 +24,7 @@
 	// The one thing a retake can lose: a thread whose lines are gone. It keeps
 	// what it was written against, and that is what the button goes to: the
 	// first, when there are several.
-	const outdated = $derived(review.threads.all.filter((thread) => thread.anchor.outdated));
+	const outdated = $derived(review.threads.all.filter((thread) => anchorOutdated(thread.anchor)));
 	const stranded = $derived(outdated.at(0));
 
 	/** What the retaken bar says happened, in the order it matters. */

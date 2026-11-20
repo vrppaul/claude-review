@@ -88,7 +88,7 @@ class AnchorHandler[Kind: AnchorBase](ABC):
 
     @abstractmethod
     def follow(self, anchor: Kind) -> Kind:
-        """The anchor moved onto what the review holds now, or marked outdated."""
+        """The anchor moved onto what the review holds now, or saying that what it was on is gone."""
 
 
 class LineAnchorHandler(AnchorHandler[LineAnchor]):
@@ -173,15 +173,18 @@ class LineAnchorHandler(AnchorHandler[LineAnchor]):
         The lines it quotes are looked for and the anchor follows them; when
         they are gone it stays on its old numbers and says so, rather than
         pointing at whatever has slid into their place. One that never kept
-        its lines has nothing to search for, and is left where it is.
+        its lines has nothing to search for, and is left where it is. Either
+        has lost its file where the review reads no lines of that side of it.
         """
+        if anchor.file not in self._hunks[anchor.side]:
+            return anchor.lost_its_file()
         if not anchor.quote:
             return anchor.current_at(anchor.start_line, anchor.end_line)
 
         lines = self._lines_of(anchor.file, anchor.side)
         found = find_run(lines, anchor.quote, near=anchor.start_line)
         if found is None:
-            return anchor.lost()
+            return anchor.lost_its_lines()
 
         return anchor.current_at(lines[found].number, lines[found + len(anchor.quote) - 1].number)
 
@@ -303,7 +306,7 @@ class AnchorService:
                 assert_never(anchor)
 
     def follow(self, anchor: Anchor) -> Anchor:
-        """The anchor moved onto what the review holds now, or marked outdated."""
+        """The anchor moved onto what the review holds now, or saying that what it was on is gone."""
         match anchor:
             case LineAnchor():
                 return self._lines.follow(anchor)

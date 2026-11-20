@@ -57,6 +57,8 @@ export interface AnchorView<Kind extends Anchor> {
 	mentionsIn: (text: string, anchor: Kind) => number[];
 	/** Whether two anchors of this kind hang on the same spot. */
 	sameSpot: (one: Kind, other: Kind) => boolean;
+	/** Whether what the thread was written on is gone from what the review holds. */
+	outdated: (anchor: Kind) => boolean;
 	/** What the comment was written against, as it read then: shown once the place it hangs on is gone. */
 	writtenAgainst: (anchor: Kind) => string[];
 	/** How that reads, the same for every anchor of the kind. */
@@ -108,6 +110,11 @@ export function anchorMentionsIn(text: string, anchor: Anchor): number[] {
 /** Whether two anchors hang on the same spot: never, for anchors of two kinds. */
 export function sameSpot(one: Anchor, other: Anchor): boolean {
 	return one.kind === other.kind && viewOf(one).sameSpot(one, other);
+}
+
+/** Whether what a thread on an anchor was written on is gone from what the review holds. */
+export function anchorOutdated(anchor: Anchor): boolean {
+	return viewOf(anchor).outdated(anchor);
 }
 
 /** What a comment on an anchor was written against, as it read then. */

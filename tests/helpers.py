@@ -40,6 +40,7 @@ from claude_review.domain.models import (
     FileStatus,
     LineAnchor,
     LineSide,
+    LineStanding,
     LineType,
     OfConversation,
     OfFiles,
@@ -225,16 +226,16 @@ def line_anchor(
     *,
     side: LineSide = LineSide.NEW,
     quote: list[str] | None = None,
-    outdated: bool = False,
+    standing: LineStanding = LineStanding.ON_ITS_LINES,
 ) -> LineAnchor:
-    """Lines of one side of a file; a single line unless an end is given."""
+    """Lines of one side of a file; a single line on its lines unless an end and a standing are given."""
     return LineAnchor(
         file=file,
         side=side,
         start_line=start_line,
         end_line=end_line or start_line,
         quote=quote or [],
-        outdated=outdated,
+        standing=standing,
     )
 
 
@@ -281,7 +282,7 @@ def line_json(
         "start_line": start_line,
         "end_line": end_line or start_line,
         "quote": [],
-        "outdated": False,
+        "standing": LineStanding.ON_ITS_LINES,
     }
 
 

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Thread } from '$lib/types';
-	import { anchorShortPlace } from '$lib/anchors/views';
+	import { anchorOutdated, anchorShortPlace } from '$lib/anchors/views';
 	import PopoverPanel from '$lib/ui/PopoverPanel.svelte';
 	import Row from '$lib/ui/Row.svelte';
 	import { counted, type CountedWords } from '$lib/utils/words';
@@ -22,7 +22,7 @@
 
 	/** What a thread is in, so the picker says whether it is still live. */
 	function threadState(thread: Thread): string {
-		if (thread.anchor.outdated) return 'outdated';
+		if (anchorOutdated(thread.anchor)) return 'outdated';
 		if (thread.resolved) return 'resolved';
 		if (thread.turns.length > 0) return counted(thread.turns.length, TURNS);
 		return '';

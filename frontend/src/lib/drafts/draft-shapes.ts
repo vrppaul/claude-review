@@ -14,21 +14,24 @@
  * the round the review had reached, rather than read back from the marks
  * its threads carry; a message taken back in the panel says when; an edit
  * says which of the reader's words in its thread it rewrites; which threads
- * went out it keeps no more, the review saying what the agent has; and it is
+ * went out it keeps no more, the review saying what the agent has; it is
  * kept under the name the review gives itself rather than under its title,
- * which another review on the same port may share. A
+ * which another review on the same port may share; and a thread on lines
+ * says how it stands there, where it said only that it was outdated. A
  * draft a release kept is brought up to date — never thrown away: it is an
- * hour of somebody's reading. The shapes between the last released one and
- * this were never released, and are not read.
+ * hour of somebody's reading. A shape no release kept is not read.
  */
 
 import type {
+	Anchor,
 	AwaitedQuestion,
 	TakenBackQuestion,
 	CommentSeverity,
 	Composer,
+	LineAnchor,
 	LineSide,
 	PanelTurn,
+	StoryAnchor,
 	TellingPosition,
 	Thread,
 	Turn,
@@ -38,7 +41,9 @@ import { COMMENT_ID_PREFIX, IdSequence, TURN_ID_PREFIX } from '$lib/utils/ids';
 import { AGENT, READER } from '$lib/utils/speakers';
 
 /** The shape drafts are kept in now. */
-export const DRAFT_SHAPE = 23;
+export const DRAFT_SHAPE = 24;
+// The shape releases 1.6.0 to 1.7.3 kept, the last before a thread on lines said how it stands
+const SHAPE_BEFORE_STANDING = 23;
 // The round every review begins in
 const FIRST_ROUND = 1;
 
@@ -109,8 +114,23 @@ export interface Draft extends KeptThreads {
 	round: number;
 }
 
+/** Lines of a file a thread hung on as drafts kept them before they said how they stand: outdated or not. */
+type KeptLineAnchor = Omit<LineAnchor, 'standing'> & { outdated: boolean };
+
+/** What a thread hung on as drafts kept it before lines said how they stand. */
+type KeptAnchor = KeptLineAnchor | StoryAnchor;
+
+/** A thread as drafts kept it before lines said how they stand. */
+type ThreadBeforeStanding = Omit<Thread, 'anchor'> & { anchor: KeptAnchor };
+
+/** A draft of the shape the last releases kept, every thread on lines saying only whether it was outdated. */
+interface DraftBeforeStanding extends Omit<Draft, 'version' | 'threads'> {
+	version: typeof SHAPE_BEFORE_STANDING;
+	threads: ThreadBeforeStanding[];
+}
+
 /** A thread as drafts kept it until how it was read moved out of it, always saying when it was written. */
-interface ReadComment extends Thread {
+interface ReadComment extends ThreadBeforeStanding {
 	at: number;
 	awaiting: AwaitedQuestion[];
 	collapsed: boolean;
@@ -166,19 +186,50 @@ interface ReleasedDraft {
 	issued?: IssuedIds;
 }
 
-/**
- * Whether what was read from storage is a draft of the current shape.
- * Threads kept as threads in any other shape were never released.
- */
-export function isCurrentDraft(value: unknown): value is Draft {
+/** Whether what was read from storage is a draft of this shape, its threads kept as threads. */
+function isDraftOfShape(value: unknown, shape: number): boolean {
 	return (
 		typeof value === 'object' &&
 		value !== null &&
 		'version' in value &&
-		value.version === DRAFT_SHAPE &&
+		value.version === shape &&
 		'threads' in value &&
 		Array.isArray(value.threads)
 	);
+}
+
+/** Whether what was read from storage is a draft of the current shape. */
+export function isCurrentDraft(value: unknown): value is Draft {
+	return isDraftOfShape(value, DRAFT_SHAPE);
+}
+
+/**
+ * Whether what was read from storage is a draft of the shape the last
+ * releases kept. Threads kept as threads in any other shape were never
+ * released.
+ */
+export function isDraftBeforeStanding(value: unknown): value is DraftBeforeStanding {
+	return isDraftOfShape(value, SHAPE_BEFORE_STANDING);
+}
+
+/** A draft of the current shape, out of one the last releases kept: every thread on lines says how it stands. */
+export function withStanding(kept: DraftBeforeStanding): Draft {
+	return {
+		...kept,
+		version: DRAFT_SHAPE,
+		threads: kept.threads.map((thread) => ({ ...thread, anchor: anchorStanding(thread.anchor) }))
+	};
+}
+
+/**
+ * What a kept thread hangs on, saying how it stands. Lines kept outdated
+ * are read as gone from their file: the draft cannot tell whether the file
+ * went too, and following the threads as the review opens finds out.
+ */
+function anchorStanding(kept: KeptAnchor): Anchor {
+	if (kept.kind === 'story') return kept;
+	const { outdated, ...lines } = kept;
+	return { ...lines, standing: outdated ? 'lines_gone' : 'on_its_lines' };
 }
 
 /** Whether what was read from storage is a draft a release kept, threads kept as comments. */
@@ -300,11 +351,11 @@ function idOf(kept: { id: string }): string {
 	return kept.id;
 }
 
-/** What a comment said, without how it was read. */
+/** What a comment said, without how it was read, and saying how it stands. */
 function threadOf(comment: ReadComment): Thread {
 	return {
 		id: comment.id,
-		anchor: comment.anchor,
+		anchor: anchorStanding(comment.anchor),
 		severity: comment.severity,
 		body: comment.body,
 		images: comment.images,
@@ -342,7 +393,7 @@ function upToDateComment(kept: KeptComment, turnIds: IdSequence): ReadComment {
 }
 
 /** What a kept thread hangs on, whether it kept an anchor or the lines alone. */
-function anchorOf(kept: KeptComment): Thread['anchor'] {
+function anchorOf(kept: KeptComment): KeptAnchor {
 	if ('anchor' in kept) return kept.anchor;
 	return {
 		kind: 'line',

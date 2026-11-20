@@ -171,7 +171,7 @@ describe('a comment whose line the diff no longer shows', () => {
 	});
 	const onTheRemovedLine = {
 		...newComment({ file: 'src/core/session.py', body: 'why did this go' }),
-		anchor: { ...lineAnchor('src/core/session.py', 'old', 2, 2, ['x = 1']), outdated: true }
+		anchor: { ...lineAnchor('src/core/session.py', 'old', 2, 2, ['x = 1']), standing: 'lines_gone' }
 	};
 
 	it('is drawn at the head of its file, whole, rather than nowhere', () => {
@@ -202,7 +202,7 @@ describe('a comment whose line the diff no longer shows', () => {
 		const review = openReview({ files: [restored] });
 		review.threads.add({
 			...onTheRemovedLine,
-			anchor: { ...lineAnchor('src/core/session.py', 'new', 9, 9, ['gone']), outdated: true }
+			anchor: { ...lineAnchor('src/core/session.py', 'new', 9, 9, ['gone']), standing: 'lines_gone' }
 		});
 		fakeServer().answer('GET /api/diff', diffResponse({ files: [restored], base: sinceRound(1) }));
 		await review.diff.setBase('round:1');

@@ -279,8 +279,7 @@ export interface components {
             end_line: number;
             /** Quote */
             quote: string[];
-            /** Outdated */
-            outdated: boolean;
+            standing: components["schemas"]["LineStanding"];
         };
         /**
          * LineSide
@@ -293,6 +292,16 @@ export interface components {
          * @enum {string}
          */
         LineSide: "old" | "new";
+        /**
+         * LineStanding
+         * @description How a line anchor stands in what the review holds.
+         *
+         *     ON_ITS_LINES — its lines stand where it says.
+         *     LINES_GONE — the review reads that side of its file, and its lines are not there.
+         *     FILE_GONE — the review reads no lines of that side of its file: the file left the take, or its old side the diff.
+         * @enum {string}
+         */
+        LineStanding: "on_its_lines" | "lines_gone" | "file_gone";
         /**
          * OverviewBlock
          * @description One of the overview's three lines, by its name.

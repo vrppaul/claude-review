@@ -93,7 +93,7 @@ describe('every control that takes the reader to a thread', () => {
 
 	it('takes the reader to the thread a retake left outdated, and n goes on from there', async () => {
 		const user = userEvent.setup();
-		review.threads.all[1].anchor.outdated = true;
+		review.threads.all[1].anchor.standing = 'lines_gone';
 		review.noteRetake({ followed: 0, outdated: 1 }, null);
 		render(ReviewScreen, { props: { review } });
 
@@ -107,7 +107,7 @@ describe('every control that takes the reader to a thread', () => {
 	it('takes the reader to the thread a retake left outdated on a file the diff no longer has', async () => {
 		const user = userEvent.setup();
 		// The agent put the file back as it was, and the retake left it out
-		const anchor = { ...newComment({ file: 'gone.py' }).anchor, outdated: true };
+		const anchor = { ...newComment({ file: 'gone.py' }).anchor, standing: 'lines_gone' };
 		review.threads.add({ ...newComment({ file: 'gone.py', body: 'about gone.py' }), anchor });
 		review.noteRetake({ followed: 0, outdated: 1 }, null);
 		render(ReviewScreen, { props: { review } });

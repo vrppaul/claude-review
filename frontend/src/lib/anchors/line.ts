@@ -37,6 +37,7 @@ export const lineAnchorView: AnchorView<LineAnchor> = {
 	token,
 	mentionsIn: (text, anchor) => mentionStarts(text, token(anchor), CARRIES_ON),
 	sameSpot,
+	outdated: (anchor) => anchor.standing !== 'on_its_lines',
 	writtenAgainst: (anchor) => anchor.quote,
 	quoteReads: 'code',
 	replaces: (anchor) => anchor.quote,
@@ -58,6 +59,6 @@ export function lineAnchor(
 		start_line: startLine,
 		end_line: endLine,
 		quote,
-		outdated: false
+		standing: 'on_its_lines'
 	};
 }

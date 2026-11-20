@@ -9,7 +9,14 @@
  * port named twice, or two repositories of one name — each find their own.
  */
 
-import { type Draft, isCurrentDraft, isReleasedDraft, upToDate } from '$lib/drafts/draft-shapes';
+import {
+	type Draft,
+	isCurrentDraft,
+	isDraftBeforeStanding,
+	isReleasedDraft,
+	upToDate,
+	withStanding
+} from '$lib/drafts/draft-shapes';
 import { storageKey } from '$lib/utils/preferences';
 
 // Where releases up to 1.5 kept the one draft of every review on a port,
@@ -119,6 +126,7 @@ export function readDraft(identity: string, title: string): KeptDraft {
 	try {
 		const kept = keptUnder(ownKey);
 		if (isCurrentDraft(kept)) return { draft: kept, setAside: false };
+		if (isDraftBeforeStanding(kept)) return { draft: withStanding(kept), setAside: false };
 	} catch (error) {
 		return unreadable(ownKey, error);
 	}

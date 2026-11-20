@@ -7,7 +7,7 @@ import pytest
 from claude_review.cli.rendering import GIST_LENGTH, render_catch_up, render_thread
 from claude_review.domain import models
 from claude_review.domain.checks import CheckStatus
-from claude_review.domain.models import CommentSeverity, Turn, TurnAuthor
+from claude_review.domain.models import CommentSeverity, LineStanding, Turn, TurnAuthor
 from claude_review.presentation.schemas.agent import AgentStatus, CatchUpResponse, PanelEntry
 from claude_review.presentation.schemas.checks import Check
 from claude_review.presentation.schemas.threads import Thread, ThreadSummary
@@ -26,7 +26,7 @@ DISCUSSED = thread(
     turns=[Turn(author=TurnAuthor.AUTHOR, body="It cannot: one queue.", round=2, images=[])],
 )
 SETTLED = thread(line_anchor("src/app.py", 3), "Rename it", thread_id="comment-5", resolved=True)
-GONE = thread(line_anchor("src/old.py", 9, outdated=True), "This moved", thread_id="comment-6")
+GONE = thread(line_anchor("src/old.py", 9, standing=LineStanding.LINES_GONE), "This moved", thread_id="comment-6")
 RAISED = thread(line_anchor("src/app.py", 7), "Kept on purpose", thread_id="raised-1", raised_by=TurnAuthor.AUTHOR)
 
 ASKED_TO_RUN_THE_TESTS = PanelEntry(

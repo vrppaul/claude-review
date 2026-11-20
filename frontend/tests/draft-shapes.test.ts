@@ -3,6 +3,7 @@ import fastCheck from 'fast-check';
 import { DRAFT_SHAPE, emptyDraft, isCurrentDraft, isReleasedDraft, type Draft } from '$lib/drafts/draft-shapes';
 import { forgetDraft, keepDraft, readDraft } from '$lib/drafts/draft-storage';
 import { lineAnchor } from '$lib/anchors/line';
+import { storyAnchor } from '$lib/anchors/story';
 import type { AwaitedQuestion, Thread } from '$lib/types';
 import { REVIEW_TITLE } from './diff';
 import { REVIEW_IDENTITY, THIS_RUN } from './fake-socket';
@@ -101,8 +102,8 @@ function keptComment(): KeptComment {
 }
 
 /**
- * A draft as v1.5.0 — the last release, the one whose drafts readers hold
- * now — wrote it with `saveDraft`, copied field for field from what that
+ * A draft as v1.5.0 — the last release to keep one draft for every review
+ * on a port — wrote it with `saveDraft`, copied field for field from what that
  * release's `Draft`, `Comment`, `Turn`, `PanelTurn` and `Composer` held:
  * shape 7, the one draft of the port, told apart by title. Each comment
  * carries how it was read; a sent thread is an [id, round] pair; the panel
@@ -188,7 +189,7 @@ const UP_TO_DATE_1_5_0: Draft = {
 		},
 		{
 			id: 'raised-1',
-			anchor: { ...lineAnchor('src/b.py', 'old', 7, 7, ['gone()']), outdated: true },
+			anchor: { ...lineAnchor('src/b.py', 'old', 7, 7, ['gone()']), standing: 'lines_gone' },
 			severity: 'note',
 			body: 'This went',
 			images: [],
@@ -222,7 +223,7 @@ const UP_TO_DATE_1_5_0: Draft = {
 	round: 2
 };
 
-describe('the draft the last release kept, as it wrote it', () => {
+describe('the draft v1.5.0 kept, as it wrote it', () => {
 	it('comes back in the current shape with everything it held', () => {
 		storeReleasedDraft(WRITTEN_BY_1_5_0);
 
@@ -267,6 +268,67 @@ describe('the draft the last release kept, as it wrote it', () => {
 				}
 			)
 		);
+	});
+});
+
+/** A thread as v1.7.3 kept it, on lines that say only whether they are outdated. */
+function threadOnLinesKeptBy1_7_3(id: string, outdated: boolean) {
+	const anchor = {
+		kind: 'line',
+		file: 'a.py',
+		side: 'new',
+		start_line: 3,
+		end_line: 4,
+		quote: ['x = 1', 'y = 2'],
+		outdated
+	};
+	return { ...fullThread(), id, anchor };
+}
+
+/** The doubt of the story's overview, and a thread on it the story said nowhere when last followed. */
+const DOUBT = 'Whether it holds.';
+const ON_A_DOUBT_GONE: Thread = {
+	...fullThread(),
+	id: 'comment-3',
+	anchor: { ...storyAnchor({ at: 'overview', text: 'doubt' }, DOUBT), outdated: true }
+};
+
+/**
+ * A draft as v1.7.3 — the last release, the one whose drafts readers hold
+ * now — kept it: shape 23, under the review's own name, a thread on lines
+ * saying only whether it was outdated.
+ */
+const WRITTEN_BY_1_7_3 = {
+	version: 23,
+	threads: [threadOnLinesKeptBy1_7_3('comment-1', false), threadOnLinesKeptBy1_7_3('comment-2', true), ON_A_DOUBT_GONE],
+	read: { folded: ['comment-2'], unread: [], awaiting: {}, takenBack: {} },
+	writing: [],
+	reviewBody: 'Overall fine',
+	panel: [],
+	composer: { text: '', images: [], uploaded: [] },
+	issued: { comments: 3, turns: 1 },
+	told: { instance: THIS_RUN, sequence: 4 },
+	files: { viewed: ['a.py'], folded: [] },
+	round: 2
+};
+
+describe('the draft the last release kept, as it wrote it', () => {
+	it('comes back in the current shape, each thread on lines standing as it said: on them, or its lines gone', () => {
+		storeDraft(WRITTEN_BY_1_7_3);
+
+		expect(readKept()).toEqual({
+			...WRITTEN_BY_1_7_3,
+			version: DRAFT_SHAPE,
+			threads: [
+				{ ...fullThread(), id: 'comment-1', anchor: lineAnchor('a.py', 'new', 3, 4, ['x = 1', 'y = 2']) },
+				{
+					...fullThread(),
+					id: 'comment-2',
+					anchor: { ...lineAnchor('a.py', 'new', 3, 4, ['x = 1', 'y = 2']), standing: 'lines_gone' }
+				},
+				ON_A_DOUBT_GONE
+			]
+		});
 	});
 });
 
@@ -459,7 +521,7 @@ describe('a draft written by an older release', () => {
 			start_line: 4,
 			end_line: 6,
 			quote: ['a', 'b', 'c'],
-			outdated: true
+			standing: 'lines_gone'
 		});
 		expect(Object.keys(comment)).not.toContain('start_line');
 		expect(Object.keys(comment)).not.toContain('quote');

@@ -121,7 +121,7 @@ describe('when the tree moves under the review', () => {
 
 	it('offers a way to the thread that lost its lines, by what it is', () => {
 		review.threads.add(newComment({ file: 'a.py', body: 'this one' }));
-		review.threads.all[0].anchor.outdated = true;
+		review.threads.all[0].anchor.standing = 'lines_gone';
 		review.noteRetake({ followed: 0, outdated: 1 }, null);
 
 		const { getByTestId } = render(DiffNotice, inReview(review));
@@ -132,7 +132,7 @@ describe('when the tree moves under the review', () => {
 	it('offers a way to the first of several threads that lost their lines', () => {
 		review.threads.add(newComment({ file: 'a.py', startLine: 1, body: 'this one' }));
 		review.threads.add(newComment({ file: 'a.py', startLine: 2, body: 'and this one' }));
-		for (const thread of review.threads.all) thread.anchor.outdated = true;
+		for (const thread of review.threads.all) thread.anchor.standing = 'lines_gone';
 		review.noteRetake({ followed: 0, outdated: 2 }, null);
 
 		const { getByTestId } = render(DiffNotice, inReview(review));

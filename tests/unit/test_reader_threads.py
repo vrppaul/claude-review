@@ -9,6 +9,7 @@ from claude_review.domain.models import (
     FIRST_ROUND,
     CommentSeverity,
     LineAnchor,
+    LineStanding,
     ThreadDraft,
     TurnAuthor,
     TurnDraft,
@@ -18,7 +19,7 @@ from tests.helpers import FIRST_THREAD_ID, REVIEWED_FILE, REVIEWED_LINE, line_an
 
 # What a thread hangs on, quoted, and the same lines once the diff lost them
 ANCHOR = line_anchor(REVIEWED_FILE, 1, quote=[REVIEWED_LINE])
-LOST = line_anchor(REVIEWED_FILE, 1, quote=[REVIEWED_LINE], outdated=True)
+LOST = line_anchor(REVIEWED_FILE, 1, quote=[REVIEWED_LINE], standing=LineStanding.LINES_GONE)
 OPENING = "Why one?"
 # The reader's reply the agent is handed with the thread, as it was and as it may come back
 REPLY_ID = "turn-1"

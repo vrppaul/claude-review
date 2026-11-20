@@ -19,6 +19,8 @@ from claude_review.domain.models import (
     FileStatus,
     LineAnchor,
     LineSide,
+    LineStanding,
+    Unshown,
 )
 from claude_review.services.anchor_service import LineAnchorHandler
 from claude_review.services.whole_file import whole_hunk
@@ -116,18 +118,52 @@ def test_a_range_moves_as_one() -> None:
     assert (followed.start_line, followed.end_line) == (3, 4)
 
 
-def test_a_thread_whose_lines_are_gone_says_so_and_stays_put() -> None:
+def test_a_thread_whose_lines_are_gone_stays_put_with_what_it_quoted() -> None:
     gone = LineAnchorHandler(MOVED_DOWN, []).follow(line_anchor(FILE, 2, quote=["def walk():"]))
 
-    assert gone.outdated is True
     assert (gone.start_line, gone.end_line) == (2, 2)
     assert gone.quote == ["def walk():"]
 
 
-def test_a_thread_whose_file_is_in_neither_the_diff_nor_the_take_is_outdated() -> None:
-    gone = LineAnchorHandler([], []).follow(line_anchor(FILE, 2, quote=[RUN]))
+# The file as the diff holds it with no line shown: binary, too large to read, or only its mode changed
+NO_LINE_SHOWN = [DiffFile(path=FILE, status=FileStatus.MODIFIED, hunks=[], unshown=Unshown.BINARY)]
 
-    assert gone.outdated is True
+
+@pytest.mark.parametrize(
+    ("diff_files", "take_files"),
+    [(MOVED_DOWN, []), ([], UNTOUCHED), (NO_LINE_SHOWN, [])],
+    ids=["in-the-diff", "in-the-file-as-the-take-holds-it", "in-a-file-the-diff-shows-no-line-of"],
+)
+def test_a_thread_whose_lines_are_gone_from_a_file_the_review_reads_has_lost_its_lines(
+    diff_files: list[DiffFile], take_files: list[FileOfTake]
+) -> None:
+    gone = LineAnchorHandler(diff_files, take_files).follow(line_anchor(FILE, 2, quote=["def walk():"]))
+
+    assert gone.standing is LineStanding.LINES_GONE
+
+
+@pytest.mark.parametrize(
+    "anchor",
+    [
+        line_anchor("gone.py", 2, quote=[RUN]),
+        line_anchor("gone.py", 2),
+        line_anchor(FILE, 2, side=LineSide.OLD, quote=[RUN]),
+        line_anchor(FILE, 2, side=LineSide.OLD),
+    ],
+    ids=[
+        "a-file-neither-the-diff-nor-the-take-holds",
+        "the-same-quoting-nothing",
+        "the-old-side-of-a-file-the-diff-does-not-hold",
+        "the-old-side-quoting-nothing",
+    ],
+)
+def test_a_thread_on_a_side_of_a_file_the_review_reads_no_lines_of_has_lost_its_file_and_stays_put(
+    anchor: LineAnchor,
+) -> None:
+    """Whether a quote stands anywhere is not asked: the review holds no line of that side to look in."""
+    gone = LineAnchorHandler([], UNTOUCHED).follow(anchor)
+
+    assert (gone.start_line, gone.standing) == (2, LineStanding.FILE_GONE)
 
 
 def test_a_thread_on_a_file_the_diff_does_not_hold_follows_its_lines_in_the_file_as_the_take_holds_it() -> None:
@@ -135,17 +171,6 @@ def test_a_thread_on_a_file_the_diff_does_not_hold_follows_its_lines_in_the_file
     followed = LineAnchorHandler([], UNTOUCHED).follow(line_anchor(FILE, 1, 2, quote=[RUN, RETURN]))
 
     assert (followed.start_line, followed.end_line, followed.outdated) == (2, 3, False)
-
-
-@pytest.mark.parametrize(
-    "anchor",
-    [line_anchor(FILE, 2, quote=["def walk():"]), line_anchor(FILE, 2, side=LineSide.OLD, quote=[RUN])],
-    ids=["its-lines-gone-from-the-file", "on-the-old-side-which-no-change-holds"],
-)
-def test_a_thread_on_a_file_the_diff_does_not_hold_and_no_line_of_it_holds_its_quote_is_outdated(
-    anchor: LineAnchor,
-) -> None:
-    assert LineAnchorHandler([], UNTOUCHED).follow(anchor).outdated is True
 
 
 def test_quoting_a_file_the_diff_does_not_hold_reads_the_lines_off_the_file_as_the_take_holds_it() -> None:
@@ -162,7 +187,7 @@ def test_a_thread_that_never_kept_its_lines_is_left_where_it_is() -> None:
 
 
 def test_lines_that_come_back_take_the_outdated_mark_off() -> None:
-    outdated = line_anchor(FILE, 7, quote=[RUN], outdated=True)
+    outdated = line_anchor(FILE, 7, quote=[RUN], standing=LineStanding.LINES_GONE)
 
     followed = LineAnchorHandler(MOVED_DOWN, []).follow(outdated)
 
@@ -210,7 +235,7 @@ def test_quoting_reads_the_lines_off_the_diff() -> None:
 
 def test_an_anchor_quoted_off_the_diff_is_on_what_the_review_holds_whatever_it_said_before() -> None:
     """Its lines were just read where it says they are: it is not outdated, though it came marked so."""
-    quoted = LineAnchorHandler(MOVED_DOWN, []).quote(line_anchor(FILE, 3, 4, outdated=True))
+    quoted = LineAnchorHandler(MOVED_DOWN, []).quote(line_anchor(FILE, 3, 4, standing=LineStanding.LINES_GONE))
 
     assert quoted.outdated is False
 

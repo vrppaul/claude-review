@@ -348,7 +348,7 @@ describe('a comment on a file the diff no longer has', () => {
 	// The agent put the file back as it was, and the diff was taken again without it
 	const onTheRevertedFile = {
 		...newComment({ file: 'src/reverted.ts', body: 'why this change' }),
-		anchor: { ...lineAnchor('src/reverted.ts', 'new', 1, 1, ['const z = 1;']), outdated: true }
+		anchor: { ...lineAnchor('src/reverted.ts', 'new', 1, 1, ['const z = 1;']), standing: 'lines_gone' }
 	};
 
 	it('is drawn above the files, whole, rather than nowhere', () => {

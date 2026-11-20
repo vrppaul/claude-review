@@ -639,7 +639,11 @@ describe('the bar of a thread', () => {
 
 	it('says what the thread asks for, that it is outdated, and the round it went out in', () => {
 		const { anchor } = onTheAddedLine('');
-		review.threads.add({ ...onTheAddedLine('Why 3?'), severity: 'question', anchor: { ...anchor, outdated: true } });
+		review.threads.add({
+			...onTheAddedLine('Why 3?'),
+			severity: 'question',
+			anchor: { ...anchor, standing: 'lines_gone' }
+		});
 		handOverNext(review, handedPush(review.threads.all));
 
 		const bar = within(firstThread().getByTestId('thread-bar'));

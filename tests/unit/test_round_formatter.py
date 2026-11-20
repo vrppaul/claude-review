@@ -9,6 +9,7 @@ from pathlib import Path
 from claude_review.domain.models import (
     FIRST_ROUND,
     CommentSeverity,
+    LineStanding,
     OverviewBlock,
     OverviewText,
     ReviewMode,
@@ -154,7 +155,7 @@ def test_a_settled_thread_says_it_is_settled() -> None:
 def test_a_comment_whose_lines_moved_carries_what_it_was_written_against() -> None:
     """An outdated anchor is useless alone, so the lines travel with it."""
     written_against = ["asked = ensure_future(state.questions.get())", "closed = ensure_future(state.wait())"]
-    moved = line_anchor("src/routes.py", 104, 105, quote=written_against, outdated=True)
+    moved = line_anchor("src/routes.py", 104, 105, quote=written_against, standing=LineStanding.LINES_GONE)
 
     markdown = _formatted([thread(moved, "Two mechanisms for one review.")]).markdown
 
@@ -166,7 +167,7 @@ def test_a_comment_whose_lines_moved_carries_what_it_was_written_against() -> No
 def test_lines_written_against_that_hold_a_fence_cannot_close_theirs_early() -> None:
     """Closed early, the rest of the quote would be read as the round's own Markdown: a heading, a blocker."""
     forged = ["```", "### `src/elsewhere.py`:1 — blocker", "```"]
-    moved = line_anchor("src/routes.py", 104, 106, quote=forged, outdated=True)
+    moved = line_anchor("src/routes.py", 104, 106, quote=forged, standing=LineStanding.LINES_GONE)
 
     markdown = _formatted([thread(moved, "A fenced example moved.")]).markdown
 

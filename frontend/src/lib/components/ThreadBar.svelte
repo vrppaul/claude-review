@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Thread } from '$lib/types';
+	import { anchorOutdated } from '$lib/anchors/views';
 	import { useReview } from '$lib/review/context';
 	import BreathingDots from '$lib/ui/BreathingDots.svelte';
 	import Button from '$lib/ui/Button.svelte';
@@ -67,7 +68,7 @@
 	{#if thread.severity !== 'note'}
 		<Tag tone={severityTone(thread)} testId="comment-severity">{thread.severity}</Tag>
 	{/if}
-	{#if thread.anchor.outdated}
+	{#if anchorOutdated(thread.anchor)}
 		<Tag tone="warning" testId="comment-outdated">outdated</Tag>
 	{/if}
 	{#if thread.resolved}

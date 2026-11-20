@@ -411,7 +411,7 @@ class FixedSource(ContentSource):
 
     @override
     async def line_anchors(self, named: frozenset[str]) -> LineAnchorHandler:
-        """What was read once alone: a thread on a file it does not hold is outdated."""
+        """What was read once alone: a thread on a file it does not hold has lost its file."""
         return LineAnchorHandler(self._content.files, [])
 
     @override

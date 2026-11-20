@@ -238,7 +238,7 @@ describe('ending the review', () => {
 								start_line: 10,
 								end_line: 10,
 								quote: [],
-								outdated: false
+								standing: 'on_its_lines'
 							},
 							severity: 'note',
 							body: 'fix this',

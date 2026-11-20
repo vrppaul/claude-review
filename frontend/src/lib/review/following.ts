@@ -5,7 +5,7 @@
  * else.
  */
 
-import { sameSpot } from '$lib/anchors/views';
+import { anchorOutdated, sameSpot } from '$lib/anchors/views';
 import type { Anchor, FollowOutcome, Thread } from '$lib/types';
 
 // Said when the server's answer leaves out a thread it was asked to follow, which it never should
@@ -65,7 +65,7 @@ function onItsAnchor(thread: Thread, movedTo: ReadonlyMap<string, Anchor>): Thre
 
 /** Whether following took a thread off lines it still had. */
 function lostItsLines({ thread, moved }: FollowedThread): boolean {
-	return moved.outdated && !thread.anchor.outdated;
+	return anchorOutdated(moved) && !anchorOutdated(thread.anchor);
 }
 
 /** Whether following took a thread, with its lines, somewhere else. */

@@ -26,6 +26,7 @@ from claude_review.domain.models import (
     CommentSeverity,
     FilePath,
     LineSide,
+    LineStanding,
     OverviewList,
     OverviewText,
     StoryBlockKind,
@@ -65,7 +66,7 @@ class LineAnchor(Schema):
     start_line: StrictInt = Field(ge=FIRST_LINE)
     end_line: StrictInt = Field(ge=FIRST_LINE)
     quote: list[QuoteLine] = Field(max_length=MAX_QUOTE_LINES)
-    outdated: StrictBool
+    standing: LineStanding
 
     @model_validator(mode="after")
     def start_before_end(self) -> Self:
@@ -81,7 +82,7 @@ class LineAnchor(Schema):
             start_line=anchor.start_line,
             end_line=anchor.end_line,
             quote=anchor.quote,
-            outdated=anchor.outdated,
+            standing=anchor.standing,
         )
 
     def to_domain(self) -> models.LineAnchor:
@@ -92,7 +93,7 @@ class LineAnchor(Schema):
             start_line=self.start_line,
             end_line=self.end_line,
             quote=self.quote,
-            outdated=self.outdated,
+            standing=self.standing,
         )
 
 
@@ -114,7 +115,7 @@ class PointedLines(Schema):
         return self
 
     def to_domain(self) -> models.LineAnchor:
-        # Not quoted yet, and so not out of date: the review quotes it from the take on screen
+        # Not quoted yet, and so on its lines: the review quotes it from the take on screen
         return models.LineAnchor(
             kind=AnchorKind.LINE,
             file=self.file,
@@ -122,7 +123,7 @@ class PointedLines(Schema):
             start_line=self.start_line,
             end_line=self.end_line,
             quote=[],
-            outdated=False,
+            standing=LineStanding.ON_ITS_LINES,
         )
 
 
@@ -557,7 +558,7 @@ class ThreadSummary(Schema):
             body=thread.body,
             raised_by=thread.raised_by,
             resolved=thread.resolved,
-            outdated=thread.anchor.outdated,
+            outdated=thread.anchor.to_domain().outdated,
             turn_count=len(thread.turns),
         )
 

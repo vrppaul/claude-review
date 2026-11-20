@@ -295,8 +295,6 @@ class AnchorBase(BaseModel):
     """
 
     quote: list[str] = Field(max_length=MAX_QUOTE_LINES)
-    # What it was made on is gone from what the review now holds
-    outdated: bool
 
 
 def check_line_span(start_line: int, end_line: int) -> None:
@@ -310,6 +308,19 @@ def check_line_span(start_line: int, end_line: int) -> None:
         raise ValueError(msg)
 
 
+class LineStanding(StrEnum):
+    """How a line anchor stands in what the review holds.
+
+    ON_ITS_LINES — its lines stand where it says.
+    LINES_GONE — the review reads that side of its file, and its lines are not there.
+    FILE_GONE — the review reads no lines of that side of its file: the file left the take, or its old side the diff.
+    """
+
+    ON_ITS_LINES = auto()
+    LINES_GONE = auto()
+    FILE_GONE = auto()
+
+
 class LineAnchor(AnchorBase):
     """Lines of one side of a file of the take: the old side as the diff holds it, the new as the file does."""
 
@@ -319,14 +330,20 @@ class LineAnchor(AnchorBase):
     side: LineSide
     start_line: int = Field(ge=FIRST_LINE)
     end_line: int = Field(ge=FIRST_LINE)
+    standing: LineStanding
 
     @model_validator(mode="after")
     def start_before_end(self) -> Self:
         check_line_span(self.start_line, self.end_line)
         return self
 
+    @property
+    def outdated(self) -> bool:
+        """Whether what it was made on is gone from what the review holds, its lines or its whole file."""
+        return self.standing is not LineStanding.ON_ITS_LINES
+
     def quoting(self, quote: list[str]) -> LineAnchor:
-        """The anchor quoting these lines, read off what the review holds at its place: it is not outdated."""
+        """The anchor quoting these lines, read off what the review holds at its place: it is on its lines."""
         return LineAnchor(
             kind=self.kind,
             file=self.file,
@@ -334,11 +351,11 @@ class LineAnchor(AnchorBase):
             start_line=self.start_line,
             end_line=self.end_line,
             quote=quote,
-            outdated=False,
+            standing=LineStanding.ON_ITS_LINES,
         )
 
     def current_at(self, start_line: int, end_line: int) -> LineAnchor:
-        """The anchor on these lines of what the review holds now: it is not outdated."""
+        """The anchor on these lines of what the review holds now: it is on its lines."""
         return LineAnchor(
             kind=self.kind,
             file=self.file,
@@ -346,11 +363,11 @@ class LineAnchor(AnchorBase):
             start_line=start_line,
             end_line=end_line,
             quote=self.quote,
-            outdated=False,
+            standing=LineStanding.ON_ITS_LINES,
         )
 
-    def lost(self) -> LineAnchor:
-        """The anchor where it was, marked outdated: what it was made on is gone from what the review holds."""
+    def lost_its_lines(self) -> LineAnchor:
+        """The anchor where it was, its lines gone from the side of the file the review reads."""
         return LineAnchor(
             kind=self.kind,
             file=self.file,
@@ -358,7 +375,19 @@ class LineAnchor(AnchorBase):
             start_line=self.start_line,
             end_line=self.end_line,
             quote=self.quote,
-            outdated=True,
+            standing=LineStanding.LINES_GONE,
+        )
+
+    def lost_its_file(self) -> LineAnchor:
+        """The anchor where it was, on a side of a file the review reads no lines of."""
+        return LineAnchor(
+            kind=self.kind,
+            file=self.file,
+            side=self.side,
+            start_line=self.start_line,
+            end_line=self.end_line,
+            quote=self.quote,
+            standing=LineStanding.FILE_GONE,
         )
 
 
@@ -461,6 +490,8 @@ class StoryAnchor(AnchorBase):
     block: StoryBlock
     # The block's words, as one text; none while the review has not quoted them yet
     quote: list[str] = Field(max_length=STORY_QUOTE_TEXTS)
+    # No block of the story the review holds says the words it quotes
+    outdated: bool
 
     def quoting(self, words: str) -> StoryAnchor:
         """The anchor quoting the block's words, read off the story the review holds: it is not outdated."""

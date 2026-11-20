@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Thread } from '$lib/types';
+	import { anchorOutdated } from '$lib/anchors/views';
 	import type { CommentField } from '$lib/review/comment-field.svelte';
 	import { useReview } from '$lib/review/context';
 	import Card from '$lib/ui/Card.svelte';
@@ -53,7 +54,7 @@
 		if (thread.resolved) return 'done';
 		if (raisedByAgent(thread)) return 'agent';
 		if (sent) return 'quiet';
-		return thread.anchor.outdated ? 'stale' : 'reader';
+		return anchorOutdated(thread.anchor) ? 'stale' : 'reader';
 	});
 	const drawn = $derived.by<Drawn>(() => {
 		if (!folded) return 'open';

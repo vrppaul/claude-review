@@ -8,6 +8,7 @@ from claude_review.domain.models import (
     FIRST_ROUND,
     CommentSeverity,
     DiffFile,
+    LineStanding,
     ReviewMode,
     ReviewResult,
     Thread,
@@ -55,7 +56,12 @@ def test_how_a_thread_is_meant_to_be_taken_is_said() -> None:
     """A blocker, a settled note and one written against words since gone are different instructions."""
     files = [_message("user-1", ["hello world"])]
     threads = [
-        thread(line_anchor("user-1", 1, outdated=True), "Fix it", severity=CommentSeverity.BLOCKER, resolved=True)
+        thread(
+            line_anchor("user-1", 1, standing=LineStanding.LINES_GONE),
+            "Fix it",
+            severity=CommentSeverity.BLOCKER,
+            resolved=True,
+        )
     ]
 
     markdown = _formatted(threads, None, files).markdown
