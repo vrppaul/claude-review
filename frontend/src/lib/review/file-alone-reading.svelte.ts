@@ -22,21 +22,29 @@ import type { FileOfTakeResponse, FileToDraw, Thread } from '$lib/types';
 import { messageOf } from '$lib/utils/errors';
 import { namesTheFileAsItStands } from '$lib/utils/line-places';
 
-/** What reading the file came to: on its way, the file, or why it could not be read. */
-export type FileAloneRead = { kind: 'reading' } | { kind: 'read'; file: FileToDraw } | { kind: 'failed'; why: string };
+/** What one read of the file came to: the file, or why it could not be read. */
+type ReadOutcome = { kind: 'read'; file: FileToDraw } | { kind: 'failed'; why: string };
 
-/**
- * The file read alone, and what reading it came to in one take: another
- * take numbers its lines anew, so it is read again for that.
- */
-interface HeldRead {
+/** How the latest read of the file stands: on its way, read, or failed, and why. */
+type LatestRead = { kind: 'reading' } | { kind: 'read' } | { kind: 'failed'; why: string };
+
+/** The file read alone: what of it is drawn, and how its latest read, in one take, stands. */
+interface HeldFile {
 	path: string;
+	/**
+	 * The file as the last read that arrived has it, drawn while a later read
+	 * of it is on its way, so reading it anew never takes its lines off the
+	 * page; none until a read arrives, and none once one fails.
+	 */
+	drawn: FileToDraw | null;
+	/** The take the latest read was asked in: another numbers the lines anew, so the file is read again for it. */
 	take: number;
-	outcome: FileAloneRead;
+	latest: LatestRead;
 }
 
-// A read on its way
-const READING: FileAloneRead = { kind: 'reading' };
+// The latest read on its way, and arrived
+const READING: LatestRead = { kind: 'reading' };
+const READ: LatestRead = { kind: 'read' };
 
 /** A file of the take as a section of lines draws it: its every line a line of its new side, one hunk. */
 function asDrawn({ path, hunk, commentable }: FileOfTakeResponse): FileToDraw {
@@ -44,7 +52,7 @@ function asDrawn({ path, hunk, commentable }: FileOfTakeResponse): FileToDraw {
 }
 
 /** Read a file of the take on screen, and say what that came to. */
-async function outcomeOfReading(path: string): Promise<FileAloneRead> {
+async function outcomeOfReading(path: string): Promise<ReadOutcome> {
 	try {
 		return { kind: 'read', file: asDrawn(await readFileOfTake(path)) };
 	} catch (error) {
@@ -59,8 +67,8 @@ export class FileAloneReading implements ReadingView {
 	readonly #threads: Threads;
 	// The section the file is drawn in, which says where the reader reads and takes them back there
 	readonly #sections: FileSections;
-	// Which file is read alone, and what reading it came to; none until the reader opens one
-	#held = $state.raw<HeldRead | null>(null);
+	// Which file is read alone, what of it is drawn, and how its latest read stands; none until the reader opens one
+	#held = $state.raw<HeldFile | null>(null);
 	// Settled once the read last asked for is, for whoever waits to go to a place in the file
 	#settled: Promise<void> = Promise.resolve();
 
@@ -80,35 +88,43 @@ export class FileAloneReading implements ReadingView {
 		return this.#held?.path ?? null;
 	}
 
-	/** What reading that file came to; null until the reader opens one. */
-	get outcome(): FileAloneRead | null {
-		return this.#held?.outcome ?? null;
+	/** The file as drawn: as its last read had it; null while none has arrived, or once one failed. */
+	get file(): FileToDraw | null {
+		return this.#held?.drawn ?? null;
+	}
+
+	/** Why the latest read of the file failed; null while none has. */
+	get failure(): string | null {
+		const latest = this.#held?.latest;
+		return latest?.kind === 'failed' ? latest.why : null;
 	}
 
 	/**
 	 * Read a file alone, in the take on screen, and settle once it is read:
 	 * at once where it is read in that take already, or on its way; anew
-	 * where it is another file, another take, or a read that failed.
+	 * where it is another file, another take, or a read that failed. The file
+	 * read anew stays drawn as it was until the new read arrives.
 	 */
 	open(path: string): Promise<void> {
 		const take = this.#diff.takeOnScreen;
 		const held = this.#held;
-		if (held?.path === path && held.take === take && held.outcome.kind !== 'failed') return this.#settled;
-		const asked: HeldRead = { path, take, outcome: READING };
+		if (held?.path === path && held.take === take && held.latest.kind !== 'failed') return this.#settled;
+		const drawn = held?.path === path ? held.drawn : null;
+		const asked: HeldFile = { path, drawn, take, latest: READING };
 		this.#held = asked;
 		this.#settled = this.#read(asked);
 		return this.#settled;
 	}
 
-	/** Its lines, once read, which take comments; and the threads of the files, which n and p walk from here. */
+	/** Its lines, while drawn, which take comments; and the threads of the files, which n and p walk from here. */
 	drawn(): Drawn {
-		return { lines: this.#held?.outcome.kind === 'read', threads: this.threadsInOrder().length > 0 };
+		return { lines: this.file !== null, threads: this.threadsInOrder().length > 0 };
 	}
 
-	/** Its one section, once the file is read. */
+	/** Its one section, while its lines are drawn. */
 	sectionKeys(): string[] {
-		const held = this.#held;
-		return held?.outcome.kind === 'read' ? [fileSectionKey(held.path)] : [];
+		const file = this.file;
+		return file === null ? [] : [fileSectionKey(file.path)];
 	}
 
 	/** As the Files way of reading walks them (`threadsInFilesOrder`). */
@@ -148,9 +164,16 @@ export class FileAloneReading implements ReadingView {
 		return true;
 	}
 
-	/** Read the file asked for, and hold what that came to while it is still the read last asked for. */
-	async #read(asked: HeldRead): Promise<void> {
+	/**
+	 * Read the file asked for, and hold what that came to while it is still
+	 * the read last asked for: the file drawn as read, or no lines and why.
+	 */
+	async #read(asked: HeldFile): Promise<void> {
 		const outcome = await outcomeOfReading(asked.path);
-		if (this.#held === asked) this.#held = { ...asked, outcome };
+		if (this.#held !== asked) return;
+		this.#held =
+			outcome.kind === 'read'
+				? { ...asked, drawn: outcome.file, latest: READ }
+				: { ...asked, drawn: null, latest: outcome };
 	}
 }

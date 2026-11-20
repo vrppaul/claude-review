@@ -11,6 +11,7 @@
 	import { languageOf } from '$lib/utils/highlight';
 	import { EVERY_LINE } from './file-drawing.svelte';
 	import LinesSection from './LinesSection.svelte';
+	import { keepPlaceRead } from './place-kept.svelte';
 
 	// What the bar says of the file, where a file of the change says what became of it
 	const NOT_IN_THIS_CHANGE = 'not in this change';
@@ -19,7 +20,8 @@
 	const alone = review.views.fileAlone;
 
 	const path = $derived(alone.path);
-	const outcome = $derived(alone.outcome);
+	const file = $derived(alone.file);
+	const failure = $derived(alone.failure);
 	const threads = $derived(path === null ? 0 : review.threads.onLinesOf(path).length);
 
 	let container: HTMLElement | undefined = $state();
@@ -33,6 +35,9 @@
 		if (!container) return;
 		return review.sections.watchInView(container);
 	});
+
+	// The file read anew for a take leaves the reader on the line they read
+	keepPlaceRead(review.sections, () => file);
 
 	/** Read the file again after a read that failed. */
 	async function readAgain(file: string) {
@@ -68,12 +73,13 @@
 	line to its last, in one column whatever layout the reader chose for a change, so scrolling never leads into
 	another file -->
 <main bind:this={container} data-testid="file-alone-view" class="cr-diff-area bg-(--cr-ground-reading)">
-	{#if path !== null && outcome !== null}
+	{#if path !== null}
 		{#key path}
-			{#if outcome.kind === 'read'}
+			{#if file !== null}
+				<!-- As last read, while a read anew is on its way -->
 				<LinesSection
 					sectionKey={fileSectionKey(path)}
-					file={outcome.file}
+					{file}
 					language={languageOf(review.mode, path)}
 					view="raw"
 					extent={EVERY_LINE}
@@ -85,13 +91,13 @@
 					{/snippet}
 				</LinesSection>
 			{:else}
-				<!-- On its way, or not read: the bar stands all the same, with the way out of the file -->
+				<!-- First on its way, or not read: the bar stands all the same, with the way out of the file -->
 				<section data-testid="file-alone">
 					{@render bar(path)}
-					{#if outcome.kind === 'failed'}
+					{#if failure !== null}
 						<!-- Why, under the bar, and the act to read it again -->
 						<div class="flex flex-wrap items-center gap-2 px-4 py-3">
-							<Failure stands="inline" testId="file-alone-failed" said={outcome.why} />
+							<Failure stands="inline" testId="file-alone-failed" said={failure} />
 							<Button tone="quiet" size="xs" testId="read-file-again" onclick={() => readAgain(path)}>Try again</Button>
 						</div>
 					{/if}

@@ -176,6 +176,26 @@ describe('a file read alone, as the change is taken again', () => {
 		await goneToAThreadOnTheCaller();
 	});
 
+	it('keeps its lines on the page while it is read anew for the take', async () => {
+		const reads = server.hold('GET /api/file-of-take');
+		server.answer('POST /api/anchors/follow', { anchors: [review.threads.all[0].anchor] });
+		server.answer('GET /api/diff', diffResponse({ files: [A_PY], take: A_LATER_TAKE }));
+		server.answer('GET /api/story', storyResponse());
+
+		await review.takeRetakenDiff();
+		await cameToRest();
+		expect(reads.requests).toHaveLength(1);
+		const whileReading = screen.getByTestId('file-lines').textContent;
+		reads.answer(0, {
+			...CALLER_OF_THE_TAKE,
+			hunk: hunk([contextLine(null, 1, 'def caller_renamed():')], { header: '' })
+		});
+		await cameToRest();
+
+		expect(whileReading).toContain('def caller():');
+		expect(screen.getByTestId('file-lines').textContent).toContain('def caller_renamed():');
+	});
+
 	it('is read anew for the take, as it stands now', async () => {
 		server.answer('GET /api/file-of-take', {
 			...CALLER_OF_THE_TAKE,

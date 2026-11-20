@@ -1,14 +1,13 @@
 <script lang="ts">
-	import { tick, untrack } from 'svelte';
 	import { provideScrollArea } from '$lib/dom/scroll-area';
 	import { useReview } from '$lib/review/context';
 	import { threadsAboveTheFiles } from '$lib/review/files-way';
 	import EmptyNote from '$lib/ui/EmptyNote.svelte';
-	import { namesTheFileAsItStands } from '$lib/utils/line-places';
 	import type { CountedWords } from '$lib/utils/words';
 	import { reportBroken } from './broken-parts';
 	import FileSection from './FileSection.svelte';
 	import PartFailed from './PartFailed.svelte';
+	import { keepPlaceRead } from './place-kept.svelte';
 	import UnplacedThreads from './UnplacedThreads.svelte';
 
 	const review = useReview();
@@ -37,16 +36,8 @@
 		return review.sections.watchInView(container);
 	});
 
-	// A new diff redraws what lies above the reader as well: they stay on the
-	// line they were reading, not at the same distance from the top, which
-	// would put them in another file. Read before the new diff is drawn, put
-	// back once it is; nothing but the diff itself starts it.
-	$effect.pre(() => {
-		void review.diff.files;
-		const place = untrack(() => review.sections.readingPlace(namesTheFileAsItStands));
-		if (place === null) return;
-		void tick().then(() => review.sections.returnTo(place));
-	});
+	// A new diff leaves the reader on the line they read, in the file they read
+	keepPlaceRead(review.sections, () => review.diff.files);
 </script>
 
 <!-- What is reviewed: the page's main part, beside the tree and the panel -->
