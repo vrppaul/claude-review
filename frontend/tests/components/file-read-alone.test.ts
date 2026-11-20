@@ -112,9 +112,28 @@ describe('a file the change did not touch, read alone', () => {
 		expect(screen.queryByTestId('go-back')).toBeNull();
 	});
 
+	it('is put away past every place the reader left inside it, back to where they came from', async () => {
+		await goneToAThreadOnTheCaller();
+		// Left by hand, as jsdom lays nothing out to read a place from: the reader went on from line 3 of the file
+		review.wayBack.note({
+			view: 'file-alone',
+			place: { within: CALLER, line: 'new:3', offset: 0 },
+			called: 'caller.py:3',
+			calledInFull: `${CALLER}:3`
+		});
+		flushSync();
+		expect(screen.getByTestId('go-back').textContent?.trim()).toBe('Back to caller.py:3');
+
+		await press('put-file-away');
+
+		expect(document.activeElement?.textContent?.trim()).toBe('1');
+		expect(screen.queryByTestId('go-back')).toBeNull();
+	});
+
 	it('shows Files chosen in the header while it is read, and leaves for the change’s files by it', async () => {
 		await goneToAThreadOnTheCaller();
 		expect(screen.getByTestId('read-as-files').getAttribute('aria-pressed')).toBe('true');
+		expect(screen.getByTestId('base-named').textContent).toBe('uncommitted changes');
 
 		await press('read-as-files');
 

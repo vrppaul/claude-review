@@ -14,14 +14,24 @@ import pytest
 from httpx2 import AsyncClient
 from playwright.async_api import Locator, Page, ViewportSize, expect
 
+from claude_review.domain.models import CommentSeverity
 from tests.e2e.browsers_loop import in_the_browsers_loop
-from tests.helpers import ReviewServers, RunningReview, committed_repository, repository_opening, write_files
+from tests.helpers import (
+    ReviewServers,
+    RunningReview,
+    committed_repository,
+    pointed_json,
+    repository_opening,
+    write_files,
+)
 
 # Three files, each changed far down: one above the file being read, and one
 # below it changed on enough lines that the line read can be scrolled to the top
 ABOVE_FILE = "above.py"
 READ_FILE = "read.py"
 BELOW_FILE = "zz_below.py"
+# A file the change does not touch, read alone
+LEFT_FILE = "left.py"
 FILE_LENGTH = 200
 CHANGED_LINE = 100
 CHANGED_BELOW = range(50, 110)
@@ -80,3 +90,48 @@ async def test_a_retake_that_rewrites_the_file_being_read_keeps_the_reader_in_it
     await page.get_by_text(f"{READ_FILE} grown {GROWN_BY - 1}", exact=True).wait_for(state="attached")
 
     await expect(_section(page, READ_FILE)).to_be_in_viewport()
+
+
+@pytest.fixture
+def a_file_left_alone(tmp_path: Path) -> Path:
+    """A repository where one file changed far down, and another the change did not touch."""
+    paths = (ABOVE_FILE, LEFT_FILE)
+    repo = committed_repository(tmp_path / "repo", {path: _lines(path) for path in paths})
+    write_files(repo, {ABOVE_FILE: _lines(ABOVE_FILE, {CHANGED_LINE: "changed"})})
+    return repo
+
+
+@in_the_browsers_loop
+async def review_with_a_thread_on_the_file_left(a_file_left_alone: Path, servers: ReviewServers) -> RunningReview:
+    """The review, with a thread the agent raised on a line far down the file the change did not touch."""
+    review = await servers.start(await repository_opening(a_file_left_alone))
+    raised = {
+        "lines": pointed_json(LEFT_FILE, CHANGED_LINE),
+        "body": "the agent forgot this",
+        "severity": CommentSeverity.NOTE,
+    }
+    async with AsyncClient(base_url=review.url) as agent:
+        (await agent.post("/api/point", json=raised)).raise_for_status()
+    return review
+
+
+async def test_a_retake_that_leaves_a_file_read_alone_untouched_keeps_the_reader_on_their_line(
+    review_with_a_thread_on_the_file_left: RunningReview, a_file_left_alone: Path, page: Page
+) -> None:
+    review = review_with_a_thread_on_the_file_left
+    await page.set_viewport_size(SCREEN)
+    await page.goto(review.url)
+    # The reader goes to the thread, into the file read alone, and reads its line from the top of the area
+    await page.get_by_test_id("outside-file").wait_for()
+    await page.keyboard.press("n")
+    alone = page.get_by_test_id("file-alone-view")
+    read = alone.get_by_role("button", name=f"Comment on line {CHANGED_LINE}", exact=True)
+    await read.evaluate("number => number.scrollIntoView({ block: 'start' })")
+
+    # The agent's work grows the file the change touches, and retakes the diff: the file read alone is read anew
+    write_files(a_file_left_alone, {ABOVE_FILE: _grown(ABOVE_FILE)})
+    async with AsyncClient(base_url=review.url) as agent:
+        await agent.post("/api/retake", json={})
+    await page.get_by_test_id("diff-retaken").wait_for()
+
+    await expect(read).to_be_in_viewport()
