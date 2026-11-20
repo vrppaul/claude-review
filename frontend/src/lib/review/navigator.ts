@@ -1,26 +1,13 @@
 /**
- * Moving the reader through the review: from thread to thread, whatever
- * each hangs on, from section to section, and to a file or a line somebody
- * names.
+ * Moving the reader through the review: from thread to thread, from section
+ * to section, to a file or a line somebody names, into a file read alone and
+ * back.
  *
- * Naming a thread is the anchor's business and touches nothing; bringing one
- * into view opens what hides it and moves the screen, so it lives here, with
- * the parts of the page it moves — and so does where the reader has got to
- * among the threads, which only moving changes. Every control that takes the
- * reader to a thread moves them through here — n and p, a, the header's
- * arrows, the replies, the finish pane, the panel's chips, the notices — and
- * so do ] and [ from section to section, a file the agent names, a line
- * somebody names — where a check failed — and Back from it. What is
- * walked, and where a thread or a file is drawn, is asked of the view the
- * review is read in (`ReadingView`). No view draws everything by itself: a
- * story draws what it tells and leaves out, the files under a narrower base
- * what that base shows, the change's files no file the change did not
- * touch. What the view on screen does not draw is gone to in the view of
- * the Files way of reading that draws it — the change's files, read
- * against the review's own base, or a file read alone — which the views
- * bring on screen for it. The page itself is moved by `FileSections`. j and
- * k move the keyboard line by line there (`FileSections.stepLine`), and
- * have no place among the threads to keep.
+ * Every control that takes the reader somewhere moves them through here, so
+ * where they have got to among the threads, which only moving changes, is
+ * kept in one place. What is walked, and which view draws a thread or a
+ * file, is the views' to say (`ReadingView`); the page is moved by
+ * `FileSections`.
  */
 
 import { threadPlaceOf, type ThreadLines } from '$lib/anchors/views';

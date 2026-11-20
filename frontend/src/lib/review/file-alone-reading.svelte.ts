@@ -156,7 +156,11 @@ export class FileAloneReading implements ReadingView {
 		return place === null ? null : placeInLines(this.#sections, place);
 	}
 
-	/** The file read from is opened alone again, and the reader put back once it is read, or says why it is not. */
+	/**
+	 * Open the file read from alone again, and put the reader back on the
+	 * place once it is read. The view draws the file whatever the read came
+	 * to, its failure said in place, so it can always draw the place.
+	 */
 	async returnTo(place: ReadingPlace): Promise<boolean> {
 		// What a view of files whole knows a section by is its file's path
 		await this.open(place.within);
