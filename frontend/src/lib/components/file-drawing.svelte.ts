@@ -1,7 +1,8 @@
 /**
  * A file made ready to draw, in whichever layout: its lines, commenting on
- * them, and reading in what the diff left out around its hunks — the whole
- * of the file, or a piece cut out of it, which has nothing around it to read.
+ * them, and reading in what the diff left out around its hunks — a file of
+ * the diff, a piece cut out of one, which has nothing around it to read, or
+ * a file read whole, which has nothing around it at all.
  *
  * Made once by whoever draws the file and handed to the layout, so both
  * layouts lay out the same lines, and switching between them prepares
@@ -40,9 +41,9 @@ export function linesView(layout: DiffLayout, file: DiffFile): 'split' | 'raw' {
 	return layout === 'split' && file.hunks.length > 0 ? 'split' : 'raw';
 }
 
-/** A file drawn whole, as the diff on screen has it. */
-interface WholeFile {
-	kind: 'whole';
+/** A file of the diff on screen, drawn as the change made to it, with what the diff left out around its hunks. */
+interface OfTheDiff {
+	kind: 'of-the-diff';
 	/** Whose numbers its lines carry, as the diff on screen was taken: see `DrawnFile`. */
 	numbering: Numbering;
 	/** Where the lines read in around its hunks are kept. */
@@ -71,8 +72,43 @@ const SAID_OF_A_GAP: Record<PieceShows, CountedWords> = {
 	'what-no-step-tells': { one: 'line not shown here', many: 'lines not shown here' }
 };
 
-/** How much of a file a drawing is of: the whole of it, or a piece. */
-export type Extent = WholeFile | Piece;
+/**
+ * A file read from its first line to its last, as it stands: nothing lies
+ * around it to read in or to say, and no line of it is a change.
+ */
+interface EveryLine {
+	kind: 'every-line';
+}
+
+/** What of a file a drawing is of: a file of the diff, a piece cut out of one, or a file read whole. */
+export type Extent = OfTheDiff | Piece | EveryLine;
+
+/** A file read whole, as every drawing of one is. */
+export const EVERY_LINE: Extent = { kind: 'every-line' };
+
+/** What a drawing of one extent is, whatever file it draws. */
+interface DrawnAs {
+	/** Whether it shows a change: two columns of numbers, a sign and a tint to each line, and what changed inside a replaced line marked. */
+	showsChange: boolean;
+	/** Whether it is of its file whole, which every thread of the file hangs in, rather than a piece of it. */
+	ofItsFileWhole: boolean;
+	/** Which gaps around and between its hunks it says. */
+	saysGap: (gap: ContextGap) => boolean;
+}
+
+// What a drawing of each extent is. A file of the diff says every gap, which may be read in; a piece those between
+// its own hunks, the rest of its file being none of it. A file read whole is the file itself: it changes nothing,
+// and has no gap to say
+const DRAWN_AS: Record<Extent['kind'], DrawnAs> = {
+	'of-the-diff': { showsChange: true, ofItsFileWhole: true, saysGap: () => true },
+	piece: { showsChange: true, ofItsFileWhole: false, saysGap: (gap) => gap.above !== null && gap.below !== null },
+	'every-line': { showsChange: false, ofItsFileWhole: true, saysGap: () => false }
+};
+
+/** Whether a drawing of this extent shows a change. */
+export function showsAChange(extent: Extent): boolean {
+	return DRAWN_AS[extent.kind].showsChange;
+}
 
 /**
  * What a file's lines take up on the page, counted from what is drawn of
@@ -107,9 +143,9 @@ const ROWS_OF_A_HUNK: Record<FileView, (lines: readonly DiffLine[]) => number> =
 // A file with no lines says why in their place, and is held this many rows for it
 const ROWS_FOR_NO_LINES = 1;
 
-/** Where the lines read in around a file's hunks are kept; null for a piece, which has nowhere to keep any. */
+/** Where the lines read in around a file's hunks are kept; null where nothing around them is read in. */
 function revealedIn(extent: Extent): RevealedContext | null {
-	return extent.kind === 'whole' ? extent.revealed : null;
+	return extent.kind === 'of-the-diff' ? extent.revealed : null;
 }
 
 /** A file as it is drawn: with the lines revealed around its hunks, where they may be. */
@@ -118,23 +154,24 @@ function shownFile(file: DiffFile, extent: Extent): DiffFile {
 	return revealed ? withRevealed(file, revealed.forFile(file.path)) : file;
 }
 
-/** The gap below the last hunk of a file as drawn, as far as a read has said how long the file is. */
+/**
+ * The gap below the last hunk of a file as drawn, as far as a read has said
+ * how long the file is, where the drawing draws it.
+ */
 function gapAtTheEnd(shown: DiffFile, extent: Extent): ContextGap | null {
 	const last = shown.hunks.at(-1);
 	if (last === undefined) return null;
-	return gapBelow(last, revealedIn(extent)?.forFile(shown.path).length ?? null);
+	const end = gapBelow(last, revealedIn(extent)?.forFile(shown.path).length ?? null);
+	return end !== null && drawsGap(extent, end) ? end : null;
 }
 
 /**
  * Whether a gap is drawn: where it is the drawing's to say, while it hides
  * lines or may — below the last hunk, how many is not known until a read
- * finds out. A piece says what it leaves out between its own hunks; what
- * lies above its first and below its last is the rest of the file, which it
- * does not draw.
+ * finds out.
  */
 function drawsGap(extent: Extent, gap: ContextGap): boolean {
-	const says = extent.kind === 'whole' || (gap.above !== null && gap.below !== null);
-	return says && hiddenIn(gap) !== 0;
+	return DRAWN_AS[extent.kind].saysGap(gap) && hiddenIn(gap) !== 0;
 }
 
 /**
@@ -148,8 +185,7 @@ export function roomOf(file: DiffFile, extent: Extent, view: FileView): LinesRoo
 	const { hunks } = shown;
 	const barred = hunks.filter((hunk, index) => drawsGap(extent, gapAbove(hunk, hunks[index - 1])));
 	// Below the last hunk, one bar more where that is drawn
-	const end = gapAtTheEnd(shown, extent);
-	const barsBelow = end !== null && drawsGap(extent, end) ? 1 : 0;
+	const barsBelow = gapAtTheEnd(shown, extent) === null ? 0 : 1;
 	const rows = hunks.reduce((counted, hunk) => counted + ROWS_OF_A_HUNK[view](hunk.lines), 0);
 	return {
 		rows: Math.max(rows, ROWS_FOR_NO_LINES),
@@ -189,8 +225,8 @@ export class FileDrawing implements DrawnFile {
 		// Lines revealed from the file sit inside the hunk beside which they were
 		// read, so numbering, highlighting and anchoring need no special case
 		this.#shownFile = $derived(shownFile(source.file(), source.extent()));
-		// What changed inside a replaced line is marked in a diff, where lines are replaced
-		this.#hunks = $derived(drawnHunks(this.#shownFile, source.language(), review.mode === 'diff'));
+		// What changed inside a replaced line is marked where a change is shown, which replaces lines
+		this.#hunks = $derived(drawnHunks(this.#shownFile, source.language(), showsAChange(source.extent())));
 		this.#end = $derived(gapAtTheEnd(this.#shownFile, source.extent()));
 		this.#failuresByLine = $derived(
 			Map.groupBy(review.checks.failuresIn(source.file().path), ({ failure }) => failure.line)
@@ -221,9 +257,22 @@ export class FileDrawing implements DrawnFile {
 		return this.#hunks;
 	}
 
+	/** Whether its lines are drawn as a change: see `DrawnAs`. */
+	get showsChange(): boolean {
+		return showsAChange(this.#source.extent());
+	}
+
+	/** A file read whole is the file of the take as it stands, numbered as the review numbers its new side. */
 	numbering(): Numbering {
 		const extent = this.#source.extent();
-		return extent.kind === 'whole' ? extent.numbering : STORY_PIECES_NUMBERING;
+		switch (extent.kind) {
+			case 'of-the-diff':
+				return extent.numbering;
+			case 'piece':
+				return STORY_PIECES_NUMBERING;
+			case 'every-line':
+				return 'the-reviews';
+		}
 	}
 
 	commentable(): boolean {
@@ -231,8 +280,7 @@ export class FileDrawing implements DrawnFile {
 	}
 
 	standsForItsFile(): boolean {
-		const extent = this.#source.extent();
-		return extent.kind === 'whole' && extent.numbering === 'the-reviews';
+		return DRAWN_AS[this.#source.extent().kind].ofItsFileWhole && this.numbering() === 'the-reviews';
 	}
 
 	/** Whether a gap is drawn here: see `drawsGap`. */
@@ -250,7 +298,7 @@ export class FileDrawing implements DrawnFile {
 		return extent.kind === 'piece' ? SAID_OF_A_GAP[extent.shows] : null;
 	}
 
-	/** The gap below the last hunk, where the file may go on past it; null where it cannot. */
+	/** The gap below the last hunk, where the drawing says the file may go on past it; null where it does not. */
 	get end(): ContextGap | null {
 		return this.#end;
 	}

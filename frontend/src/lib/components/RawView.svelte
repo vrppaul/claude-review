@@ -3,14 +3,13 @@
 	import type { DiffLine, LineSide } from '$lib/types';
 	import LineFailure from '$lib/ui/LineFailure.svelte';
 	import type { DrawnLine } from '$lib/utils/drawn-file';
-	import { useReview } from '$lib/review/context';
 	import type { FileDrawing } from './file-drawing.svelte';
 	import HunkGap from './HunkGap.svelte';
 	import LineGutter from './LineGutter.svelte';
 	import type { Reach } from './line-commenting.svelte';
 	import LineNotes from './LineNotes.svelte';
 
-	// Columns a row spans: two numbers, the sign and the code in a diff; one number and the code otherwise
+	// Columns a row spans: two numbers, the sign and the code where a change is shown; one number and the code otherwise
 	const DIFF_COLUMNS = 4;
 	const PLAIN_COLUMNS = 2;
 	// The sign a diff writes before each kind of line
@@ -24,15 +23,14 @@
 	}
 
 	let { drawing }: Props = $props();
-	const review = useReview();
 
-	const isDiffMode = $derived(review.mode === 'diff');
-	const columns = $derived(isDiffMode ? DIFF_COLUMNS : PLAIN_COLUMNS);
+	const showsChange = $derived(drawing.showsChange);
+	const columns = $derived(showsChange ? DIFF_COLUMNS : PLAIN_COLUMNS);
 	const commenting = $derived(drawing.commenting);
 
 	/** A row's tint, with the reader's own mark added to the change rather than replacing it. */
 	function rowClass(kind: DiffLine['kind'], marked: boolean): ClassValue {
-		return [isDiffMode && TINTS[kind], marked && 'cr-row-marked'];
+		return [showsChange && TINTS[kind], marked && 'cr-row-marked'];
 	}
 
 	/** Whether a line wears the reader's mark: it is being written about, or it is the one the page took them to. */
@@ -53,20 +51,18 @@
 <div data-testid="raw-view">
 	{#each drawing.hunks() as hunk (hunk.key)}
 		<div class="cr-hunk">
-			{#if isDiffMode}
-				<HunkGap gap={hunk.gap} header={hunk.header} {drawing} />
-			{/if}
+			<HunkGap gap={hunk.gap} header={hunk.header} {drawing} />
 
 			<!-- Fixed layout so every hunk's gutters line up: the automatic
 				algorithm sizes each table from its own rows, and a hunk whose
 				line numbers are wider would step the columns out of line. -->
 			<table class="cr-code w-full table-fixed border-collapse font-mono">
 				<colgroup>
-					{#if isDiffMode}
+					{#if showsChange}
 						<col class="w-(--cr-line-number-width)" />
 					{/if}
 					<col class="w-(--cr-line-number-width)" />
-					{#if isDiffMode}
+					{#if showsChange}
 						<col class="w-(--cr-diff-sign-width)" />
 					{/if}
 					<col />
@@ -77,7 +73,7 @@
 							class={['cr-row', rowClass(drawn.line.kind, marked(drawn))]}
 							onmouseenter={() => commenting.enter(drawn)}
 						>
-							{#if isDiffMode}
+							{#if showsChange}
 								<td class="cr-gutter w-(--cr-line-number-width) p-0 text-right select-none">
 									<LineGutter {drawn} side="old" reach={reachOf(drawn, 'old')} {commenting} />
 								</td>
@@ -85,7 +81,7 @@
 							<td class="cr-gutter w-(--cr-line-number-width) border-r border-base-300 p-0 text-right select-none">
 								<LineGutter {drawn} side="new" reach={reachOf(drawn, 'new')} {commenting} />
 							</td>
-							{#if isDiffMode}
+							{#if showsChange}
 								<td class="cr-sign w-(--cr-diff-sign-width) px-1 text-center select-none">
 									{SIGNS[drawn.line.kind]}
 								</td>
@@ -121,7 +117,7 @@
 			</table>
 		</div>
 	{/each}
-	{#if isDiffMode && drawing.end}
+	{#if drawing.end}
 		<HunkGap gap={drawing.end} header="" {drawing} />
 	{/if}
 </div>
