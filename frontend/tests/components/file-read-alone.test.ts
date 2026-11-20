@@ -33,9 +33,13 @@ let server: FakeServer;
 beforeEach(() => {
 	server = fakeServer();
 	server.answer('GET /api/file-of-take', CALLER_OF_THE_TAKE);
-	review = openReview({ files: [A_PY] });
-	render(ReviewScreen, { props: { review } });
 });
+
+/** Open the review of a change to these files, on screen. */
+function openedOn(files: DiffFile[]): void {
+	review = openReview({ files });
+	render(ReviewScreen, { props: { review } });
+}
 
 /** Let the page read what it asked for and take the reader where it goes, until they come to rest. */
 async function cameToRest(): Promise<void> {
@@ -58,6 +62,10 @@ async function goneToAThreadOnTheCaller(): Promise<void> {
 }
 
 describe('a file the change did not touch, read alone', () => {
+	beforeEach(() => {
+		openedOn([A_PY]);
+	});
+
 	it('is where a thread on it takes the reader: whole, in place of the change, the keyboard on the thread', async () => {
 		await goneToAThreadOnTheCaller();
 
@@ -92,15 +100,6 @@ describe('a file the change did not touch, read alone', () => {
 		expect(screen.queryByTestId('file-alone-view')).toBeNull();
 		expect(document.activeElement?.textContent?.trim()).toBe('1');
 		expect(screen.queryByTestId('go-back')).toBeNull();
-	});
-
-	it('is put away to the change’s files where the reader came to it from nowhere', async () => {
-		await goneToAThreadOnTheCaller();
-
-		await press('put-file-away');
-
-		expect(screen.queryByTestId('file-alone-view')).toBeNull();
-		expect(screen.getByTestId('diff-view').textContent).toContain('in a.py');
 	});
 
 	it('shows Files chosen in the header while it is read, and leaves for the change’s files by it', async () => {
@@ -145,6 +144,20 @@ describe('a file the change did not touch, read alone', () => {
 	});
 });
 
+describe('a file read alone, come to from nowhere', () => {
+	it('is put away to the change’s files, with no way back offered', async () => {
+		// A change of no file: there is no line to read, and so no place left as the reader is taken in
+		openedOn([]);
+		await goneToAThreadOnTheCaller();
+		expect(screen.queryByTestId('go-back')).toBeNull();
+
+		await press('put-file-away');
+
+		expect(screen.queryByTestId('file-alone-view')).toBeNull();
+		expect(screen.getByTestId('no-changes').textContent?.trim()).toBe('No changes found.');
+	});
+});
+
 describe('a file read alone, as the change is taken again', () => {
 	// What the server says of a file the take holds none of
 	const NO_SUCH_FILE = 404;
@@ -159,6 +172,7 @@ describe('a file read alone, as the change is taken again', () => {
 	}
 
 	beforeEach(async () => {
+		openedOn([A_PY]);
 		await goneToAThreadOnTheCaller();
 	});
 
@@ -194,6 +208,10 @@ describe('a file read alone, as the change is taken again', () => {
 });
 
 describe('the tree, beside the change’s files and a file read alone', () => {
+	beforeEach(() => {
+		openedOn([A_PY]);
+	});
+
 	/** The rows the tree lists under "Not in this change", by what each says. */
 	function listedOutside(): string[] {
 		return screen.queryAllByTestId('outside-file').map((row) => row.textContent?.replace(/\s+/g, ' ').trim());
