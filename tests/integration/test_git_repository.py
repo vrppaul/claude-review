@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 from claude_review.domain.interfaces import GitError
-from claude_review.domain.models import HEAD, LARGEST_FILE_SHOWN_BYTES, FileStatus
+from claude_review.domain.models import HEAD, LARGEST_FILE_SHOWN_BYTES, FilesRead, FileStatus
 from claude_review.repositories.git_repository import GitRepository
 from claude_review.services.diff_reading import read_diff
 from tests.helpers import LOOK_EVERY_SECONDS, SETTLE_SECONDS, git
@@ -310,9 +310,10 @@ async def test_the_files_holding_a_word_are_those_of_the_tree_written_down(
     assert (holding, holding_none) == (["src/uses.py"], [])
 
 
-async def test_a_file_of_a_tree_reads_as_written_down_and_one_too_large_or_missing_is_left_out(
+async def test_a_file_of_a_tree_reads_as_written_down_one_too_large_is_named_unread_and_one_missing_left_out(
     tmp_git_repo: Path, tmp_path_factory: pytest.TempPathFactory
 ) -> None:
+    """A path git would read against the working tree names no file of the tree, and fails no other path asked."""
     repo = GitRepository(objects=tmp_path_factory.mktemp("review-objects"))
     (tmp_git_repo / "work.py").write_bytes(b"caf\xc3\xa9 = 1\n")
     (tmp_git_repo / "dump.log").write_bytes(b"x" * (LARGEST_FILE_SHOWN_BYTES + 1))
@@ -320,10 +321,23 @@ async def test_a_file_of_a_tree_reads_as_written_down_and_one_too_large_or_missi
     (tmp_git_repo / "work.py").write_text("moved on\n")
 
     read = await repo.files_of(
-        tmp_git_repo, tree, ["work.py", "dump.log", "missing.py", "missing\x1eseparated.py", "initial.txt"]
+        tmp_git_repo,
+        tree,
+        [
+            "work.py",
+            "dump.log",
+            "missing.py",
+            "missing\x1eseparated.py",
+            "../outside.py",
+            "./initial.txt",
+            "initial.txt",
+        ],
     )
 
-    assert read == {"work.py": b"caf\xc3\xa9 = 1\n", "initial.txt": b"initial content\n"}
+    assert read == FilesRead(
+        contents={"work.py": b"caf\xc3\xa9 = 1\n", "initial.txt": b"initial content\n"},
+        too_large=frozenset({"dump.log"}),
+    )
 
 
 async def test_a_commit_is_read_as_its_tree(tmp_git_repo: Path, tmp_path_factory: pytest.TempPathFactory) -> None:
@@ -336,7 +350,7 @@ async def test_a_commit_is_read_as_its_tree(tmp_git_repo: Path, tmp_path_factory
     read = await repo.files_of(tmp_git_repo, commit, ["initial.txt"])
     holding = await repo.paths_holding(tmp_git_repo, commit, "initial")
 
-    assert (read, holding) == ({"initial.txt": b"initial content\n"}, ["initial.txt"])
+    assert (read.contents, holding) == ({"initial.txt": b"initial content\n"}, ["initial.txt"])
 
 
 async def test_no_tree_is_read_without_a_store_that_kept_it(tmp_git_repo: Path) -> None:

@@ -5,16 +5,15 @@ trees held in memory, the take's and the base's, each a file at a path.
 """
 
 from pathlib import Path
-from typing import override
 
 import pytest
 
 from claude_review.domain.code_names import CodePlace, DefinitionKind, FoundAs, NameFound, NamePlace
 from claude_review.domain.exceptions import FileNotInReviewError
-from claude_review.domain.interfaces import TreesRead
-from claude_review.domain.models import DiffFile, DiffHunk, FileStatus, LineSide
+from claude_review.domain.models import DiffFile, DiffHunk, FilesRead, FileStatus, LineSide
 from claude_review.services.code_names.lookup import NameLookup
 from tests.helpers import HUNK_HEADER, added_line, context_line, diff_file, removed_line
+from tests.without_git import TreesHeld
 
 ROOT = Path("/repository-read-from-trees")
 TAKE = "take-tree"
@@ -58,24 +57,16 @@ TAKE_DIFF = [
 ]
 
 
-class TreesHeld(TreesRead):
-    """Trees held in memory, each a file at a path; every file of a tree is said to hold any word."""
-
-    def __init__(self, trees: dict[str, dict[str, bytes]]) -> None:
-        self._trees = trees
-
-    @override
-    async def paths_holding(self, root: Path, tree: str, word: str) -> list[str]:
-        return list(self._trees[tree])
-
-    @override
-    async def files_of(self, root: Path, tree: str, paths: list[str]) -> dict[str, bytes]:
-        held = self._trees[tree]
-        return {path: held[path] for path in held.keys() & set(paths)}
-
-
 def lookup() -> NameLookup:
-    return NameLookup(TreesHeld({TAKE: TAKE_FILES, BASE: BASE_FILES}), ROOT)
+    return NameLookup(
+        TreesHeld(
+            {
+                TAKE: FilesRead(contents=TAKE_FILES, too_large=frozenset()),
+                BASE: FilesRead(contents=BASE_FILES, too_large=frozenset()),
+            }
+        ),
+        ROOT,
+    )
 
 
 async def test_a_name_is_found_in_every_file_of_the_take_the_uses_the_change_wrote_said_so() -> None:

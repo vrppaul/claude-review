@@ -16,6 +16,7 @@ from claude_review.domain.models import (
     LARGEST_FILE_SHOWN_BYTES,
     Checkout,
     DiffFile,
+    FilesRead,
     FileStatus,
     GitRef,
     OnBranch,
@@ -196,6 +197,10 @@ DESCRIPTION_SEPARATOR = " "
 BLOB_TYPE = "blob"
 BLOBS_READ = ["cat-file", "--batch=%(objectsize)"]
 BLOB_END = b"\n"
+# What separates a path's steps, and the steps git reads a path starting with against the working tree, not the
+# tree asked: one leaving the repository fails the whole batch
+PATH_STEP_SEPARATOR = "/"
+WORKING_TREE_STEPS = frozenset({".", ".."})
 
 # Where in an object store git finds the other stores it reads objects from,
 # and what ends each one's line there
@@ -467,33 +472,34 @@ class GitRepository(ReviewedRepository):
         return [name.removeprefix(found_in) for name in _succeeded(run, arguments).text.split(NAME_END) if name]
 
     @override
-    async def files_of(self, root: Path, tree: str, paths: list[str]) -> dict[str, bytes]:
+    async def files_of(self, root: Path, tree: str, paths: list[str]) -> FilesRead:
         """What each of these files of the tree holds, read in two commands whatever their number.
 
         The first says what stands at each path, so a file the tree lacks, or
         one too large to read, is never read; the second reads the rest. A
-        path holding a line break cannot be asked a line at a time, and is
-        left out.
+        path git cannot be asked about a tree is left out (`_can_be_asked`).
 
         Raises:
             GitError: if no object store was given, so no tree was ever written down, or git fails.
         """
         variables = self._reading_trees_written()
-        asked = [path for path in paths if LINE_END not in path]
+        asked = [path for path in paths if _can_be_asked(path)]
         if not asked:
-            return {}
+            return FilesRead(contents={}, too_large=frozenset())
         handed = "".join(f"{tree}{BLOB_AT}{path}{LINE_END}" for path in asked)
         described = _line_to_each(await _run(root, OBJECTS_DESCRIBED, variables, handed=handed))
         blobs = {
             path: blob
             for path, description in zip(asked, described, strict=True)
-            if (blob := _blob_described(description)) is not None and blob.size <= LARGEST_FILE_SHOWN_BYTES
+            if (blob := _blob_described(description)) is not None
         }
-        if not blobs:
-            return {}
-        handed = "".join(f"{blob.object_id}{LINE_END}" for blob in blobs.values())
+        too_large = frozenset(path for path, blob in blobs.items() if blob.size > LARGEST_FILE_SHOWN_BYTES)
+        readable = {path: blob for path, blob in blobs.items() if path not in too_large}
+        if not readable:
+            return FilesRead(contents={}, too_large=too_large)
+        handed = "".join(f"{blob.object_id}{LINE_END}" for blob in readable.values())
         read = _succeeded(await _execute(root, BLOBS_READ, variables, handed=handed), BLOBS_READ).output
-        return dict(zip(blobs, _contents_of(read), strict=True))
+        return FilesRead(contents=dict(zip(readable, _contents_of(read), strict=True)), too_large=too_large)
 
     def _reading_trees_written(self) -> dict[str, str]:
         """What points a command at the object store trees are written down into, the only one that holds them.
@@ -646,6 +652,13 @@ def _line_to_each(answered: str) -> list[str]:
     says is missing comes back in its line, whatever it holds.
     """
     return answered.removesuffix(LINE_END).split(LINE_END)
+
+
+def _can_be_asked(path: str) -> bool:
+    """Whether git can be asked what a tree holds at a path: one asked a line at a time, never read against the
+    working tree."""
+    first_step, _, _ = path.partition(PATH_STEP_SEPARATOR)
+    return LINE_END not in path and first_step not in WORKING_TREE_STEPS
 
 
 def _blob_described(description: str) -> StoredBlob | None:

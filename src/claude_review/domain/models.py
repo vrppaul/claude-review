@@ -868,6 +868,19 @@ class PathState(BaseModel):
 type TreeState = frozenset[PathState]
 
 
+class FilesRead(BaseModel):
+    """What a tree holds at the paths asked: each file read, by path, and those larger than the review reads, unread.
+
+    A path neither names is one the tree holds no file at.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    contents: dict[str, bytes]
+    # Larger than `LARGEST_FILE_SHOWN_BYTES`: nobody reads such a file line by line
+    too_large: frozenset[str]
+
+
 class TreeSnapshot(BaseModel):
     """The working tree as one taking of the diff saw it.
 

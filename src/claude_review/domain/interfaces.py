@@ -12,7 +12,7 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
-from claude_review.domain.models import Checkout, DiffFile, EpochMillis, GitRef
+from claude_review.domain.models import Checkout, DiffFile, EpochMillis, FilesRead, GitRef
 from claude_review.domain.page_events import PageEvent
 
 
@@ -107,8 +107,8 @@ class TreesRead(ABC):
         """
 
     @abstractmethod
-    async def files_of(self, root: Path, tree: str, paths: list[str]) -> dict[str, bytes]:
-        """What each of these files of the tree holds, by path; one it lacks, or larger than the review reads, left out.
+    async def files_of(self, root: Path, tree: str, paths: list[str]) -> FilesRead:
+        """What each of these files of the tree holds, by path; one larger than the review reads named and left unread.
 
         Raises:
             GitError: if git cannot say it.

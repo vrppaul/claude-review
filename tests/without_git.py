@@ -20,11 +20,12 @@ from collections.abc import AsyncGenerator, Callable
 from pathlib import Path
 from typing import override
 
-from claude_review.domain.interfaces import ReviewedRepository, StagedTree
+from claude_review.domain.interfaces import ReviewedRepository, StagedTree, TreesRead
 from claude_review.domain.models import (
     Checkout,
     DiffFile,
     DiffHunk,
+    FilesRead,
     FileStatus,
     GitRef,
     LineType,
@@ -189,8 +190,27 @@ class RepositoryWithoutGit(ReviewedRepository):
         return []
 
     @override
-    async def files_of(self, root: Path, tree: str, paths: list[str]) -> dict[str, bytes]:
-        return {}
+    async def files_of(self, root: Path, tree: str, paths: list[str]) -> FilesRead:
+        return FilesRead(contents={}, too_large=frozenset())
+
+
+class TreesHeld(TreesRead):
+    """Trees held in memory, by their ids, each as what reading every path of it gives; every file holds any word."""
+
+    def __init__(self, trees: dict[str, FilesRead]) -> None:
+        self._trees = trees
+
+    @override
+    async def paths_holding(self, root: Path, tree: str, word: str) -> list[str]:
+        return list(self._trees[tree].contents)
+
+    @override
+    async def files_of(self, root: Path, tree: str, paths: list[str]) -> FilesRead:
+        held = self._trees[tree]
+        return FilesRead(
+            contents={path: held.contents[path] for path in held.contents.keys() & set(paths)},
+            too_large=held.too_large & set(paths),
+        )
 
 
 class StagingHeldStill(StagedTree):

@@ -52,7 +52,7 @@ class NameLookup:
                 revision, path = base, _old_path_of(place.path, files)
             case _:
                 assert_never(place.side)
-        asked = (await self._repository.files_of(self._root, revision, [path])).get(path)
+        asked = (await self._repository.files_of(self._root, revision, [path])).contents.get(path)
         if asked is None:
             msg = f"no file to read at {path} on the {place.side} side"
             raise FileNotInReviewError(msg)
@@ -61,7 +61,7 @@ class NameLookup:
         named = time.perf_counter()
         holding = await self._repository.paths_holding(self._root, tree, name)
         searched = time.perf_counter()
-        contents = await self._repository.files_of(self._root, tree, holding)
+        contents = (await self._repository.files_of(self._root, tree, holding)).contents
         read = time.perf_counter()
         places = await asyncio.to_thread(_places_in, contents, name, _added_lines(files))
         log.debug(
