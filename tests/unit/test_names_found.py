@@ -25,7 +25,7 @@ from claude_review.domain.interfaces import GitError
 from claude_review.domain.models import FilesRead, LineSide
 from claude_review.services.code_names import reading
 from claude_review.services.code_names.found import FoundSoFar, read_names_found
-from claude_review.services.code_names.outlines import NamesParsing, Outlines
+from claude_review.services.code_names.outlines import NamesParsing, Outlines, SearchWaits
 from tests.without_git import WORKERS_IN_TESTS, OutlinesHeld, TreesHeld, held_object_id, parsing_in_tests
 
 ROOT = Path("/repository-read-from-trees")
@@ -35,6 +35,11 @@ LATER_TAKE = "later-take-tree"
 READ_A_WHILE_SECONDS = 0.05
 # How long a search waits where a test needs every file outlined: far past what outlining a few takes
 EVERY_FILE_OUTLINED_WITHIN_SECONDS = 10.0
+EVERY_FILE_OUTLINED = SearchWaits(
+    first_seconds=EVERY_FILE_OUTLINED_WITHIN_SECONDS, again_seconds=EVERY_FILE_OUTLINED_WITHIN_SECONDS
+)
+# A first answer given at once, with whatever is outlined by then
+AT_ONCE = SearchWaits(first_seconds=0, again_seconds=EVERY_FILE_OUTLINED_WITHIN_SECONDS)
 # Files enough to fill several chunks of outlining
 MANY_FILES = 200
 # Names enough in each of two files that, of either, one answer lists fewer than all
@@ -90,6 +95,15 @@ class TextSearched(TreesHeld):
         return [path for path, content in read.contents.items() if text.lower().encode() in content.lower()]
 
 
+class TextSearchedSlowly(TextSearched):
+    """Trees held in memory, each search of one counted, whose contents take a while to read."""
+
+    @override
+    async def blobs_read(self, root: Path, object_ids: list[str]) -> list[bytes]:
+        await asyncio.sleep(READ_A_WHILE_SECONDS)
+        return await super().blobs_read(root, object_ids)
+
+
 class BlobsSlow(TreesHeld):
     """Trees held in memory whose contents take a while to read."""
 
@@ -117,9 +131,7 @@ class ChunksRecorded(ThreadPoolExecutor):
 
 async def search(outlines: Outlines, text: str, tree: str) -> FoundSoFar:
     """The names found outside a change that touched none, every file outlined."""
-    return await read_names_found(
-        outlines, text=text, tree=tree, touched=[], within_seconds=EVERY_FILE_OUTLINED_WITHIN_SECONDS
-    )
+    return await read_names_found(outlines, text=text, tree=tree, touched=[], waits=EVERY_FILE_OUTLINED)
 
 
 def held_tree(tree: str, files: dict[str, bytes]) -> TreesHeld:
@@ -155,7 +167,7 @@ async def test_the_names_found_hold_the_text_whatever_its_case_and_the_change_s_
         text="FAIL",
         tree=TAKE,
         touched=touched,
-        within_seconds=EVERY_FILE_OUTLINED_WITHIN_SECONDS,
+        waits=EVERY_FILE_OUTLINED,
     )
 
     assert found == FoundSoFar(
@@ -226,7 +238,7 @@ async def test_a_search_answers_with_what_is_outlined_in_time_and_lists_the_rest
     held = BlobsSlow({TAKE: FilesRead(contents={"src/attempts.py": ATTEMPTS}, too_large=frozenset())})
     outlines = Outlines(held, ROOT, parsing_in_tests())
 
-    found_at_once = await read_names_found(outlines, text="fail", tree=TAKE, touched=[], within_seconds=0)
+    found_at_once = await read_names_found(outlines, text="fail", tree=TAKE, touched=[], waits=AT_ONCE)
     found_again = await search(outlines, "fail", TAKE)
 
     assert (found_at_once, len(found_again.names), found_again.complete) == (
@@ -294,10 +306,10 @@ async def test_a_search_of_a_tree_whose_every_file_is_outlined_asks_git_nothing(
 
 async def test_a_text_asked_again_while_its_files_are_outlined_is_searched_for_once() -> None:
     """As the page asks again until every file holding the text is outlined."""
-    held = TextSearched({TAKE: FilesRead(contents={"src/attempts.py": ATTEMPTS}, too_large=frozenset())})
+    held = TextSearchedSlowly({TAKE: FilesRead(contents={"src/attempts.py": ATTEMPTS}, too_large=frozenset())})
     outlines = Outlines(held, ROOT, parsing_in_tests())
 
-    await read_names_found(outlines, text="fail", tree=TAKE, touched=[], within_seconds=0)
+    await read_names_found(outlines, text="fail", tree=TAKE, touched=[], waits=AT_ONCE)
     found_again = await search(outlines, "fail", TAKE)
 
     assert (held.searches_count, len(found_again.names)) == (1, 2)

@@ -43,7 +43,7 @@ from claude_review.domain.models import (
 from claude_review.services.anchor_service import LineAnchorHandler, TakeRead, TakeUnread
 from claude_review.services.code_names.found import read_names_found
 from claude_review.services.code_names.lookup import NameLookup
-from claude_review.services.code_names.outlines import NamesParsing, Outlines
+from claude_review.services.code_names.outlines import NamesParsing, Outlines, SearchWaits
 from claude_review.services.code_names.touched import read_names_touched
 from claude_review.services.diff_reading import read_diff, read_diff_between
 from claude_review.services.files_of_take import FilesOfTake
@@ -57,9 +57,9 @@ from claude_review.services.review_opening import OpenedRepository, ReviewOpenin
 
 log = structlog.get_logger()
 
-# How long a search for a text first waits for the files it needs outlined before it answers with what is outlined
-# so far: the page asks again for the rest, and draws what it has meanwhile
-NAMES_FOUND_WITHIN_SECONDS = 0.2
+# How long a search for names waits for the files it needs outlined before it answers with what is outlined so far:
+# the page draws what it has and asks again at once, an answer a second showing names come in at little cost
+NAMES_FOUND_WAITS = SearchWaits(first_seconds=0.2, again_seconds=1.0)
 
 
 class DiffView(BaseModel):
@@ -396,7 +396,7 @@ class RepositorySource(ContentSource):
             text=text,
             tree=_tree_written(content),
             touched=touched,
-            within_seconds=NAMES_FOUND_WITHIN_SECONDS,
+            waits=NAMES_FOUND_WAITS,
         )
         return found.in_take(content.take)
 

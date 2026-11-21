@@ -777,7 +777,8 @@ def _blobs_listed(listed: str) -> BlobsAt:
         description, _, path = entry.partition(ENTRY_PATH_SEPARATOR)
         # Split at any run of blanks, as git pads the size to a column
         match description.split():
-            case [_, object_type, object_id, size] if object_type == BLOB_TYPE and size.isdecimal():
+            # A blob's size is always a number: git writes "-" for a commit's alone
+            case [_, object_type, object_id, size] if object_type == BLOB_TYPE:
                 if int(size) > LARGEST_FILE_SHOWN_BYTES:
                     too_large.add(path)
                 else:

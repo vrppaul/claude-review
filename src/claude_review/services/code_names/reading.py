@@ -5,8 +5,8 @@ a string holds is never a place a name stands. What no grammar reads — a
 file of no language here, a Svelte component's markup — is read as text,
 each whole word in it taken for a name. The names outlining a file, those
 standing at its top, are read off the same definitions' patterns of a kind
-that can stand there, each with the lines it is defined on. Parsing is the CPU's work: whoever asks runs this off the
-event loop.
+that can stand there, each with the lines it is defined on. Parsing is the
+CPU's work: whoever asks runs this off the event loop.
 """
 
 import re

@@ -9,7 +9,7 @@ a large tree's every name: only those an answer lists are written out.
 from pydantic import BaseModel, ConfigDict
 
 from claude_review.domain.code_names import NAMES_FOUND_LISTED, FileNamesTouched, NameDefined, NamesFound
-from claude_review.services.code_names.outlines import Outlines
+from claude_review.services.code_names.outlines import Outlines, SearchWaits
 
 # The names the tree lists of a file the change did not touch
 NONE_LISTED: frozenset[str] = frozenset()
@@ -31,10 +31,10 @@ class FoundSoFar(BaseModel):
 
 
 async def read_names_found(
-    outlines: Outlines, *, text: str, tree: str, touched: list[FileNamesTouched], within_seconds: float
+    outlines: Outlines, *, text: str, tree: str, touched: list[FileNamesTouched], waits: SearchWaits
 ) -> FoundSoFar:
     """The names outlining files of the tree that hold the text whatever its case, the change's own left out, in
-    the files outlined within the time given: the first listed, and how many more there are.
+    the files outlined by the time the search waits: the first listed, and how many more there are.
 
     Those starting with the text come first, the way a reader types a name
     from its start; each run in the order of the files' paths and their lines.
@@ -42,19 +42,21 @@ async def read_names_found(
     Raises:
         GitError: if git cannot read the tree.
     """
-    holding = await outlines.names_holding_text(tree, text, within_seconds=within_seconds)
+    holding = await outlines.names_holding_text(tree, text, waits=waits)
     listed_in_tree = {file.path: frozenset(name.name for name in file.names) for file in touched}
     # Lower-cased, as the page's filter matches the names the tree lists
     sought = text.lower()
     starting: list[NameDefined] = []
     holding_within: list[NameDefined] = []
-    found = 0
-    for lowered, path, name in zip(holding.lowered, holding.paths, holding.names, strict=True):
-        if sought not in lowered or name.name in listed_in_tree.get(path, NONE_LISTED):
-            continue
-        found += 1
-        run = starting if lowered.startswith(sought) else holding_within
-        if len(run) < NAMES_FOUND_LISTED:
-            run.append(name.defined_in(path))
+    found_count = 0
+    for file in holding.files:
+        left_to_tree = listed_in_tree.get(file.path, NONE_LISTED)
+        for lowered, name in zip(file.lowered, file.names, strict=True):
+            if sought not in lowered or name.name in left_to_tree:
+                continue
+            found_count += 1
+            run = starting if lowered.startswith(sought) else holding_within
+            if len(run) < NAMES_FOUND_LISTED:
+                run.append(name.defined_in(file.path))
     names = [*starting, *holding_within][:NAMES_FOUND_LISTED]
-    return FoundSoFar(names=names, more=found - len(names), complete=holding.complete)
+    return FoundSoFar(names=names, more=found_count - len(names), complete=holding.complete)

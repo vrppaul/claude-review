@@ -37,8 +37,9 @@ class Grammar(BaseModel):
     language: Language
     names: frozenset[str]
     definitions: Query
-    # The patterns of `definitions` that can outline a file (`OUTLINES`) alone, written first as there: an outline
-    # never reads each parameter and variable of a file, most of what defines a name in it
+    # Only those patterns of `definitions` that define a kind outlining a file (`OUTLINES`), in the same order, so
+    # the first of two still says what a name is: an outline never reads each parameter and variable of a file,
+    # most of what defines a name in it
     outlines: Query
     # The nodes that wrap a definition with its decorators: their lines are the definition's
     wrappers: frozenset[str]
@@ -268,8 +269,6 @@ def code_files_of(path: str) -> CodeFiles | None:
 
 
 def extension_of(path: str) -> str:
-    """The extension a path ends in, as its language is told by: none for a name starting with its only dot.
-
-    Split as text: a review asks it of every file of a large tree, and a path object takes many times longer.
-    """
+    """The extension a path ends in, as its language is told by: none for a name starting with its only dot."""
+    # Split as text: a review asks it of every file of a large tree, and a path object takes many times longer
     return posixpath.splitext(path)[1]
