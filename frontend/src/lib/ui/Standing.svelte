@@ -17,8 +17,9 @@
 	 * - on-a-bar: on the line of a card's bar, at the size of the bar's small words; or so on a line of its own, under
 	 *   a callout's words
 	 * - under-a-heading: under the title it says something of, a step smaller, so the title reads first
+	 * - under-a-list: under a list's last row, how many more it does not list, set in as the rows' words are
 	 */
-	type StandingPlace = 'on-a-bar' | 'under-a-heading';
+	type StandingPlace = 'on-a-bar' | 'under-a-heading' | 'under-a-list';
 
 	// The class of each in the library's stylesheet
 	const STANDING_TONES: Record<StandingTone, string> = {
@@ -32,7 +33,8 @@
 
 	const STANDING_PLACES: Record<StandingPlace, string> = {
 		'on-a-bar': 'cr-ui-standing-on-a-bar',
-		'under-a-heading': 'cr-ui-standing-under-a-heading'
+		'under-a-heading': 'cr-ui-standing-under-a-heading',
+		'under-a-list': 'cr-ui-standing-under-a-list'
 	};
 
 	interface Props {

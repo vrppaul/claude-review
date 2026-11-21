@@ -5,7 +5,7 @@ import FileList from '$lib/components/FileList.svelte';
 import { LINE_NUMBER_ROLE } from '$lib/dom/keyboard';
 import { LINE_ROW_ROLE } from '$lib/dom/line-read-from.svelte';
 import type { Review } from '$lib/review/review.svelte';
-import type { NameResponse, NamesTouchedResponse, TouchedName } from '$lib/types';
+import type { NameDefined, NameResponse, NamesFoundResponse, NamesTouchedResponse, TouchedName } from '$lib/types';
 import { stopsTogether } from '$lib/utils/stops';
 import {
 	A_LATER_TAKE,
@@ -575,12 +575,12 @@ describe('the names the change touched, under their files', () => {
 		fakeServer().answer('GET /api/names-touched', namesOfHandler);
 		const review = openReview({ files: diffFiles });
 
-		const { findAllByTestId, getByTestId } = render(FileList, inReview(review));
+		const { findAllByTestId, findByTestId, getByTestId } = render(FileList, inReview(review));
 		await findAllByTestId('name-item');
 		await user.type(getByTestId('file-filter'), 'zzz');
 
 		expect(getByTestId('file-filter').getAttribute('placeholder')).toBe('Find a file or name');
-		expect(getByTestId('no-matches').textContent?.trim()).toBe('No file or name matches “zzz”.');
+		expect((await findByTestId('no-matches')).textContent?.trim()).toBe('No file or name matches “zzz”.');
 	});
 
 	it('lists the files alone once the reader turns the names off, the filter then finding files alone', async () => {
@@ -944,5 +944,153 @@ describe('the names the change touched, under their files', () => {
 		render(FileList, inReview(review));
 
 		expect(server.requestsTo('GET /api/names-touched')).toHaveLength(0);
+	});
+
+	describe('names outside the change, found by the filter', () => {
+		const ATTEMPTS = 'src/auth/attempts.ts';
+		const failedRun: NameDefined = { name: 'FailedRun', defined_as: 'interface', path: ATTEMPTS, line: 4, column: 10 };
+		const failedTimes: NameDefined = {
+			name: 'failedTimes',
+			defined_as: 'function',
+			path: ATTEMPTS,
+			line: 12,
+			column: 16
+		};
+		const failedFound: NamesFoundResponse = { take: FIRST_TAKE, names: [failedRun, failedTimes], more: 0 };
+
+		it('lists them under “Not in this change”, what answered lit, each by its file, asking only what was typed last', async () => {
+			const user = userEvent.setup();
+			const server = fakeServer();
+			server.answer('GET /api/names-touched', namesOfHandler);
+			server.answer('GET /api/names-found', failedFound);
+			const review = openReview({ files: diffFiles });
+
+			const { findAllByTestId, getByTestId } = render(FileList, inReview(review));
+			await findAllByTestId('name-item');
+			await user.type(getByTestId('file-filter'), 'Fail');
+			const rows = await findAllByTestId('outside-name');
+
+			expect(getByTestId('not-in-this-change-heading').textContent).toBe('Not in this change');
+			expect(rows.map((row) => row.textContent?.replace(/\s+/g, ' ').trim())).toEqual([
+				'FailedRun attempts.ts',
+				'failedTimes() attempts.ts'
+			]);
+			expect(rows.map((row) => within(row).getByTestId('outside-name-sought').textContent)).toEqual(['Fail', 'fail']);
+			expect(server.requestsTo('GET /api/names-found').map((request) => request.query.text)).toEqual(['fail']);
+		});
+
+		it('takes the reader to where one is defined', async () => {
+			const user = userEvent.setup();
+			const server = fakeServer();
+			server.answer('GET /api/names-touched', namesOfHandler);
+			server.answer('GET /api/names-found', failedFound);
+			const review = openReview({ files: diffFiles });
+			const goToLine = vi.spyOn(review.navigator, 'goToLine').mockResolvedValue();
+
+			const { findAllByTestId, getByTestId } = render(FileList, inReview(review));
+			await findAllByTestId('name-item');
+			await user.type(getByTestId('file-filter'), 'fail');
+			const [first] = await findAllByTestId('outside-name');
+			await user.click(first);
+
+			expect(goToLine.mock.calls).toEqual([[ATTEMPTS, { side: 'new', number: 4 }, { column: 10, name: 'FailedRun' }]]);
+		});
+
+		it('says how many more answer than it lists', async () => {
+			const user = userEvent.setup();
+			const server = fakeServer();
+			server.answer('GET /api/names-touched', namesOfHandler);
+			server.answer('GET /api/names-found', { ...failedFound, more: 3608 });
+			const review = openReview({ files: diffFiles });
+
+			const { findAllByTestId, findByTestId, getByTestId } = render(FileList, inReview(review));
+			await findAllByTestId('name-item');
+			await user.type(getByTestId('file-filter'), 'fail');
+
+			expect((await findByTestId('outside-names-more')).textContent?.trim()).toBe('3,608 more names');
+		});
+
+		it('keeps those found that still answer while what more was typed is asked, never a late answer to less', async () => {
+			const user = userEvent.setup();
+			const server = fakeServer();
+			server.answer('GET /api/names-touched', namesOfHandler);
+			const found = server.hold('GET /api/names-found');
+			const review = openReview({ files: diffFiles });
+			const { findAllByTestId, getByTestId, queryAllByTestId } = render(FileList, inReview(review));
+			await findAllByTestId('name-item');
+			await user.type(getByTestId('file-filter'), 'fail');
+			await vi.waitFor(() => expect(found.requests).toHaveLength(1));
+			found.answer(0, failedFound);
+			await findAllByTestId('outside-name');
+
+			await user.type(getByTestId('file-filter'), 'edr');
+			const whileAsking = queryAllByTestId('outside-name').map((row) => row.textContent?.replace(/\s+/g, ' ').trim());
+			await vi.waitFor(() => expect(found.requests).toHaveLength(2));
+			await user.clear(getByTestId('file-filter'));
+			await user.type(getByTestId('file-filter'), 'fai');
+			await vi.waitFor(() => expect(found.requests).toHaveLength(3));
+			found.answer(2, { take: FIRST_TAKE, names: [failedTimes], more: 0 });
+			found.answer(1, { take: FIRST_TAKE, names: [failedRun], more: 0 });
+			await settled();
+
+			expect(whileAsking).toEqual(['FailedRun attempts.ts']);
+			expect(queryAllByTestId('outside-name').map((row) => row.textContent?.replace(/\s+/g, ' ').trim())).toEqual([
+				'failedTimes() attempts.ts'
+			]);
+		});
+
+		it('says that nothing matches less typed only once it is answered, though more typed matched nothing', async () => {
+			const user = userEvent.setup();
+			const server = fakeServer();
+			server.answer('GET /api/names-touched', namesOfHandler);
+			const found = server.hold('GET /api/names-found');
+			const review = openReview({ files: diffFiles });
+			const { findAllByTestId, findByTestId, getByTestId, queryByTestId } = render(FileList, inReview(review));
+			await findAllByTestId('name-item');
+			await user.type(getByTestId('file-filter'), 'failx');
+			await vi.waitFor(() => expect(found.requests).toHaveLength(1));
+			found.answer(0, { take: FIRST_TAKE, names: [], more: 0 });
+			await findByTestId('no-matches');
+
+			await user.keyboard('{Backspace}');
+			const whileAsking = queryByTestId('no-matches');
+			await vi.waitFor(() => expect(found.requests).toHaveLength(2));
+			found.answer(1, failedFound);
+
+			expect(whileAsking).toBeNull();
+			expect(await findAllByTestId('outside-name')).toHaveLength(2);
+		});
+
+		it('draws none found in a take other than the diff on screen', async () => {
+			const user = userEvent.setup();
+			const server = fakeServer();
+			server.answer('GET /api/names-touched', namesOfHandler);
+			server.answer('GET /api/names-found', { ...failedFound, take: A_LATER_TAKE });
+			const review = openReview({ files: diffFiles });
+
+			const { findAllByTestId, getByTestId, queryAllByTestId } = render(FileList, inReview(review));
+			await findAllByTestId('name-item');
+			await user.type(getByTestId('file-filter'), 'fail');
+			await vi.waitFor(() => expect(server.requestsTo('GET /api/names-found')).toHaveLength(1));
+			await settled();
+
+			expect(queryAllByTestId('outside-name')).toHaveLength(0);
+		});
+
+		it('hands the keyboard to the first of them on the down arrow where no file answers', async () => {
+			const user = userEvent.setup();
+			const server = fakeServer();
+			server.answer('GET /api/names-touched', namesOfHandler);
+			server.answer('GET /api/names-found', failedFound);
+			const review = openReview({ files: diffFiles });
+
+			const { findAllByTestId, getByTestId } = render(FileList, inReview(review));
+			await findAllByTestId('name-item');
+			await user.type(getByTestId('file-filter'), 'fail');
+			const [first] = await findAllByTestId('outside-name');
+			await user.keyboard('{ArrowDown}');
+
+			expect(document.activeElement).toBe(first);
+		});
 	});
 });

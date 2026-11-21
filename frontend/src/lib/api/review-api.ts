@@ -26,6 +26,7 @@ import type {
 	KeptSettings,
 	MessageRequest,
 	NameResponse,
+	NamesFoundResponse,
 	NamesTouchedResponse,
 	ReaderSettings,
 	RetakeResponse,
@@ -86,6 +87,17 @@ export function readNamesTouched(asked: DiffQuery): Promise<NamesTouchedResponse
 	return read('get', '/api/names-touched', {
 		query: routeQueryOf(asked),
 		doing: 'Could not read the names the change touched'
+	});
+}
+
+/**
+ * The names outside the change that hold a text, with the change's own left out as the diff asked for alike reads
+ * them.
+ */
+export function readNamesFound(asked: DiffQuery, text: string): Promise<NamesFoundResponse> {
+	return read('get', '/api/names-found', {
+		query: { ...routeQueryOf(asked), text },
+		doing: 'Could not find the names outside the change'
 	});
 }
 

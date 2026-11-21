@@ -7,6 +7,7 @@
 	import { counted, type CountedWords, FILES } from '$lib/utils/words';
 	import { tourStop } from '$lib/guide/tour';
 	import { useReview } from '$lib/review/context';
+	import { NamesOutside } from '$lib/review/names-outside.svelte';
 	import { fileSectionKey } from '$lib/review/reading-view';
 	import Dot from '$lib/ui/Dot.svelte';
 	import EmptyNote from '$lib/ui/EmptyNote.svelte';
@@ -20,7 +21,7 @@
 	import FileNames from './FileNames.svelte';
 	import FileRow from './FileRow.svelte';
 	import FileTreeFolder from './FileTreeFolder.svelte';
-	import OutsideFiles from './OutsideFiles.svelte';
+	import NotInThisChange from './NotInThisChange.svelte';
 	import { chordName, COLUMN_CHORD } from './keymap';
 	import { LookupFromTheTree } from './tree-name-lookup';
 	import TreeNameLookup from './TreeNameLookup.svelte';
@@ -60,8 +61,9 @@
 	// What the mark of the checks' failures on a file's row says, counted
 	const PLACES_FAILED: CountedWords = { one: 'place the checks failed', many: 'places the checks failed' };
 	const OUT_OF_DATE_SAID = ', out of date';
-	// What every row that names a file carries, so the filter can hand the keyboard to the first of them
-	const FILE_ROW_ROLE = 'file-row';
+	// What every row the filter leaves or finds carries — a file of the change, a name outside it — so the filter can
+	// hand the keyboard to the first of them
+	const FOUND_ROW_ROLE = 'found-row';
 
 	const review = useReview();
 
@@ -91,6 +93,12 @@
 		void review.names.follow();
 	});
 
+	// The names outside the change the filter finds, asked as the reader pauses typing while the tree lists names
+	const outside = new NamesOutside(review.diff);
+	const soughtOutside = $derived(namesListed ? query : '');
+	$effect(() => outside.seek(soughtOutside));
+	const foundOutside = $derived(outside.of(soughtOutside));
+
 	// The name of the line the reader reads from, where the tree lists it, unfolded: its row is the current one
 	const nameInView = $derived.by(() => {
 		const read = review.sections.linesRead;
@@ -100,8 +108,8 @@
 		return standing !== null && listedThere.includes(standing) ? standing : null;
 	});
 
-	// What the filter leaves, drawn: where it looks for the first file to go to
-	let list: HTMLElement | undefined = $state();
+	// What the filter leaves and finds, drawn: where it looks for the first row to go to
+	let filtered: HTMLElement | undefined = $state();
 
 	// Where a name the tree lists is defined and used, asked from the icon on its row; its pane lies over the column
 	const lookup = new LookupFromTheTree(review.diff);
@@ -113,12 +121,13 @@
 	}
 
 	/**
-	 * Enter goes to the first file the filter leaves, as a click on it would;
-	 * the down arrow hands the keyboard to it, to go on from there.
+	 * Enter goes to the first file the filter leaves, or else the first name
+	 * it finds outside the change, as a click on it would; the down arrow
+	 * hands the keyboard to it, to go on from there.
 	 */
 	function onFilterKey(event: KeyboardEvent) {
 		if (isComposingText(event) || (event.key !== 'Enter' && event.key !== 'ArrowDown')) return;
-		const first = list?.querySelector<HTMLElement>(`[data-role="${FILE_ROW_ROLE}"]`);
+		const first = filtered?.querySelector<HTMLElement>(`[data-role="${FOUND_ROW_ROLE}"]`);
 		if (!first) return;
 		event.preventDefault();
 		if (event.key === 'Enter') first.click();
@@ -131,7 +140,7 @@
 	{@const namesFolded = layout.areNamesFolded(file.path)}
 	<FileRow
 		testId="file-item"
-		role={FILE_ROW_ROLE}
+		role={FOUND_ROW_ROLE}
 		{depth}
 		status={isDiffMode ? file.status : null}
 		current={review.sections.fileInView === file.path && nameInView === null}
@@ -264,24 +273,31 @@
 		{/if}
 	</div>
 
-	{#if review.diff.files.length === 0}
-		<!-- An empty diff, the work undone, say: there is nothing a filter could have missed -->
-		<EmptyNote within="list" testId="no-files">No {COUNTED_AS[review.mode].many}.</EmptyNote>
-	{:else if found.length === 0}
-		<EmptyNote within="list" testId="no-matches">No {filteredBy.sought} matches “{layout.filter}”.</EmptyNote>
-	{:else}
-		<ul bind:this={list}>
-			{#if isDiffMode}
-				{#each tree as node (node.path)}
-					{@render treeNode(node, 0)}
-				{/each}
-			{:else}
-				{#each found as listed (listed.file.path)}
-					{@render fileRow(listed, listed.file.path, 0)}
-				{/each}
+	<!-- What the filter leaves of the change's files, and what it finds outside the change -->
+	<div bind:this={filtered} data-testid="file-tree-found">
+		{#if review.diff.files.length === 0}
+			<!-- An empty diff, the work undone, say: there is nothing a filter could have missed -->
+			<EmptyNote within="list" testId="no-files">No {COUNTED_AS[review.mode].many}.</EmptyNote>
+		{:else if found.length === 0}
+			<!-- Said where nothing outside the change answers either, as far as is known: never while what is known
+				proves nothing -->
+			{#if foundOutside.whole && foundOutside.names.length === 0}
+				<EmptyNote within="list" testId="no-matches">No {filteredBy.sought} matches “{layout.filter}”.</EmptyNote>
 			{/if}
-		</ul>
-	{/if}
+		{:else}
+			<ul>
+				{#if isDiffMode}
+					{#each tree as node (node.path)}
+						{@render treeNode(node, 0)}
+					{/each}
+				{:else}
+					{#each found as listed (listed.file.path)}
+						{@render fileRow(listed, listed.file.path, 0)}
+					{/each}
+				{/if}
+			</ul>
+		{/if}
 
-	<OutsideFiles />
+		<NotInThisChange found={foundOutside} sought={query} foundRole={FOUND_ROW_ROLE} />
+	</div>
 </SideColumn>

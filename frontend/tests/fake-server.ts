@@ -13,7 +13,7 @@
  */
 import { vi } from 'vitest';
 import type { paths } from '$lib/types/generated/http';
-import type { NamesTouchedResponse, ReaderSettings, SettingsChange } from '$lib/types';
+import type { NamesFoundResponse, NamesTouchedResponse, ReaderSettings, SettingsChange } from '$lib/types';
 import { FIRST_TAKE } from './diff';
 
 /** What a route answers when it did what it was asked and has nothing to add: no body at all. */
@@ -57,6 +57,7 @@ const ROUTES = [
 	'GET /api/file-of-take',
 	'GET /api/name',
 	'GET /api/names-touched',
+	'GET /api/names-found',
 	'GET /api/settings',
 	'PUT /api/settings',
 	'GET /api/guide',
@@ -274,6 +275,8 @@ export function fakeServer(): FakeServer {
 	// The tree of a review of a change reads the names it touched as soon as it is drawn, whatever the test is about:
 	// unless a test says otherwise, the change touched none
 	server.answer('GET /api/names-touched', NO_NAMES_TOUCHED);
+	// Its filter, while it lists names, asks for those outside the change: unless a test says otherwise, none
+	server.answer('GET /api/names-found', NO_NAMES_FOUND);
 	serversThisTest.push(server);
 	vi.stubGlobal('fetch', (input: RequestInfo | URL, init?: RequestInit) => server.receive(input, init));
 	return server;
@@ -293,6 +296,9 @@ export function failOnUnanswered(): void {
 
 /** What the review says of a change that touched no name, in the take a test's review opens on. */
 const NO_NAMES_TOUCHED: NamesTouchedResponse = { take: FIRST_TAKE, files: [] };
+
+/** What the review says of a text no name outside the change holds, in the take a test's review opens on. */
+const NO_NAMES_FOUND: NamesFoundResponse = { take: FIRST_TAKE, names: [], more: 0 };
 
 /** What a reader who has never chosen anything has. */
 export const NEW_READER: ReaderSettings = {

@@ -1846,6 +1846,11 @@
 	font-size: var(--text-2xs);
 	line-height: var(--text-2xs--line-height);
 }
+.cr-ui-standing-under-a-list {
+	padding-inline: var(--cr-list-row-room);
+	font-size: var(--text-xs);
+	line-height: var(--text-xs--line-height);
+}
 /* Breathing dots keep half a step more room from the words they stand before: three marks, not one */
 .cr-ui-standing > .cr-ui-breathing-dots {
 	margin-inline-end: --spacing(0.5);
@@ -2428,6 +2433,15 @@
 	color: var(--cr-muted);
 	font-weight: var(--font-weight-normal);
 	text-overflow: ellipsis;
+}
+/*
+ * What it says, at the row's end, as a folder stands at the end of a file's row: in faint words at the row's own
+ * weight, and still in the room the label leaves
+ */
+.cr-ui-row-said-at-end {
+	color: var(--cr-faint);
+	font-weight: inherit;
+	text-align: end;
 }
 /* What the reader has finished with steps back, in faint words */
 .cr-ui-row-viewed {

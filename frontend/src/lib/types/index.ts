@@ -286,6 +286,10 @@ export type FileNamesTouched = Schemas['FileNamesTouched'];
 export type TouchedName = Schemas['TouchedName'];
 /** What the change did to a name it touched. */
 export type NameChange = Schemas['NameChange'];
+/** The names outside the change that hold a text, the first listed and how many more, and the take they are of. */
+export type NamesFoundResponse = Schemas['NamesFoundResponse'];
+/** A name a file of the take defines at its top, and where it is written on the new side. */
+export type NameDefined = Schemas['NameDefined'];
 /** What a definition of a name defines, as the grammars tell them apart. */
 export type DefinitionKind = Schemas['DefinitionKind'];
 export type VersionsResponse = Schemas['VersionsResponse'];

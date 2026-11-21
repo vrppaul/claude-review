@@ -90,6 +90,12 @@
   names as well as paths, lighting what answered in each name. A toggle
   beside the filter lists the files alone, and the page remembers it. The
   tour stops at the names after the files.
+- **The filter finds names outside the change too.** Under the tree,
+  "Not in this change" lists the functions and classes the repository
+  defines whose names hold what you typed, each with its file; pressing
+  one takes you to it. Twenty are listed, and a line counts the rest. The
+  review reads each file's names once, so a later search, or the names of
+  a later round, read only the files that changed.
 
 ### Changed
 - **Help's "What's new" names no release.** The news it opens is of the

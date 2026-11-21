@@ -25,7 +25,10 @@ export function wordsFor(count: number, words: CountedWords): string {
 	return count === 1 ? words.one : words.many;
 }
 
-/** A count and the words that go with it: "1 file", "0 files". */
+// How a count is written: in the page's own language, its thousands set apart, "3,608"
+const COUNT_WRITTEN = new Intl.NumberFormat('en');
+
+/** A count and the words that go with it: "1 file", "0 files", "3,608 names". */
 export function counted(count: number, words: CountedWords): string {
-	return `${count} ${wordsFor(count, words)}`;
+	return `${COUNT_WRITTEN.format(count)} ${wordsFor(count, words)}`;
 }

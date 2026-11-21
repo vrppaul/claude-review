@@ -1,19 +1,10 @@
-<script lang="ts" module>
-	import type { DefinitionKind } from '$lib/types';
-
-	// What of the names outlining a file is called, and so written with the brackets a call takes after its name
-	const CALLED: ReadonlySet<DefinitionKind> = new Set(['function']);
-	// What a name that is called is written with after it
-	const CALL_BRACKETS = '()';
-</script>
-
 <script lang="ts">
 	import type { TouchedName } from '$lib/types';
 	import Icon from '$lib/ui/Icon.svelte';
 	import IconButton from '$lib/ui/IconButton.svelte';
 	import RowWithAct from '$lib/ui/RowWithAct.svelte';
-	import Sought from '$lib/ui/Sought.svelte';
 	import StatusLetter from '$lib/ui/StatusLetter.svelte';
+	import CodeNameWords from './CodeNameWords.svelte';
 	import { NAME_LETTERS } from './status-letters';
 
 	/** The way to where a name is defined and used from its row: whether its pane is open, and how to ask. */
@@ -50,9 +41,7 @@
 {/snippet}
 
 {#snippet label()}
-	<Sought words={name.name} {sought} testId="name-sought" />{#if CALLED.has(name.defined_as)}<span class="cr-faint"
-			>{CALL_BRACKETS}</span
-		>{/if}
+	<CodeNameWords name={name.name} definedAs={name.defined_as} {sought} soughtTestId="name-sought" />
 {/snippet}
 
 <!-- The way to where it is defined and used, where the review can look it up -->

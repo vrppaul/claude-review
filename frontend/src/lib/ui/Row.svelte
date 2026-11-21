@@ -29,6 +29,12 @@
 	// The class of each in the library's stylesheet
 	const BRANCHES: Record<Branch, string> = { first: 'cr-ui-row-branch-first', next: 'cr-ui-row-branch-next' };
 
+	/** Where what a row says of what it names stands on its line: right after its label, or at the row's end. */
+	type SaidAt = 'label' | 'end';
+
+	// The class of each in the library's stylesheet
+	const SAID_AT: Record<SaidAt, string | null> = { label: null, end: 'cr-ui-row-said-at-end' };
+
 	interface Props extends Omit<HTMLButtonAttributes, 'class' | 'style' | 'type' | 'children' | 'aria-expanded'> {
 		names: Names;
 		testId: string;
@@ -48,6 +54,11 @@
 		label: Snippet;
 		/** What it says of what it names, after its label in quieter words: a thread's, after the line it hangs on. */
 		said?: Snippet;
+		/**
+		 * Where what it says stands: right after its label; or at its end, where a list of names says the file each
+		 * is in. Either way in the room the label leaves, so the label is cut last.
+		 */
+		saidAt?: SaidAt;
 		/** What stands at its end: a count, the lines a file changes, how long ago. */
 		trailing?: Snippet;
 		/** The row itself, for whoever hands the keyboard to it. */
@@ -65,6 +76,7 @@
 		leading,
 		label,
 		said,
+		saidAt = 'label',
 		trailing,
 		element = $bindable(),
 		...attributes
@@ -95,7 +107,7 @@
 		{/if}
 		<span class="cr-ui-row-label">{@render label()}</span>
 		{#if said}
-			<span data-testid="{testId}-said" class="cr-ui-row-said">{@render said()}</span>
+			<span data-testid="{testId}-said" class={['cr-ui-row-said', SAID_AT[saidAt]]}>{@render said()}</span>
 		{/if}
 		{#if trailing || folded !== undefined}
 			<span class="cr-ui-row-end">
