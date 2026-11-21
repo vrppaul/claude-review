@@ -289,14 +289,6 @@ What a thing is:
 - [ ] `feat(ui)`: the rest of the name lookup's design: the names a change
       touches in the tree, and the lookup opened from there; the lookup in
       the news and as a stop of the tour.
-- [ ] `feat`: the agent's chip of a file the change did not touch
-      (`Navigator.showFile`: an answer's file, a file a check names, the
-      agent's work) says "not in the diff yet" and goes nowhere, and a
-      check's failure in such a file is said and not pressable
-      (`ChecksChip`), though going to a line of one opens it alone. The
-      page cannot tell a file the take holds outside the change from one it
-      does not hold: the server says that of each file the agent names
-      first, and then such a chip opens the file alone.
 - [ ] `feat`: what the server does not find yet. A Svelte component is
       defined by its file, which the lookup reports as no definition
       (`CommentThread` gave 13 places and none defining it); a loop's

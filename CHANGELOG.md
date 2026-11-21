@@ -49,6 +49,16 @@
   takes you back where you came from. n and p walk its threads after the
   change's; a retake leaves you in it, or puts you among the change's
   files once the change touches it.
+- **The agent's chip of a file the change did not touch opens it.** The
+  review says of every file the agent names — in what it says, in the
+  work it reports, in a check's failure — whether its base holds the file,
+  from the base's files git lists once as the review opens. A chip of
+  such a file, or a failure in one, opens it alone, at the failure's
+  line, with Back to where you were; one named by the path the change
+  renamed it from goes to the renamed file. One that is not text, or too
+  large to show, opens saying so under its bar, as such a file of the
+  change does. A file neither holds, such as one made since the diff was
+  taken, still says "not in the diff yet".
 - **Where a name is defined and used.** Ctrl+click a name in the code,
   Cmd+click on a Mac, and a pane by the name, on whichever side of it had
   more room as it opened, lists its places: where it is defined, where it
