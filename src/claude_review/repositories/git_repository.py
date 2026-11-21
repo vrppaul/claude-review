@@ -477,6 +477,9 @@ class GitRepository(ReviewedRepository):
         Raises:
             GitError: if no object store was given, so no tree was ever written down, or git fails.
         """
+        # A NUL cannot be handed to git, and no text file it searches holds one
+        if NAME_END in sought:
+            return []
         arguments = [*FILES_SEARCHED, *sought_as, SOUGHT_FOLLOWS, sought, tree, END_OF_REVISIONS]
         run = await _execute(root, arguments, self._reading_trees_written())
         if run.exit_code == NOTHING_FOUND:

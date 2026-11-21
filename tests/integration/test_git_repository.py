@@ -324,8 +324,9 @@ async def test_the_files_holding_a_text_hold_it_inside_a_word_and_in_any_case(
 
     holding = await repo.paths_with_text(tmp_git_repo, tree, "aILe")
     holding_as_pattern = await repo.paths_with_text(tmp_git_repo, tree, "fail.d")
+    holding_a_nul = await repo.paths_with_text(tmp_git_repo, tree, "Fail\0ed")
 
-    assert (holding, holding_as_pattern) == (["src/runs.py"], [])
+    assert (holding, holding_as_pattern, holding_a_nul) == (["src/runs.py"], [], [])
 
 
 async def test_a_file_of_a_tree_reads_as_written_down_one_too_large_is_named_unread_and_one_missing_left_out(
