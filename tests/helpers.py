@@ -62,9 +62,10 @@ from claude_review.presentation.schemas.pushes import ProgressPush, Push, Server
 from claude_review.presentation.schemas.session import Delivery, SessionMessage, Welcome
 from claude_review.repositories.git_repository import GitRepository
 from claude_review.repositories.system_clock import SystemClock
+from claude_review.services.review.content_sources import CodeRead
 from claude_review.services.review.review_lifetime import EndReason, ReviewLifetime
 from claude_review.services.review_opening import OpenedRepository, ReviewOpening, open_diff
-from tests.without_git import RepositoryHeldStill, change_held_still
+from tests.without_git import RepositoryHeldStill, change_held_still, parsing_in_tests
 
 # Where a review built in the test process is reached. Its own page names
 # itself by this origin, and the host is what the origin guard checks.
@@ -396,7 +397,9 @@ class ReviewFactory:
         )
         return host_review(
             opening,
-            repository=repository or GitRepository(objects=workspace.objects),
+            code=CodeRead(
+                repository=repository or GitRepository(objects=workspace.objects), parsing=parsing_in_tests()
+            ),
             workspace=workspace,
             reader_files=self._reader_files,
             clock=clock or SystemClock(),

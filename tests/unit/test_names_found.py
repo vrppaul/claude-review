@@ -6,6 +6,8 @@ tree held so holds any text: which names hold it is the review's to say.
 """
 
 import asyncio
+from collections.abc import Callable
+from concurrent.futures import Future, ThreadPoolExecutor
 from pathlib import Path
 from typing import override
 
@@ -22,9 +24,9 @@ from claude_review.domain.code_names import (
 )
 from claude_review.domain.interfaces import GitError
 from claude_review.domain.models import FilesRead, LineSide
-from claude_review.services.code_names.found import read_names_found
-from claude_review.services.code_names.outlines import Outlines
-from tests.without_git import TreesHeld, held_object_id
+from claude_review.services.code_names.found import FoundSoFar, read_names_found
+from claude_review.services.code_names.outlines import NamesParsing, Outlines
+from tests.without_git import WORKERS_IN_TESTS, OutlinesHeld, TreesHeld, held_object_id, parsing_in_tests
 
 ROOT = Path("/repository-read-from-trees")
 TAKE = "take-tree"
@@ -32,6 +34,10 @@ LATER_TAKE = "later-take-tree"
 TAKE_NUMBER = 3
 # How long a content git reads takes where a test needs one read to end after another
 READ_A_WHILE_SECONDS = 0.05
+# How long a search waits where a test needs every file outlined: far past what outlining a few takes
+EVERY_FILE_OUTLINED_WITHIN_SECONDS = 10.0
+# Files enough to fill several chunks of outlining
+MANY_FILES = 200
 
 ATTEMPTS = b"class FailedRun:\n    def fail_now(self):\n        pass\n\n\ndef failed_attempts():\n    pass\n"
 LOG = b"def note_failure():\n    pass\n\n\ndef is_failure():\n    pass\n\n\ndef fail_safe():\n    pass\n"
@@ -68,6 +74,47 @@ class BlobsFailing(TreesHeld):
         return await super().blobs_read(root, object_ids)
 
 
+class TextSearched(TreesHeld):
+    """Trees held in memory whose files hold a text only where it is written in them, whatever its case."""
+
+    @override
+    async def paths_with_text(self, root: Path, tree: str, text: str) -> list[str]:
+        read = await self.files_of(root, tree, list(await self.files_in(root, tree)))
+        return [path for path, content in read.contents.items() if text.lower().encode() in content.lower()]
+
+
+class BlobsSlow(TreesHeld):
+    """Trees held in memory whose contents take a while to read."""
+
+    @override
+    async def blobs_read(self, root: Path, object_ids: list[str]) -> list[bytes]:
+        await asyncio.sleep(READ_A_WHILE_SECONDS)
+        return await super().blobs_read(root, object_ids)
+
+
+class ChunksRecorded(ThreadPoolExecutor):
+    """Threads to outline in that note the paths of each chunk of files they are given, in the order given."""
+
+    def __init__(self, *, max_workers: int) -> None:
+        super().__init__(max_workers=max_workers)
+        self.paths_given: list[list[str]] = []
+
+    @override
+    def submit[**Takes, Gives](
+        self, fn: Callable[Takes, Gives], /, *args: Takes.args, **kwargs: Takes.kwargs
+    ) -> Future[Gives]:
+        [files] = args
+        self.paths_given.append([file.path for file in files])
+        return super().submit(fn, *args, **kwargs)
+
+
+async def search(outlines: Outlines, text: str, tree: str) -> FoundSoFar:
+    """The names found outside a change that touched none, every file outlined."""
+    return await read_names_found(
+        outlines, text=text, tree=tree, touched=[], within_seconds=EVERY_FILE_OUTLINED_WITHIN_SECONDS
+    )
+
+
 def held_tree(tree: str, files: dict[str, bytes]) -> TreesHeld:
     return TreesHeld({tree: FilesRead(contents=files, too_large=frozenset())})
 
@@ -96,14 +143,23 @@ async def test_the_names_found_hold_the_text_whatever_its_case_and_the_change_s_
         )
     ]
 
-    found = await read_names_found(Outlines(held, ROOT), text="FAIL", tree=TAKE, touched=touched)
+    found = await read_names_found(
+        Outlines(held, ROOT, parsing_in_tests()),
+        text="FAIL",
+        tree=TAKE,
+        touched=touched,
+        within_seconds=EVERY_FILE_OUTLINED_WITHIN_SECONDS,
+    )
 
-    assert found == [
-        defined("FailedRun", DefinitionKind.CLASS, "src/attempts.py", 1, 6),
-        defined("failed_attempts", DefinitionKind.FUNCTION, "src/attempts.py", 6, 4),
-        defined("fail_safe", DefinitionKind.FUNCTION, "src/log.py", 9, 4),
-        defined("note_failure", DefinitionKind.FUNCTION, "src/log.py", 1, 4),
-    ]
+    assert found == FoundSoFar(
+        names=[
+            defined("FailedRun", DefinitionKind.CLASS, "src/attempts.py", 1, 6),
+            defined("failed_attempts", DefinitionKind.FUNCTION, "src/attempts.py", 6, 4),
+            defined("fail_safe", DefinitionKind.FUNCTION, "src/log.py", 9, 4),
+            defined("note_failure", DefinitionKind.FUNCTION, "src/log.py", 1, 4),
+        ],
+        complete=True,
+    )
 
 
 async def test_a_file_rewritten_in_a_later_take_says_the_names_it_holds_there() -> None:
@@ -115,25 +171,60 @@ async def test_a_file_rewritten_in_a_later_take_says_the_names_it_holds_there() 
             ),
         }
     )
-    outlines = Outlines(held, ROOT)
+    outlines = Outlines(held, ROOT, parsing_in_tests())
 
-    await read_names_found(outlines, text="fail", tree=TAKE, touched=[])
-    found_later = await read_names_found(outlines, text="fail", tree=LATER_TAKE, touched=[])
+    await search(outlines, "fail", TAKE)
+    found_later = await search(outlines, "fail", LATER_TAKE)
 
-    assert found_later == [defined("fail_later", DefinitionKind.FUNCTION, "src/attempts.py", 1, 4)]
+    assert found_later.names == [defined("fail_later", DefinitionKind.FUNCTION, "src/attempts.py", 1, 4)]
 
 
 async def test_searches_asked_at_once_read_a_file_once() -> None:
     """As a reader typing asks again before the last answer: what one search reads, another one waits for."""
     held = BlobsCounted({TAKE: FilesRead(contents={"src/attempts.py": ATTEMPTS}, too_large=frozenset())})
-    outlines = Outlines(held, ROOT)
+    outlines = Outlines(held, ROOT, parsing_in_tests())
 
-    found = await asyncio.gather(
-        read_names_found(outlines, text="fail", tree=TAKE, touched=[]),
-        read_names_found(outlines, text="failed", tree=TAKE, touched=[]),
+    found = await asyncio.gather(search(outlines, "fail", TAKE), search(outlines, "failed", TAKE))
+
+    assert (held.blobs_read_count, [len(each.names) for each in found]) == (1, [2, 2])
+
+
+async def test_a_file_outlined_in_one_review_is_never_read_again_in_the_next() -> None:
+    held = BlobsCounted({TAKE: FilesRead(contents={"src/attempts.py": ATTEMPTS}, too_large=frozenset())})
+    parsing = parsing_in_tests()
+
+    await search(Outlines(held, ROOT, parsing), "fail", TAKE)
+    found_next = await search(Outlines(held, ROOT, parsing), "fail", TAKE)
+
+    assert (held.blobs_read_count, len(found_next.names)) == (1, 2)
+
+
+async def test_a_search_answers_with_what_is_outlined_in_time_and_lists_the_rest_asked_again() -> None:
+    held = BlobsSlow({TAKE: FilesRead(contents={"src/attempts.py": ATTEMPTS}, too_large=frozenset())})
+    outlines = Outlines(held, ROOT, parsing_in_tests())
+
+    found_at_once = await read_names_found(outlines, text="fail", tree=TAKE, touched=[], within_seconds=0)
+    found_again = await search(outlines, "fail", TAKE)
+
+    assert (found_at_once, len(found_again.names), found_again.complete) == (
+        FoundSoFar(names=[], complete=False),
+        2,
+        True,
     )
 
-    assert (held.blobs_read_count, [len(names) for names in found]) == (1, [2, 2])
+
+async def test_a_search_is_outlined_before_the_files_made_ready_ahead_of_it() -> None:
+    files = {f"src/file_{number:03}.py": f"def fail_{number}():\n    pass\n".encode() for number in range(MANY_FILES)}
+    held = TextSearched({TAKE: FilesRead(contents=files, too_large=frozenset())})
+    chunks = ChunksRecorded(max_workers=WORKERS_IN_TESTS)
+    outlines = Outlines(held, ROOT, NamesParsing(executor=chunks, workers=WORKERS_IN_TESTS, kept=OutlinesHeld()))
+
+    await outlines.make_ready(TAKE)
+    await search(outlines, "fail_199", TAKE)
+    # Let what is made ready be outlined while the test's loop runs
+    await outlines.of_files(TAKE, list(files))
+
+    assert chunks.paths_given[0][0] == "src/file_199.py"
 
 
 async def test_a_file_git_fails_to_read_fails_the_search_as_git_failed_while_another_file_is_read_apart() -> None:
@@ -141,7 +232,7 @@ async def test_a_file_git_fails_to_read_fails_the_search_as_git_failed_while_ano
         {TAKE: FilesRead(contents={"src/attempts.py": ATTEMPTS, "src/log.py": LOG}, too_large=frozenset())},
         failing=held_object_id(LOG),
     )
-    outlines = Outlines(held, ROOT)
+    outlines = Outlines(held, ROOT, parsing_in_tests())
     reading_attempts = asyncio.create_task(outlines.of_files(TAKE, ["src/attempts.py"]))
     await asyncio.sleep(0)
 
@@ -153,6 +244,6 @@ async def test_a_file_git_fails_to_read_fails_the_search_as_git_failed_while_ano
 def test_an_answer_lists_twenty_names_and_says_how_many_more_hold_the_text() -> None:
     found = [defined(f"fail_{number}", DefinitionKind.FUNCTION, "src/many.py", number, 4) for number in range(1, 26)]
 
-    listing = NamesFound.listing(TAKE_NUMBER, found)
+    listing = NamesFound.listing(TAKE_NUMBER, found, complete=True)
 
-    assert listing == NamesFound(take=TAKE_NUMBER, names=found[:20], more=5)
+    assert listing == NamesFound(take=TAKE_NUMBER, names=found[:20], more=5, complete=True)

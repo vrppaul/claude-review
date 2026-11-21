@@ -278,6 +278,10 @@ class Review:
         """The names outlining files of the take that hold a text, those `names_touched` reads alike left out."""
         return await self._source.names_found(text, base, ignore_whitespace=ignore_whitespace)
 
+    async def make_names_ready(self) -> None:
+        """Begin outlining every file of the take on screen, for the searches the reader is about to type."""
+        await self._source.make_names_ready()
+
     async def file_of_take(self, path: str) -> OpenedFileOfTake:
         """A file of the take on screen as the reader opens it: whole, or saying why none of its lines are read."""
         return await self._source.file_of_take(path)

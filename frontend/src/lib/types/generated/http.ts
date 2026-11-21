@@ -293,6 +293,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/names-found/ready": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Make Names Ready
+         * @description Begin outlining every file of the take on screen, as the reader comes to the tree's filter.
+         *
+         *     Answered once the work is begun, not done: a search asked meanwhile is outlined first.
+         */
+        post: operations["make_names_ready_api_names_found_ready_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/file-of-take": {
         parameters: {
             query?: never;
@@ -1663,6 +1685,8 @@ export interface components {
             names: components["schemas"]["NameDefined"][];
             /** More */
             more: number;
+            /** Complete */
+            complete: boolean;
         };
         /**
          * NamesTouchedResponse
@@ -3349,6 +3373,51 @@ export interface operations {
             };
             /** @description Unprocessable Content */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Refusal"];
+                };
+            };
+        };
+    };
+    make_names_ready_api_names_found_ready_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Refusal"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Refusal"];
+                };
+            };
+            /** @description Conflict */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

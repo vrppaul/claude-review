@@ -208,16 +208,18 @@ class NameDefined(BaseModel):
 
 class NamesFound(BaseModel):
     """The names outlining files of the take that hold what the reader typed, those the change touched left out: the
-    first listed, how many more hold it, and the take they were read in."""
+    first listed, how many more hold it, whether every file holding it was outlined, and the take they were read in."""
 
     model_config = ConfigDict(frozen=True)
 
     take: int
     names: list[NameDefined]
     more: int
+    # Whether every file holding the text was outlined: until it is, asking again finds more as they are
+    complete: bool
 
     @classmethod
-    def listing(cls, take: int, found: list[NameDefined]) -> NamesFound:
+    def listing(cls, take: int, found: list[NameDefined], *, complete: bool) -> NamesFound:
         """The names found, as many listed as one answer lists, in the order found."""
         listed = found[:NAMES_FOUND_LISTED]
-        return cls(take=take, names=listed, more=len(found) - len(listed))
+        return cls(take=take, names=listed, more=len(found) - len(listed), complete=complete)

@@ -47,7 +47,7 @@ from claude_review.repositories.json_record_store import JsonRecordStore
 from claude_review.repositories.system_clock import SystemClock
 from claude_review.services.image_service import REVIEW_IMAGE_QUOTA, ImageService
 from claude_review.services.reader_record_service import ReaderRecordService
-from claude_review.services.review.content_sources import content_source
+from claude_review.services.review.content_sources import CodeRead, content_source
 from claude_review.services.review.review import Review
 from claude_review.services.review.review_lifetime import EndReason
 from claude_review.services.review.review_record import ReviewRecord
@@ -72,6 +72,7 @@ from tests.helpers import (
     until_an_agent_waits,
     write_files,
 )
+from tests.without_git import parsing_in_tests
 from tests.stories import as_the_agent_writes, chapter_of, planted, rows_of, step, story_of, story_of_chapters
 
 STORY_ROUTE = "/api/story"
@@ -475,7 +476,11 @@ async def page_reading_the_story(
     page = PageReadingTheStory()
     opening, clock = await repository_opening(tmp_git_repo), SystemClock()
     page.review = Review(
-        content_source(opening, repository=GitRepository(objects=workspace.objects), clock=clock),
+        content_source(
+            opening,
+            code=CodeRead(repository=GitRepository(objects=workspace.objects), parsing=parsing_in_tests()),
+            clock=clock,
+        ),
         page=page,
         clock=clock,
         images=ImageService(DirectoryImageStore(workspace.images), REVIEW_IMAGE_QUOTA),

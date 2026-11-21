@@ -16,7 +16,7 @@ from claude_review.services.code_names import reading
 from claude_review.services.code_names.outlines import Outlines
 from claude_review.services.code_names.touched import read_names_touched
 from tests.helpers import HUNK_HEADER, added_line, context_line, diff_file, removed_line
-from tests.without_git import TreesHeld
+from tests.without_git import TreesHeld, parsing_in_tests
 
 ROOT = Path("/repository-read-from-trees")
 TAKE = "take-tree"
@@ -188,7 +188,10 @@ async def test_what_became_of_a_name_is_judged_against_the_base(
     base: bytes, take: bytes, lines: list[DiffLine], touched: list[TouchedName]
 ) -> None:
     names = await read_names_touched(
-        Outlines(trees({PATH: take}, {PATH: base}), ROOT), tree=TAKE, base=BASE, files=[diff_file(PATH, lines)]
+        Outlines(trees({PATH: take}, {PATH: base}), ROOT, parsing_in_tests()),
+        tree=TAKE,
+        base=BASE,
+        files=[diff_file(PATH, lines)],
     )
 
     assert [name for file in names for name in file.names] == touched
@@ -239,7 +242,7 @@ async def test_the_names_of_a_file_stand_in_the_order_a_reader_meets_them_down_i
     file = DiffFile(path=PATH, status=FileStatus.MODIFIED, hunks=[hunk])
 
     names = await read_names_touched(
-        Outlines(trees({PATH: take}, {PATH: base}), ROOT), tree=TAKE, base=BASE, files=[file]
+        Outlines(trees({PATH: take}, {PATH: base}), ROOT, parsing_in_tests()), tree=TAKE, base=BASE, files=[file]
     )
 
     assert [name.name for file in names for name in file.names] == met
@@ -258,7 +261,9 @@ async def test_a_renamed_file_s_names_are_judged_against_the_file_it_moved_from(
 
     names = await read_names_touched(
         Outlines(
-            trees({"src/new.py": b"def first():\n    return 1\n"}, {"src/old.py": b"def first():\n    pass\n"}), ROOT
+            trees({"src/new.py": b"def first():\n    return 1\n"}, {"src/old.py": b"def first():\n    pass\n"}),
+            ROOT,
+            parsing_in_tests(),
         ),
         tree=TAKE,
         base=BASE,
@@ -329,7 +334,7 @@ async def test_the_names_a_change_touched_are_said_file_by_file_in_the_order_of_
         diff_file("src/gone.py", [removed_line(1, "def gone():"), removed_line(2, "    pass")], FileStatus.DELETED),
     ]
 
-    names = await read_names_touched(Outlines(held, ROOT), tree=TAKE, base=BASE, files=files)
+    names = await read_names_touched(Outlines(held, ROOT, parsing_in_tests()), tree=TAKE, base=BASE, files=files)
 
     assert names == [
         FileNamesTouched(
@@ -395,7 +400,7 @@ async def test_a_file_whose_base_could_not_be_read_in_time_says_no_names(monkeyp
     ]
 
     names = await read_names_touched(
-        Outlines(trees({PATH: b"def big():\n    pass\n"}, {PATH: SLOW_TO_PARSE}), ROOT),
+        Outlines(trees({PATH: b"def big():\n    pass\n"}, {PATH: SLOW_TO_PARSE}), ROOT, parsing_in_tests()),
         tree=TAKE,
         base=BASE,
         files=[diff_file(PATH, lines)],

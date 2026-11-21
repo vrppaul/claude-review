@@ -152,6 +152,22 @@ class TreesRead(ABC):
         """
 
 
+class OutlinesKept(ABC):
+    """What the names outlining a file's content came to, kept across reviews by a key naming that content.
+
+    A content's id never names other bytes, so what is kept by it never goes
+    stale: a file is outlined once for as long as nobody changes it.
+    """
+
+    @abstractmethod
+    async def read(self, keys: list[str]) -> dict[str, bytes]:
+        """What is kept under each of these keys, by key; a key nothing is kept under is left out."""
+
+    @abstractmethod
+    async def keep(self, kept: dict[str, bytes]) -> None:
+        """Keep each of these under its key, in place of what was kept there."""
+
+
 class ReviewedRepository(Repository, TreesRead):
     """Everything a review asks of the repository it reviews."""
 

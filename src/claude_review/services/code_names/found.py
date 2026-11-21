@@ -21,10 +21,20 @@ class NameInFile(BaseModel):
     name: str
 
 
+class FoundSoFar(BaseModel):
+    """The names found in the files outlined by now, and whether those are every file that holds the text."""
+
+    model_config = ConfigDict(frozen=True)
+
+    names: list[NameDefined]
+    complete: bool
+
+
 async def read_names_found(
-    outlines: Outlines, *, text: str, tree: str, touched: list[FileNamesTouched]
-) -> list[NameDefined]:
-    """The names outlining files of the tree that hold the text whatever its case, the change's own left out.
+    outlines: Outlines, *, text: str, tree: str, touched: list[FileNamesTouched], within_seconds: float
+) -> FoundSoFar:
+    """The names outlining files of the tree that hold the text whatever its case, the change's own left out, in
+    the files outlined within the time given.
 
     Those starting with the text come first, the way a reader types a name
     from its start; each run in the order of the files' paths and their lines.
@@ -32,7 +42,7 @@ async def read_names_found(
     Raises:
         GitError: if git cannot read the tree.
     """
-    holding = await outlines.holding_text(tree, text)
+    holding = await outlines.holding_text(tree, text, within_seconds=within_seconds)
     listed = {NameInFile(path=file.path, name=name.name) for file in touched for name in file.names}
     # Lower-cased, as the page's filter matches the names the tree lists
     sought = text.lower()
@@ -43,4 +53,5 @@ async def read_names_found(
         for name in holding.outline_of(path) or []
         if sought in name.name.lower() and NameInFile(path=path, name=name.name) not in listed
     ]
-    return sorted(found, key=lambda name: not name.name.lower().startswith(sought))
+    ordered = sorted(found, key=lambda name: not name.name.lower().startswith(sought))
+    return FoundSoFar(names=ordered, complete=holding.complete)

@@ -159,9 +159,14 @@ class NamesFoundResponse(Schema):
     names: list[NameDefined]
     # How many more names hold the text than are listed
     more: int
+    # Whether every file holding the text was outlined: until it is, asking again finds more as they are
+    complete: StrictBool
 
     @classmethod
     def from_domain(cls, found: code_names.NamesFound) -> Self:
         return cls(
-            take=found.take, names=[NameDefined.from_domain(defined) for defined in found.names], more=found.more
+            take=found.take,
+            names=[NameDefined.from_domain(defined) for defined in found.names],
+            more=found.more,
+            complete=found.complete,
         )

@@ -3,7 +3,7 @@
 from fastapi import FastAPI
 from pydantic import BaseModel, ConfigDict
 
-from claude_review.domain.interfaces import Clock, ReviewedRepository
+from claude_review.domain.interfaces import Clock
 from claude_review.domain.kept_review import KeptReview
 from claude_review.domain.models import GuideState, ReaderSettings
 from claude_review.hosting.workspace import ReaderFiles, ReviewWorkspace
@@ -13,7 +13,7 @@ from claude_review.repositories.image_store import DirectoryImageStore
 from claude_review.repositories.json_record_store import JsonRecordStore
 from claude_review.services.image_service import REVIEW_IMAGE_QUOTA, ImageService
 from claude_review.services.reader_record_service import ReaderRecords, ReaderRecordService
-from claude_review.services.review.content_sources import content_source
+from claude_review.services.review.content_sources import CodeRead, content_source
 from claude_review.services.review.review import Review
 from claude_review.services.review.review_record import ReviewRecord
 from claude_review.services.review_opening import ReviewOpening
@@ -31,12 +31,12 @@ class HostedReview(BaseModel):
 def host_review(
     opening: ReviewOpening,
     *,
-    repository: ReviewedRepository,
+    code: CodeRead,
     workspace: ReviewWorkspace,
     reader_files: ReaderFiles,
     clock: Clock,
 ) -> HostedReview:
-    """Put a review together on what it opens on, reading through the repository it is given.
+    """Put a review together on what it opens on, reading code through what it is given (`CodeRead`).
 
     Whoever hosts it says how the repository is read — the command line
     through git, writing the trees the review is read against into the
@@ -48,12 +48,13 @@ def host_review(
     pages through, and to the app, which serves those pages. So are the
     reader's settings: the app reads and changes them, and the review reads
     as it opens whether its story is written then. What the review keeps of
-    itself is kept in the workspace too.
+    itself is kept in the workspace too. Whoever hosts it says how it parses
+    the names outlining files, and where it keeps them.
     """
     broadcast = BrowserBroadcast(backlog=PAGE_BACKLOG, identity=opening.identity_digest)
     records = _reader_records(reader_files)
     review = Review(
-        content_source(opening, repository=repository, clock=clock),
+        content_source(opening, code=code, clock=clock),
         page=broadcast,
         clock=clock,
         images=ImageService(DirectoryImageStore(workspace.images), REVIEW_IMAGE_QUOTA),

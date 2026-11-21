@@ -45,6 +45,11 @@ STATE_HOME_FALLBACK = Path(".local") / "state"
 READER_DIRECTORY = "claude-review"
 SETTINGS_FILE = "settings.json"
 GUIDE_FILE = "guide.json"
+# Where every review on the machine keeps the names outlining files, with other programs' caches, as they are
+# outlined again if lost: a file to each generation of the code outlining them
+CACHE_HOME_VARIABLE = "XDG_CACHE_HOME"
+CACHE_HOME_FALLBACK = Path(".cache")
+OUTLINES_FILE = "names-{generation}.sqlite"
 
 
 class ReviewWorkspace(BaseModel):
@@ -234,6 +239,12 @@ def _left_if_written_into(directory: Path) -> bool:
         return True
     directory.rmdir()
     return False
+
+
+def outlines_file(generation: str) -> Path:
+    """Where this machine's reviews keep the names outlining files, as code of this generation outlines them."""
+    cache = _base_directory(CACHE_HOME_VARIABLE, CACHE_HOME_FALLBACK)
+    return cache / READER_DIRECTORY / OUTLINES_FILE.format(generation=generation)
 
 
 def _base_directory(variable: str, fallback: Path) -> Path:

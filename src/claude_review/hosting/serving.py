@@ -13,9 +13,11 @@ before it runs still leaves no staging behind.
 
 import asyncio
 import contextlib
+import os
 import signal
 import socket
-from collections.abc import Coroutine, Generator
+from collections.abc import AsyncGenerator, Coroutine, Generator
+from concurrent.futures import ProcessPoolExecutor
 
 import structlog
 
@@ -25,9 +27,18 @@ from claude_review.hosting.errors import ReviewStoppedError
 from claude_review.hosting.hosted_review import HostedReview, host_review
 from claude_review.hosting.ports import bind, stable_port
 from claude_review.hosting.review_server import ReviewServer
-from claude_review.hosting.workspace import forget_review, note_address, reader_files, review_workspace
+from claude_review.hosting.workspace import (
+    forget_review,
+    note_address,
+    outlines_file,
+    reader_files,
+    review_workspace,
+)
 from claude_review.repositories.git_repository import GitRepository
+from claude_review.repositories.outlines_file import OutlinesFile
 from claude_review.repositories.system_clock import SystemClock
+from claude_review.services.code_names.outlines import NamesParsing, outlines_generation
+from claude_review.services.review.content_sources import CodeRead
 from claude_review.services.review.review import Review
 from claude_review.services.review.review_lifetime import EndReason, ReviewLifetime
 from claude_review.services.review_opening import OpenedRepository, ReviewOpening
@@ -36,6 +47,9 @@ log = structlog.get_logger()
 
 # What stops a review the way closing it does: Ctrl+C, and `kill`
 STOP_SIGNALS = (signal.SIGINT, signal.SIGTERM)
+# The most processes a review parses names in: past four, a repository of 724 files gains little, and the reader's
+# machine keeps its other cores
+MOST_PARSING_WORKERS = 4
 
 
 class StopSignals:
@@ -122,12 +136,15 @@ async def hold_open(
         WorkspaceRefusedError: If where every review keeps its own is not a directory of the user's.
         ReviewAlreadyOpenError: If this review runs already, in another process.
     """
-    async with review_workspace(
-        opening.identity_digest, writes_trees=isinstance(opening.source, OpenedRepository), announcer=announcer
-    ) as workspace:
+    async with (
+        review_workspace(
+            opening.identity_digest, writes_trees=isinstance(opening.source, OpenedRepository), announcer=announcer
+        ) as workspace,
+        _names_parsing() as parsing,
+    ):
         hosted = host_review(
             opening,
-            repository=GitRepository(objects=workspace.objects),
+            code=CodeRead(repository=GitRepository(objects=workspace.objects), parsing=parsing),
             workspace=workspace,
             reader_files=reader_files(),
             clock=SystemClock(),
@@ -138,6 +155,27 @@ async def hold_open(
         if hosted.review.lifetime.reason is EndReason.FINISHED:
             await forget_review(workspace)
         return handed_back
+
+
+@contextlib.asynccontextmanager
+async def _names_parsing() -> AsyncGenerator[NamesParsing]:
+    """Lend the review processes to parse the names outlining files in while it runs, and where every review keeps
+    them; the processes start when first given a file, and are let go of with the review, unfinished work dropped."""
+    workers = min(MOST_PARSING_WORKERS, os.process_cpu_count() or 1)
+    generation = await asyncio.to_thread(outlines_generation)
+    executor = ProcessPoolExecutor(max_workers=workers)
+    try:
+        await asyncio.to_thread(_processes_started, executor, workers)
+        yield NamesParsing(executor=executor, workers=workers, kept=OutlinesFile(outlines_file(generation)))
+    finally:
+        executor.shutdown(wait=False, cancel_futures=True)
+
+
+def _processes_started(executor: ProcessPoolExecutor, workers: int) -> None:
+    """Start the processes now, off the event loop: the first to start has the review's code imported, and the
+    pool starts it inside the first call handed to it, which would hold every request a second or more."""
+    for started in [executor.submit(os.getpid) for _ in range(workers)]:
+        started.result()
 
 
 async def serve_review(

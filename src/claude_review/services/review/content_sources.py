@@ -24,7 +24,7 @@ from collections.abc import AsyncIterator
 from typing import assert_never, override
 
 import structlog
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from claude_review.domain.code_names import CodePlace, FileNamesTouched, NameFound, NamesFound, NamesTouched
 from claude_review.domain.exceptions import NoRepositoryError, TakeNotWrittenError
@@ -43,7 +43,7 @@ from claude_review.domain.models import (
 from claude_review.services.anchor_service import LineAnchorHandler, TakeRead, TakeUnread
 from claude_review.services.code_names.found import read_names_found
 from claude_review.services.code_names.lookup import NameLookup
-from claude_review.services.code_names.outlines import Outlines
+from claude_review.services.code_names.outlines import NamesParsing, Outlines
 from claude_review.services.code_names.touched import read_names_touched
 from claude_review.services.diff_reading import read_diff, read_diff_between
 from claude_review.services.files_of_take import FilesOfTake
@@ -56,6 +56,10 @@ from claude_review.services.review.tree_watcher_service import TreeWatcherServic
 from claude_review.services.review_opening import OpenedRepository, ReviewOpening
 
 log = structlog.get_logger()
+
+# How long a search for names waits for the files it needs outlined before it answers with what is outlined so far:
+# the page asks again for the rest, and draws what it has meanwhile
+NAMES_FOUND_WITHIN_SECONDS = 0.2
 
 
 class DiffView(BaseModel):
@@ -151,6 +155,10 @@ class ContentSource(TakesCompared, TreesWritten):
         them left out, and which take that is."""
 
     @abstractmethod
+    async def make_names_ready(self) -> None:
+        """Begin outlining every file of the take on screen, for the searches the reader is about to type."""
+
+    @abstractmethod
     async def file_of_take(self, path: str) -> OpenedFileOfTake:
         """A file of the take on screen as the reader opens it: whole, or saying why none of its lines are read."""
 
@@ -174,7 +182,13 @@ class RepositorySource(ContentSource):
     """The changes in a repository: taken at opening, taken again after each round, read against any base."""
 
     def __init__(
-        self, opening: ReviewOpening, opened: OpenedRepository, *, repository: ReviewedRepository, clock: Clock
+        self,
+        opening: ReviewOpening,
+        opened: OpenedRepository,
+        *,
+        repository: ReviewedRepository,
+        clock: Clock,
+        parsing: NamesParsing,
     ) -> None:
         self._opening = opening
         self._root = opened.root
@@ -182,7 +196,7 @@ class RepositorySource(ContentSource):
         self._repository = repository
         self._watcher = TreeWatcherService(repository)
         self._names = NameLookup(repository, opened.root)
-        self._outlines = Outlines(repository, opened.root)
+        self._outlines = Outlines(repository, opened.root, parsing)
         self._files_of_take = FilesOfTake(repository, opened.root)
         self._versions = ReviewVersions(repository, clock, opened)
         # Held while the diff is taken again, so two retakes never interleave
@@ -377,8 +391,23 @@ class RepositorySource(ContentSource):
         """
         content = self._content
         touched = await self._names_touched(content, base, ignore_whitespace=ignore_whitespace)
-        found = await read_names_found(self._outlines, text=text, tree=_tree_written(content), touched=touched)
-        return NamesFound.listing(content.take, found)
+        found = await read_names_found(
+            self._outlines,
+            text=text,
+            tree=_tree_written(content),
+            touched=touched,
+            within_seconds=NAMES_FOUND_WITHIN_SECONDS,
+        )
+        return NamesFound.listing(content.take, found.names, complete=found.complete)
+
+    @override
+    async def make_names_ready(self) -> None:
+        """Outline the tree the take on screen was written down as, behind whatever a search waits for.
+
+        Raises:
+            TakeNotWrittenError: if git wrote down no tree of the take.
+        """
+        await self._outlines.make_ready(_tree_written(self._content))
 
     async def _names_touched(
         self, content: ReviewContent, base: VersionKey | None, *, ignore_whitespace: bool
@@ -531,6 +560,12 @@ class FixedSource(ContentSource):
         raise NoRepositoryError(msg)
 
     @override
+    async def make_names_ready(self) -> None:
+        """Raises: NoRepositoryError, always: what was read once has no tree to outline."""
+        msg = "No repository whose names to make ready"
+        raise NoRepositoryError(msg)
+
+    @override
     async def file_of_take(self, path: str) -> OpenedFileOfTake:
         """Raises: NoRepositoryError, always: what was read once is every file there is to open."""
         msg = "No repository to open a file the review does not hold from"
@@ -570,11 +605,20 @@ async def _no_moves() -> AsyncIterator[int]:
         yield moved
 
 
-def content_source(opening: ReviewOpening, *, repository: ReviewedRepository, clock: Clock) -> ContentSource:
+class CodeRead(BaseModel):
+    """What a review reads a repository's code through: the repository, and how it parses the names outlining files."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True, frozen=True)
+
+    repository: ReviewedRepository
+    parsing: NamesParsing
+
+
+def content_source(opening: ReviewOpening, *, code: CodeRead, clock: Clock) -> ContentSource:
     """Where this review's content comes from: a repository's change from the repository, whenever it is taken."""
     match opening.source:
         case OpenedRepository() as opened:
-            return RepositorySource(opening, opened, repository=repository, clock=clock)
+            return RepositorySource(opening, opened, repository=code.repository, clock=clock, parsing=code.parsing)
         case OfFiles() | OfConversation():
             return FixedSource(opening)
         case _:

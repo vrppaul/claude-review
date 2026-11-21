@@ -18,10 +18,11 @@ import contextlib
 import hashlib
 from collections import defaultdict
 from collections.abc import AsyncGenerator, Callable
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import override
 
-from claude_review.domain.interfaces import ReviewedRepository, StagedTree, TreesRead
+from claude_review.domain.interfaces import OutlinesKept, ReviewedRepository, StagedTree, TreesRead
 from claude_review.domain.models import (
     BlobsAt,
     Checkout,
@@ -34,6 +35,7 @@ from claude_review.domain.models import (
     OnBranch,
     Unshown,
 )
+from claude_review.services.code_names.outlines import NamesParsing
 from claude_review.services.review_opening import OpenedRepository, ReviewOpening
 
 # Where a repository without git stands, the one commit any base it is asked for names, the tree of nothing, and
@@ -214,6 +216,31 @@ class RepositoryWithoutGit(ReviewedRepository):
     @override
     async def files_in(self, root: Path, tree: str) -> frozenset[str]:
         return frozenset()
+
+
+class OutlinesHeld(OutlinesKept):
+    """Outlines kept in memory, for one test alone."""
+
+    def __init__(self) -> None:
+        self._kept: dict[str, bytes] = {}
+
+    @override
+    async def read(self, keys: list[str]) -> dict[str, bytes]:
+        return {key: self._kept[key] for key in keys if key in self._kept}
+
+    @override
+    async def keep(self, kept: dict[str, bytes]) -> None:
+        self._kept.update(kept)
+
+
+# The threads a test's review parses names in: one interpreter's, so a test spawns no processes
+WORKERS_IN_TESTS = 2
+PARSED_IN_TESTS = ThreadPoolExecutor(max_workers=WORKERS_IN_TESTS)
+
+
+def parsing_in_tests() -> NamesParsing:
+    """How a test's review parses names: in threads, keeping what it outlined for itself alone."""
+    return NamesParsing(executor=PARSED_IN_TESTS, workers=WORKERS_IN_TESTS, kept=OutlinesHeld())
 
 
 def held_object_id(content: bytes) -> str:

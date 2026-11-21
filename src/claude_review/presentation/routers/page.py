@@ -294,6 +294,19 @@ async def get_names_found(
     return NamesFoundResponse.from_domain(found)
 
 
+@router.post(
+    "/names-found/ready",
+    status_code=HTTPStatus.NO_CONTENT,
+    responses=refusals(NoRepositoryError, TakeNotWrittenError, takes=Takes.NOTHING),
+)
+async def make_names_ready(review: ReviewDep) -> None:
+    """Begin outlining every file of the take on screen, as the reader comes to the tree's filter.
+
+    Answered once the work is begun, not done: a search asked meanwhile is outlined first.
+    """
+    await review.make_names_ready()
+
+
 @router.get(
     "/file-of-take",
     responses=refusals(NoRepositoryError, TakeNotWrittenError, FileNotInReviewError, takes=Takes.PARAMETERS),
