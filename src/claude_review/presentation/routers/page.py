@@ -40,7 +40,7 @@ from claude_review.presentation.schemas.agent import (
 )
 from claude_review.presentation.schemas.base import SafeId, made_or_none
 from claude_review.presentation.schemas.checks import Check
-from claude_review.presentation.schemas.code_names import NameResponse, NamesTouchedResponse
+from claude_review.presentation.schemas.code_names import NameResponse, NamesFoundResponse, NamesTouchedResponse
 from claude_review.presentation.schemas.content import (
     SEND_LIMITS,
     DiffFile,
@@ -272,6 +272,26 @@ async def get_names_touched(
     """
     touched = await review.names_touched(made_or_none(key_of, base), ignore_whitespace=ignore_whitespace)
     return NamesTouchedResponse.from_domain(touched)
+
+
+@router.get(
+    "/names-found",
+    responses=refusals(UnknownVersionError, NoRepositoryError, TakeNotWrittenError, takes=Takes.PARAMETERS),
+)
+async def get_names_found(
+    # What the reader typed into the tree's filter, which finds a file by its path too
+    text: Annotated[str, Query(min_length=1, max_length=MAX_PATH_LENGTH)],
+    review: ReviewDep,
+    *,
+    ignore_whitespace: bool = False,
+    base: Annotated[str | None, Query(max_length=MAX_ID_LENGTH)] = None,
+) -> NamesFoundResponse:
+    """Say which names outlining files of the take on screen hold a text, whatever its case, outside the change.
+
+    The names `GET /api/names-touched` says, asked alike, are left out: the tree lists them.
+    """
+    found = await review.names_found(text, made_or_none(key_of, base), ignore_whitespace=ignore_whitespace)
+    return NamesFoundResponse.from_domain(found)
 
 
 @router.get(

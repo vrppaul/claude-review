@@ -12,7 +12,7 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
-from claude_review.domain.models import Checkout, DiffFile, EpochMillis, FilesRead, GitRef
+from claude_review.domain.models import BlobsAt, Checkout, DiffFile, EpochMillis, FilesRead, GitRef
 from claude_review.domain.page_events import PageEvent
 
 
@@ -111,8 +111,33 @@ class TreesRead(ABC):
         """
 
     @abstractmethod
+    async def paths_with_text(self, root: Path, tree: str, text: str) -> list[str]:
+        """The paths of the tree's text files that hold the text anywhere, whatever its case.
+
+        Raises:
+            GitError: if git cannot say it.
+        """
+
+    @abstractmethod
     async def files_of(self, root: Path, tree: str, paths: list[str]) -> FilesRead:
         """What each of these files of the tree holds, by path; one larger than the review reads named and left unread.
+
+        Raises:
+            GitError: if git cannot say it.
+        """
+
+    @abstractmethod
+    async def blobs_at(self, root: Path, tree: str, paths: list[str]) -> BlobsAt:
+        """The id of what each of these files of the tree holds, by path, none of them read; one larger than the
+        review reads named apart.
+
+        Raises:
+            GitError: if git cannot say it.
+        """
+
+    @abstractmethod
+    async def blobs_read(self, root: Path, object_ids: list[str]) -> list[bytes]:
+        """What each of these contents of the object store holds, in the order asked.
 
         Raises:
             GitError: if git cannot say it.

@@ -26,7 +26,7 @@ from typing import assert_never, override
 import structlog
 from pydantic import BaseModel
 
-from claude_review.domain.code_names import CodePlace, NameFound, NamesTouched
+from claude_review.domain.code_names import CodePlace, FileNamesTouched, NameFound, NamesFound, NamesTouched
 from claude_review.domain.exceptions import NoRepositoryError, TakeNotWrittenError
 from claude_review.domain.interfaces import Clock, GitError, ReviewedRepository, StagedTree
 from claude_review.domain.models import (
@@ -41,7 +41,9 @@ from claude_review.domain.models import (
     VersionOnOffer,
 )
 from claude_review.services.anchor_service import LineAnchorHandler, TakeRead, TakeUnread
+from claude_review.services.code_names.found import read_names_found
 from claude_review.services.code_names.lookup import NameLookup
+from claude_review.services.code_names.outlines import Outlines
 from claude_review.services.code_names.touched import read_names_touched
 from claude_review.services.diff_reading import read_diff, read_diff_between
 from claude_review.services.files_of_take import FilesOfTake
@@ -144,6 +146,11 @@ class ContentSource(TakesCompared, TreesWritten):
         """The names the change touched in each file of the diff `view` reads alike, and which take that is."""
 
     @abstractmethod
+    async def names_found(self, text: str, base: VersionKey | None, *, ignore_whitespace: bool) -> NamesFound:
+        """The names outlining files of the take that hold a text, those the change touched as `names_touched` reads
+        them left out, and which take that is."""
+
+    @abstractmethod
     async def file_of_take(self, path: str) -> OpenedFileOfTake:
         """A file of the take on screen as the reader opens it: whole, or saying why none of its lines are read."""
 
@@ -175,6 +182,7 @@ class RepositorySource(ContentSource):
         self._repository = repository
         self._watcher = TreeWatcherService(repository)
         self._names = NameLookup(repository, opened.root)
+        self._outlines = Outlines(repository, opened.root)
         self._files_of_take = FilesOfTake(repository, opened.root)
         self._versions = ReviewVersions(repository, clock, opened)
         # Held while the diff is taken again, so two retakes never interleave
@@ -355,11 +363,36 @@ class RepositorySource(ContentSource):
             TakeNotWrittenError: if git wrote down no tree of the take.
         """
         content = self._content
-        reading = await self._read(content, base, ignore_whitespace=ignore_whitespace)
-        files = await read_names_touched(
-            self._repository, self._root, tree=_tree_written(content), base=reading.against, files=reading.files
+        return NamesTouched(
+            take=content.take, files=await self._names_touched(content, base, ignore_whitespace=ignore_whitespace)
         )
-        return NamesTouched(take=content.take, files=files)
+
+    @override
+    async def names_found(self, text: str, base: VersionKey | None, *, ignore_whitespace: bool) -> NamesFound:
+        """Read from the tree the take on screen was written down as, never the disk, so its lines are the diff's.
+
+        Raises:
+            UnknownVersionError: if the review offers no such base.
+            TakeNotWrittenError: if git wrote down no tree of the take.
+        """
+        content = self._content
+        touched = await self._names_touched(content, base, ignore_whitespace=ignore_whitespace)
+        found = await read_names_found(self._outlines, text=text, tree=_tree_written(content), touched=touched)
+        return NamesFound.listing(content.take, found)
+
+    async def _names_touched(
+        self, content: ReviewContent, base: VersionKey | None, *, ignore_whitespace: bool
+    ) -> list[FileNamesTouched]:
+        """The names the change touched in each file of a take read against a base, with whitespace counted or not.
+
+        Raises:
+            UnknownVersionError: if the review offers no such base.
+            TakeNotWrittenError: if git wrote down no tree of the take.
+        """
+        reading = await self._read(content, base, ignore_whitespace=ignore_whitespace)
+        return await read_names_touched(
+            self._outlines, tree=_tree_written(content), base=reading.against, files=reading.files
+        )
 
     @override
     async def file_of_take(self, path: str) -> OpenedFileOfTake:
@@ -489,6 +522,12 @@ class FixedSource(ContentSource):
     async def names_touched(self, base: VersionKey | None, *, ignore_whitespace: bool) -> NamesTouched:
         """Raises: NoRepositoryError, always: what was read once is no change to a repository's code."""
         msg = "No repository whose code a change touched"
+        raise NoRepositoryError(msg)
+
+    @override
+    async def names_found(self, text: str, base: VersionKey | None, *, ignore_whitespace: bool) -> NamesFound:
+        """Raises: NoRepositoryError, always: what was read once has no tree to find names in."""
+        msg = "No repository to find names in"
         raise NoRepositoryError(msg)
 
     @override

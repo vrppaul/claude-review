@@ -14,6 +14,7 @@ from claude_review.domain.interfaces import GitError, ReviewedRepository, Staged
 from claude_review.domain.models import (
     HEAD,
     LARGEST_FILE_SHOWN_BYTES,
+    BlobsAt,
     Checkout,
     DiffFile,
     FilesRead,
@@ -165,19 +166,23 @@ SIZES_ASKED = ["cat-file", "--batch-check=%(objectsize)"]
 # base or a tree, `:<path>` in the index being staged
 BLOB_AT = ":"
 
-# How git is asked which of a tree's files hold a word: the files by name alone, each name unquoted; the word
-# whole, a fixed string and never a pattern; no binary file, nor a submodule's, whatever the reader's settings say
-WORD_SEARCHED = [
+# How git is asked which of a tree's files hold what is sought: the files by name alone, each name unquoted; what
+# is sought a fixed string and never a pattern; no binary file, nor a submodule's, whatever the reader's settings say
+FILES_SEARCHED = [
     "grep",
     "--no-color",
     "--no-recurse-submodules",
     "--files-with-matches",
     "-z",
-    "--word-regexp",
     "--fixed-strings",
     "-I",
-    "-e",
 ]
+# A word sought whole, as a name is looked up
+WORD_SOUGHT = ["--word-regexp"]
+# A text sought anywhere, a word's part too, whatever its case, as the tree's filter finds names
+TEXT_SOUGHT = ["--ignore-case"]
+# Says the argument after it is what is sought, even where it starts with a dash
+SOUGHT_FOLLOWS = "-e"
 # What `git grep` exits with when nothing matched: an answer, not a failure
 NOTHING_FOUND = 1
 # Ends the revisions a command reads, so whatever follows is a path
@@ -455,7 +460,24 @@ class GitRepository(ReviewedRepository):
         Raises:
             GitError: if no object store was given, so no tree was ever written down, or git fails.
         """
-        arguments = [*WORD_SEARCHED, word, tree, END_OF_REVISIONS]
+        return await self._paths_found(root, tree, WORD_SOUGHT, word)
+
+    @override
+    async def paths_with_text(self, root: Path, tree: str, text: str) -> list[str]:
+        """The paths of the tree's text files holding the text anywhere, as `git grep --ignore-case` matches it.
+
+        Raises:
+            GitError: if no object store was given, so no tree was ever written down, or git fails.
+        """
+        return await self._paths_found(root, tree, TEXT_SOUGHT, text)
+
+    async def _paths_found(self, root: Path, tree: str, sought_as: list[str], sought: str) -> list[str]:
+        """The paths of the tree's text files `git grep` finds what is sought in, sought as these options say.
+
+        Raises:
+            GitError: if no object store was given, so no tree was ever written down, or git fails.
+        """
+        arguments = [*FILES_SEARCHED, *sought_as, SOUGHT_FOLLOWS, sought, tree, END_OF_REVISIONS]
         run = await _execute(root, arguments, self._reading_trees_written())
         if run.exit_code == NOTHING_FOUND:
             return []
@@ -468,8 +490,20 @@ class GitRepository(ReviewedRepository):
         """What each of these files of the tree holds, read in two commands whatever their number.
 
         The first says what stands at each path, so a file the tree lacks, or
-        one too large to read, is never read; the second reads the rest. A
-        path git cannot be asked about a tree is left out (`_can_be_asked`).
+        one too large to read, is never read; the second reads the rest.
+
+        Raises:
+            GitError: if no object store was given, so no tree was ever written down, or git fails.
+        """
+        at = await self.blobs_at(root, tree, paths)
+        contents = await self.blobs_read(root, list(at.object_ids.values()))
+        return FilesRead(contents=dict(zip(at.object_ids, contents, strict=True)), too_large=at.too_large)
+
+    @override
+    async def blobs_at(self, root: Path, tree: str, paths: list[str]) -> BlobsAt:
+        """What stands at each of these paths of the tree, asked in one command whatever their number, none read.
+
+        A path git cannot be asked about a tree is left out (`_can_be_asked`).
 
         Raises:
             GitError: if no object store was given, so no tree was ever written down, or git fails.
@@ -477,7 +511,7 @@ class GitRepository(ReviewedRepository):
         variables = self._reading_trees_written()
         asked = [path for path in paths if _can_be_asked(path)]
         if not asked:
-            return FilesRead(contents={}, too_large=frozenset())
+            return BlobsAt(object_ids={}, too_large=frozenset())
         handed = "".join(f"{tree}{BLOB_AT}{path}{LINE_END}" for path in asked)
         described = _line_to_each(await _run(root, OBJECTS_DESCRIBED, variables, handed=handed))
         blobs = {
@@ -486,12 +520,22 @@ class GitRepository(ReviewedRepository):
             if (blob := _blob_described(description)) is not None
         }
         too_large = frozenset(path for path, blob in blobs.items() if blob.size > LARGEST_FILE_SHOWN_BYTES)
-        readable = {path: blob for path, blob in blobs.items() if path not in too_large}
-        if not readable:
-            return FilesRead(contents={}, too_large=too_large)
-        handed = "".join(f"{blob.object_id}{LINE_END}" for blob in readable.values())
+        readable = {path: blob.object_id for path, blob in blobs.items() if path not in too_large}
+        return BlobsAt(object_ids=readable, too_large=too_large)
+
+    @override
+    async def blobs_read(self, root: Path, object_ids: list[str]) -> list[bytes]:
+        """What each of these contents holds, read in one command whatever their number.
+
+        Raises:
+            GitError: if no object store was given, so no tree was ever written down, or git fails.
+        """
+        if not object_ids:
+            return []
+        handed = "".join(f"{object_id}{LINE_END}" for object_id in object_ids)
+        variables = self._reading_trees_written()
         read = _succeeded(await _execute(root, BLOBS_READ, variables, handed=handed), BLOBS_READ).output
-        return FilesRead(contents=dict(zip(readable, _contents_of(read), strict=True)), too_large=too_large)
+        return _contents_of(read)
 
     @override
     async def files_in(self, root: Path, tree: str) -> frozenset[str]:

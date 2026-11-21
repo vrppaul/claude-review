@@ -122,3 +122,46 @@ class NamesTouchedResponse(Schema):
     @classmethod
     def from_domain(cls, touched: code_names.NamesTouched) -> Self:
         return cls(take=touched.take, files=[FileNamesTouched.from_domain(file) for file in touched.files])
+
+
+class NameDefined(Schema):
+    """A name outlining a file of the take, and where it is written."""
+
+    name: str
+    defined_as: DefinitionKind
+    path: str
+    # Where the name is written on the new side, as `GET /api/name` is asked a place: lines from 1, columns in
+    # characters from 0
+    line: int
+    column: int
+
+    @classmethod
+    def from_domain(cls, defined: code_names.NameDefined) -> Self:
+        return cls(
+            name=defined.name,
+            defined_as=defined.defined_as,
+            path=defined.path,
+            line=defined.line,
+            column=defined.column,
+        )
+
+
+class NamesFoundResponse(Schema):
+    """Response for GET /api/names-found — the names outlining files of the take that hold the text, outside the
+    change.
+
+    Those starting with the text come first, then the rest, each run by its
+    file's path and its line; the change's own are left to the names touched.
+    """
+
+    # The take the names were read in: a page holds them only while its diff is of the same take, read the same way
+    take: int
+    names: list[NameDefined]
+    # How many more names hold the text than are listed
+    more: int
+
+    @classmethod
+    def from_domain(cls, found: code_names.NamesFound) -> Self:
+        return cls(
+            take=found.take, names=[NameDefined.from_domain(defined) for defined in found.names], more=found.more
+        )

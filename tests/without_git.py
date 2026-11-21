@@ -15,6 +15,7 @@ is tested on git itself, so nothing here writes it.
 """
 
 import contextlib
+import hashlib
 from collections import defaultdict
 from collections.abc import AsyncGenerator, Callable
 from pathlib import Path
@@ -22,6 +23,7 @@ from typing import override
 
 from claude_review.domain.interfaces import ReviewedRepository, StagedTree, TreesRead
 from claude_review.domain.models import (
+    BlobsAt,
     Checkout,
     DiffFile,
     DiffHunk,
@@ -194,31 +196,69 @@ class RepositoryWithoutGit(ReviewedRepository):
         return []
 
     @override
+    async def paths_with_text(self, root: Path, tree: str, text: str) -> list[str]:
+        return []
+
+    @override
     async def files_of(self, root: Path, tree: str, paths: list[str]) -> FilesRead:
         return FilesRead(contents={}, too_large=frozenset())
+
+    @override
+    async def blobs_at(self, root: Path, tree: str, paths: list[str]) -> BlobsAt:
+        return BlobsAt(object_ids={}, too_large=frozenset())
+
+    @override
+    async def blobs_read(self, root: Path, object_ids: list[str]) -> list[bytes]:
+        return []
 
     @override
     async def files_in(self, root: Path, tree: str) -> frozenset[str]:
         return frozenset()
 
 
+def held_object_id(content: bytes) -> str:
+    """The id an object store keeps a content by: the same for the same bytes, whichever tree and path hold them."""
+    return hashlib.sha1(content, usedforsecurity=False).hexdigest()
+
+
 class TreesHeld(TreesRead):
-    """Trees held in memory, by their ids, each as what reading every path of it gives; every file holds any word."""
+    """Trees held in memory, by their ids, each as what reading every path of it gives; every file holds any word or
+    text."""
 
     def __init__(self, trees: dict[str, FilesRead]) -> None:
         self._trees = trees
+        self._objects = {
+            held_object_id(content): content for held in trees.values() for content in held.contents.values()
+        }
 
     @override
     async def paths_holding(self, root: Path, tree: str, word: str) -> list[str]:
         return list(self._trees[tree].contents)
 
     @override
+    async def paths_with_text(self, root: Path, tree: str, text: str) -> list[str]:
+        return list(self._trees[tree].contents)
+
+    @override
     async def files_of(self, root: Path, tree: str, paths: list[str]) -> FilesRead:
         held = self._trees[tree]
         return FilesRead(
-            contents={path: held.contents[path] for path in held.contents.keys() & set(paths)},
+            # In the order asked, as git answers
+            contents={path: held.contents[path] for path in paths if path in held.contents},
             too_large=held.too_large & set(paths),
         )
+
+    @override
+    async def blobs_at(self, root: Path, tree: str, paths: list[str]) -> BlobsAt:
+        read = await self.files_of(root, tree, paths)
+        return BlobsAt(
+            object_ids={path: held_object_id(content) for path, content in read.contents.items()},
+            too_large=read.too_large,
+        )
+
+    @override
+    async def blobs_read(self, root: Path, object_ids: list[str]) -> list[bytes]:
+        return [self._objects[object_id] for object_id in object_ids]
 
     @override
     async def files_in(self, root: Path, tree: str) -> frozenset[str]:

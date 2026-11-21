@@ -310,6 +310,24 @@ async def test_the_files_holding_a_word_are_those_of_the_tree_written_down(
     assert (holding, holding_none) == (["src/uses.py"], [])
 
 
+async def test_the_files_holding_a_text_hold_it_inside_a_word_and_in_any_case(
+    tmp_git_repo: Path, tmp_path_factory: pytest.TempPathFactory
+) -> None:
+    """Only text files of the tree written down, the text read as itself and never as a pattern."""
+    repo = GitRepository(objects=tmp_path_factory.mktemp("review-objects"))
+    (tmp_git_repo / "src").mkdir()
+    (tmp_git_repo / "src" / "runs.py").write_text("class FailedRun:\n    pass\n")
+    (tmp_git_repo / "dotted.py").write_text("fail.ed = 1\n")
+    (tmp_git_repo / "image.bin").write_bytes(b"FAILED\0\0")
+    tree = await _written_tree(repo, tmp_git_repo)
+    (tmp_git_repo / "after.py").write_text("failed = 3\n")
+
+    holding = await repo.paths_with_text(tmp_git_repo, tree, "aILe")
+    holding_as_pattern = await repo.paths_with_text(tmp_git_repo, tree, "fail.d")
+
+    assert (holding, holding_as_pattern) == (["src/runs.py"], [])
+
+
 async def test_a_file_of_a_tree_reads_as_written_down_one_too_large_is_named_unread_and_one_missing_left_out(
     tmp_git_repo: Path, tmp_path_factory: pytest.TempPathFactory
 ) -> None:

@@ -27,6 +27,7 @@ from claude_review.domain.code_names import (
     FoundAs,
     LinesOnSide,
     NameChange,
+    NameDefined,
     NamePlace,
     TouchedName,
 )
@@ -170,6 +171,16 @@ class OutlinedName(BaseModel):
             line=self.named_at.line,
             column=self.named_at.column,
             stands_on=stands_on,
+        )
+
+    def defined_in(self, path: str) -> NameDefined:
+        """The name as one the file at this path of the take defines."""
+        return NameDefined(
+            name=self.name,
+            defined_as=self.kind,
+            path=path,
+            line=self.named_at.line,
+            column=self.named_at.column,
         )
 
 

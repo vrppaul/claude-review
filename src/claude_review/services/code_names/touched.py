@@ -5,22 +5,20 @@ names outlining it that the change touched, and what became of each. What
 became of one only the base can say: a name it outlined too is modified,
 however much of it was rewritten, one it did not is added, and one it
 outlined that the take does not is removed. Each tree is read in one asking
-of git, and every file by its grammar off the event loop, as parsing is the
-CPU's work.
+of git, and every file outlined once for the review's life (`Outlines`).
 """
 
 import asyncio
 import time
-from pathlib import Path
 from typing import assert_never
 
 import structlog
 
 from claude_review.domain.code_names import FileNamesTouched, NameChange, TouchedName
-from claude_review.domain.interfaces import TreesRead
-from claude_review.domain.models import DiffFile, DiffHunk, FilesRead, LineSide, LinesTouched
+from claude_review.domain.models import DiffFile, DiffHunk, LineSide, LinesTouched
 from claude_review.services.code_names.languages import code_files_of
-from claude_review.services.code_names.reading import OutlinedName, outline
+from claude_review.services.code_names.outlines import FilesOutlined, Outlines
+from claude_review.services.code_names.reading import OutlinedName
 from claude_review.services.code_names.timing import milliseconds_between
 
 log = structlog.get_logger()
@@ -31,7 +29,7 @@ MET_FIRST = {LineSide.OLD: 0, LineSide.NEW: 1}
 
 
 async def read_names_touched(
-    repository: TreesRead, root: Path, *, tree: str, base: str, files: list[DiffFile]
+    outlines: Outlines, *, tree: str, base: str, files: list[DiffFile]
 ) -> list[FileNamesTouched]:
     """The names the change touched in each of its files, in the order of its diff; a file with none left out.
 
@@ -44,43 +42,27 @@ async def read_names_touched(
     read_as_code = [file for file in files if file.hunks and code_files_of(file.path) is not None]
     started = time.perf_counter()
     now, before = await asyncio.gather(
-        repository.files_of(root, tree, [file.path for file in read_as_code]),
-        repository.files_of(root, base, [file.path_before for file in read_as_code]),
+        outlines.of_files(tree, [file.path for file in read_as_code]),
+        outlines.of_files(base, [file.path_before for file in read_as_code]),
     )
-    read = time.perf_counter()
-    named = await asyncio.to_thread(_names_in, read_as_code, now, before)
+    said = (_names_of(file, now, before) for file in read_as_code)
+    named = [touched for touched in said if touched is not None and touched.names]
     log.debug(
         "names_touched_read",
         files=len(read_as_code),
         names=sum(len(file.names) for file in named),
-        read_ms=milliseconds_between(started, read),
-        parsed_ms=milliseconds_between(read, time.perf_counter()),
+        outlined_ms=milliseconds_between(started, time.perf_counter()),
     )
     return named
 
 
-def _names_in(files: list[DiffFile], now: FilesRead, before: FilesRead) -> list[FileNamesTouched]:
-    """The names the change touched in each of these files, a file with none left out."""
-    named = (_names_of(file, now, before) for file in files)
-    return [file for file in named if file is not None and file.names]
-
-
-def _names_of(file: DiffFile, now: FilesRead, before: FilesRead) -> FileNamesTouched | None:
+def _names_of(file: DiffFile, now: FilesOutlined, before: FilesOutlined) -> FileNamesTouched | None:
     """The names the change touched in one file; None where either side is not known, so nothing can be said."""
-    outlined_now = _outline_in(now, file.path)
-    outlined_before = _outline_in(before, file.path_before)
+    outlined_now = now.outline_of(file.path)
+    outlined_before = before.outline_of(file.path_before)
     if outlined_now is None or outlined_before is None:
         return None
     return FileNamesTouched(path=file.path, names=_names_touched(outlined_now, outlined_before, file))
-
-
-def _outline_in(read: FilesRead, path: str) -> list[OutlinedName] | None:
-    """The names outlining a file as a tree holds it: none where the tree holds no such file, and None where the
-    file was too large to read or its parse was given up."""
-    if path in read.too_large:
-        return None
-    content = read.contents.get(path)
-    return [] if content is None else outline(path, content)
 
 
 def _names_touched(now: list[OutlinedName], before: list[OutlinedName], file: DiffFile) -> list[TouchedName]:

@@ -33,7 +33,7 @@ import structlog
 from pydantic import BaseModel
 
 from claude_review.domain.checks import CheckReport
-from claude_review.domain.code_names import CodePlace, NameFound, NamesTouched
+from claude_review.domain.code_names import CodePlace, NameFound, NamesFound, NamesTouched
 from claude_review.domain.exceptions import ReviewEndedError, UnknownFileError
 from claude_review.domain.interfaces import Clock, PageChannel
 from claude_review.domain.kept_review import KeptReview
@@ -273,6 +273,10 @@ class Review:
     async def names_touched(self, base: VersionKey | None, *, ignore_whitespace: bool) -> NamesTouched:
         """The names the change touched in each file of the diff `view` reads alike, and which take that is."""
         return await self._source.names_touched(base, ignore_whitespace=ignore_whitespace)
+
+    async def names_found(self, text: str, base: VersionKey | None, *, ignore_whitespace: bool) -> NamesFound:
+        """The names outlining files of the take that hold a text, those `names_touched` reads alike left out."""
+        return await self._source.names_found(text, base, ignore_whitespace=ignore_whitespace)
 
     async def file_of_take(self, path: str) -> OpenedFileOfTake:
         """A file of the take on screen as the reader opens it: whole, or saying why none of its lines are read."""

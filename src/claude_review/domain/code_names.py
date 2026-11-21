@@ -186,3 +186,38 @@ class NamesTouched(BaseModel):
 
     take: int
     files: list[FileNamesTouched]
+
+
+# The most names one answer to the tree's filter lists: the column shows a screenful under the tree, and typing more
+# of a name narrows the rest
+NAMES_FOUND_LISTED = 20
+
+
+class NameDefined(BaseModel):
+    """A name outlining a file of the take: what it is, the file, and where it is written, as a `CodePlace` on the new
+    side."""
+
+    model_config = ConfigDict(frozen=True)
+
+    name: str
+    defined_as: DefinitionKind
+    path: str
+    line: int
+    column: int
+
+
+class NamesFound(BaseModel):
+    """The names outlining files of the take that hold what the reader typed, those the change touched left out: the
+    first listed, how many more hold it, and the take they were read in."""
+
+    model_config = ConfigDict(frozen=True)
+
+    take: int
+    names: list[NameDefined]
+    more: int
+
+    @classmethod
+    def listing(cls, take: int, found: list[NameDefined]) -> NamesFound:
+        """The names found, as many listed as one answer lists, in the order found."""
+        listed = found[:NAMES_FOUND_LISTED]
+        return cls(take=take, names=listed, more=len(found) - len(listed))

@@ -60,6 +60,8 @@ WIDENED_TO = 6
 NAME_ROUTE = "/api/name"
 # Where the page asks which names the change touched
 NAMES_TOUCHED_ROUTE = "/api/names-touched"
+# Where the page asks which names outside the change hold what the tree's filter was typed
+NAMES_FOUND_ROUTE = "/api/names-found"
 # Where the page asks for a file of the take whole
 FILE_OF_TAKE_ROUTE = "/api/file-of-take"
 
@@ -616,6 +618,43 @@ async def test_the_names_a_change_touched_are_not_read_without_a_repository(file
 
     assert response.status_code == HTTPStatus.NOT_FOUND
     assert "No repository" in Refusal.model_validate_json(response.content).detail
+
+
+async def test_the_names_found_outside_the_change_are_answered_of_the_take_on_screen(
+    tmp_git_repo: Path, reviews: ReviewFactory
+) -> None:
+    """Read from the tree the take was written down as, the names the change touched left to the tree; the answer
+    says which take it is of, and how many more names hold the text."""
+    write_files(
+        tmp_git_repo,
+        {
+            "src/flags.py": "def shown() -> bool:\n    return True\n\n\ndef show_all() -> None:\n    pass\n",
+            "src/menu.py": "class ShowMenu:\n    pass\n",
+        },
+    )
+    git(tmp_git_repo, "add", ".")
+    git(tmp_git_repo, "commit", "-m", "flags")
+    write_files(
+        tmp_git_repo,
+        {
+            "src/flags.py": "def shown() -> bool:\n    return False\n\n\ndef show_all() -> None:\n    pass\n",
+            "src/pane.py": "def show_pane() -> None:\n    pass\n",
+        },
+    )
+
+    async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as client:
+        write_files(tmp_git_repo, {"src/later.py": "def show_later() -> None:\n    pass\n"})
+        response = await client.get(NAMES_FOUND_ROUTE, params={"text": "SHOW"})
+        take = (await client.get(DIFF_ROUTE)).json()["take"]
+
+    assert response.json() == {
+        "take": take,
+        "names": [
+            {"name": "show_all", "defined_as": "function", "path": "src/flags.py", "line": 5, "column": 4},
+            {"name": "ShowMenu", "defined_as": "class", "path": "src/menu.py", "line": 1, "column": 6},
+        ],
+        "more": 0,
+    }
 
 
 async def test_a_file_of_the_take_is_served_whole_as_the_take_holds_it(

@@ -271,6 +271,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/names-found": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Names Found
+         * @description Say which names outlining files of the take on screen hold a text, whatever its case, outside the change.
+         *
+         *     The names `GET /api/names-touched` says, asked alike, are left out: the tree lists them.
+         */
+        get: operations["get_names_found_api_names_found_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/file-of-take": {
         parameters: {
             query?: never;
@@ -1570,6 +1592,21 @@ export interface components {
          */
         NameChange: "added" | "modified" | "removed";
         /**
+         * NameDefined
+         * @description A name outlining a file of the take, and where it is written.
+         */
+        NameDefined: {
+            /** Name */
+            name: string;
+            defined_as: components["schemas"]["DefinitionKind"];
+            /** Path */
+            path: string;
+            /** Line */
+            line: number;
+            /** Column */
+            column: number;
+        };
+        /**
          * NamePlace
          * @description One place a name stands in the take on screen: where, the line it is on, and what it does there.
          */
@@ -1610,6 +1647,22 @@ export interface components {
             path: string;
             /** Held By Base */
             held_by_base: boolean;
+        };
+        /**
+         * NamesFoundResponse
+         * @description Response for GET /api/names-found — the names outlining files of the take that hold the text, outside the
+         *     change.
+         *
+         *     Those starting with the text come first, then the rest, each run by its
+         *     file's path and its line; the change's own are left to the names touched.
+         */
+        NamesFoundResponse: {
+            /** Take */
+            take: number;
+            /** Names */
+            names: components["schemas"]["NameDefined"][];
+            /** More */
+            more: number;
         };
         /**
          * NamesTouchedResponse
@@ -3187,6 +3240,75 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["NamesTouchedResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Refusal"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Refusal"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Refusal"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Refusal"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Refusal"];
+                };
+            };
+        };
+    };
+    get_names_found_api_names_found_get: {
+        parameters: {
+            query: {
+                text: string;
+                ignore_whitespace?: boolean;
+                base?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NamesFoundResponse"];
                 };
             };
             /** @description Bad Request */

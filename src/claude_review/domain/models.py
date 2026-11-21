@@ -995,6 +995,18 @@ class FilesRead(BaseModel):
     too_large: frozenset[str]
 
 
+class BlobsAt(BaseModel):
+    """What a tree holds at the paths asked, none of it read: the id of each file's content in the object store, by
+    path, and those larger than the review reads, with none."""
+
+    model_config = ConfigDict(frozen=True)
+
+    # One content has one id, however many trees and paths hold it
+    object_ids: dict[str, str]
+    # Larger than `LARGEST_FILE_SHOWN_BYTES`: nobody reads such a file line by line
+    too_large: frozenset[str]
+
+
 class TreeSnapshot(BaseModel):
     """The working tree as one taking of the diff saw it.
 
