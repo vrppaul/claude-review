@@ -21,7 +21,7 @@ import {
 	wholeFile
 } from '../diff';
 import { failedCheck, failure } from '../checks';
-import { fakeServer, keepingSettings } from '../fake-server';
+import { fakeServer, keepingSettings, SERVER_ERROR } from '../fake-server';
 import { frames } from '../frames';
 import { inReview, openReview } from '../review';
 import { settled } from '../settled';
@@ -515,10 +515,6 @@ describe('the names the change touched, under their files', () => {
 	});
 
 	it.each([
-		{
-			what: 'another reading of the diff, its names on their way',
-			takeOut: (review: Review) => review.setIgnoreWhitespace(true)
-		},
 		{ what: 'its file’s names folded', takeOut: (review: Review) => review.layout.fileTree.toggleNames(HANDLER) },
 		{ what: 'the names turned off', takeOut: (review: Review) => review.layout.fileTree.toggleNamesListed() },
 		{ what: 'a filter it does not answer', takeOut: (review: Review) => review.layout.fileTree.setFilter('retir') }
@@ -773,12 +769,14 @@ describe('the names the change touched, under their files', () => {
 		getByTestId('file-item-names-fold').focus();
 
 		await review.setIgnoreWhitespace(true);
+		await vi.waitFor(() => expect(names.requests).toHaveLength(2));
+		names.answer(1, { take: FIRST_TAKE, files: [] });
 		await settled();
 
 		expect(document.activeElement).toBe(getAllByTestId('file-item')[0]);
 	});
 
-	it('draws no names of a diff read another way, until those of it arrive', async () => {
+	it('keeps the names it lists while those of the diff read another way are on their way, then lists those', async () => {
 		const server = fakeServer();
 		const names = server.hold('GET /api/names-touched');
 		keepingSettings(server);
@@ -790,12 +788,31 @@ describe('the names the change touched, under their files', () => {
 		names.answer(0, namesOfHandler);
 		await findAllByTestId('name-item');
 		await review.setIgnoreWhitespace(true);
+		const whileAsking = queryAllByTestId('name-item').length;
+		await vi.waitFor(() => expect(names.requests).toHaveLength(2));
+		names.answer(1, { take: FIRST_TAKE, files: [{ path: HANDLER, names: [handle] }] });
+		await settled();
+
+		expect([whileAsking, queryAllByTestId('name-item').length]).toEqual([2, 1]);
+		expect(names.requests[1].query.ignore_whitespace).toBe('true');
+	});
+
+	it('lists no names once those of the diff on screen could not be read', async () => {
+		const server = fakeServer();
+		const names = server.hold('GET /api/names-touched');
+		keepingSettings(server);
+		server.answer('GET /api/diff', diffResponse({ files: diffFiles, take: FIRST_TAKE }));
+		const review = openReview({ files: diffFiles });
+		const { findAllByTestId, queryAllByTestId } = render(FileList, inReview(review));
+		await vi.waitFor(() => expect(names.requests).toHaveLength(1));
+		names.answer(0, namesOfHandler);
+		await findAllByTestId('name-item');
+
+		server.fail('GET /api/names-touched', SERVER_ERROR);
+		await review.setIgnoreWhitespace(true);
+		await settled();
 
 		expect(queryAllByTestId('name-item')).toHaveLength(0);
-		await vi.waitFor(() => expect(names.requests).toHaveLength(2));
-		names.answer(1, namesOfHandler);
-		expect(await findAllByTestId('name-item')).toHaveLength(2);
-		expect(names.requests[1].query.ignore_whitespace).toBe('true');
 	});
 
 	it('asks the review about a name by its place at the icon at its row’s end, and opens the lookup by it', async () => {
@@ -901,14 +918,15 @@ describe('the names the change touched, under their files', () => {
 		expect([queryByTestId('name-lookup'), document.activeElement]).toEqual([null, icon]);
 	});
 
-	it('closes once the change is taken again, its row gone until the names of the take come, the keyboard on its file', async () => {
+	it('closes once the change is taken again, the keyboard back on its icon while the row stands', async () => {
 		const user = userEvent.setup();
 		const server = fakeServer();
 		server.answer('GET /api/names-touched', namesOfHandler);
 		server.answer('GET /api/name', HANDLE_LOOKED_UP);
 		const review = openReview({ files: diffFiles });
-		const { findAllByTestId, getAllByTestId, queryByTestId } = render(FileList, inReview(review));
-		await user.click((await findAllByTestId('name-look-up'))[0]);
+		const { findAllByTestId, queryByTestId } = render(FileList, inReview(review));
+		const [icon] = await findAllByTestId('name-look-up');
+		await user.click(icon);
 		await settled();
 
 		server.hold('GET /api/names-touched');
@@ -919,8 +937,7 @@ describe('the names the change touched, under their files', () => {
 		await frames();
 		await settled();
 
-		expect(queryByTestId('name-lookup')).toBeNull();
-		expect(document.activeElement).toBe(getAllByTestId('file-item')[0]);
+		expect([queryByTestId('name-lookup'), document.activeElement]).toEqual([null, icon]);
 	});
 
 	it('offers no lookup of a removed name while the diff on screen is read against another base', async () => {
