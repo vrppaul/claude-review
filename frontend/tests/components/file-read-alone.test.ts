@@ -9,6 +9,7 @@ import { A_LATER_TAKE, addedLine, contextLine, diffFile, diffResponse, hunk } fr
 import { type FakeServer, fakeServer } from '../fake-server';
 import { frames } from '../frames';
 import { newComment, onAFileGone } from '../new-comment';
+import { chatPush, namedFile } from '../pushes';
 import { openReview } from '../review';
 import { settled } from '../settled';
 import { storyResponse } from '../story';
@@ -18,12 +19,22 @@ const A_PY = diffFile({ path: 'a.py', hunks: [hunk([addedLine(1, 'in a.py')])] }
 const CALLER = 'src/caller.py';
 const CALLER_OF_THE_TAKE: FileOfTakeResponse = {
 	path: CALLER,
-	hunk: hunk(
-		[contextLine(null, 1, 'def caller():'), contextLine(null, 2, '    handler()'), contextLine(null, 3, '    return')],
-		{ header: '' }
-	),
+	hunks: [
+		hunk(
+			[
+				contextLine(null, 1, 'def caller():'),
+				contextLine(null, 2, '    handler()'),
+				contextLine(null, 3, '    return')
+			],
+			{ header: '' }
+		)
+	],
+	unshown: null,
 	commentable: true
 };
+// A file the change did not touch that is not text, and what the take says of it: no line, and why
+const LOGO = 'docs/logo.png';
+const LOGO_OF_THE_TAKE: FileOfTakeResponse = { path: LOGO, hunks: [], unshown: 'binary', commentable: true };
 // What the server says of a file of the take it could not read
 const SERVER_FAILED = 500;
 // How long a reader takes to read why a file could not be read, in milliseconds
@@ -218,6 +229,37 @@ describe('a file the change did not touch, read alone', () => {
 		await press('read-file-again');
 
 		expect(document.activeElement?.textContent).toContain('the agent forgot this call');
+	});
+});
+
+describe('a file the agent names that the change did not touch', () => {
+	it('is opened alone at a press on its chip, where the review’s base holds it, noting where the reader came from', async () => {
+		review = openReview({ files: [A_PY], facts: { answerer_attached: true } });
+		render(ReviewScreen, { props: { review } });
+		review.conversation.receive(
+			chatPush('It is called from here.', { files: [namedFile(CALLER, { held_by_base: true })] })
+		);
+		flushSync();
+
+		await press('answer-file');
+
+		expect(within(screen.getByTestId('file-alone-view')).getByTestId('file-alone-heading').textContent).toBe(CALLER);
+		expect(screen.getByTestId('go-back').textContent?.trim()).toBe('Back to a.py:1');
+	});
+
+	it('is opened with no line where it is not text, saying so under its bar, with nothing to try again', async () => {
+		server.answer('GET /api/file-of-take', LOGO_OF_THE_TAKE);
+		review = openReview({ files: [A_PY], facts: { answerer_attached: true } });
+		render(ReviewScreen, { props: { review } });
+		review.conversation.receive(chatPush('See the logo.', { files: [namedFile(LOGO, { held_by_base: true })] }));
+		flushSync();
+
+		await press('answer-file');
+
+		const alone = within(screen.getByTestId('file-alone-view'));
+		expect(alone.getByTestId('file-alone-heading').textContent).toBe(LOGO);
+		expect(alone.getByText('Binary file — no preview')).toBeTruthy();
+		expect(screen.queryByTestId('read-file-again')).toBeNull();
 	});
 });
 

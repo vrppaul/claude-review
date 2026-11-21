@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { focusWhatRemains } from '$lib/dom/keyboard';
 	import { useReview } from '$lib/review/context';
+	import { fileReachedBy } from '$lib/review/files-way';
 	import Dot from '$lib/ui/Dot.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
 	import { timeAgo } from '$lib/utils/time';
@@ -60,8 +61,8 @@
 		<!-- As far under what it says as the files of the agent's answer stand under its words -->
 		<div class="mt-2 flex flex-wrap gap-1">
 			<!-- Known by where they stand, since the agent may name a file twice -->
-			{#each work.files as path, position (position)}
-				<FileChip {path} testId="progress-file" />
+			{#each work.files as file, position (position)}
+				<FileChip path={file.path} leadsTo={fileReachedBy(file, review.diff)} testId="progress-file" />
 			{/each}
 		</div>
 	{/if}

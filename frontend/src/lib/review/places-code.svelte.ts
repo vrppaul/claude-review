@@ -30,7 +30,9 @@ const LINES_ROUND_A_PLACE = 9;
 async function readHighlighted(path: string, mode: ReviewMode): Promise<CodeRead> {
 	try {
 		const file = await readFileOfTake(path);
-		return { kind: 'read', lines: highlightHunk(file.hunk.lines, languageOf(mode, path)) };
+		// A place stands only in a file the review reads the lines of, which are one hunk
+		const lines = file.hunks.flatMap((hunk) => hunk.lines);
+		return { kind: 'read', lines: highlightHunk(lines, languageOf(mode, path)) };
 	} catch (error) {
 		return { kind: 'failed', why: messageOf(error) };
 	}

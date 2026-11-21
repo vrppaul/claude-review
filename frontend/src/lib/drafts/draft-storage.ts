@@ -12,9 +12,11 @@
 import {
 	type Draft,
 	isCurrentDraft,
+	isDraftBeforeNamedFiles,
 	isDraftBeforeStanding,
 	isReleasedDraft,
 	upToDate,
+	withNamedFiles,
 	withStanding
 } from '$lib/drafts/draft-shapes';
 import { storageKey } from '$lib/utils/preferences';
@@ -126,7 +128,8 @@ export function readDraft(identity: string, title: string): KeptDraft {
 	try {
 		const kept = keptUnder(ownKey);
 		if (isCurrentDraft(kept)) return { draft: kept, setAside: false };
-		if (isDraftBeforeStanding(kept)) return { draft: withStanding(kept), setAside: false };
+		if (isDraftBeforeNamedFiles(kept)) return { draft: withNamedFiles(kept), setAside: false };
+		if (isDraftBeforeStanding(kept)) return { draft: withNamedFiles(withStanding(kept)), setAside: false };
 	} catch (error) {
 		return unreadable(ownKey, error);
 	}

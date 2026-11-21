@@ -29,7 +29,7 @@ export interface components {
             /** Text */
             text: string;
             /** Files */
-            files: string[];
+            files: components["schemas"]["NamedFile"][];
             /** Steps */
             steps: components["schemas"]["ProgressStep"][];
             /** At */
@@ -109,7 +109,7 @@ export interface components {
             /** Body */
             body: string;
             /** Files */
-            files: string[];
+            files: components["schemas"]["NamedFile"][];
         };
         /**
          * Check
@@ -145,6 +145,8 @@ export interface components {
             what: string;
             /** Why */
             why: string | null;
+            /** Held By Base */
+            held_by_base: boolean;
         };
         /**
          * CheckStatus
@@ -305,6 +307,16 @@ export interface components {
          * @enum {string}
          */
         LineStanding: "on_its_lines" | "lines_gone" | "file_gone";
+        /**
+         * NamedFile
+         * @description A file the agent named, and whether the review's base holds it: where the change does not, it is read alone.
+         */
+        NamedFile: {
+            /** Path */
+            path: string;
+            /** Held By Base */
+            held_by_base: boolean;
+        };
         /**
          * OverviewBlock
          * @description One of the overview's three lines, by its name.

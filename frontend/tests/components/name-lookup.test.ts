@@ -381,7 +381,7 @@ describe('going to a place of a name', () => {
 /** A file of the take whole, as the review reads one: a line to each text, numbered from the first. */
 function fileOfTake(path: string, texts: string[]): FileOfTakeResponse {
 	const lines = texts.map((text, offset) => contextLine(null, offset + 1, text));
-	return { path, hunk: hunk(lines, { header: '' }), commentable: true };
+	return { path, hunks: [hunk(lines, { header: '' })], unshown: null, commentable: true };
 }
 
 // The files of the take the places of TOTAL stand in: the change's, and one the change did not touch, whose line 9
@@ -437,7 +437,8 @@ function codeShown(): string[] {
 
 /** Lines of a file of the take, each its number and its code, from the first to the last. */
 function linesOf(path: string, first: number, last: number): string[] {
-	return FILES_OF_THE_TAKE[path].hunk.lines.slice(first - 1, last).map((line) => `${line.new_number}${line.content}`);
+	const lines = FILES_OF_THE_TAKE[path].hunks.flatMap((whole) => whole.lines);
+	return lines.slice(first - 1, last).map((line) => `${line.new_number}${line.content}`);
 }
 
 describe('reading where a name stands in a window', () => {

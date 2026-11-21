@@ -7,11 +7,13 @@ same queue, so an answer written after a round arrives after it.
 
 from http import HTTPStatus
 from pathlib import Path
+from typing import override
 
 import pytest
 from fastapi.testclient import TestClient
 from httpx2 import AsyncClient
 
+from claude_review.domain.interfaces import GitError
 from claude_review.domain.models import CommentSeverity, TurnAuthor
 from claude_review.presentation.schemas.agent import ProgressStep
 from claude_review.presentation.schemas.pushes import (
@@ -28,6 +30,7 @@ from tests.helpers import (
     EVENTS_ROUTE,
     FIRST_THREAD_ID,
     GLANCE_AT_EVENTS,
+    INITIAL_FILE,
     PANEL_MESSAGE_ID,
     REVIEW_ROUTE,
     REVIEWED_FILE,
@@ -35,6 +38,7 @@ from tests.helpers import (
     WAIT_FOR_EVENT,
     FixedClock,
     ReviewFactory,
+    files_opening_of,
     http_client,
     line_json,
     message_json,
@@ -52,6 +56,7 @@ from tests.helpers import (
     turn_json,
     until_the_review_holds_threads,
 )
+from tests.without_git import RepositoryHeldStill, change_held_still
 
 MESSAGE = message_json("Run the tests and say what fails.", images=[])
 
@@ -62,6 +67,8 @@ TAKEN_BACK_AFTER = 40_000
 # A file the agent makes after the diff was taken, and one it has yet to make
 MADE_SINCE = "made_since.py"
 NOT_YET_MADE = "src/not_yet.py"
+# A file the change under review adds: the change holds it, its base does not
+ADDED_BY_THE_CHANGE = "added.py"
 
 THREAD = thread_json(
     {**line_json(REVIEWED_FILE, 42), "quote": ["    return now - self.started_at > timeout"]},
@@ -158,7 +165,7 @@ async def test_a_page_opening_reads_what_was_said_in_the_panel(client: AsyncClie
     assert (asked["said_id"], asked["author"], asked["body"]) == ("panel-1", "reader", MESSAGE["body"])
     assert (asked["threads"], asked["taken_back_at"]) == ([FIRST_THREAD_ID], None)
     assert (answered["author"], answered["message_id"], answered["body"]) == ("author", "panel-1", "One failed; fixed.")
-    assert answered["files"] == [REVIEWED_FILE]
+    assert [named["path"] for named in answered["files"]] == [REVIEWED_FILE]
 
 
 async def test_a_page_opening_before_anything_was_said_reads_nothing(client: AsyncClient) -> None:
@@ -302,7 +309,7 @@ def test_the_agent_may_speak_first(review_page: TestClient) -> None:
         pushed = next_push(socket, ChatPush)
 
     assert pushed.message_id is None
-    assert pushed.files == ["src/cli.py"]
+    assert [named.path for named in pushed.files] == ["src/cli.py"]
 
 
 @pytest.mark.parametrize(
@@ -317,6 +324,93 @@ async def test_the_agent_may_name_a_file_the_diff_does_not_hold(
     response = await client.post(route, json={**said, "files": [NOT_YET_MADE]})
 
     assert response.status_code == HTTPStatus.NO_CONTENT
+
+
+async def test_a_page_opening_reads_whether_the_base_holds_each_file_the_agent_said(
+    tmp_git_repo: Path, reviews: ReviewFactory
+) -> None:
+    """A file the change did not touch can be read alone; one made since the review opened, nowhere yet."""
+    (tmp_git_repo / ADDED_BY_THE_CHANGE).write_text("x = 1\n")
+
+    async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as client:
+        (tmp_git_repo / MADE_SINCE).write_text("y = 2\n")
+        await client.post(
+            "/api/say", json={"body": "Split it out.", "files": [INITIAL_FILE, ADDED_BY_THE_CHANGE, MADE_SINCE]}
+        )
+        [said] = (await client.get(CONVERSATION_ROUTE)).json()["said"]
+
+    assert said["files"] == [
+        {"path": INITIAL_FILE, "held_by_base": True},
+        {"path": ADDED_BY_THE_CHANGE, "held_by_base": False},
+        {"path": MADE_SINCE, "held_by_base": False},
+    ]
+
+
+async def test_a_page_opening_reads_whether_the_base_holds_each_file_the_agent_works_on(
+    tmp_git_repo: Path, reviews: ReviewFactory
+) -> None:
+    async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as client:
+        await client.post("/api/progress", json={"text": "splitting it out", "files": [INITIAL_FILE, MADE_SINCE]})
+        work = (await client.get(REVIEW_ROUTE)).json()["work"]
+
+    assert work["files"] == [{"path": INITIAL_FILE, "held_by_base": True}, {"path": MADE_SINCE, "held_by_base": False}]
+
+
+async def test_a_page_opening_reads_whether_the_base_holds_each_file_a_check_failed_in(
+    tmp_git_repo: Path, reviews: ReviewFactory
+) -> None:
+    """Two failures in one file are both held, by the one asking of git for every path the check names."""
+    failed_in = [
+        {"path": INITIAL_FILE, "line": 1, "what": "test_split"},
+        {"path": MADE_SINCE, "line": 1, "what": "test_split"},
+        {"path": INITIAL_FILE, "line": 2, "what": "test_join"},
+    ]
+
+    async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as client:
+        await client.post("/api/check", json={"name": "pytest", "status": "failed", "failures": failed_in})
+        [check] = (await client.get(REVIEW_ROUTE)).json()["checks"]
+
+    assert [(failure["path"], failure["held_by_base"]) for failure in check["failures"]] == [
+        (INITIAL_FILE, True),
+        (MADE_SINCE, False),
+        (INITIAL_FILE, True),
+    ]
+
+
+class BaseUnlisted(RepositoryHeldStill):
+    """A repository held still whose base git will not list."""
+
+    @override
+    async def files_in(self, root: Path, tree: str) -> frozenset[str]:
+        msg = "git cannot list the base just now"
+        raise GitError(msg)
+
+
+async def test_a_review_whose_base_git_will_not_list_opens_and_holds_no_file_of_it(reviews: ReviewFactory) -> None:
+    """Every file the agent names then goes only where the change holds it."""
+    change = [one_line_file()]
+    hosted = reviews.hosted(change_held_still(change, title=""), repository=BaseUnlisted(change))
+
+    async with http_client(hosted.app) as client:
+        await client.post("/api/say", json={"body": "See the caller.", "files": [REVIEWED_FILE, "src/caller.py"]})
+        [said] = (await client.get(CONVERSATION_ROUTE)).json()["said"]
+
+    assert said["files"] == [
+        {"path": REVIEWED_FILE, "held_by_base": False},
+        {"path": "src/caller.py", "held_by_base": False},
+    ]
+
+
+async def test_in_a_review_of_files_no_base_holds_a_file_the_agent_names(reviews: ReviewFactory) -> None:
+    """Every file there is to read is one the review read: any other is read nowhere."""
+    async with http_client(reviews.app(files_opening_of([one_line_file()]))) as client:
+        await client.post("/api/say", json={"body": "See the plan.", "files": [REVIEWED_FILE, NOT_YET_MADE]})
+        [said] = (await client.get(CONVERSATION_ROUTE)).json()["said"]
+
+    assert said["files"] == [
+        {"path": REVIEWED_FILE, "held_by_base": False},
+        {"path": NOT_YET_MADE, "held_by_base": False},
+    ]
 
 
 async def test_the_reader_is_taken_only_to_a_file_the_review_holds(tmp_git_repo: Path, reviews: ReviewFactory) -> None:
@@ -340,7 +434,7 @@ def test_what_is_being_done_is_said_while_it_is_done(review_page: TestClient) ->
         work = work_pushed(socket)
 
     assert work.text == "rewriting the answer handler"
-    assert work.files == ["a.ts", "b.ts"]
+    assert [named.path for named in work.files] == ["a.ts", "b.ts"]
     assert work.message_id == "panel-1"
 
 
@@ -382,7 +476,7 @@ def test_a_review_opened_while_work_is_under_way_is_told_what_is_being_done(revi
 
     assert work is not None
     assert work.text == "rewriting the answer handler"
-    assert work.files == ["a.ts"]
+    assert [named.path for named in work.files] == ["a.ts"]
 
 
 @pytest.mark.parametrize("nothing", ["", " \n"])

@@ -15,7 +15,7 @@ import type { Review } from '$lib/review/review.svelte';
 import { inReview, openReview } from '../review';
 import { settled } from '../settled';
 import { SEND_LIMITS, KEPT_AS, keepingImages, oversizedScreenshot, paste, screenshot } from '../pasted-images';
-import { chatPush, handOverNext } from '../pushes';
+import { chatPush, handOverNext, namedFile } from '../pushes';
 
 const TITLE = 'claude-review: uncommitted changes';
 // The longest text a test's server takes, short enough to type past
@@ -399,7 +399,7 @@ describe('the agent panel', () => {
 		await user.click(getByTestId('send-message'));
 
 		review.answerer.showWork(
-			work({ text: 'rewriting the answer handler', files: ['src/lib/components/AgentPanel.svelte'] })
+			work({ text: 'rewriting the answer handler', files: [namedFile('src/lib/components/AgentPanel.svelte')] })
 		);
 		await tick();
 
@@ -440,7 +440,7 @@ describe('the agent panel', () => {
 					{ text: 'ran the tests', done: true },
 					{ text: 'ran the tests', done: false }
 				],
-				files: ['src/routes.py', 'src/routes.py']
+				files: [namedFile('src/routes.py'), namedFile('src/routes.py')]
 			})
 		);
 		await tick();
@@ -452,7 +452,9 @@ describe('the agent panel', () => {
 	it('draws a file the agent names twice in what it says, twice', async () => {
 		const { getAllByTestId } = render(AgentPanel, inReview(review));
 
-		review.conversation.receive(chatPush('Both halves are here.', { files: ['src/routes.py', 'src/routes.py'] }));
+		review.conversation.receive(
+			chatPush('Both halves are here.', { files: [namedFile('src/routes.py'), namedFile('src/routes.py')] })
+		);
 		await tick();
 
 		expect(getAllByTestId('answer-file')).toHaveLength(2);
@@ -509,7 +511,7 @@ describe('the agent panel', () => {
 	it('lets the agent speak first, with a file worth opening at it', async () => {
 		const { getByTestId } = render(AgentPanel, inReview(review));
 
-		review.conversation.receive(chatPush('Tests are green again.', { files: ['src/claude_review/cli.py'] }));
+		review.conversation.receive(chatPush('Tests are green again.', { files: [namedFile('src/claude_review/cli.py')] }));
 		await tick();
 
 		expect(getByTestId('panel-answer').textContent).toContain('Tests are green again.');
@@ -732,7 +734,7 @@ describe('what was said before the page opened', () => {
 					at: Date.now(),
 					images: [],
 					threads: [],
-					files: [file.path],
+					files: [namedFile(file.path)],
 					taken_back_at: null
 				}
 			]
@@ -757,11 +759,31 @@ describe('a file the agent names', () => {
 	it('takes the reader to it when the diff holds it', async () => {
 		const user = userEvent.setup();
 		const shown = vi.spyOn(review.sections, 'show');
-		review.conversation.receive(chatPush('Renamed it.', { files: [file.path] }));
+		review.conversation.receive(chatPush('Renamed it.', { files: [namedFile(file.path, { held_by_base: true })] }));
 		const { getByTestId } = render(AgentPanel, inReview(review));
 
 		await user.click(getByTestId('answer-file'));
 
+		expect(shown).toHaveBeenCalledWith(file.path);
+	});
+
+	it('takes the reader to the renamed file for the path it had before the change renamed it', async () => {
+		const user = userEvent.setup();
+		review = openReview({
+			files: [file],
+			diff: { own_renames: [{ former_path: 'src/old_routes.py', path: file.path }] },
+			facts: { answerer_attached: true }
+		});
+		const shown = vi.spyOn(review.sections, 'show');
+		review.conversation.receive(
+			chatPush('Renamed it.', { files: [namedFile('src/old_routes.py', { held_by_base: true })] })
+		);
+		const { getByTestId } = render(AgentPanel, inReview(review));
+
+		await user.click(getByTestId('answer-file'));
+		await settled();
+
+		expect(review.views.onScreen.name).toBe('files');
 		expect(shown).toHaveBeenCalledWith(file.path);
 	});
 
@@ -778,7 +800,7 @@ describe('a file the agent names', () => {
 		await review.diff.take();
 		await review.diff.setBase('round:1');
 		const shown = vi.spyOn(review.sections, 'show');
-		review.conversation.receive(chatPush('Changed it too.', { files: [other.path] }));
+		review.conversation.receive(chatPush('Changed it too.', { files: [namedFile(other.path)] }));
 		const { getByTestId } = render(AgentPanel, inReview(review));
 
 		expect(getByTestId('answer-file').getAttribute('title')).toBe(other.path);
@@ -789,11 +811,11 @@ describe('a file the agent names', () => {
 		expect(shown).toHaveBeenCalledWith(other.path);
 	});
 
-	it('says one the diff does not hold yet is not in it, and takes the reader nowhere', async () => {
+	it('says one neither the change nor its base holds is not in the diff yet, and takes the reader nowhere', async () => {
 		const user = userEvent.setup();
 		const shown = vi.spyOn(review.navigator, 'showFile');
-		review.conversation.receive(chatPush('Split it out.', { files: ['src/made_since.py'] }));
-		review.answerer.showWork(work({ text: 'splitting it out', files: ['src/made_since.py'] }));
+		review.conversation.receive(chatPush('Split it out.', { files: [namedFile('src/made_since.py')] }));
+		review.answerer.showWork(work({ text: 'splitting it out', files: [namedFile('src/made_since.py')] }));
 		const { getByTestId } = render(AgentPanel, inReview(review));
 		await tick();
 

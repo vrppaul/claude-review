@@ -4,9 +4,9 @@ import type { Check, CheckFailure } from '$lib/types';
 // When a check was reported, unless a test says: 13:02 on a day in November, in the time of whoever runs the tests
 export const REPORTED_AT = new Date(2026, 10, 19, 13, 2).getTime();
 
-/** A place a check failed, unless a test says otherwise. */
+/** A place a check failed, in a file the review's base does not hold, unless a test says otherwise. */
 export function failure(given: Partial<CheckFailure> = {}): CheckFailure {
-	return { path: 'a.py', line: 1, what: 'test_it', why: null, ...given };
+	return { path: 'a.py', line: 1, what: 'test_it', why: null, held_by_base: false, ...given };
 }
 
 /** A check that passed on the code as it stands, in the first round, unless a test says otherwise. */

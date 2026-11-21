@@ -5,14 +5,15 @@
  * Where a thread on lines is read in it is decided here once, from what its
  * anchor says of how it stands and from the review's own diff, so the
  * views, the tree and the walk of n and p cannot place one thread apart.
- * No file is read to decide it.
+ * So is the file a file the agent named takes the reader to. No file is read
+ * to decide either.
  */
 
 import { inDiffOrder, isDrawn, threadsOffTheDiff, type ThreadsOffTheDiff } from '$lib/anchors/placement';
 import type { ThreadLines } from '$lib/anchors/views';
 import type { ReviewDiff } from '$lib/review/review-diff.svelte';
 import type { Threads } from '$lib/review/threads.svelte';
-import type { Thread } from '$lib/types';
+import type { NamedFile, Thread } from '$lib/types';
 
 /**
  * Where a thread on lines is read among the files:
@@ -34,6 +35,18 @@ const HEAD_OF_THE_FILE = 0;
 export function whereRead(lines: ThreadLines, diff: ReviewDiff): ReadAmongTheFiles {
 	if (!diff.holds(lines.file)) return lines.standing === 'file_gone' ? 'above-the-files' : 'in-its-file-alone';
 	return diff.narrowed || diff.shows(lines.file) ? 'in-the-change' : 'above-the-files';
+}
+
+/**
+ * The file a file the agent named takes the reader to, as the review said of
+ * it when it was named: the change's file where its own diff holds the path
+ * or renamed a file from it, else the file read alone where the review's
+ * base holds it, else none — one made since the take, or in a review of no
+ * repository.
+ */
+export function fileReachedBy(named: NamedFile, diff: ReviewDiff): string | null {
+	if (diff.holds(named.path)) return named.path;
+	return diff.renamedTo(named.path) ?? (named.held_by_base ? named.path : null);
 }
 
 /**

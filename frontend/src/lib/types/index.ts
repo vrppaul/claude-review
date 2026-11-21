@@ -44,7 +44,7 @@ export type DiffFile = Schemas['DiffFile'];
  * shows no lines. What became of it in a change is said by its header, and only of a file the change touched.
  */
 export type FileToDraw = Omit<DiffFile, 'status' | 'old_path'>;
-/** Why a file whose content changed shows none of its lines: not text, or too large to read. */
+/** Why a file shows none of its lines: not text, or too large to read. */
 export type Unshown = Schemas['Unshown'];
 /** What the review is and where it stands, read as the page opens. */
 export type ReviewResponse = Schemas['ReviewResponse'];
@@ -88,7 +88,7 @@ export type AgentStatus = Schemas['AgentStatus'];
 
 /** A check the agent ran — tests, a linter — as the review holds it: how it ended, and whether the code moved on since. */
 export type Check = Schemas['Check'];
-/** A place a check failed, and whether its file changed since the check ran. */
+/** A place a check failed, and whether the review's base holds its file. */
 export type CheckFailure = Schemas['CheckFailure'];
 
 /** Who wrote a turn: the reader, or whoever answers for the change. */
@@ -340,6 +340,11 @@ export type ChangesSince = Schemas['ChangesSince'];
  * it changes. The server alone decides when it is over, and says so.
  */
 export type AgentWork = Schemas['AgentWork'];
+/**
+ * A file the agent named, and whether the review's base holds it: where the change does not, the file is read
+ * alone. A check's failure says the same of the file it is in.
+ */
+export type NamedFile = Schemas['NamedFile'];
 
 /** What moving the threads onto a retaken diff did: how many followed their lines, how many lost them. */
 export interface FollowOutcome {
@@ -367,7 +372,7 @@ export interface PanelTurn {
 	/** Threads this message pointed at, by id. */
 	threads?: string[];
 	/** Files worth opening at what was said. */
-	files?: string[];
+	files?: NamedFile[];
 	/** Images the reader attached, by the id the server kept them under. */
 	images?: string[];
 	/** Which message an answer belongs to. */

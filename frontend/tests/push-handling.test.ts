@@ -22,7 +22,7 @@ import { fakeServer, SERVER_ERROR, takingStoryAskings, type FakeServer } from '.
 import { THIS_RUN } from './fake-socket';
 import { newComment, storyComment } from './new-comment';
 import { inReview, openReview, settingsWritingStories } from './review';
-import { chatPush, handedOf, handedPush, handOverNext, pushedAt } from './pushes';
+import { chatPush, handedOf, handedPush, handOverNext, namedFile, pushedAt } from './pushes';
 import { settled } from './settled';
 import { ASKED, codeMovedOn, readTheStoryAgain, STOPPED, storyHeld, storyResponse, TAKEN } from './story';
 
@@ -108,7 +108,7 @@ describe('what the server pushes, taken in', () => {
 	});
 
 	it('shows what the agent says it is doing, and nothing once it says its work is over', () => {
-		const underWay = work({ text: 'reading the handler', files: ['a.py'] });
+		const underWay = work({ text: 'reading the handler', files: [namedFile('a.py')] });
 
 		handOverNext(review, { type: 'progress', work: underWay });
 		expect(review.answerer.work).toEqual(underWay);

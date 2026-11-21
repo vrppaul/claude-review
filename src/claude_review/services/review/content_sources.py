@@ -31,9 +31,9 @@ from claude_review.domain.interfaces import Clock, GitError, ReviewedRepository,
 from claude_review.domain.models import (
     ChangedSinceRound,
     DiffFile,
-    FileOfTake,
     OfConversation,
     OfFiles,
+    OpenedFileOfTake,
     ReviewKey,
     VersionKey,
     VersionOnOffer,
@@ -61,6 +61,8 @@ class DiffView(BaseModel):
     files: list[DiffFile]
     # The files the review's own diff holds: `files` shows fewer under a narrower base or with whitespace left out
     own_paths: frozenset[str]
+    # The files the review's own diff renamed, by the path each had: a path the agent may still name one by
+    own_renames: dict[str, str]
     # The base the diff was taken against. None in a review whose content did
     # not come from a repository: it is compared against nothing.
     shown: VersionKey | None
@@ -129,8 +131,12 @@ class ContentSource(TakesCompared, TreesWritten):
         """The name at a place the reader points at, and every place it stands in the take on screen."""
 
     @abstractmethod
-    async def file_of_take(self, path: str) -> FileOfTake:
-        """A file of the take on screen, whole: what the reader opens of a file the change did not touch."""
+    async def file_of_take(self, path: str) -> OpenedFileOfTake:
+        """A file of the take on screen as the reader opens it: whole, or saying why none of its lines are read."""
+
+    @abstractmethod
+    def base_holds(self, path: str) -> bool:
+        """Whether the review's base holds a file at the path: what is told of every file the agent names."""
 
     @abstractmethod
     async def line_anchors(self, named: frozenset[str]) -> LineAnchorHandler:
@@ -161,6 +167,8 @@ class RepositorySource(ContentSource):
         self._versions = ReviewVersions(repository, clock, opened)
         # Held while the diff is taken again, so two retakes never interleave
         self._retaking = asyncio.Lock()
+        # Every file the pinned base holds, by path, listed as the review opens: none until then
+        self._base_files: frozenset[str] = frozenset()
 
     @property
     @override
@@ -185,6 +193,13 @@ class RepositorySource(ContentSource):
         mark rounds go back to is the very tree on screen. A repository git
         will not stage just now costs the review its first mark, never the
         review itself: what was read first stays on screen.
+
+        The files of the base are listed once, after the staging lent the
+        review's store the repository's objects: the base is pinned and never
+        moves, so nothing the agent names waits on git to be told. The paths
+        are kept for as long as the review: some 30 MB for a repository of
+        200,000 files. A base git will not list holds no file, and what is
+        named then goes only where the change holds it.
         """
         try:
             async with self._repository.staged(self._root) as staged:
@@ -192,6 +207,10 @@ class RepositorySource(ContentSource):
         except GitError as refusal:
             log.warning("opening_mark_refused", reason=str(refusal))
             self._content = self._content.on_tree(await self._watcher.read(self._root))
+        try:
+            self._base_files = await self._repository.files_in(self._root, self._versions.pinned_base)
+        except GitError as refusal:
+            log.warning("base_files_unlisted", reason=str(refusal))
 
     @override
     async def view(self, base: VersionKey | None, *, ignore_whitespace: bool) -> DiffView:
@@ -213,7 +232,14 @@ class RepositorySource(ContentSource):
             async with self._repository.staged(self._root) as staged:
                 files = await read_diff(staged, base=against, ignore_whitespace=ignore_whitespace)
         moved = await self._watcher.drift(self._root, content.tree)
-        return DiffView(files=files, own_paths=content.paths, shown=shown, moved=moved, take=content.take)
+        return DiffView(
+            files=files,
+            own_paths=content.paths,
+            own_renames=content.renames,
+            shown=shown,
+            moved=moved,
+            take=content.take,
+        )
 
     @override
     async def offer(self) -> list[VersionOnOffer]:
@@ -293,15 +319,18 @@ class RepositorySource(ContentSource):
         )
 
     @override
-    async def file_of_take(self, path: str) -> FileOfTake:
+    async def file_of_take(self, path: str) -> OpenedFileOfTake:
         """Read from the tree the take on screen was written down as, never the disk, so its lines are the diff's.
 
         Raises:
             TakeNotWrittenError: if git wrote down no tree of the take.
             FileNotInReviewError: if the take holds no file at the path.
-            FileUnreadableError: if the file is not text, or larger than the review reads line by line.
         """
         return await self._files_of_take.file(_tree_written(self._content), path)
+
+    @override
+    def base_holds(self, path: str) -> bool:
+        return path in self._base_files
 
     @override
     async def line_anchors(self, named: frozenset[str]) -> LineAnchorHandler:
@@ -363,7 +392,14 @@ class FixedSource(ContentSource):
             msg = "This review is not compared against anything"
             raise NoRepositoryError(msg)
         content = self._content
-        return DiffView(files=content.files, own_paths=content.paths, shown=None, moved=0, take=content.take)
+        return DiffView(
+            files=content.files,
+            own_paths=content.paths,
+            own_renames=content.renames,
+            shown=None,
+            moved=0,
+            take=content.take,
+        )
 
     @override
     async def offer(self) -> list[VersionOnOffer]:
@@ -407,10 +443,15 @@ class FixedSource(ContentSource):
         raise NoRepositoryError(msg)
 
     @override
-    async def file_of_take(self, path: str) -> FileOfTake:
+    async def file_of_take(self, path: str) -> OpenedFileOfTake:
         """Raises: NoRepositoryError, always: what was read once is every file there is to open."""
         msg = "No repository to open a file the review does not hold from"
         raise NoRepositoryError(msg)
+
+    @override
+    def base_holds(self, path: str) -> bool:
+        """Never: what was read once has no base, and every file there is to read is one it read."""
+        return False
 
     @override
     async def line_anchors(self, named: frozenset[str]) -> LineAnchorHandler:

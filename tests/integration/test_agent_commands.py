@@ -138,7 +138,7 @@ async def test_what_the_agent_says_names_the_files_it_is_about(review: RunningRe
         said = await asyncio.to_thread(next_push, page, ChatPush)
 
     assert result.exit_code == 0, result.output
-    assert said.files == [REVIEWED_FILE]
+    assert [named.path for named in said.files] == [REVIEWED_FILE]
 
 
 async def test_the_work_is_shown_with_each_file_and_branch_once(review: RunningReview) -> None:
@@ -154,7 +154,7 @@ async def test_the_work_is_shown_with_each_file_and_branch_once(review: RunningR
     work = (await _facts(review)).work
 
     assert work is not None
-    assert work.files == [REVIEWED_FILE]
+    assert [named.path for named in work.files] == [REVIEWED_FILE]
     assert work.steps == [
         ProgressStep(text="read the handler", done=True),
         ProgressStep(text="two subagents out", done=False),
@@ -169,7 +169,11 @@ async def test_the_work_reported_reaches_the_review_on_screen_and_goes_when_done
         await _run(review, "progress", "--done")
         finished = await asyncio.to_thread(next_push, page, ProgressPush)
 
-    assert (work.message_id, work.text, work.files) == ("panel-1", "rewriting the handler", [REVIEWED_FILE])
+    assert (work.message_id, work.text, [named.path for named in work.files]) == (
+        "panel-1",
+        "rewriting the handler",
+        [REVIEWED_FILE],
+    )
     assert finished.work is None
 
 

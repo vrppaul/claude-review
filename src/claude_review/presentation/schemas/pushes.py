@@ -6,7 +6,7 @@ from typing import Annotated, Literal
 from pydantic import ConfigDict, Field, StrictBool
 
 from claude_review.domain.models import CommentSeverity, FilePath
-from claude_review.presentation.schemas.agent import AgentStatus, AgentWork
+from claude_review.presentation.schemas.agent import AgentStatus, AgentWork, NamedFile
 from claude_review.presentation.schemas.base import Schema
 from claude_review.presentation.schemas.checks import Check
 from claude_review.presentation.schemas.content import ChangesSince, StoryAsking
@@ -86,7 +86,7 @@ class ChatPush(Push):
     said_id: str
     message_id: str | None
     body: str
-    files: list[FilePath]
+    files: list[NamedFile]
 
 
 class ProgressPush(Push):

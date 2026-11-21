@@ -42,10 +42,11 @@ from claude_review.domain.models import (
     AgentWork,
     Anchor,
     CommentSeverity,
-    FileOfTake,
     FilePath,
     LineAnchor,
     LineSide,
+    NamedFile,
+    OpenedFileOfTake,
     PanelCancel,
     PanelEntry,
     PanelMessage,
@@ -215,10 +216,11 @@ class Review:
         """Say what the agent is doing, replacing whatever was showing; nothing said ends it.
 
         The files are any the agent names, the diff holding them or not: it
-        works on files it is about to make, and the page says of each it
-        cannot take the reader to that it is not in the diff yet.
+        works on files it is about to make, and the page says of each that
+        neither the change nor its base holds that it is not in the diff yet.
         """
-        self._answerer.report_work(message_id=message_id, text=text, files=files, steps=steps)
+        named = self._named(files)
+        self._answerer.report_work(message_id=message_id, text=text, files=named, steps=steps)
 
     def report_status(self, *, model: str | None, context: str | None) -> None:
         """Take what the agent says about itself."""
@@ -230,7 +232,8 @@ class Review:
         Raises:
             NoRepositoryError: if the review's content did not come from a repository: no tree for it to run on.
         """
-        await self._checks.report(report, round_number=self._rounds.current)
+        paths_in_base = frozenset(failure.path for failure in report.failures if self._source.base_holds(failure.path))
+        await self._checks.report(report, round_number=self._rounds.current, paths_in_base=paths_in_base)
 
     async def keep_image(self, content: bytes) -> StoredImage:
         """Keep an image the reader is about to send."""
@@ -267,8 +270,8 @@ class Review:
         """The name at a place the reader points at, and every place it stands in the take on screen."""
         return await self._source.name_at(place)
 
-    async def file_of_take(self, path: str) -> FileOfTake:
-        """A file of the take on screen, whole: what the reader opens of a file the change did not touch."""
+    async def file_of_take(self, path: str) -> OpenedFileOfTake:
+        """A file of the take on screen as the reader opens it: whole, or saying why none of its lines are read."""
         return await self._source.file_of_take(path)
 
     async def follow(self, anchors: list[Anchor]) -> list[Anchor]:
@@ -381,8 +384,9 @@ class Review:
 
         The files are any the agent names, as the work it reports names them.
         """
-        said_id = self._conversation.agent_said(message_id=message_id, body=body, files=files)
-        self._page.tell(AgentSaid(said_id=said_id, message_id=message_id, body=body, files=files))
+        named = self._named(files)
+        said_id = self._conversation.agent_said(message_id=message_id, body=body, files=named)
+        self._page.tell(AgentSaid(said_id=said_id, message_id=message_id, body=body, files=named))
         self._answerer.end_work_for(message_id)
         log.info("panel_answer", message_id=message_id, unprompted=message_id is None)
 
@@ -683,3 +687,7 @@ class Review:
             at=said.at,
             images=[stored.path for stored in kept if stored is not None],
         )
+
+    def _named(self, paths: list[FilePath]) -> list[NamedFile]:
+        """The files the agent names, each saying whether the review's base holds it."""
+        return [NamedFile(path=path, held_by_base=self._source.base_holds(path)) for path in paths]

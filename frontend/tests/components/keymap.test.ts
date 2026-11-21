@@ -217,7 +217,8 @@ describe('the keys the review answers', () => {
 		const user = userEvent.setup();
 		fakeServer().answer('GET /api/file-of-take', {
 			path: 'caller.py',
-			hunk: hunk([contextLine(null, 1, 'handler()')], { header: '' }),
+			hunks: [hunk([contextLine(null, 1, 'handler()')], { header: '' })],
+			unshown: null,
 			commentable: true
 		});
 		review.threads.add(newComment({ file: 'caller.py', body: 'the agent forgot this call' }));
@@ -240,6 +241,27 @@ describe('the keys the review answers', () => {
 			'Ctrl+Shift+Enter: Finish the review',
 			'?: Show this list',
 			'Ctrl+click: Where a name in the code is defined and used',
+			'Esc: Close it'
+		]);
+	});
+
+	it('lists in the help no key of lines while a file read alone shows none of its lines', async () => {
+		const user = userEvent.setup();
+		fakeServer().answer('GET /api/file-of-take', { path: 'logo.png', hunks: [], unshown: 'binary', commentable: true });
+		render(ReviewScreen, { props: { review } });
+		await review.navigator.readAlone('logo.png');
+		await settled();
+
+		await user.keyboard('?');
+
+		expect(listedInTheHelp()).toEqual([
+			'Ctrl+Enter: Add the comment, or send the message, being written',
+			'a: Next unread reply',
+			'b: Back to where you were',
+			'c: Talk to the agent',
+			'f: Show or hide the file tree',
+			'Ctrl+Shift+Enter: Finish the review',
+			'?: Show this list',
 			'Esc: Close it'
 		]);
 	});

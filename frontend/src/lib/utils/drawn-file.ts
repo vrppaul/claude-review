@@ -38,6 +38,11 @@ export interface DrawnHunk {
 	lines: DrawnLine[];
 }
 
+/** Whether a file has lines to draw: none where it shows none of them, or where a change left its content alone. */
+export function hasLinesToDraw(file: FileToDraw): boolean {
+	return file.hunks.length > 0;
+}
+
 /** Where a line is: on the old side if the change removed it, on the new side otherwise. */
 function placeOf(line: DiffLine): LinePlace {
 	if (line.kind === 'delete') return { side: 'old', number: line.old_number ?? NO_NUMBER };

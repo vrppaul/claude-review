@@ -162,13 +162,16 @@ export class Navigator {
 	/**
 	 * Bring a file somebody named into view — the agent, in what it said or
 	 * showed — and mark it once it gets there. A file the view on screen
-	 * draws none of is shown among the change's files, which come on screen
-	 * for it; one not drawn there either is shown nowhere.
+	 * draws none of comes on screen for it: among the change's files where
+	 * the review's own diff holds it, else read alone, coming into which
+	 * notes the place left for Back. Whoever asks names a file that is one
+	 * or the other: a file read alone the take does not hold says why it
+	 * could not be read.
 	 */
 	showFile(path: string): void {
 		const section = this.#views.onScreen.sectionOfFile(path);
 		if (section !== null) this.#sections.show(section);
-		else void this.#views.showTheChange().then((files) => this.#showIn(files, path));
+		else void this.#showWhereFileRead(path);
 	}
 
 	/**
@@ -305,9 +308,12 @@ export class Navigator {
 		this.#sections.goToThread(thread.id, section);
 	}
 
-	/** Show a file in a view, if the view draws any of it. */
-	#showIn(view: ReadingView, path: string): void {
-		const section = view.sectionOfFile(path);
+	/** Show a file in the view of the Files way of reading that draws it, brought on screen for it, if it draws any. */
+	async #showWhereFileRead(path: string): Promise<void> {
+		const left = this.#placeRead();
+		const drawing = await this.#views.showWhereFileRead(path);
+		this.#noteComingInto(left, drawing, path);
+		const section = drawing.sectionOfFile(path);
 		if (section !== null) this.#sections.show(section);
 	}
 }

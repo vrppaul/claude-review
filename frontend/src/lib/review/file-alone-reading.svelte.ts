@@ -1,7 +1,8 @@
 /**
  * A file of the take the change did not touch, read alone in place of the
  * change's files: whole, from its first line to its last, so scrolling
- * never leads into another file.
+ * never leads into another file. One the review reads no lines of says why
+ * in their place.
  *
  * The reader comes here to read what the change left — a use the agent
  * forgot — and comments on it as on any line. It is read as Files, the way
@@ -19,6 +20,7 @@ import { type Drawn, fileSectionKey, placeInLines, type PlaceRead, type ReadingV
 import type { ReviewDiff } from '$lib/review/review-diff.svelte';
 import type { Threads } from '$lib/review/threads.svelte';
 import type { FileOfTakeResponse, FileToDraw, Thread } from '$lib/types';
+import { hasLinesToDraw } from '$lib/utils/drawn-file';
 import { messageOf } from '$lib/utils/errors';
 import { namesTheFileAsItStands } from '$lib/utils/line-places';
 
@@ -38,9 +40,9 @@ interface HeldRead {
 // A read on its way
 const READING: FileAloneRead = { kind: 'reading' };
 
-/** A file of the take as a section of lines draws it: its every line a line of its new side, one hunk. */
-function asDrawn({ path, hunk, commentable }: FileOfTakeResponse): FileToDraw {
-	return { path, hunks: [hunk], unshown: null, old_mode: null, new_mode: null, commentable };
+/** A file of the take as a section of lines draws it: its every line a line of its new side, or none and why. */
+function asDrawn({ path, hunks, unshown, commentable }: FileOfTakeResponse): FileToDraw {
+	return { path, hunks, unshown, old_mode: null, new_mode: null, commentable };
 }
 
 /** Read a file of the take on screen, and say what that came to. */
@@ -99,12 +101,13 @@ export class FileAloneReading implements ReadingView {
 		return this.#settled;
 	}
 
-	/** Its lines, while drawn, which take comments; and the threads of the files, which n and p walk from here. */
+	/** Its lines, where the file read has any to draw, which take comments; and the threads of the files, which n and p walk from here. */
 	drawn(): Drawn {
-		return { lines: this.#file() !== null, threads: this.threadsInOrder().length > 0 };
+		const file = this.#file();
+		return { lines: file !== null && hasLinesToDraw(file), threads: this.threadsInOrder().length > 0 };
 	}
 
-	/** Its one section, while its lines are drawn. */
+	/** Its one section, once the file is read. */
 	sectionKeys(): string[] {
 		const file = this.#file();
 		return file === null ? [] : [fileSectionKey(file.path)];
@@ -126,10 +129,10 @@ export class FileAloneReading implements ReadingView {
 
 	/** Nothing of a file read alone is folded. */
 	unfold(): void {
-		// Every line of the file is drawn
+		// Every line the file shows is drawn
 	}
 
-	/** Every line of the file is drawn. */
+	/** Every line the file shows is drawn; one that shows none is gone to all the same, to say why. */
 	drawLine(path: string): Promise<string | null> {
 		return Promise.resolve(this.sectionOfFile(path));
 	}

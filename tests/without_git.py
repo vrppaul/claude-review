@@ -193,6 +193,10 @@ class RepositoryWithoutGit(ReviewedRepository):
     async def files_of(self, root: Path, tree: str, paths: list[str]) -> FilesRead:
         return FilesRead(contents={}, too_large=frozenset())
 
+    @override
+    async def files_in(self, root: Path, tree: str) -> frozenset[str]:
+        return frozenset()
+
 
 class TreesHeld(TreesRead):
     """Trees held in memory, by their ids, each as what reading every path of it gives; every file holds any word."""
@@ -211,6 +215,11 @@ class TreesHeld(TreesRead):
             contents={path: held.contents[path] for path in held.contents.keys() & set(paths)},
             too_large=held.too_large & set(paths),
         )
+
+    @override
+    async def files_in(self, root: Path, tree: str) -> frozenset[str]:
+        held = self._trees[tree]
+        return frozenset(held.contents) | held.too_large
 
 
 class StagingHeldStill(StagedTree):

@@ -83,10 +83,19 @@ class CheckFailure(Schema):
     line: int
     what: str
     why: str | None
+    # Whether the review's base holds the file: where the change does not, the file is read alone
+    held_by_base: StrictBool
 
     @classmethod
-    def from_domain(cls, failure: checks.CheckFailure) -> Self:
-        return cls(path=failure.path, line=failure.line, what=failure.what, why=failure.why)
+    def from_domain(cls, failure: checks.CheckFailure, *, paths_in_base: frozenset[str]) -> Self:
+        """The failure, saying of its file what the review says of the files its check failed in."""
+        return cls(
+            path=failure.path,
+            line=failure.line,
+            what=failure.what,
+            why=failure.why,
+            held_by_base=failure.path in paths_in_base,
+        )
 
 
 class Check(Schema):
@@ -111,7 +120,9 @@ class Check(Schema):
             name=reported.name,
             status=reported.status,
             summary=reported.summary,
-            failures=[CheckFailure.from_domain(failure) for failure in reported.failures],
+            failures=[
+                CheckFailure.from_domain(failure, paths_in_base=check.paths_in_base) for failure in reported.failures
+            ],
             round=check.round,
             at=check.at,
             changed_since=check.changed_since,

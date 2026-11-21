@@ -26,7 +26,7 @@ from claude_review.domain.page_events import (
     TreeMoved,
     WorkReported,
 )
-from claude_review.presentation.schemas.agent import AgentStatus, AgentWork
+from claude_review.presentation.schemas.agent import AgentStatus, AgentWork, NamedFile
 from claude_review.presentation.schemas.base import made_or_none
 from claude_review.presentation.schemas.checks import Check
 from claude_review.presentation.schemas.content import StoryAsking
@@ -64,7 +64,12 @@ def push_of(event: PageEvent) -> ServerPush:
         case AnswererChanged():
             return AnswererPush(attached=event.attached)
         case AgentSaid():
-            return ChatPush(said_id=event.said_id, message_id=event.message_id, body=event.body, files=event.files)
+            return ChatPush(
+                said_id=event.said_id,
+                message_id=event.message_id,
+                body=event.body,
+                files=[NamedFile.from_domain(named) for named in event.files],
+            )
         case WorkReported():
             return ProgressPush(work=made_or_none(AgentWork.from_domain, event.work))
         case FileShown():

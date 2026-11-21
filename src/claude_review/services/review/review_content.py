@@ -47,6 +47,11 @@ class ReviewContent:
         return frozenset(file.path for file in self._files)
 
     @property
+    def renames(self) -> dict[str, str]:
+        """Each file the take renamed, by the path it had in the base, to the path it has."""
+        return {file.old_path: file.path for file in self._files if file.old_path is not None}
+
+    @property
     def tree(self) -> TreeState:
         return self._tree
 

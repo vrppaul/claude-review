@@ -3,6 +3,7 @@
 	import { useReview } from '$lib/review/context';
 	import EmptyNote from '$lib/ui/EmptyNote.svelte';
 	import NoticeBar from '$lib/ui/NoticeBar.svelte';
+	import { hasLinesToDraw } from '$lib/utils/drawn-file';
 	import { modeChangeOf } from '$lib/utils/file-modes';
 	import { wholeMegabytes } from '$lib/utils/sizes';
 	import { FILE_NOT_COMMENTABLE } from './line-commenting.svelte';
@@ -20,18 +21,18 @@
 	// Why a thread is drawn at the head of its file: the line it hangs on is not drawn
 	const OFF_THEIR_LINES = { one: 'comment on a line no longer shown', many: 'comments on lines no longer shown' };
 
-	// Why a file whose content changed shows none of its lines, in words
+	// Why a file shows none of its lines, in words: one whose content changed, or one of the take read alone
 	const unshownWords: Record<Unshown, string> = {
 		binary: 'Binary file — no preview',
 		too_large: `Too large to show (over ${wholeMegabytes(review.limits.largest_file_shown_bytes)} MB)`
 	};
 
 	const modeChange = $derived(modeChangeOf(file));
-	// A file can change without producing lines: binary content, content too
-	// large to read, or a bare change of its mode. Say which, rather than
-	// showing an empty panel.
+	// A file can have no lines to draw: content that is not text or too large
+	// to read, or a bare change of its mode. Say which, rather than showing an
+	// empty panel.
 	const emptyReason = $derived(
-		file.hunks.length > 0
+		hasLinesToDraw(file)
 			? null
 			: file.unshown
 				? unshownWords[file.unshown]

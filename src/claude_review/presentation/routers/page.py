@@ -48,6 +48,7 @@ from claude_review.presentation.schemas.content import (
     DiffResponse,
     FileOfTakeResponse,
     FileWindowResponse,
+    OwnRename,
     RetakeResponse,
     ReviewResponse,
     StoryAsking,
@@ -188,6 +189,9 @@ async def get_diff(
     return DiffResponse(
         files=[DiffFile.from_domain(file) for file in view.files],
         own_paths=sorted(view.own_paths),
+        own_renames=[
+            OwnRename(former_path=former_path, path=path) for former_path, path in sorted(view.own_renames.items())
+        ],
         base=made_or_none(lambda shown: shown_base(shown, opened_against), view.shown),
         moved=view.moved,
         take=view.take,
@@ -252,14 +256,15 @@ async def get_name(
 
 @router.get(
     "/file-of-take",
-    responses=refusals(
-        NoRepositoryError, TakeNotWrittenError, FileNotInReviewError, FileUnreadableError, takes=Takes.PARAMETERS
-    ),
+    responses=refusals(NoRepositoryError, TakeNotWrittenError, FileNotInReviewError, takes=Takes.PARAMETERS),
 )
 async def get_file_of_take(
     path: Annotated[str, Query(min_length=1, max_length=MAX_PATH_LENGTH)], review: ReviewDep
 ) -> FileOfTakeResponse:
-    """Serve a file of the take on screen whole, as its tree holds it, for the reader to open one the change left."""
+    """Serve a file of the take on screen as its tree holds it, for the reader to open one the change left.
+
+    Whole where the review reads its lines; one that is not text, or too large, says so and shows none.
+    """
     return FileOfTakeResponse.from_domain(await review.file_of_take(path))
 
 

@@ -8,8 +8,17 @@ from pathlib import Path
 
 import pytest
 
-from claude_review.domain.exceptions import FileNotInReviewError, FileUnreadableError
-from claude_review.domain.models import NO_HUNK_HEADER, DiffHunk, DiffLine, FileOfTake, FilesRead, LineType
+from claude_review.domain.exceptions import FileNotInReviewError
+from claude_review.domain.models import (
+    NO_HUNK_HEADER,
+    DiffHunk,
+    DiffLine,
+    FileOfTake,
+    FilesRead,
+    LineType,
+    Unshown,
+    UnshownFileOfTake,
+)
 from claude_review.services.files_of_take import FilesOfTake
 from tests.without_git import TreesHeld
 
@@ -59,7 +68,14 @@ async def test_of_the_files_a_thread_names_only_those_the_review_reads_line_by_l
     assert [file.path for file in read] == ["src/flags.py"]
 
 
-@pytest.mark.parametrize("path", ["logo.png", "dump.log"], ids=["not-text", "larger-than-the-review-reads"])
-async def test_a_file_the_review_does_not_read_line_by_line_is_refused_as_unreadable(path: str) -> None:
-    with pytest.raises(FileUnreadableError, match=path):
-        await files_of_take().file(TAKE, path)
+@pytest.mark.parametrize(
+    ("path", "unshown"),
+    [("logo.png", Unshown.BINARY), ("dump.log", Unshown.TOO_LARGE)],
+    ids=["not-text", "larger-than-the-review-reads"],
+)
+async def test_a_file_the_review_does_not_read_line_by_line_is_opened_with_no_lines_and_says_why(
+    path: str, unshown: Unshown
+) -> None:
+    opened = await files_of_take().file(TAKE, path)
+
+    assert opened == UnshownFileOfTake(path=path, unshown=unshown)

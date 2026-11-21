@@ -258,7 +258,9 @@ export interface paths {
         };
         /**
          * Get File Of Take
-         * @description Serve a file of the take on screen whole, as its tree holds it, for the reader to open one the change left.
+         * @description Serve a file of the take on screen as its tree holds it, for the reader to open one the change left.
+         *
+         *     Whole where the review reads its lines; one that is not text, or too large, says so and shows none.
          */
         get: operations["get_file_of_take_api_file_of_take_get"];
         put?: never;
@@ -828,7 +830,7 @@ export interface components {
             /** Text */
             text: string;
             /** Files */
-            files: string[];
+            files: components["schemas"]["NamedFile"][];
             /** Steps */
             steps: components["schemas"]["ProgressStep"][];
             /** At */
@@ -973,6 +975,8 @@ export interface components {
             what: string;
             /** Why */
             why: string | null;
+            /** Held By Base */
+            held_by_base: boolean;
         };
         /**
          * CheckRequest
@@ -1138,6 +1142,8 @@ export interface components {
             files: components["schemas"]["DiffFile"][];
             /** Own Paths */
             own_paths: string[];
+            /** Own Renames */
+            own_renames: components["schemas"]["OwnRename"][];
             base: components["schemas"]["ShownBase"] | null;
             /** Moved */
             moved: number;
@@ -1208,12 +1214,14 @@ export interface components {
         };
         /**
          * FileOfTakeResponse
-         * @description Response for GET /api/file-of-take — a file of the take on screen read whole, drawn as a file of the diff is.
+         * @description Response for GET /api/file-of-take — a file of the take on screen as it is opened, drawn as a diff's file is.
          */
         FileOfTakeResponse: {
             /** Path */
             path: string;
-            hunk: components["schemas"]["DiffHunk"];
+            /** Hunks */
+            hunks: components["schemas"]["DiffHunk"][];
+            unshown: components["schemas"]["Unshown"] | null;
             /** Commentable */
             commentable: boolean;
         };
@@ -1540,6 +1548,16 @@ export interface components {
             places: components["schemas"]["NamePlace"][];
         };
         /**
+         * NamedFile
+         * @description A file the agent named, and whether the review's base holds it: where the change does not, it is read alone.
+         */
+        NamedFile: {
+            /** Path */
+            path: string;
+            /** Held By Base */
+            held_by_base: boolean;
+        };
+        /**
          * OfConversation
          * @description A review of a conversation Claude Code kept: in no repository, and called by its title.
          */
@@ -1631,6 +1649,16 @@ export interface components {
          * @enum {string}
          */
         OverviewText: "task" | "done" | "doubt";
+        /**
+         * OwnRename
+         * @description A file the review's own diff renamed: the path it had in the base, and the path it has.
+         */
+        OwnRename: {
+            /** Former Path */
+            former_path: string;
+            /** Path */
+            path: string;
+        };
         /**
          * PanelCancel
          * @description The reader withdrawing a panel message before it was answered.
@@ -1958,7 +1986,7 @@ export interface components {
             /** Threads */
             threads: string[];
             /** Files */
-            files: string[];
+            files: components["schemas"]["NamedFile"][];
             /** Taken Back At */
             taken_back_at: number | null;
         };
@@ -2532,11 +2560,12 @@ export interface components {
         };
         /**
          * Unshown
-         * @description Why a file whose content changed shows none of its lines.
+         * @description Why a file shows none of its lines: one whose content changed, or one of the take the reader opens.
          *
          *     BINARY — its content is not text.
-         *     TOO_LARGE — it is larger, on one side or the other, than the review reads
-         *     line by line (`LARGEST_FILE_SHOWN_BYTES`): whether it is text is never asked.
+         *     TOO_LARGE — it is larger than the review reads line by line
+         *     (`LARGEST_FILE_SHOWN_BYTES`), on either side where it changed: whether it
+         *     is text is never asked.
          * @enum {string}
          */
         Unshown: "binary" | "too_large";

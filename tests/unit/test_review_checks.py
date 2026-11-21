@@ -27,6 +27,8 @@ SECOND_ROUND = 2
 # Where the tests failed, and a file of the change no test failed in
 FAILING_TEST_FILE = "tests/test_a.py"
 UNTESTED_FILE = "src/b.py"
+# What the review's base holds of the files a check failed in, where a test says nothing of it
+NONE_IN_BASE: frozenset[str] = frozenset()
 
 PYTEST_FAILED = CheckReport(
     name="pytest",
@@ -81,9 +83,16 @@ async def test_a_check_reported_is_held_stamped_and_current_and_every_page_is_to
     page = RecordingPage()
     checks = _checks(page, TreesOfTheTest())
 
-    await checks.report(PYTEST_FAILED, round_number=SECOND_ROUND)
+    await checks.report(PYTEST_FAILED, round_number=SECOND_ROUND, paths_in_base=frozenset({FAILING_TEST_FILE}))
 
-    held = Check(report=PYTEST_FAILED, round=SECOND_ROUND, at=REPORTED_AT, tree=THE_TREE, changed_since=[])
+    held = Check(
+        report=PYTEST_FAILED,
+        round=SECOND_ROUND,
+        at=REPORTED_AT,
+        tree=THE_TREE,
+        changed_since=[],
+        paths_in_base=frozenset({FAILING_TEST_FILE}),
+    )
     assert checks.held == [held]
     assert not held.out_of_date
     assert page.told == [ChecksChanged(checks=[held])]
@@ -92,10 +101,10 @@ async def test_a_check_reported_is_held_stamped_and_current_and_every_page_is_to
 async def test_a_check_reported_again_under_its_name_takes_its_place() -> None:
     """The list the reader reads does not reshuffle: the tests stay where they were, green now."""
     checks = _checks(RecordingPage(), TreesOfTheTest())
-    await checks.report(PYTEST_FAILED, round_number=SECOND_ROUND)
-    await checks.report(RUFF_PASSED, round_number=SECOND_ROUND)
+    await checks.report(PYTEST_FAILED, round_number=SECOND_ROUND, paths_in_base=NONE_IN_BASE)
+    await checks.report(RUFF_PASSED, round_number=SECOND_ROUND, paths_in_base=NONE_IN_BASE)
 
-    await checks.report(PYTEST_PASSED, round_number=SECOND_ROUND)
+    await checks.report(PYTEST_PASSED, round_number=SECOND_ROUND, paths_in_base=NONE_IN_BASE)
 
     assert [check.report for check in checks.held] == [PYTEST_PASSED, RUFF_PASSED]
 
@@ -105,7 +114,7 @@ async def test_a_check_a_file_changed_under_is_out_of_date() -> None:
     page = RecordingPage()
     trees = TreesOfTheTest()
     checks = _checks(page, trees)
-    await checks.report(TY_FAILED_IN_TWO_FILES, round_number=SECOND_ROUND)
+    await checks.report(TY_FAILED_IN_TWO_FILES, round_number=SECOND_ROUND, paths_in_base=NONE_IN_BASE)
 
     trees.changed = {THE_TREE: [FAILING_TEST_FILE]}
     await checks.measure()
@@ -119,7 +128,7 @@ async def test_measuring_checks_the_code_has_not_moved_on_from_tells_nobody() ->
     """The watch measures at every save: a page told nothing new each time hears noise."""
     page = RecordingPage()
     checks = _checks(page, TreesOfTheTest())
-    await checks.report(PYTEST_PASSED, round_number=SECOND_ROUND)
+    await checks.report(PYTEST_PASSED, round_number=SECOND_ROUND, paths_in_base=NONE_IN_BASE)
 
     await checks.measure()
 
@@ -131,11 +140,11 @@ async def test_a_check_nobody_can_measure_stays_out_of_date_beside_those_measure
     trees = TreesOfTheTest()
     checks = _checks(RecordingPage(), trees)
     trees.tree = None
-    await checks.report(PYTEST_FAILED, round_number=SECOND_ROUND)
+    await checks.report(PYTEST_FAILED, round_number=SECOND_ROUND, paths_in_base=NONE_IN_BASE)
     trees.tree = THE_TREE
-    await checks.report(RUFF_PASSED, round_number=SECOND_ROUND)
+    await checks.report(RUFF_PASSED, round_number=SECOND_ROUND, paths_in_base=NONE_IN_BASE)
     trees.tree = TREE_UNREAD
-    await checks.report(TY_PASSED, round_number=SECOND_ROUND)
+    await checks.report(TY_PASSED, round_number=SECOND_ROUND, paths_in_base=NONE_IN_BASE)
 
     await checks.measure()
 
@@ -150,13 +159,13 @@ async def test_a_check_reported_while_a_measuring_waits_on_git_is_not_measured_b
     """That measuring asked git of the trees held before it: of the one reported since, it knows nothing."""
     trees = TreesOfTheTest()
     checks = _checks(RecordingPage(), trees)
-    await checks.report(PYTEST_PASSED, round_number=SECOND_ROUND)
+    await checks.report(PYTEST_PASSED, round_number=SECOND_ROUND, paths_in_base=NONE_IN_BASE)
     trees.answer.clear()
     measuring = asyncio.create_task(checks.measure())
     await trees.asked.wait()
 
     trees.tree = TREE_EDITED
-    reporting = asyncio.create_task(checks.report(RUFF_PASSED, round_number=SECOND_ROUND))
+    reporting = asyncio.create_task(checks.report(RUFF_PASSED, round_number=SECOND_ROUND, paths_in_base=NONE_IN_BASE))
     # A turn of the loop, in which the report would land were nothing holding it back
     await asyncio.sleep(0)
     trees.answer.set()

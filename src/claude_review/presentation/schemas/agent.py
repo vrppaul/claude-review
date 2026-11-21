@@ -93,11 +93,22 @@ def _each_branch_once(steps: list[ProgressStep]) -> list[ProgressStep]:
 # Files hung off what the agent says, a chip each the reader can jump by. Each
 # once: the page tells the chips apart by their paths, and a second chip for a
 # file says nothing the first did not.
-NamedFiles = Annotated[list[FilePath], Field(max_length=MAX_FILES_NAMED), AfterValidator(_each_file_once)]
+NamedPaths = Annotated[list[FilePath], Field(max_length=MAX_FILES_NAMED), AfterValidator(_each_file_once)]
 
 # What the work has branched into, each branch once: the reader tells them
 # apart by what they say, and so does the page
 WorkBranches = Annotated[list[ProgressStep], Field(max_length=MAX_PROGRESS_STEPS), AfterValidator(_each_branch_once)]
+
+
+class NamedFile(Schema):
+    """A file the agent named, and whether the review's base holds it: where the change does not, it is read alone."""
+
+    path: FilePath
+    held_by_base: StrictBool
+
+    @classmethod
+    def from_domain(cls, named: models.NamedFile) -> Self:
+        return cls(path=named.path, held_by_base=named.held_by_base)
 
 
 class AgentWork(Schema):
@@ -106,7 +117,7 @@ class AgentWork(Schema):
     # Which message the work is for; None for work on the agent's own account
     message_id: str | None
     text: str
-    files: list[FilePath]
+    files: list[NamedFile]
     steps: list[ProgressStep]
     # When it was reported, so a review reloaded later says how long it has gone on
     at: EpochMillis
@@ -116,7 +127,7 @@ class AgentWork(Schema):
         return cls(
             message_id=work.message_id,
             text=work.text,
-            files=work.files,
+            files=[NamedFile.from_domain(named) for named in work.files],
             steps=[ProgressStep.from_domain(step) for step in work.steps],
             at=work.at,
         )
@@ -199,7 +210,7 @@ class SaidInPanel(Schema):
     # The threads a message points at, by their ids
     threads: list[str]
     # Files the agent's words name, a chip each
-    files: list[FilePath]
+    files: list[NamedFile]
     # When the reader took the message back before it was answered; null while it stands
     taken_back_at: EpochMillis | None
 
@@ -213,7 +224,7 @@ class SaidInPanel(Schema):
             at=said.at,
             images=said.images,
             threads=said.threads,
-            files=said.files,
+            files=[NamedFile.from_domain(named) for named in said.files],
             taken_back_at=said.taken_back_at,
         )
 
@@ -289,7 +300,7 @@ class SayRequest(Schema):
     body: SaidWords
     # Files worth opening at what was said. They travel as chips under the
     # turn, so the reader jumps rather than searches.
-    files: NamedFiles = Field(default_factory=list)
+    files: NamedPaths = Field(default_factory=list)
 
 
 class ProgressRequest(Schema):
@@ -302,7 +313,7 @@ class ProgressRequest(Schema):
 
     message_id: SafeId | None = None
     text: ProgressText = ""
-    files: NamedFiles = Field(default_factory=list)
+    files: NamedPaths = Field(default_factory=list)
     # What the work has branched into: subagents, checks, files being
     # rewritten. Sent whole every time, because this is a state and not a log.
     steps: WorkBranches = Field(default_factory=list)

@@ -478,14 +478,28 @@ async def test_a_file_of_the_take_is_served_whole_as_the_take_holds_it(
 
     assert response.json() == {
         "path": "src/flags.py",
-        "hunk": {
-            "header": "",
-            "old_start": 1,
-            "new_start": 1,
-            "lines": [{"kind": "context", "old_number": None, "new_number": 1, "content": "shown = False"}],
-        },
+        "hunks": [
+            {
+                "header": "",
+                "old_start": 1,
+                "new_start": 1,
+                "lines": [{"kind": "context", "old_number": None, "new_number": 1, "content": "shown = False"}],
+            }
+        ],
+        "unshown": None,
         "commentable": True,
     }
+
+
+async def test_a_file_of_the_take_that_is_not_text_is_served_with_no_lines_and_says_why(
+    tmp_git_repo: Path, reviews: ReviewFactory
+) -> None:
+    (tmp_git_repo / "logo.png").write_bytes(b"\x89PNG\r\n\x1a\n\0\0\0")
+
+    async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as client:
+        response = await client.get(FILE_OF_TAKE_ROUTE, params={"path": "logo.png"})
+
+    assert response.json() == {"path": "logo.png", "hunks": [], "unshown": "binary", "commentable": True}
 
 
 async def test_a_file_is_not_opened_whole_from_a_take_git_wrote_no_tree_of(

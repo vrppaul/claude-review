@@ -4,27 +4,27 @@
 	import { fileName } from '$lib/utils/paths';
 
 	interface Props {
-		/** A file the agent named, in what it said or in what it is working on. */
+		/** A file the agent named, in what it said or in what it is working on, or one a check's code changed in. */
 		path: string;
+		/** The file pressing it takes the reader to, as whoever draws it decides; null where it leads nowhere. */
+		leadsTo: string | null;
 		/** What a test finds the chip by. */
 		testId: string;
 	}
 
-	let { path, testId }: Props = $props();
+	let { path, leadsTo, testId }: Props = $props();
 	const review = useReview();
 
-	// What a file the diff does not hold is said to be: the agent names a file
+	// What a file that leads nowhere is said to be: the agent names a file
 	// it has made, as it works, before the diff is taken again
 	const NOT_IN_THE_DIFF = 'not in the diff yet';
-
-	// Asked of the review's own diff: a narrower base on screen leaves out files the review holds
-	const held = $derived(review.diff.holds(path));
 </script>
 
-{#if held}
+{#if leadsTo !== null}
 	<!-- Where the view on screen draws the file, the reader is taken there; where it draws none of
-		it — a story that does not tell it, a narrower base — the files come on screen for it, whole -->
-	<Chip voice="agent" names="place" {testId} title={path} onclick={() => review.navigator.showFile(path)}>
+		it — a story that does not tell it, a narrower base — the files come on screen for it, whole,
+		or the file the change did not touch is read alone -->
+	<Chip voice="agent" names="place" {testId} title={path} onclick={() => review.navigator.showFile(leadsTo)}>
 		{fileName(path)}
 	</Chip>
 {:else}

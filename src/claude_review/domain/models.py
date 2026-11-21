@@ -106,11 +106,12 @@ class DiffHunk(BaseModel):
 
 
 class Unshown(StrEnum):
-    """Why a file whose content changed shows none of its lines.
+    """Why a file shows none of its lines: one whose content changed, or one of the take the reader opens.
 
     BINARY — its content is not text.
-    TOO_LARGE — it is larger, on one side or the other, than the review reads
-    line by line (`LARGEST_FILE_SHOWN_BYTES`): whether it is text is never asked.
+    TOO_LARGE — it is larger than the review reads line by line
+    (`LARGEST_FILE_SHOWN_BYTES`), on either side where it changed: whether it
+    is text is never asked.
     """
 
     BINARY = auto()
@@ -183,6 +184,22 @@ class FileOfTake(BaseModel):
     def commentable(self) -> bool:
         """Whether a thread may hang on the file: whether its path is one a thread may name."""
         return thread_may_name(self.path)
+
+
+class UnshownFileOfTake(BaseModel):
+    """A file of the take on screen the review reads no lines of, and why: what a reader opens of such a file."""
+
+    path: str
+    unshown: Unshown
+
+    @property
+    def commentable(self) -> bool:
+        """Whether its path is one a thread may name, as is said of every file drawn."""
+        return thread_may_name(self.path)
+
+
+# What a reader opens of a file of the take: its lines, or why it shows none
+type OpenedFileOfTake = FileOfTake | UnshownFileOfTake
 
 
 class CommentSeverity(StrEnum):
@@ -724,6 +741,21 @@ class ProgressStep(BaseModel):
     done: bool
 
 
+class NamedFile(BaseModel):
+    """A file the agent names, and whether the review's base holds it: what a page needs to take the reader there.
+
+    Said of the base, never of a take: the base is pinned as the review
+    opens, so the fact holds for as long as the review, as everything told
+    to a page must. Where the change neither holds the file nor renamed it,
+    the take holds it as the base does, and it is read alone.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    path: FilePath
+    held_by_base: bool
+
+
 class AgentWork(BaseModel):
     """What the agent is doing right now, whole: it replaces whatever was showing.
 
@@ -738,7 +770,7 @@ class AgentWork(BaseModel):
     # account — a round being worked through, reviewers still reading
     message_id: str | None
     text: str
-    files: list[FilePath]
+    files: list[NamedFile]
     steps: list[ProgressStep]
     # When it was reported, so a review reloaded later says how long it has gone on
     at: EpochMillis
@@ -779,7 +811,7 @@ class SaidInPanel(BaseModel):
     # The threads a message points at, by their ids
     threads: list[str]
     # Files the agent's words name, a chip each
-    files: list[FilePath]
+    files: list[NamedFile]
     # When the reader took the message back before it was answered; None while it stands
     taken_back_at: EpochMillis | None
 

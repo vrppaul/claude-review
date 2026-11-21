@@ -15,7 +15,7 @@ from collections.abc import Generator
 import structlog
 
 from claude_review.domain.interfaces import Clock, PageChannel
-from claude_review.domain.models import AgentStatus, AgentWork, FilePath, ProgressStep, says_nothing
+from claude_review.domain.models import AgentStatus, AgentWork, NamedFile, ProgressStep, says_nothing
 from claude_review.domain.page_events import AnswererChanged, StatusReported, WorkReported
 
 log = structlog.get_logger()
@@ -86,7 +86,7 @@ class Answerer:
         log.info("agent_status", model=self._status.model, context=self._status.context)
 
     def report_work(
-        self, *, message_id: str | None, text: str, files: list[FilePath], steps: list[ProgressStep]
+        self, *, message_id: str | None, text: str, files: list[NamedFile], steps: list[ProgressStep]
     ) -> None:
         """Say what is being done, replacing whatever was showing; a report of nothing says the work is over."""
         reports_nothing = says_nothing(text) and not steps

@@ -2,7 +2,7 @@
 import { takePush } from '$lib/page/push-handling';
 import type { Review } from '$lib/review/review.svelte';
 import { threadOnTheWire } from '$lib/api/thread-wire';
-import type { ChatPush, ServerPush, TellingPosition, Thread, ThreadAsHanded } from '$lib/types';
+import type { ChatPush, NamedFile, ServerPush, TellingPosition, Thread, ThreadAsHanded } from '$lib/types';
 import { THIS_RUN } from './fake-socket';
 
 /** A push that changes nothing a test reads. */
@@ -33,6 +33,11 @@ export function handedOf(threads: readonly Thread[]): Record<string, ThreadAsHan
 /** What the review pushes once it hands these threads to the agent, each as the page holds it now. */
 export function handedPush(threads: readonly Thread[]): ServerPush {
 	return { type: 'handed', handed: handedOf(threads) };
+}
+
+/** A file the agent names, as the review tells it: one its base does not hold, unless a test says it does. */
+export function namedFile(path: string, given: Partial<NamedFile> = {}): NamedFile {
+	return { path, held_by_base: false, ...given };
 }
 
 /** What the agent says in the panel, as the review pushes it: under an id of its own, answering nothing unless told. */

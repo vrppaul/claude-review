@@ -103,4 +103,4 @@ async def test_what_the_agent_says_beyond_ascii_reaches_the_review_as_said(serve
     assert [entry.body for entry in seen.panel] == [SAID_BEYOND_ASCII]
     assert seen.agent.context == CONTEXT_BEYOND_ASCII
     assert facts.work is not None
-    assert (facts.work.text, facts.work.files) == (SAID_BEYOND_ASCII, [FILE_BEYOND_ASCII])
+    assert (facts.work.text, [named.path for named in facts.work.files]) == (SAID_BEYOND_ASCII, [FILE_BEYOND_ASCII])

@@ -11,7 +11,7 @@ import { FakeSocket, latestSocket, REVIEW_IDENTITY, THIS_RUN, welcome } from './
 import { lineAnchor } from '$lib/anchors/line';
 import type { FollowRequest, HeldThread, ReaderSettings, SaidInPanel, ServerPush } from '$lib/types';
 import { newComment } from './new-comment';
-import { chatPush, NO_WORK, pushedAt } from './pushes';
+import { chatPush, namedFile, NO_WORK, pushedAt } from './pushes';
 import { leavePage, openReview } from './review';
 import { settled } from './settled';
 import { STOPPED, storyHeld, storyResponse, TAKEN } from './story';
@@ -80,7 +80,7 @@ const AN_ANSWER_BEFORE_ANY_PAGE: SaidInPanel = {
 	at: NOW - A_MINUTE / 2,
 	images: [],
 	threads: [],
-	files: ['a.py'],
+	files: [namedFile('a.py')],
 	taken_back_at: null
 };
 // What the agent said once the test had begun: after any note a page made of its own
@@ -528,7 +528,7 @@ describe('opening the page', () => {
 		expect(panelOf(page)).toEqual(['reader: Run the tests and say what fails.', 'author: One failed; fixed.']);
 		expect(openedReview(page).conversation.turns).toMatchObject([
 			{ id: 'panel-1', images: ['shot.png'], threads: ['comment-1'] },
-			{ id: 'answer-3f2a', answers: 'panel-1', files: ['a.py'] }
+			{ id: 'answer-3f2a', answers: 'panel-1', files: [namedFile('a.py')] }
 		]);
 	});
 

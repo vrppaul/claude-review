@@ -60,6 +60,11 @@ export class ReviewDiff {
 		return this.#onScreen.own_paths.includes(path);
 	}
 
+	/** The path the review's own diff renamed a file to from this one, whatever base the diff on screen is taken with. */
+	renamedTo(formerPath: string): string | null {
+		return this.#onScreen.own_renames.find((renamed) => renamed.former_path === formerPath)?.path ?? null;
+	}
+
 	/** Whether the diff on screen shows a file: it leaves out what its base, or whitespace left out, has nothing to say of. */
 	shows(path: string): boolean {
 		return this.files.some((file) => file.path === path);

@@ -79,12 +79,13 @@ export const A_LATER_TAKE = 2;
 
 /**
  * What the server answers a request for the diff with, around these files:
- * the review's own diff, holding them alone, unless it says otherwise.
+ * the review's own diff, holding them alone and renaming none, unless it says otherwise.
  */
 export function diffResponse({ files = [], ...given }: Partial<DiffResponse> = {}): DiffResponse {
 	return {
 		files,
 		own_paths: files.map((file) => file.path),
+		own_renames: [],
 		base: REVIEW_BASE,
 		moved: 0,
 		take: FIRST_TAKE,

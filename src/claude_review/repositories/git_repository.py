@@ -197,6 +197,10 @@ DESCRIPTION_SEPARATOR = " "
 BLOB_TYPE = "blob"
 BLOBS_READ = ["cat-file", "--batch=%(objectsize)"]
 BLOB_END = b"\n"
+# How git is asked for everything a tree holds, however deep: an entry to each, ended by a NUL, its path
+# unquoted after its mode, type and id and a tab. A submodule's entry is a commit's, no file.
+ENTRIES_LISTED = ["ls-tree", "-r", "-z", "--full-tree"]
+ENTRY_PATH_SEPARATOR = "\t"
 PATH_STEP_SEPARATOR = "/"
 # Git reads a path starting with one of these steps against the working tree, and fails the batch if it leaves it
 WORKING_TREE_STEPS = frozenset({".", ".."})
@@ -500,6 +504,17 @@ class GitRepository(ReviewedRepository):
         read = _succeeded(await _execute(root, BLOBS_READ, variables, handed=handed), BLOBS_READ).output
         return FilesRead(contents=dict(zip(readable, _contents_of(read), strict=True)), too_large=too_large)
 
+    @override
+    async def files_in(self, root: Path, tree: str) -> frozenset[str]:
+        """The path of every file the tree holds, in one command whatever their number.
+
+        Raises:
+            GitError: if no object store was given, so no tree was ever written down, or git fails.
+        """
+        arguments = [*ENTRIES_LISTED, END_OF_OPTIONS, tree]
+        listed = await _run(root, arguments, self._reading_trees_written())
+        return frozenset(path for entry in listed.split(NAME_END) if (path := _file_listed(entry)) is not None)
+
     def _reading_trees_written(self) -> dict[str, str]:
         """What points a command at the object store trees are written down into, the only one that holds them.
 
@@ -657,6 +672,16 @@ def _can_be_asked(path: str) -> bool:
     """Whether git can be asked what a tree holds at a path, a line at a time and never against the working tree."""
     first_step, _, _ = path.partition(PATH_STEP_SEPARATOR)
     return LINE_END not in path and first_step not in WORKING_TREE_STEPS
+
+
+def _file_listed(entry: str) -> str | None:
+    """The path of the file one entry of `ls-tree -z` names, or None where it names none: a submodule, or nothing."""
+    description, _, path = entry.partition(ENTRY_PATH_SEPARATOR)
+    match description.split(DESCRIPTION_SEPARATOR):
+        case [_, object_type, _] if object_type == BLOB_TYPE:
+            return path
+        case _:
+            return None
 
 
 def _blob_described(description: str) -> StoredBlob | None:

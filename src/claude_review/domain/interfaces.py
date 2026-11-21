@@ -114,6 +114,14 @@ class TreesRead(ABC):
             GitError: if git cannot say it.
         """
 
+    @abstractmethod
+    async def files_in(self, root: Path, tree: str) -> frozenset[str]:
+        """The path of every file the tree holds, however deep, none of them read.
+
+        Raises:
+            GitError: if git cannot say it.
+        """
+
 
 class ReviewedRepository(Repository, TrackedPaths, TreesRead):
     """Everything a review asks of the repository it reviews."""

@@ -6,7 +6,7 @@ import type { ReadingViewName } from '$lib/review/reading-view';
 import type { Review } from '$lib/review/review.svelte';
 import { OVERVIEW_PART } from '$lib/review/story-keys';
 import type { PlaceLeft } from '$lib/review/way-back.svelte';
-import type { CheckFailure, StoryHeld } from '$lib/types';
+import type { CheckFailure, FileOfTakeResponse, StoryHeld } from '$lib/types';
 import { flushSync } from 'svelte';
 import { storyHeld, toldChapter, toldStep } from '../story';
 import { failedCheck, failure } from '../checks';
@@ -32,11 +32,22 @@ function onScreenFailing(failures: CheckFailure[], story: StoryHeld | null = nul
 	return review;
 }
 
-/** Press where a check failed, in the pane the header's chip opens. */
-async function pressFailure(): Promise<void> {
+// A file the change did not touch, and what the take holds of it
+const ELSEWHERE = 'src/elsewhere.py';
+const ELSEWHERE_OF_THE_TAKE: FileOfTakeResponse = {
+	path: ELSEWHERE,
+	hunks: [hunk([contextLine(null, 1, 'first'), contextLine(null, 2, 'second')], { header: '' })],
+	unshown: null,
+	commentable: true
+};
+// What a failure in the file of the change is pressed by
+const IN_APP_PY = /app\.py/;
+
+/** Press where a check failed, in a file of this name, in the pane the header's chip opens. */
+async function pressFailureIn(fileName: RegExp): Promise<void> {
 	const user = userEvent.setup({ delay: null });
 	await user.click(screen.getByTestId('checks'));
-	await user.click(within(screen.getByTestId('checks-pane')).getByRole('button', { name: /app\.py/ }));
+	await user.click(within(screen.getByTestId('checks-pane')).getByRole('button', { name: fileName }));
 	await settled();
 }
 
@@ -56,7 +67,7 @@ describe('going to where a check failed', () => {
 	it('takes the reader to the line, the keyboard on its number', async () => {
 		onScreenFailing([failure({ path: 'src/app.py', line: 2 })]);
 
-		await pressFailure();
+		await pressFailureIn(IN_APP_PY);
 
 		expect(document.activeElement?.textContent?.trim()).toBe('2');
 	});
@@ -66,7 +77,7 @@ describe('going to where a check failed', () => {
 		review.views.show('story');
 		flushSync();
 
-		await pressFailure();
+		await pressFailureIn(IN_APP_PY);
 
 		expect(review.views.onScreen.name).toBe('files');
 		expect(document.activeElement?.textContent?.trim()).toBe('2');
@@ -78,7 +89,7 @@ describe('going to where a check failed', () => {
 		review.views.show('story');
 		flushSync();
 
-		await pressFailure();
+		await pressFailureIn(IN_APP_PY);
 
 		expect(review.views.onScreen.name).toBe('story');
 		expect(document.activeElement?.textContent?.trim()).toBe('2');
@@ -100,7 +111,7 @@ describe('going to where a check failed', () => {
 		const review = onScreenFailing([failure({ path: 'src/app.py', line: 3 })]);
 		review.reading.toggleFolded('src/app.py');
 
-		await pressFailure();
+		await pressFailureIn(IN_APP_PY);
 
 		expect(document.activeElement?.textContent?.trim()).toBe('3');
 	});
@@ -111,13 +122,39 @@ describe('going to where a check failed', () => {
 		server.answer('GET /api/file-window', { start: 4, lines: read, total: 50 });
 		onScreenFailing([failure({ path: 'src/app.py', line: 16 })]);
 
-		await pressFailure();
+		await pressFailureIn(IN_APP_PY);
 
 		expect(document.activeElement?.textContent?.trim()).toBe('16');
 	});
 
-	it('says where a check failed in a file the review does not hold, with no way there', async () => {
-		onScreenFailing([failure({ path: 'src/elsewhere.py', line: 2, what: 'test_elsewhere' })]);
+	it('opens a file the change did not touch alone at the line, where the review’s base holds it', async () => {
+		fakeServer().answer('GET /api/file-of-take', ELSEWHERE_OF_THE_TAKE);
+		onScreenFailing([failure({ path: ELSEWHERE, line: 2, held_by_base: true })]);
+
+		await pressFailureIn(/elsewhere\.py/);
+		await frames();
+
+		expect(within(screen.getByTestId('file-alone-view')).getByTestId('file-alone-heading').textContent).toBe(ELSEWHERE);
+		expect(document.activeElement?.textContent?.trim()).toBe('2');
+	});
+
+	it('goes to the renamed file in the change for the path a check failed at before the change renamed it', async () => {
+		const review = openReview({
+			files: [file],
+			diff: { own_renames: [{ former_path: 'src/old_app.py', path: file.path }] },
+			facts: { checks: [failedCheck([failure({ path: 'src/old_app.py', line: 2, held_by_base: true })])] }
+		});
+		render(ReviewScreen, { props: { review } });
+
+		await pressFailureIn(/old_app\.py/);
+		await frames();
+
+		expect(screen.queryByTestId('file-alone-view')).toBeNull();
+		expect(document.activeElement?.textContent?.trim()).toBe('2');
+	});
+
+	it('says where a check failed in a file neither the change nor its base holds, with no way there', async () => {
+		onScreenFailing([failure({ path: ELSEWHERE, line: 2, what: 'test_elsewhere' })]);
 		await userEvent.setup({ delay: null }).click(screen.getByTestId('checks'));
 
 		const pane = screen.getByTestId('checks-pane');

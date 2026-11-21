@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { anchorShortPlace } from '$lib/anchors/views';
 	import { useReview } from '$lib/review/context';
+	import { fileReachedBy } from '$lib/review/files-way';
 	import type { PanelTurn } from '$lib/types';
 	import Chip from '$lib/ui/Chip.svelte';
 	import Conversation from '$lib/ui/Conversation.svelte';
@@ -174,8 +175,8 @@
 						{#if turn.files && turn.files.length > 0}
 							<div class="mt-2 flex flex-wrap gap-1">
 								<!-- Known by where they stand, since the agent may name a file twice -->
-								{#each turn.files as path, position (position)}
-									<FileChip {path} testId="answer-file" />
+								{#each turn.files as file, position (position)}
+									<FileChip path={file.path} leadsTo={fileReachedBy(file, review.diff)} testId="answer-file" />
 								{/each}
 							</div>
 						{/if}

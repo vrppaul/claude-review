@@ -11,7 +11,7 @@ import uuid
 
 from claude_review.domain.exceptions import MessageAnsweredError
 from claude_review.domain.interfaces import Clock
-from claude_review.domain.models import FilePath, SaidInPanel, TurnAuthor
+from claude_review.domain.models import NamedFile, SaidInPanel, TurnAuthor
 
 # What the ids the review gives the agent's words begin with. Unique rather
 # than counted: a page's draft outlives the review it was kept from, and the
@@ -47,7 +47,7 @@ class Conversation:
             )
         )
 
-    def agent_said(self, *, message_id: str | None, body: str, files: list[FilePath]) -> str:
+    def agent_said(self, *, message_id: str | None, body: str, files: list[NamedFile]) -> str:
         """Keep what the agent said, and say the id every page is to know it by."""
         said_id = f"{AGENT_WORDS_PREFIX}{uuid.uuid4().hex}"
         self._said.append(

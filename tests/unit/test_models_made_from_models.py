@@ -22,6 +22,7 @@ from claude_review.domain.models import (
     LineSide,
     LineSpan,
     LineStanding,
+    NamedFile,
     OverviewBlock,
     OverviewText,
     ReaderSettings,
@@ -81,7 +82,7 @@ SAID = SaidInPanel(
     at=1_760_000_000_000,
     images=["image-1"],
     threads=["thread-1"],
-    files=["src/moved.py"],
+    files=[NamedFile(path="src/moved.py", held_by_base=True)],
     taken_back_at=None,
 )
 # When the message above is taken back, forty seconds after it was said
@@ -148,7 +149,7 @@ CHECK_HELD = CheckReport(
     status=CheckStatus.FAILED,
     summary="1 failed",
     failures=[CheckFailure(path="tests/test_a.py", line=3, what="test_rename", why="AssertionError")],
-).stamped(round_number=2, at=TAKEN_AT, tree="a-tree")
+).stamped(round_number=2, at=TAKEN_AT, tree="a-tree", paths_in_base=frozenset({"tests/test_a.py"}))
 MOVED_ON = CodeMovedOn(round=2, left_out=None)
 
 MADE = [

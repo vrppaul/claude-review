@@ -60,7 +60,7 @@ class ReviewChecks:
         """The names of the checks the code may have moved on from, to run again."""
         return [check.report.name for check in self._held.values() if check.out_of_date]
 
-    async def report(self, report: CheckReport, *, round_number: int) -> None:
+    async def report(self, report: CheckReport, *, round_number: int, paths_in_base: frozenset[str]) -> None:
         """Take a check, stamped with the tree as it stands, in place of any under its name, and tell the pages.
 
         Raises:
@@ -68,7 +68,9 @@ class ReviewChecks:
         """
         async with self._asking_git:
             tree = await self._trees.tree_as_it_stands()
-            self._held[report.name] = report.stamped(round_number=round_number, at=self._clock.now(), tree=tree)
+            self._held[report.name] = report.stamped(
+                round_number=round_number, at=self._clock.now(), tree=tree, paths_in_base=paths_in_base
+            )
         self._page.tell(ChecksChanged(checks=self.held))
         log.info("check_reported", name=report.name, status=report.status, failures=len(report.failures))
 

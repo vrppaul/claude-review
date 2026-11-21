@@ -310,13 +310,13 @@ describe('moving the reader in whatever view the review is read in', () => {
 		expect(showWhereRead).not.toHaveBeenCalled();
 	});
 
-	it('shows a file the view on screen draws none of among the change’s files, brought on screen for it', async () => {
+	it('shows a file the view on screen draws none of in the view of Files that draws it, brought on screen for it', async () => {
 		const brought: string[] = [];
 		sectionKnownBy('a.py in the files', brought);
 		const drawsAll = { ...DRAWS_NOTHING, sectionOfFile: () => 'a.py in the files' };
 		const navigator = navigatorOver({
 			...onlyIn(DRAWS_NOTHING),
-			showTheChange: () => Promise.resolve(drawsAll)
+			showWhereFileRead: () => Promise.resolve(drawsAll)
 		});
 
 		navigator.showFile('a.py');

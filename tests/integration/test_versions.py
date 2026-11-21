@@ -151,8 +151,9 @@ async def test_a_base_nobody_offered_is_refused(tmp_git_repo: Path, reviews: Rev
 async def test_the_review_keeps_its_own_diff_whatever_is_being_looked_at(
     tmp_git_repo: Path, reviews: ReviewFactory
 ) -> None:
-    """A base is a way of looking, not a change to what is under review."""
+    """A base is a way of looking, not a change to what is under review: its files, and the paths it renamed them from."""
     (tmp_git_repo / "from_the_start.py").write_text("here all along\n")
+    git(tmp_git_repo, "mv", "initial.txt", "renamed.txt")
 
     async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as client:
         await _mark(client)
@@ -163,8 +164,9 @@ async def test_the_review_keeps_its_own_diff_whatever_is_being_looked_at(
         whole = (await client.get(DIFF_ROUTE, headers=LOCAL_HEADERS)).json()
 
     assert [served["path"] for served in narrowed["files"]] == ["later.py"]
-    assert narrowed["own_paths"] == ["from_the_start.py", "later.py"]
-    assert sorted(served["path"] for served in whole["files"]) == ["from_the_start.py", "later.py"]
+    assert narrowed["own_paths"] == ["from_the_start.py", "later.py", "renamed.txt"]
+    assert narrowed["own_renames"] == [{"former_path": "initial.txt", "path": "renamed.txt"}]
+    assert sorted(served["path"] for served in whole["files"]) == ["from_the_start.py", "later.py", "renamed.txt"]
 
 
 async def test_the_diff_names_the_base_it_was_taken_against_and_whether_it_is_narrower_than_the_reviews(

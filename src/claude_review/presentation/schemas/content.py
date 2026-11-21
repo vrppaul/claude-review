@@ -92,17 +92,31 @@ class DiffFile(Schema):
 
 
 class FileOfTakeResponse(Schema):
-    """Response for GET /api/file-of-take — a file of the take on screen read whole, drawn as a file of the diff is."""
+    """Response for GET /api/file-of-take — a file of the take on screen as it is opened, drawn as a diff's file is."""
 
     path: str
-    # Every line a context line on the new side: one column of numbers
-    hunk: DiffHunk
+    # The file whole in one hunk, every line a context line on the new side: one column of numbers. Empty
+    # where no line of it is shown.
+    hunks: list[DiffHunk]
+    # Why none of its lines are shown; null when they are
+    unshown: Unshown | None
     # Whether a thread may name it: a path holding a control character is shown, but only to be read
     commentable: StrictBool
 
     @classmethod
-    def from_domain(cls, file: models.FileOfTake) -> Self:
-        return cls(path=file.path, hunk=DiffHunk.from_domain(file.hunk), commentable=file.commentable)
+    def from_domain(cls, file: models.OpenedFileOfTake) -> Self:
+        match file:
+            case models.FileOfTake():
+                return cls(
+                    path=file.path,
+                    hunks=[DiffHunk.from_domain(file.hunk)],
+                    unshown=None,
+                    commentable=file.commentable,
+                )
+            case models.UnshownFileOfTake():
+                return cls(path=file.path, hunks=[], unshown=file.unshown, commentable=file.commentable)
+            case _:
+                assert_never(file)
 
 
 class SendLimits(Schema):
@@ -333,6 +347,13 @@ class ReviewResponse(Schema):
     release: str
 
 
+class OwnRename(Schema):
+    """A file the review's own diff renamed: the path it had in the base, and the path it has."""
+
+    former_path: str
+    path: str
+
+
 class ShownBase(Schema):
     """The base a diff was taken against, as the page shows it.
 
@@ -353,6 +374,8 @@ class DiffResponse(Schema):
     # The files the review's own diff holds, whatever `files` shows, in path
     # order so the same files are said alike every time
     own_paths: list[str]
+    # The files the review's own diff renamed, whatever `files` shows, in the order of the paths they had
+    own_renames: list[OwnRename]
     # None in a review whose content did not come from a repository: it is
     # compared against nothing
     base: ShownBase | None

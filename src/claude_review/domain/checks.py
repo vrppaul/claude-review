@@ -46,9 +46,18 @@ class CheckReport(BaseModel):
     summary: str | None
     failures: list[CheckFailure]
 
-    def stamped(self, *, round_number: int, at: EpochMillis, tree: str | None) -> Check:
-        """The report as the review holds it, stamped with when it came and the tree it ran on: current, by its tree."""
-        return Check(report=self, round=round_number, at=at, tree=tree, changed_since=None if tree is None else [])
+    def stamped(
+        self, *, round_number: int, at: EpochMillis, tree: str | None, paths_in_base: frozenset[FilePath]
+    ) -> Check:
+        """The report as the review holds it: when it came, the tree it ran on, current by it, what its base holds."""
+        return Check(
+            report=self,
+            round=round_number,
+            at=at,
+            tree=tree,
+            changed_since=None if tree is None else [],
+            paths_in_base=paths_in_base,
+        )
 
 
 class Check(BaseModel):
@@ -66,6 +75,9 @@ class Check(BaseModel):
     # The paths that differ between that tree and the working tree now: None
     # where that cannot be said, which is no ground to call the check current
     changed_since: list[str] | None
+    # Of the files it failed in, those the review's base holds: where the change does not, a failure's file is
+    # read alone. Said of the base the review pinned, so it stays true for as long as the check is held.
+    paths_in_base: frozenset[FilePath]
 
     @property
     def out_of_date(self) -> bool:
@@ -80,4 +92,5 @@ class Check(BaseModel):
             at=self.at,
             tree=self.tree,
             changed_since=None if self.tree is None else changed_since.get(self.tree),
+            paths_in_base=self.paths_in_base,
         )

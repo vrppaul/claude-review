@@ -16,8 +16,9 @@
  * says which of the reader's words in its thread it rewrites; which threads
  * went out it keeps no more, the review saying what the agent has; it is
  * kept under the name the review gives itself rather than under its title,
- * which another review on the same port may share; and a thread on lines
- * says how it stands there, where it said only that it was outdated. A
+ * which another review on the same port may share; a thread on lines
+ * says how it stands there, where it said only that it was outdated; and a
+ * file the agent named says whether the review's base holds it. A
  * draft a release kept is brought up to date — never thrown away: it is an
  * hour of somebody's reading. A shape no release kept is not read.
  */
@@ -30,6 +31,7 @@ import type {
 	Composer,
 	LineAnchor,
 	LineSide,
+	NamedFile,
 	PanelTurn,
 	StoryAnchor,
 	TellingPosition,
@@ -41,7 +43,9 @@ import { COMMENT_ID_PREFIX, IdSequence, TURN_ID_PREFIX } from '$lib/utils/ids';
 import { AGENT, READER } from '$lib/utils/speakers';
 
 /** The shape drafts are kept in now. */
-export const DRAFT_SHAPE = 24;
+export const DRAFT_SHAPE = 25;
+// The shape pages kept after 1.7.3, the last before each file the agent named said whether the review's base holds it
+const SHAPE_BEFORE_NAMED_FILES = 24;
 // The shape releases 1.6.0 to 1.7.3 kept, the last before a thread on lines said how it stands
 const SHAPE_BEFORE_STANDING = 23;
 // The round every review begins in
@@ -123,8 +127,17 @@ type KeptAnchor = KeptLineAnchor | StoryAnchor;
 /** A thread as drafts kept it before lines said how they stand. */
 type ThreadBeforeStanding = Omit<Thread, 'anchor'> & { anchor: KeptAnchor };
 
+/** Something said in the panel as drafts kept it before each file the agent named said whether the base holds it. */
+type PanelTurnBeforeNamedFiles = Omit<PanelTurn, 'files'> & { files?: string[] };
+
+/** A draft of the shape pages kept after 1.7.3, each file the agent named kept by its path alone. */
+interface DraftBeforeNamedFiles extends Omit<Draft, 'version' | 'panel'> {
+	version: typeof SHAPE_BEFORE_NAMED_FILES;
+	panel: PanelTurnBeforeNamedFiles[];
+}
+
 /** A draft of the shape the last releases kept, every thread on lines saying only whether it was outdated. */
-interface DraftBeforeStanding extends Omit<Draft, 'version' | 'threads'> {
+interface DraftBeforeStanding extends Omit<DraftBeforeNamedFiles, 'version' | 'threads'> {
 	version: typeof SHAPE_BEFORE_STANDING;
 	threads: ThreadBeforeStanding[];
 }
@@ -165,7 +178,7 @@ type AsKept<Shape> = Omit<Shape, GrownLater | 'turns'> &
 type KeptComment = AsKept<ReadComment> | AsKept<FlatComment>;
 
 /** Something said in the panel, as a release kept it: whether the reader took it back, never when. */
-type KeptPanelTurn = Omit<PanelTurn, 'takenBackAt'> & { cancelled?: boolean };
+type KeptPanelTurn = Omit<PanelTurnBeforeNamedFiles, 'takenBackAt'> & { cancelled?: boolean };
 
 /**
  * A draft of a shape before 10, when threads were kept as comments with how
@@ -203,6 +216,11 @@ export function isCurrentDraft(value: unknown): value is Draft {
 	return isDraftOfShape(value, DRAFT_SHAPE);
 }
 
+/** Whether what was read from storage is a draft of the shape pages kept after 1.7.3. */
+export function isDraftBeforeNamedFiles(value: unknown): value is DraftBeforeNamedFiles {
+	return isDraftOfShape(value, SHAPE_BEFORE_NAMED_FILES);
+}
+
 /**
  * Whether what was read from storage is a draft of the shape the last
  * releases kept. Threads kept as threads in any other shape were never
@@ -212,11 +230,34 @@ export function isDraftBeforeStanding(value: unknown): value is DraftBeforeStand
 	return isDraftOfShape(value, SHAPE_BEFORE_STANDING);
 }
 
-/** A draft of the current shape, out of one the last releases kept: every thread on lines says how it stands. */
-export function withStanding(kept: DraftBeforeStanding): Draft {
+/**
+ * A draft of the current shape, out of one pages kept after 1.7.3: each file
+ * the agent named is held by no base, since nobody said, and so goes where
+ * the change holds it, or nowhere.
+ */
+export function withNamedFiles(kept: DraftBeforeNamedFiles): Draft {
+	return { ...kept, version: DRAFT_SHAPE, panel: kept.panel.map(panelTurnNamingFiles) };
+}
+
+/** Something said in the panel, each file the agent named in it held by no base. */
+function panelTurnNamingFiles({ files, ...turn }: PanelTurnBeforeNamedFiles): PanelTurn {
+	return files === undefined ? turn : { ...turn, files: files.map(heldByNoBase) };
+}
+
+/**
+ * A file the agent named as a draft kept it before the review said whether
+ * its base holds one: held by none, since nobody said, so it leads where the
+ * change holds it, or nowhere, as it did when it was kept.
+ */
+function heldByNoBase(path: string): NamedFile {
+	return { path, held_by_base: false };
+}
+
+/** A draft of the shape pages kept after 1.7.3, out of one the last releases kept: every thread on lines says how it stands. */
+export function withStanding(kept: DraftBeforeStanding): DraftBeforeNamedFiles {
 	return {
 		...kept,
-		version: DRAFT_SHAPE,
+		version: SHAPE_BEFORE_NAMED_FILES,
 		threads: kept.threads.map((thread) => ({ ...thread, anchor: anchorStanding(thread.anchor) }))
 	};
 }
@@ -285,8 +326,8 @@ export function upToDate(kept: ReleasedDraft): Draft {
 		comments: commentIdsPast(kept.comments),
 		turns: turnIds.issued
 	};
-	return {
-		version: DRAFT_SHAPE,
+	return withNamedFiles({
+		version: SHAPE_BEFORE_NAMED_FILES,
 		threads: comments.map(threadOf),
 		read: {
 			folded: comments.filter((comment) => comment.collapsed).map(idOf),
@@ -310,15 +351,15 @@ export function upToDate(kept: ReleasedDraft): Draft {
 		// Which files were read was never kept before
 		files: emptyFilesRead(),
 		round: roundReached(comments, sent)
-	};
+	});
 }
 
 /**
- * Something said in the panel a release kept, in the current shape. One it
- * kept as taken back is taken back at the moment it was said: no release
- * kept when, and a message is taken back while it is still waited on.
+ * Something said in the panel a release kept, saying when it was taken back.
+ * One it kept as taken back is taken back at the moment it was said: no
+ * release kept when, and a message is taken back while it is still waited on.
  */
-function upToDatePanelTurn({ cancelled, ...turn }: KeptPanelTurn): PanelTurn {
+function upToDatePanelTurn({ cancelled, ...turn }: KeptPanelTurn): PanelTurnBeforeNamedFiles {
 	return cancelled ? { ...turn, takenBackAt: turn.at } : turn;
 }
 

@@ -353,6 +353,27 @@ async def test_a_commit_is_read_as_its_tree(tmp_git_repo: Path, tmp_path_factory
     assert (read.contents, holding) == ({"initial.txt": b"initial content\n"}, ["initial.txt"])
 
 
+async def test_a_commit_lists_every_file_it_holds_by_path_and_no_directory_or_submodule(
+    tmp_git_repo: Path, tmp_path_factory: pytest.TempPathFactory
+) -> None:
+    """A name with a tab or a line break in it is listed as it is; what is made since is in no commit."""
+    repo = GitRepository(objects=tmp_path_factory.mktemp("review-objects"))
+    (tmp_git_repo / "src").mkdir()
+    (tmp_git_repo / "src" / "kept.py").write_text("kept = True\n")
+    (tmp_git_repo / "odd\tname\n.txt").write_text("odd\n")
+    commit_of_the_submodule = git(tmp_git_repo, "rev-parse", HEAD).strip()
+    git(tmp_git_repo, "update-index", "--add", "--cacheinfo", f"160000,{commit_of_the_submodule},vendored")
+    git(tmp_git_repo, "add", "src/kept.py", "odd\tname\n.txt")
+    git(tmp_git_repo, "commit", "-m", "kept")
+    commit = git(tmp_git_repo, "rev-parse", HEAD).strip()
+    (tmp_git_repo / "made_since.py").write_text("x = 1\n")
+    await _written_tree(repo, tmp_git_repo)
+
+    listed = await repo.files_in(tmp_git_repo, commit)
+
+    assert listed == frozenset({"initial.txt", "src/kept.py", "odd\tname\n.txt"})
+
+
 async def test_no_tree_is_read_without_a_store_that_kept_it(tmp_git_repo: Path) -> None:
     """Refused for what it is, not for what git makes of a store that is not there."""
     with pytest.raises(GitError, match="without an object store of the review's own"):

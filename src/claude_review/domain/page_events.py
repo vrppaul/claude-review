@@ -16,6 +16,7 @@ from claude_review.domain.models import (
     ChangedSinceRound,
     CommentSeverity,
     FilePath,
+    NamedFile,
     ThreadAsHanded,
 )
 from claude_review.domain.story import StoryAsking
@@ -59,7 +60,7 @@ class AgentSaid(PageEventBase):
     said_id: str
     message_id: str | None
     body: str
-    files: list[FilePath]
+    files: list[NamedFile]
 
 
 class WorkReported(PageEventBase):

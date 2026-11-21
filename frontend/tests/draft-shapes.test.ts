@@ -211,7 +211,8 @@ const UP_TO_DATE_1_5_0: Draft = {
 	// The message it kept as taken back, taken back when it was said: v1.5.0 never kept when it was taken back
 	panel: [
 		WRITTEN_BY_1_5_0.panel[0],
-		WRITTEN_BY_1_5_0.panel[1],
+		// Nobody said whether the base held the file it named: it is held by none
+		{ ...WRITTEN_BY_1_5_0.panel[1], files: [{ path: 'src/a.py', held_by_base: false }] },
 		{ id: 'message-3', author: 'reader', body: 'Never mind', at: 1400, takenBackAt: 1400 }
 	],
 	composer: { text: 'half a thought', images: ['pasted.png'], uploaded: [] },
@@ -327,6 +328,31 @@ describe('the draft the last release kept, as it wrote it', () => {
 					anchor: { ...lineAnchor('a.py', 'new', 3, 4, ['x = 1', 'y = 2']), standing: 'lines_gone' }
 				},
 				ON_A_DOUBT_GONE
+			]
+		});
+	});
+});
+
+/**
+ * A draft as the pages since v1.7.3 kept it: shape 24, a thread on lines
+ * saying how it stands, a file the agent named kept by its path alone.
+ */
+const KEPT_SINCE_1_7_3 = {
+	...WRITTEN_BY_1_7_3,
+	version: 24,
+	threads: [fullThread()],
+	panel: [{ id: 'answer-1', author: 'author', body: 'Moved it.', at: 60, files: ['a.py'] }]
+};
+
+describe('the draft the pages since the last release kept, as they wrote it', () => {
+	it('comes back in the current shape, each file the agent named held by no base, since nobody said', () => {
+		storeDraft(KEPT_SINCE_1_7_3);
+
+		expect(readKept()).toEqual({
+			...KEPT_SINCE_1_7_3,
+			version: DRAFT_SHAPE,
+			panel: [
+				{ id: 'answer-1', author: 'author', body: 'Moved it.', at: 60, files: [{ path: 'a.py', held_by_base: false }] }
 			]
 		});
 	});

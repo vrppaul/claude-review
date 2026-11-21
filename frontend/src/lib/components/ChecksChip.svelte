@@ -46,6 +46,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import { useReview } from '$lib/review/context';
+	import { fileReachedBy } from '$lib/review/files-way';
 	import Button from '$lib/ui/Button.svelte';
 	import CheckFailure from '$lib/ui/CheckFailure.svelte';
 	import CheckList from '$lib/ui/CheckList.svelte';
@@ -114,7 +115,9 @@
 
 {#snippet changedFiles()}
 	{#each changed as path (path)}
-		<FileChip {path} testId="check-changed-file" />
+		<!-- Git names a file the code changed in since, and nobody said whether the review's base holds it:
+			it leads only where the review's own diff holds it -->
+		<FileChip {path} leadsTo={review.diff.holds(path) ? path : null} testId="check-changed-file" />
 	{/each}
 {/snippet}
 
@@ -144,13 +147,14 @@
 				{#snippet failures()}
 					<!-- Known by place: replaced whole with each report, and a tool may say the same of one line twice -->
 					{#each check.failures as failure, place (place)}
+						{@const reached = fileReachedBy(failure, review.diff)}
 						<CheckFailure
 							what={failure.what}
 							where="{fileName(failure.path)}:{failure.line}"
 							why={failure.why}
 							title="{failure.path}:{failure.line}"
 							testId="check-failure"
-							onclick={review.diff.holds(failure.path) ? () => goTo(failure.path, failure.line) : undefined}
+							onclick={reached === null ? undefined : () => goTo(reached, failure.line)}
 						/>
 					{/each}
 				{/snippet}
