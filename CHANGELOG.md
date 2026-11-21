@@ -80,6 +80,16 @@
   review of files or of a conversation has no repository to look through,
   and a browser that cannot say where its caret stands or mark text offers
   no lookup: the press does nothing there.
+- **The names a change touched, under each file in the tree.** In a
+  review of a repository's change, the tree lists under each file the
+  functions and classes the change added, changed or removed, each with
+  its letter, on branches off the file; a chevron at the file's row folds
+  them. Pressing a name takes you to where it is defined, and the name you
+  read in is the tree's current row. An icon at the end of a name's row
+  opens the same pane as Ctrl+click, by the icon. The tree's filter finds
+  names as well as paths, lighting what answered in each name. A toggle
+  beside the filter lists the files alone, and the page remembers it. The
+  tour stops at the names after the files.
 
 ### Changed
 - **Help's "What's new" names no release.** The news it opens is of the

@@ -299,9 +299,10 @@ Where a thing is:
 
 What a thing is:
 
-- [ ] `feat(ui)`: the rest of the name lookup's design: the names a change
-      touches in the tree, and the lookup opened from there; the lookup in
-      the news and as a stop of the tour.
+- [ ] `feat(ui)`: the rest of the name lookup's design: under the tree's
+      filter, the names the repository defines outside the change that
+      answer it ("Not in this change"), once the owner says how they are
+      found; the lookup in the release's news.
 - [ ] `feat`: what the server does not find yet. A Svelte component is
       defined by its file, which the lookup reports as no definition
       (`CommentThread` gave 13 places and none defining it); a loop's

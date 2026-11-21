@@ -14,6 +14,8 @@ Everything a review does, by what you are doing at the time. How to start one is
 - A file the agent rewrote in a round loses the tick that said you had read it.
 - A moved file says where it was: "old → new" in the tree and over its code.
 - Fold a file away, mark it viewed, filter the tree by path; drag the tree narrower or put it away.
+- Under each file the tree lists the functions and classes the change touched: press one to go to it, or its icon to
+  see where it is defined and used. The filter finds them by name too; a toggle beside it lists the files alone.
 - Syntax highlighting that reads a hunk whole, so a docstring stays a docstring: JavaScript, TypeScript, Python, CSS,
   JSON, HTML and XML, shell, YAML, Markdown, Rust, Go, SQL and PHP.
 - A Markdown file can be read raw, rendered, or both side by side.
