@@ -8,8 +8,8 @@ patterns capture one name, the one written first says what it defines. A
 file of no row is read as text.
 """
 
+import posixpath
 import re
-from pathlib import PurePosixPath
 
 import tree_sitter_javascript
 import tree_sitter_python
@@ -264,4 +264,12 @@ CODE_FILES_BY_EXTENSION = {extension: files for files in CODE_FILES for extensio
 
 def code_files_of(path: str) -> CodeFiles | None:
     """How a file of this path is read as code: None for a file of no grammar here, read as text."""
-    return CODE_FILES_BY_EXTENSION.get(PurePosixPath(path).suffix)
+    return CODE_FILES_BY_EXTENSION.get(extension_of(path))
+
+
+def extension_of(path: str) -> str:
+    """The extension a path ends in, as its language is told by: none for a name starting with its only dot.
+
+    Split as text: a review asks it of every file of a large tree, and a path object takes many times longer.
+    """
+    return posixpath.splitext(path)[1]

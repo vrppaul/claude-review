@@ -1015,6 +1015,11 @@ class BlobsAt(BaseModel):
     # Larger than `LARGEST_FILE_SHOWN_BYTES`: nobody reads such a file line by line
     too_large: frozenset[str]
 
+    @property
+    def paths(self) -> frozenset[str]:
+        """The path of every file, read or too large to be."""
+        return frozenset(self.object_ids) | self.too_large
+
 
 class TreeSnapshot(BaseModel):
     """The working tree as one taking of the diff saw it.

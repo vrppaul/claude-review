@@ -217,9 +217,3 @@ class NamesFound(BaseModel):
     more: int
     # Whether every file holding the text was outlined: until it is, asking again finds more as they are
     complete: bool
-
-    @classmethod
-    def listing(cls, take: int, found: list[NameDefined], *, complete: bool) -> NamesFound:
-        """The names found, as many listed as one answer lists, in the order found."""
-        listed = found[:NAMES_FOUND_LISTED]
-        return cls(take=take, names=listed, more=len(found) - len(listed), complete=complete)

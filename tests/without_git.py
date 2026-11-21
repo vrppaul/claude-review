@@ -214,8 +214,8 @@ class RepositoryWithoutGit(ReviewedRepository):
         return []
 
     @override
-    async def files_in(self, root: Path, tree: str) -> frozenset[str]:
-        return frozenset()
+    async def blobs_in(self, root: Path, tree: str) -> BlobsAt:
+        return BlobsAt(object_ids={}, too_large=frozenset())
 
 
 class OutlinesHeld(OutlinesKept):
@@ -288,9 +288,9 @@ class TreesHeld(TreesRead):
         return [self._objects[object_id] for object_id in object_ids]
 
     @override
-    async def files_in(self, root: Path, tree: str) -> frozenset[str]:
+    async def blobs_in(self, root: Path, tree: str) -> BlobsAt:
         held = self._trees[tree]
-        return frozenset(held.contents) | held.too_large
+        return await self.blobs_at(root, tree, [*held.contents, *held.too_large])
 
 
 class StagingHeldStill(StagedTree):

@@ -11,6 +11,7 @@ import pytest
 from pydantic import BaseModel, ConfigDict
 
 from claude_review.domain.checks import CheckFailure, CheckReport, CheckStatus
+from claude_review.domain.code_names import DefinitionKind, NameDefined
 from claude_review.domain.models import (
     ChapterBlock,
     ChapterText,
@@ -38,6 +39,7 @@ from claude_review.domain.models import (
 )
 from claude_review.domain.story import CodeMovedOn, Chapter, KeptStory, LeftOut, Step, StepNow, StoryAsking
 from claude_review.presentation.schemas.records import GuideChange, SettingsChange
+from claude_review.services.code_names.found import FoundSoFar
 from claude_review.presentation.schemas.refusal import FieldRefusal
 from tests.helpers import line_anchor, story_anchor
 from tests.stories import canvas_story, hunk
@@ -151,6 +153,13 @@ CHECK_HELD = CheckReport(
     failures=[CheckFailure(path="tests/test_a.py", line=3, what="test_rename", why="AssertionError")],
 ).stamped(round_number=2, at=TAKEN_AT, tree="a-tree", paths_in_base=frozenset({"tests/test_a.py"}))
 MOVED_ON = CodeMovedOn(round=2, left_out=None)
+# Names the tree's filter found, more than it lists, and the take they were found in
+FOUND = FoundSoFar(
+    names=[NameDefined(name="read_all", defined_as=DefinitionKind.FUNCTION, path="src/read.py", line=3, column=4)],
+    more=2,
+    complete=False,
+)
+TAKE_FOUND_IN = 4
 
 MADE = [
     MadeFrom(what="a piece of a file", source=FILE, made=FILE.showing(OTHER_ROWS), replaced={"hunks"}),
@@ -257,6 +266,7 @@ MADE = [
         made=CHECK_HELD.measured({"a-tree": ["tests/test_a.py"]}),
         replaced={"changed_since"},
     ),
+    MadeFrom(what="the names found, of a take", source=FOUND, made=FOUND.in_take(TAKE_FOUND_IN), replaced={"take"}),
 ]
 EACH_MADE = pytest.mark.parametrize("model", MADE, ids=[model.what for model in MADE])
 

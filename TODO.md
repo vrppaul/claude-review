@@ -300,15 +300,13 @@ Where a thing is:
 What a thing is:
 
 - [ ] `docs`: the name lookup in the release's news.
-- [ ] `perf(names)`: names on a large repository. On microsoft/vscode
-      (16,563 files read by a grammar) a search from the kept outlines
-      takes 1.4–2.8 s where it should take 0.1 s, and the event loop is
-      held up to 1–2 s at a time, stalling the whole review. Measure first
-      where the loop is held (git's answers on 16,000 files read in Python,
-      outlines checked and written as JSON on the loop); kept outlines say
-      every line a name stands on, thousands for a large class, where the
-      first and last of each definition would do. Cold, a frequent text
-      takes 58 s whole there, the tree 74 s.
+- [ ] `perf(names)`: what still holds the loop on a large repository. On
+      microsoft/vscode, with other work on the machine, the garbage
+      collector's steps take 20–75 ms at a time while a tree's outlines
+      load, and a new text's first answer queues its files in some 60 ms.
+      Until every file is outlined each new text costs `git grep`, 0.6 s
+      there; a parse given up is outlined again in every review, so a tree
+      holding such a file is whole only once it is.
 - [ ] `chore(names)`: the kept outlines of an older generation of the code
       are never removed from `~/.cache/claude-review` (836 KB each here).
 - [ ] `feat`: what the server does not find yet. A Svelte component is

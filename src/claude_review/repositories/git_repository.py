@@ -197,8 +197,9 @@ BLOB_TYPE = "blob"
 BLOBS_READ = ["cat-file", "--batch=%(objectsize)"]
 BLOB_END = b"\n"
 # How git is asked for everything a tree holds, however deep: an entry to each, ended by a NUL, its path
-# unquoted after its mode, type and id and a tab. A submodule's entry is a commit's, no file.
-ENTRIES_LISTED = ["ls-tree", "-r", "-z", "--full-tree"]
+# unquoted after its mode, type, id and size, padded with blanks, and a tab. A submodule's entry is a commit's,
+# no file.
+ENTRIES_LISTED = ["ls-tree", "-r", "-z", "--long", "--full-tree"]
 ENTRY_PATH_SEPARATOR = "\t"
 PATH_STEP_SEPARATOR = "/"
 # Git reads a path starting with one of these steps against the working tree, and fails the batch if it leaves it
@@ -541,15 +542,17 @@ class GitRepository(ReviewedRepository):
         return _contents_of(read)
 
     @override
-    async def files_in(self, root: Path, tree: str) -> frozenset[str]:
-        """The path of every file the tree holds, in one command whatever their number.
+    async def blobs_in(self, root: Path, tree: str) -> BlobsAt:
+        """Every file the tree holds, in one command whatever their number: git lists a tree's own entries far
+        faster than it finds each of as many paths from the tree's root.
 
         Raises:
             GitError: if no object store was given, so no tree was ever written down, or git fails.
         """
         arguments = [*ENTRIES_LISTED, END_OF_OPTIONS, tree]
         listed = await _run(root, arguments, self._reading_trees_written())
-        return frozenset(path for entry in listed.split(NAME_END) if (path := _file_listed(entry)) is not None)
+        # Off the loop: a large tree lists tens of thousands of entries
+        return await asyncio.to_thread(_blobs_listed, listed)
 
     def _reading_trees_written(self) -> dict[str, str]:
         """What points a command at the object store trees are written down into, the only one that holds them.
@@ -766,14 +769,23 @@ def _can_be_asked(path: str) -> bool:
     return not ends_its_line_early and first_step not in WORKING_TREE_STEPS
 
 
-def _file_listed(entry: str) -> str | None:
-    """The path of the file one entry of `ls-tree -z` names, or None where it names none: a submodule, or nothing."""
-    description, _, path = entry.partition(ENTRY_PATH_SEPARATOR)
-    match description.split(DESCRIPTION_SEPARATOR):
-        case [_, object_type, _] if object_type == BLOB_TYPE:
-            return path
-        case _:
-            return None
+def _blobs_listed(listed: str) -> BlobsAt:
+    """The files `ls-tree -z --long` listed, read entry by entry into the answer, nothing made for each."""
+    readable: dict[str, str] = {}
+    too_large: set[str] = set()
+    for entry in listed.split(NAME_END):
+        description, _, path = entry.partition(ENTRY_PATH_SEPARATOR)
+        # Split at any run of blanks, as git pads the size to a column
+        match description.split():
+            case [_, object_type, object_id, size] if object_type == BLOB_TYPE and size.isdecimal():
+                if int(size) > LARGEST_FILE_SHOWN_BYTES:
+                    too_large.add(path)
+                else:
+                    readable[path] = object_id
+            case _:
+                # A submodule's entry, or the nothing after the last
+                pass
+    return BlobsAt(object_ids=readable, too_large=frozenset(too_large))
 
 
 def _blob_described(description: str) -> StoredBlob | None:

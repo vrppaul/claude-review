@@ -19,7 +19,6 @@ from claude_review.domain.code_names import (
     LinesOnSide,
     NameChange,
     NameDefined,
-    NamesFound,
     TouchedName,
 )
 from claude_review.domain.interfaces import GitError
@@ -32,13 +31,14 @@ from tests.without_git import WORKERS_IN_TESTS, OutlinesHeld, TreesHeld, held_ob
 ROOT = Path("/repository-read-from-trees")
 TAKE = "take-tree"
 LATER_TAKE = "later-take-tree"
-TAKE_NUMBER = 3
 # How long a content git reads takes where a test needs one read to end after another
 READ_A_WHILE_SECONDS = 0.05
 # How long a search waits where a test needs every file outlined: far past what outlining a few takes
 EVERY_FILE_OUTLINED_WITHIN_SECONDS = 10.0
 # Files enough to fill several chunks of outlining
 MANY_FILES = 200
+# Names enough in each of two files that, of either, one answer lists fewer than all
+NAMES_PAST_LISTED = 21
 
 ATTEMPTS = b"class FailedRun:\n    def fail_now(self):\n        pass\n\n\ndef failed_attempts():\n    pass\n"
 LOG = b"def note_failure():\n    pass\n\n\ndef is_failure():\n    pass\n\n\ndef fail_safe():\n    pass\n"
@@ -76,11 +76,17 @@ class BlobsFailing(TreesHeld):
 
 
 class TextSearched(TreesHeld):
-    """Trees held in memory whose files hold a text only where it is written in them, whatever its case."""
+    """Trees held in memory whose files hold a text only where it is written in them, whatever its case; each search
+    of one counted."""
+
+    def __init__(self, trees: dict[str, FilesRead]) -> None:
+        super().__init__(trees)
+        self.searches_count = 0
 
     @override
     async def paths_with_text(self, root: Path, tree: str, text: str) -> list[str]:
-        read = await self.files_of(root, tree, list(await self.files_in(root, tree)))
+        self.searches_count += 1
+        read = await self.files_of(root, tree, list((await self.blobs_in(root, tree)).paths))
         return [path for path, content in read.contents.items() if text.lower().encode() in content.lower()]
 
 
@@ -159,6 +165,7 @@ async def test_the_names_found_hold_the_text_whatever_its_case_and_the_change_s_
             defined("fail_safe", DefinitionKind.FUNCTION, "src/log.py", 9, 4),
             defined("note_failure", DefinitionKind.FUNCTION, "src/log.py", 1, 4),
         ],
+        more=0,
         complete=True,
     )
 
@@ -223,7 +230,7 @@ async def test_a_search_answers_with_what_is_outlined_in_time_and_lists_the_rest
     found_again = await search(outlines, "fail", TAKE)
 
     assert (found_at_once, len(found_again.names), found_again.complete) == (
-        FoundSoFar(names=[], complete=False),
+        FoundSoFar(names=[], more=0, complete=False),
         2,
         True,
     )
@@ -257,9 +264,40 @@ async def test_a_file_git_fails_to_read_fails_the_search_as_git_failed_while_ano
     await reading_attempts
 
 
-def test_an_answer_lists_twenty_names_and_says_how_many_more_hold_the_text() -> None:
-    found = [defined(f"fail_{number}", DefinitionKind.FUNCTION, "src/many.py", number, 4) for number in range(1, 26)]
+async def test_an_answer_lists_twenty_names_those_starting_with_the_text_first_and_says_how_many_more_hold_it() -> None:
+    holding_within = b"".join(f"def is_fail_{number}():\n    pass\n".encode() for number in range(NAMES_PAST_LISTED))
+    starting = b"".join(f"def fail_{number}():\n    pass\n".encode() for number in range(NAMES_PAST_LISTED))
+    held = held_tree(TAKE, {"src/a_within.py": holding_within, "src/b_starting.py": starting})
 
-    listing = NamesFound.listing(TAKE_NUMBER, found, complete=True)
+    found = await search(Outlines(held, ROOT, parsing_in_tests()), "fail", TAKE)
 
-    assert listing == NamesFound(take=TAKE_NUMBER, names=found[:20], more=5, complete=True)
+    assert (found.names, found.more) == (
+        [
+            defined(f"fail_{number}", DefinitionKind.FUNCTION, "src/b_starting.py", 2 * number + 1, 4)
+            for number in range(20)
+        ],
+        22,
+    )
+
+
+async def test_a_search_of_a_tree_whose_every_file_is_outlined_asks_git_nothing() -> None:
+    held = TextSearched(
+        {TAKE: FilesRead(contents={"src/attempts.py": ATTEMPTS, "src/log.py": LOG}, too_large=frozenset())}
+    )
+    outlines = Outlines(held, ROOT, parsing_in_tests())
+    await outlines.of_files(TAKE, ["src/attempts.py", "src/log.py"])
+
+    found = await search(outlines, "fail", TAKE)
+
+    assert (held.searches_count, len(found.names)) == (0, 5)
+
+
+async def test_a_text_asked_again_while_its_files_are_outlined_is_searched_for_once() -> None:
+    """As the page asks again until every file holding the text is outlined."""
+    held = TextSearched({TAKE: FilesRead(contents={"src/attempts.py": ATTEMPTS}, too_large=frozenset())})
+    outlines = Outlines(held, ROOT, parsing_in_tests())
+
+    await read_names_found(outlines, text="fail", tree=TAKE, touched=[], within_seconds=0)
+    found_again = await search(outlines, "fail", TAKE)
+
+    assert (held.searches_count, len(found_again.names)) == (1, 2)

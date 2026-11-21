@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 from claude_review.domain.interfaces import GitError
-from claude_review.domain.models import HEAD, LARGEST_FILE_SHOWN_BYTES, FilesRead, FileStatus
+from claude_review.domain.models import HEAD, LARGEST_FILE_SHOWN_BYTES, BlobsAt, FilesRead, FileStatus
 from claude_review.repositories.git_repository import GitRepository
 from claude_review.services.diff_reading import read_diff
 from tests.helpers import LOOK_EVERY_SECONDS, SETTLE_SECONDS, git
@@ -372,25 +372,34 @@ async def test_a_commit_is_read_as_its_tree(tmp_git_repo: Path, tmp_path_factory
     assert (read.contents, holding) == ({"initial.txt": b"initial content\n"}, ["initial.txt"])
 
 
-async def test_a_commit_lists_every_file_it_holds_by_path_and_no_directory_or_submodule(
+async def test_a_commit_lists_every_file_it_holds_by_path_with_its_content_s_id_and_no_directory_or_submodule(
     tmp_git_repo: Path, tmp_path_factory: pytest.TempPathFactory
 ) -> None:
-    """A name with a tab or a line break in it is listed as it is; what is made since is in no commit."""
+    """A name with a tab or a line break in it is listed as it is; one too large is named apart; what is made since
+    is in no commit."""
     repo = GitRepository(objects=tmp_path_factory.mktemp("review-objects"))
     (tmp_git_repo / "src").mkdir()
     (tmp_git_repo / "src" / "kept.py").write_text("kept = True\n")
     (tmp_git_repo / "odd\tname\n.txt").write_text("odd\n")
+    (tmp_git_repo / "dump.log").write_bytes(b"x" * (LARGEST_FILE_SHOWN_BYTES + 1))
     commit_of_the_submodule = git(tmp_git_repo, "rev-parse", HEAD).strip()
     git(tmp_git_repo, "update-index", "--add", "--cacheinfo", f"160000,{commit_of_the_submodule},vendored")
-    git(tmp_git_repo, "add", "src/kept.py", "odd\tname\n.txt")
+    git(tmp_git_repo, "add", "src/kept.py", "odd\tname\n.txt", "dump.log")
     git(tmp_git_repo, "commit", "-m", "kept")
     commit = git(tmp_git_repo, "rev-parse", HEAD).strip()
     (tmp_git_repo / "made_since.py").write_text("x = 1\n")
     await _written_tree(repo, tmp_git_repo)
 
-    listed = await repo.files_in(tmp_git_repo, commit)
+    listed = await repo.blobs_in(tmp_git_repo, commit)
 
-    assert listed == frozenset({"initial.txt", "src/kept.py", "odd\tname\n.txt"})
+    assert listed == BlobsAt(
+        object_ids={
+            "initial.txt": git(tmp_git_repo, "rev-parse", f"{commit}:initial.txt").strip(),
+            "odd\tname\n.txt": git(tmp_git_repo, "rev-parse", f"{commit}:odd\tname\n.txt").strip(),
+            "src/kept.py": git(tmp_git_repo, "rev-parse", f"{commit}:src/kept.py").strip(),
+        },
+        too_large=frozenset({"dump.log"}),
+    )
 
 
 async def test_no_tree_is_read_without_a_store_that_kept_it(tmp_git_repo: Path) -> None:

@@ -144,8 +144,9 @@ class TreesRead(ABC):
         """
 
     @abstractmethod
-    async def files_in(self, root: Path, tree: str) -> frozenset[str]:
-        """The path of every file the tree holds, however deep, none of them read.
+    async def blobs_in(self, root: Path, tree: str) -> BlobsAt:
+        """Every file the tree holds, however deep, by path, with the id of its content, none read; one larger than
+        the review reads named apart.
 
         Raises:
             GitError: if git cannot say it.

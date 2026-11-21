@@ -99,7 +99,10 @@
   They are read in several processes, the files a search waits for first,
   and the review starts on the whole tree as you come to the filter;
   where a search outruns them, what is found so far shows over breathing
-  dots, and the rest follows.
+  dots, and the rest follows. Once every file is read, a search asks git
+  nothing: on a repository of 16,000 code files it answers in tens of
+  milliseconds, and the review never holds more of the code than its
+  processes are reading.
 
 ### Changed
 - **Help's "What's new" names no release.** The news it opens is of the
@@ -113,6 +116,9 @@
   `outdated`.
 
 ### Fixed
+- **The review answers at once.** Every request after a connection's
+  first waited some 40 ms for the browser to acknowledge the one before:
+  the server never asked its socket to send small answers straight away.
 - **Everything on screen is of the diff as it was taken.** The lines read
   in around a hunk came from the disk, and a diff against another base,
   or with whitespace left out, from the working tree as it stood: once a

@@ -57,8 +57,8 @@ from claude_review.services.review_opening import OpenedRepository, ReviewOpenin
 
 log = structlog.get_logger()
 
-# How long a search for names waits for the files it needs outlined before it answers with what is outlined so far:
-# the page asks again for the rest, and draws what it has meanwhile
+# How long a search for a text first waits for the files it needs outlined before it answers with what is outlined
+# so far: the page asks again for the rest, and draws what it has meanwhile
 NAMES_FOUND_WITHIN_SECONDS = 0.2
 
 
@@ -242,7 +242,7 @@ class RepositorySource(ContentSource):
             log.warning("opening_mark_refused", reason=str(refusal))
             self._content = self._content.on_tree(await self._watcher.read(self._root))
         try:
-            self._base_files = await self._repository.files_in(self._root, self._versions.pinned_base)
+            self._base_files = (await self._repository.blobs_in(self._root, self._versions.pinned_base)).paths
         except GitError as refusal:
             log.warning("base_files_unlisted", reason=str(refusal))
 
@@ -398,7 +398,7 @@ class RepositorySource(ContentSource):
             touched=touched,
             within_seconds=NAMES_FOUND_WITHIN_SECONDS,
         )
-        return NamesFound.listing(content.take, found.names, complete=found.complete)
+        return found.in_take(content.take)
 
     @override
     async def make_names_ready(self) -> None:
