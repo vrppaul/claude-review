@@ -8,6 +8,7 @@ patterns capture one name, the one written first says what it defines. A
 file of no row is read as text.
 """
 
+import re
 from pathlib import PurePosixPath
 
 import tree_sitter_javascript
@@ -17,9 +18,13 @@ import tree_sitter_typescript
 from pydantic import BaseModel, ConfigDict
 from tree_sitter import Language, Query
 
+from claude_review.domain.code_names import OUTLINES, DefinitionKind
+
 # What a query of definitions captures a definition as, before its kind, and the name it defines as
 DEFINITION_CAPTURE = "definition."
 NAME_CAPTURE = "name"
+# The kind a pattern of a query of definitions captures, as written in it
+KIND_CAPTURED = re.compile(rf"@{re.escape(DEFINITION_CAPTURE)}(\w+)")
 # What a query of where code stands in a file of another language captures each stretch of code as
 CODE_CAPTURE = "code"
 
@@ -32,10 +37,33 @@ class Grammar(BaseModel):
     language: Language
     names: frozenset[str]
     definitions: Query
+    # The patterns of `definitions` that can outline a file (`OUTLINES`) alone, written first as there: an outline
+    # never reads each parameter and variable of a file, most of what defines a name in it
+    outlines: Query
     # The nodes that wrap a definition with its decorators: their lines are the definition's
     wrappers: frozenset[str]
     # The nodes that open a scope of their own: a definition inside none stands at the top of its file
     scopes: frozenset[str]
+
+    @classmethod
+    def reading(
+        cls,
+        language: Language,
+        *,
+        names: frozenset[str],
+        definitions: str,
+        wrappers: frozenset[str],
+        scopes: frozenset[str],
+    ) -> Grammar:
+        """A grammar whose queries of definitions are both made from the patterns written."""
+        return cls(
+            language=language,
+            names=names,
+            definitions=Query(language, definitions),
+            outlines=_outlining(language, definitions),
+            wrappers=wrappers,
+            scopes=scopes,
+        )
 
 
 class EmbeddedCode(BaseModel):
@@ -56,6 +84,18 @@ class CodeFiles(BaseModel):
     grammar: Grammar
     # Where in such a file its code stands; None where the whole file is code
     embedded_in: EmbeddedCode | None
+
+
+def _outlining(language: Language, definitions: str) -> Query:
+    """A query of these definitions with every pattern of a kind that outlines no file disabled."""
+    query = Query(language, definitions)
+    written = definitions.encode()
+    for pattern in range(query.pattern_count):
+        pattern_text = written[query.start_byte_for_pattern(pattern) : query.end_byte_for_pattern(pattern)]
+        kinds = {DefinitionKind(kind) for kind in KIND_CAPTURED.findall(pattern_text.decode())}
+        if kinds.isdisjoint(OUTLINES):
+            query.disable_pattern(pattern)
+    return query
 
 
 PYTHON_LANGUAGE = Language(tree_sitter_python.language())
@@ -178,31 +218,31 @@ SCRIPT_SCOPES = frozenset(
 )
 TYPESCRIPT_SCOPES = SCRIPT_SCOPES | {"internal_module", "module"}
 
-PYTHON = Grammar(
-    language=PYTHON_LANGUAGE,
+PYTHON = Grammar.reading(
+    PYTHON_LANGUAGE,
     names=PYTHON_NAMES,
-    definitions=Query(PYTHON_LANGUAGE, PYTHON_DEFINITIONS),
+    definitions=PYTHON_DEFINITIONS,
     wrappers=PYTHON_WRAPPERS,
     scopes=PYTHON_SCOPES,
 )
-JAVASCRIPT = Grammar(
-    language=JAVASCRIPT_LANGUAGE,
+JAVASCRIPT = Grammar.reading(
+    JAVASCRIPT_LANGUAGE,
     names=JAVASCRIPT_NAMES,
-    definitions=Query(JAVASCRIPT_LANGUAGE, JAVASCRIPT_DEFINITIONS),
+    definitions=JAVASCRIPT_DEFINITIONS,
     wrappers=SCRIPT_WRAPPERS,
     scopes=SCRIPT_SCOPES,
 )
-TYPESCRIPT = Grammar(
-    language=TYPESCRIPT_LANGUAGE,
+TYPESCRIPT = Grammar.reading(
+    TYPESCRIPT_LANGUAGE,
     names=TYPESCRIPT_NAMES,
-    definitions=Query(TYPESCRIPT_LANGUAGE, TYPESCRIPT_DEFINITIONS),
+    definitions=TYPESCRIPT_DEFINITIONS,
     wrappers=SCRIPT_WRAPPERS,
     scopes=TYPESCRIPT_SCOPES,
 )
-TSX = Grammar(
-    language=TSX_LANGUAGE,
+TSX = Grammar.reading(
+    TSX_LANGUAGE,
     names=TYPESCRIPT_NAMES,
-    definitions=Query(TSX_LANGUAGE, TYPESCRIPT_DEFINITIONS),
+    definitions=TYPESCRIPT_DEFINITIONS,
     wrappers=SCRIPT_WRAPPERS,
     scopes=TYPESCRIPT_SCOPES,
 )

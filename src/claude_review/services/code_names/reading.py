@@ -4,8 +4,8 @@ Code is read by its language's grammar (`languages.py`): a word a comment or
 a string holds is never a place a name stands. What no grammar reads — a
 file of no language here, a Svelte component's markup — is read as text,
 each whole word in it taken for a name. The names outlining a file, those
-standing at its top, are read off the same definitions, each with the lines
-it is defined on. Parsing is the CPU's work: whoever asks runs this off the
+standing at its top, are read off the same definitions' patterns of a kind
+that can stand there, each with the lines it is defined on. Parsing is the CPU's work: whoever asks runs this off the
 event loop.
 """
 
@@ -17,12 +17,11 @@ from itertools import accumulate
 
 import structlog
 from pydantic import BaseModel, ConfigDict
-from tree_sitter import Node, Parser, QueryCursor, Range
+from tree_sitter import Node, Parser, Query, QueryCursor, Range
 
 from claude_review.domain.code_names import (
     FIRST_COLUMN,
     HOLDS_CODE,
-    OUTLINES,
     DefinitionKind,
     FoundAs,
     LinesOnSide,
@@ -232,8 +231,10 @@ def outline(path: str, content: bytes) -> list[OutlinedName] | None:
         return []
     source = SourceLines.of(content)
     outlining: defaultdict[str, list[Definition]] = defaultdict(list)
-    for definition in sorted(_definitions(code).values(), key=lambda definition: definition.name_start):
-        if definition.kind in OUTLINES and definition.at_top:
+    for definition in sorted(
+        _definitions(code, code.grammar.outlines).values(), key=lambda definition: definition.name_start
+    ):
+        if definition.at_top:
             outlining[definition.name].append(definition)
     return [_outlined(source, defined) for defined in outlining.values()]
 
@@ -311,7 +312,7 @@ def _named_places(
     path: str, source: SourceLines, code: ReadCode, name: str, added_lines: frozenset[int]
 ) -> list[NamePlace]:
     """Every place the grammar reads the name at, each with what it defines and the code it stands inside."""
-    definitions = _definitions(code)
+    definitions = _definitions(code, code.grammar.definitions)
     holding_code = [definition for definition in definitions.values() if definition.kind in HOLDS_CODE]
     wanted = name.encode(TEXT_ENCODING)
     places = []
@@ -376,10 +377,11 @@ def _first_outside_code(
     return None
 
 
-def _definitions(code: ReadCode) -> dict[int, Definition]:
-    """Every definition in the code, by the byte its name starts at; of two of one name, the first pattern's."""
+def _definitions(code: ReadCode, query: Query) -> dict[int, Definition]:
+    """Every definition in the code a query of the grammar's finds, by the byte its name starts at; of two of one
+    name, the first pattern's."""
     definitions: dict[int, Definition] = {}
-    matches = QueryCursor(code.grammar.definitions).matches(code.root)
+    matches = QueryCursor(query).matches(code.root)
     for _, captures in sorted(matches, key=lambda match: match[0]):
         definition = _definition_of(captures, code)
         definitions.setdefault(definition.name_start, definition)
