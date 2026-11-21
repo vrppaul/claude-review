@@ -176,6 +176,19 @@ async def _arrive_at_the_definition(page: Page, review: RunningReview) -> Locato
     return defining
 
 
+async def test_back_from_the_line_arrived_at_in_a_file_read_alone_puts_its_light_out_without_an_error(
+    review: RunningReview, page: Page
+) -> None:
+    errors: list[str] = []
+    page.on("pageerror", lambda error: errors.append(str(error)))
+    await _arrive_at_the_definition(page, review)
+
+    await page.keyboard.press("b")
+
+    await expect(page.get_by_test_id("file-alone-view")).to_have_count(0)
+    assert errors == []
+
+
 async def test_the_first_ctrl_click_on_the_line_arrived_at_opens_where_its_name_is_defined_and_used(
     review: RunningReview, page: Page
 ) -> None:

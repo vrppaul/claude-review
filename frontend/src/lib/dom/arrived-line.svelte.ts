@@ -43,15 +43,21 @@ export class ArrivedLine {
 	 */
 	light(section: string, arrived: LineArrivedAt, number: HTMLElement): void {
 		this.#leaving.abort();
-		this.#leaving = new AbortController();
+		const leaving = new AbortController();
+		this.#leaving = leaving;
 		this.#at = { section, ...arrived };
-		number.addEventListener('blur', () => this.#putOutOnceLeft(number), { signal: this.#leaving.signal });
+		// The number may lose the keyboard by going with its view, in the middle of the page drawing what replaces
+		// it, when nothing the page draws from may change: the light goes out once that is done
+		number.addEventListener('blur', () => queueMicrotask(() => this.#putOutOnceLeft(number, leaving)), {
+			signal: leaving.signal
+		});
 	}
 
-	#putOutOnceLeft(number: HTMLElement): void {
+	/** Put the light out, unless the line was arrived at anew since, or the keyboard is on its number still. */
+	#putOutOnceLeft(number: HTMLElement, leaving: AbortController): void {
 		// A window the reader leaves blurs what holds the keyboard, which holds it still when they are back
-		if (document.activeElement === number) return;
-		this.#leaving.abort();
+		if (leaving.signal.aborted || document.activeElement === number) return;
+		leaving.abort();
 		this.#at = null;
 	}
 }
