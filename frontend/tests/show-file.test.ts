@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, onTestFinished, vi } from 'vitest';
 import { tick } from 'svelte';
 import { FileSections, FOLD_TOGGLE_ROLE } from '$lib/dom/file-sections';
 import { Jumps } from '$lib/dom/jump';
@@ -338,13 +338,13 @@ describe('knowing which file the reader is in', () => {
 		sections.register('b.py', 'b.py', second);
 		sections.register('a.py', 'a.py', first);
 
-		sections.watchInView(document.body);
+		onTestFinished(sections.watchInView(document.body));
 
 		expect(sections.fileInView).toBe('a.py');
 	});
 
 	it('follows a file drawn after the watching began', () => {
-		sections.watchInView(document.body);
+		onTestFinished(sections.watchInView(document.body));
 
 		section('a.py');
 
@@ -356,7 +356,7 @@ describe('knowing which file the reader is in', () => {
 		document.body.append(leaving);
 		const takeBack = sections.register('a.py', 'a.py', leaving);
 		section('b.py');
-		sections.watchInView(document.body);
+		onTestFinished(sections.watchInView(document.body));
 
 		takeBack();
 
@@ -396,7 +396,7 @@ describe('a file drawn in several pieces, as a story draws one', () => {
 	it('names the file of the piece being read', () => {
 		piece('step-1', 'a.py');
 
-		sections.watchInView(document.body);
+		onTestFinished(sections.watchInView(document.body));
 
 		expect(sections.fileInView).toBe('a.py');
 	});

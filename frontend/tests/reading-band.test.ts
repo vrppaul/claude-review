@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, onTestFinished } from 'vitest';
 import { FileSections } from '$lib/dom/file-sections';
 import { Jumps } from '$lib/dom/jump';
 import { frames } from './frames';
@@ -44,9 +44,9 @@ function section(path: string): HTMLElement {
 	return element;
 }
 
-/** The observer watching the band, once the reading area is watched. */
+/** The observer watching the band, once the reading area is watched: until the test is over, when nothing is left looking at it. */
 function band(): ReportedObserver {
-	sections.watchInView(document.body);
+	onTestFinished(sections.watchInView(document.body));
 	const observer = ReportedObserver.latest;
 	if (!observer) throw new Error('The band is not watched');
 	return observer;
@@ -198,7 +198,7 @@ describe('the file being read', () => {
 	it('is still the file a jump took the reader to, when the area watched before this one is let go of after that', () => {
 		section('a.py');
 		const stopTheFirst = sections.watchInView(document.body);
-		sections.watchInView(document.body);
+		onTestFinished(sections.watchInView(document.body));
 		sections.scrollTo('a.py');
 
 		stopTheFirst();
