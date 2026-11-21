@@ -1,13 +1,14 @@
 <script lang="ts">
 	import { tick, untrack } from 'svelte';
 	import { provideScrollArea } from '$lib/dom/scroll-area';
-	import { useReview } from '$lib/review/context';
+	import { provideNameLookup, useReview } from '$lib/review/context';
 	import { threadsAboveTheFiles } from '$lib/review/files-way';
 	import EmptyNote from '$lib/ui/EmptyNote.svelte';
 	import { namesTheFileAsItStands } from '$lib/utils/line-places';
 	import type { CountedWords } from '$lib/utils/words';
 	import { reportBroken } from './broken-parts';
 	import FileSection from './FileSection.svelte';
+	import NameLookupPane from './NameLookupPane.svelte';
 	import PartFailed from './PartFailed.svelte';
 	import UnplacedThreads from './UnplacedThreads.svelte';
 
@@ -32,6 +33,8 @@
 	let container: HTMLElement | undefined = $state();
 	// Every file's section scrolls in this area, and builds its rows as it comes near it
 	provideScrollArea(() => container ?? null);
+	// A name pressed in any file is looked up in this area, its pane standing by it
+	const names = provideNameLookup(review);
 
 	// The sidebar scrolls the stream, and the stream reports back which file is
 	// current — one direction each way, so the two cannot fight over it.
@@ -72,4 +75,7 @@
 			<EmptyNote within="view" testId="no-changes">No changes found.</EmptyNote>
 		{/if}
 	{/each}
+	{#if names}
+		<NameLookupPane lookup={names} />
+	{/if}
 </main>

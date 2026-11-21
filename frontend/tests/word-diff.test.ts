@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import fastCheck from 'fast-check';
 import { escapeMarkup } from '$lib/utils/safe-markup';
-import { wordRanges, markRanges, withWordMarks, type TextRange } from '$lib/utils/word-diff';
+import { markRanges, type TextRange } from '$lib/utils/markup-marks';
+import { wordRanges, withWordMarks } from '$lib/utils/word-diff';
 import { splitSuggestions } from '$lib/utils/suggestion';
 import type { DiffLine } from '$lib/types';
 import { drawnHunks } from '$lib/utils/drawn-file';
@@ -77,19 +78,19 @@ describe('the words a changed line marks', () => {
 
 describe('marking words in highlighted code', () => {
 	it('wraps a range of plain text', () => {
-		expect(markRanges('abcdef', [{ start: 2, end: 4 }])).toBe('ab<span class="cr-word">cd</span>ef');
+		expect(markRanges('abcdef', [{ start: 2, end: 4 }], 'cr-word')).toBe('ab<span class="cr-word">cd</span>ef');
 	});
 
 	it('counts an escaped character as one character', () => {
 		const html = 'a&amp;b';
 
-		expect(markRanges(html, [{ start: 2, end: 3 }])).toBe('a&amp;<span class="cr-word">b</span>');
+		expect(markRanges(html, [{ start: 2, end: 3 }], 'cr-word')).toBe('a&amp;<span class="cr-word">b</span>');
 	});
 
 	it('leaves existing markup valid when a range crosses a tag', () => {
 		const html = 'a<span class="hljs-string">bc</span>d';
 
-		const result = markRanges(html, [{ start: 0, end: 3 }]);
+		const result = markRanges(html, [{ start: 0, end: 3 }], 'cr-word');
 
 		expect(result).toBe(
 			'<span class="cr-word">a</span><span class="hljs-string">' + '<span class="cr-word">bc</span></span>d'
@@ -99,7 +100,7 @@ describe('marking words in highlighted code', () => {
 	it('leaves the markup as it was when there is nothing to mark', () => {
 		const html = '<span class="hljs-keyword">def</span> f():';
 
-		expect(markRanges(html, [])).toBe(html);
+		expect(markRanges(html, [], 'cr-word')).toBe(html);
 	});
 });
 
@@ -269,7 +270,7 @@ describe('marking ranges inside highlighted markup, whatever the line', () => {
 	it('changes nothing of what the line says', () => {
 		fastCheck.assert(
 			fastCheck.property(lineAndRanges, ({ text, html, ranges }) => {
-				expect(drawn(markRanges(html, ranges)).textContent).toBe(text);
+				expect(drawn(markRanges(html, ranges, 'cr-word')).textContent).toBe(text);
 			})
 		);
 	});
@@ -278,7 +279,7 @@ describe('marking ranges inside highlighted markup, whatever the line', () => {
 		fastCheck.assert(
 			fastCheck.property(lineAndRanges, ({ text, html, ranges }) => {
 				const wanted = [...text].map((_, index) => ranges.some((range) => index >= range.start && index < range.end));
-				expect(markedCharacters(markRanges(html, ranges))).toEqual(wanted);
+				expect(markedCharacters(markRanges(html, ranges, 'cr-word'))).toEqual(wanted);
 			})
 		);
 	});
@@ -286,7 +287,7 @@ describe('marking ranges inside highlighted markup, whatever the line', () => {
 	it('leaves every span closed in the order it was opened', () => {
 		fastCheck.assert(
 			fastCheck.property(lineAndRanges, ({ html, ranges }) => {
-				expect(spansNest(markRanges(html, ranges))).toBe(true);
+				expect(spansNest(markRanges(html, ranges, 'cr-word'))).toBe(true);
 			})
 		);
 	});

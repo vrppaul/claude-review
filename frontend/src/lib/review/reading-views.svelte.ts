@@ -152,6 +152,14 @@ export class ReadingViews implements ViewsOnScreen {
 		return whereRead(lines, this.#diff) === 'in-its-file-alone' ? this.readAlone(lines.file) : this.showTheChange();
 	}
 
+	/**
+	 * Bring on screen the view of the Files way of reading that draws a file, and hand it over: the change's files
+	 * where the change holds it, or else the file read alone.
+	 */
+	showWhereFileRead(path: string): Promise<ReadingView> {
+		return this.#diff.holds(path) ? this.showTheChange() : this.readAlone(path);
+	}
+
 	/** Bring a view on screen for the reader: the story brought is being tried. */
 	#bring(name: ReadingViewName): void {
 		this.#nameOnScreen = name;

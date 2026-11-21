@@ -11,6 +11,7 @@
  */
 
 import { threadPlaceOf, type ThreadLines } from '$lib/anchors/views';
+import type { LineArrivedAt, NameOnLine } from '$lib/dom/arrived-line.svelte';
 import type { FileSections } from '$lib/dom/file-sections';
 import { fileSectionKey, type ReadingView, type ReadingViewName } from '$lib/review/reading-view';
 import type { Threads } from '$lib/review/threads.svelte';
@@ -33,6 +34,8 @@ export interface ViewsOnScreen {
 	readAlone: (path: string) => Promise<ReadingView>;
 	/** Bring on screen the view of the Files way of reading that draws a thread on these lines, and hand it over. */
 	showWhereRead: (lines: ThreadLines) => Promise<ReadingView>;
+	/** Bring on screen the view of the Files way of reading that draws a file, and hand it over. */
+	showWhereFileRead: (path: string) => Promise<ReadingView>;
 	/** Bring a view on screen, as it draws the review now, and hand it over: how the reader chose to read stays. */
 	show: (name: ReadingViewName) => ReadingView;
 }
@@ -214,21 +217,24 @@ export class Navigator {
 	 * Take the reader to a line of a file as it stands, with the keyboard on
 	 * its number, in the middle of the reading area: where the view on
 	 * screen draws it, its file unfolded and what the diff left out around
-	 * it read in, or else among the change's files, which come on screen for
-	 * it. A line drawn nowhere is not gone to. Where the reader was is read
-	 * first, and noted for Back once they are taken somewhere else.
+	 * it read in, or else in the view of the Files way of reading that draws
+	 * the file, which comes on screen for it: among the change's files, or
+	 * the file read alone. A line drawn nowhere is not gone to. A name on the
+	 * line the reader is taken to stands marked on it while the line is lit.
+	 * Where the reader was is read first, and noted for Back once they are
+	 * taken somewhere else.
 	 */
-	async goToLine(path: string, line: number): Promise<void> {
+	async goToLine(path: string, line: number, name: NameOnLine | null): Promise<void> {
 		const left = this.#placeRead();
-		const lineKey = placeKey({ side: 'new', number: line });
+		const arrived = { line: placeKey({ side: 'new', number: line }), name };
 		const onScreen = await this.#views.onScreen.drawLine(path, line);
 		if (onScreen !== null) {
-			this.#goToLineFrom(left, onScreen, lineKey);
+			this.#goToLineFrom(left, onScreen, arrived);
 			return;
 		}
-		const files = await this.#views.showTheChange();
-		const section = await files.drawLine(path, line);
-		if (section !== null) this.#goToLineFrom(left, section, lineKey);
+		const drawing = await this.#views.showWhereFileRead(path);
+		const section = await drawing.drawLine(path, line);
+		if (section !== null) this.#goToLineFrom(left, section, arrived);
 	}
 
 	/**
@@ -258,9 +264,9 @@ export class Navigator {
 	 * where the reader is taken somewhere else: a line they see already
 	 * leaves them looking at what they saw, and Back would lead nowhere.
 	 */
-	#goToLineFrom(left: PlaceLeft | null, section: string, lineKey: string): void {
-		if (left !== null && !this.#sections.seesLine(section, lineKey)) this.#wayBack.note(left);
-		this.#sections.goToLine(section, lineKey);
+	#goToLineFrom(left: PlaceLeft | null, section: string, arrived: LineArrivedAt): void {
+		if (left !== null && !this.#sections.seesLine(section, arrived.line)) this.#wayBack.note(left);
+		this.#sections.goToLine(section, arrived);
 	}
 
 	/** Bring a thread on lines of a file into view, where the view on screen draws them or else where Files does. */

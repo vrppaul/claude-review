@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { provideScrollArea } from '$lib/dom/scroll-area';
-	import { useReview } from '$lib/review/context';
+	import { provideNameLookup, useReview } from '$lib/review/context';
 	import { OVERVIEW_PART } from '$lib/review/story-keys';
 	import { threadsOffTheStory } from '$lib/review/story-reading';
 	import type { CountedWords } from '$lib/utils/words';
 	import ChapterBar from './ChapterBar.svelte';
+	import NameLookupPane from './NameLookupPane.svelte';
 	import StoryChapter from './StoryChapter.svelte';
 	import StoryHousekeeping from './StoryHousekeeping.svelte';
 	import StoryLeftOut from './StoryLeftOut.svelte';
@@ -28,6 +29,8 @@
 	let container: HTMLElement | undefined = $state();
 	// Every piece of the story scrolls in this area, and builds its rows as it comes near it
 	provideScrollArea(() => container ?? null);
+	// A name pressed in any piece is looked up in this area, its pane standing by it
+	const names = provideNameLookup(review);
 	// Where what the reader waits on stands, while there is no story
 	let waitingRoom: HTMLElement | undefined = $state();
 
@@ -96,5 +99,8 @@
 				/>
 			{/if}
 		</article>
+	{/if}
+	{#if names}
+		<NameLookupPane lookup={names} />
 	{/if}
 </main>

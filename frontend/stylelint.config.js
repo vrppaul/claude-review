@@ -22,7 +22,7 @@ const THE_COLOUR_OF_FAILING = ['/var\\(--color-error/'];
 // the field to reply in stood tall. A pane's edge is a colour, not a room. Refused in every stylesheet but the
 // library's, and the tokens' own
 const A_LIBRARY_ROOM = [
-	'/var\\(--cr-((band|card|notice|track|button|field|turn|lists-card|listed|head)-|pane-(gap|medium|wide))/'
+	'/var\\(--cr-((band|card|notice|track|button|field|turn|lists-card|listed|head)-|pane-(gap|medium|wide|code))/'
 ];
 // The functions that write a colour, and the curve a motion eases along: each written once, in tokens.css
 const WRITTEN_IN_THE_TOKENS = [

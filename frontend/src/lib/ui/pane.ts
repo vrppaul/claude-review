@@ -8,11 +8,14 @@
  * the window, or the part of a reading area under what is kept in sight at
  * its top, which lies over the pane, and above the area's foot, which cuts
  * it off. It opens the other way where it would not stand whole its own way
- * and the other has more room, is moved along until it stands whole inside,
+ * and the other has more room (a pane drawn before it knows what it will
+ * hold opens the way with more room), is moved along until it stands whole inside,
  * and is drawn no wider and no taller than that leaves it room for, its body
  * scrolling inside. What it is seen in is measured as it opens and again as the
- * window is resized or anything under the pane scrolls, so a pane never
- * keeps the room of a place it is no longer in.
+ * window is resized, a box it is seen in changes size, or anything under
+ * the pane scrolls, so a pane never keeps the room of a place it is no
+ * longer in; a pane whose way is chosen as it opens scrolls with what it
+ * stands by instead, and keeps its way.
  */
 
 import type { Snippet } from 'svelte';
@@ -29,8 +32,44 @@ export type TriggerProps = {
 	onclick: () => void;
 } & Record<symbol, Attachment<HTMLElement>>;
 
-/** Where a pane opens beside what opened it, and which of its edges it lines up with. */
-export type Placement = 'below-start' | 'below-end' | 'above-start' | 'above-end';
+/** A way a pane opens beside what opened it, and which of its edges it lines up with. */
+export type Way = 'below-start' | 'below-end' | 'above-start' | 'above-end';
+
+/**
+ * Where a pane opens: a way, or, for a pane drawn before it knows what it
+ * will hold, lined up with the start on whichever side has more room as it
+ * opens, so neither what it comes to hold nor what scrolls under it moves
+ * it to the other side.
+ */
+export type Placement = Way | 'roomier-start';
+
+/**
+ * How a placement chooses the way a pane opens: the way it opens first;
+ * whether it keeps to it where it stands whole, which only a pane that
+ * knows what it holds as it is drawn can tell; and whether the way is
+ * chosen once, as the pane opens, the pane then scrolling with what it
+ * stands by as a card in the code does, fitted again only to a window resized.
+ */
+interface Opening {
+	way: Way;
+	keptWhereWhole: boolean;
+	chosenAsItOpens: boolean;
+}
+
+const OPENINGS: Record<Placement, Opening> = {
+	'below-start': { way: 'below-start', keptWhereWhole: true, chosenAsItOpens: false },
+	'below-end': { way: 'below-end', keptWhereWhole: true, chosenAsItOpens: false },
+	'above-start': { way: 'above-start', keptWhereWhole: true, chosenAsItOpens: false },
+	'above-end': { way: 'above-end', keptWhereWhole: true, chosenAsItOpens: false },
+	'roomier-start': { way: 'below-start', keptWhereWhole: false, chosenAsItOpens: true }
+};
+
+/**
+ * Something a pane stands by where no control holds it, a stretch of text:
+ * where it stands in the window, read each time it is asked; null while it
+ * is not drawn, when the pane stays where it last stood.
+ */
+export type Spot = () => DOMRectReadOnly | null;
 
 /** A box on the screen, in the window's pixels. */
 export interface ScreenBox {
@@ -52,13 +91,13 @@ export interface LaidOut {
 	wholeHeight: number;
 }
 
-/** How a placement lays a pane out: its class in the library's stylesheet, and what follows from where it opens. */
+/** How a way lays a pane out: its class in the library's stylesheet, and what follows from where it opens. */
 interface Placing {
 	drawnAs: string;
 	/** Where its left edge stands at a width, lined up with the edge of what it stands by that it lines up with. */
 	leftAt: (pane: ScreenBox, width: number) => number;
-	/** The placement that lines up with the same edge and opens the other way. */
-	otherWay: Placement;
+	/** The way that lines up with the same edge and opens the other way. */
+	otherWay: Way;
 	/**
 	 * The most it may reach, standing so far off what it stands by: down to the foot of what it is seen in, or
 	 * up to its top, less the room kept.
@@ -89,30 +128,32 @@ function upToTheTop(standsBy: ScreenBox, offBy: number, seen: ScreenBox): number
 	return standsBy.top - offBy - (seen.top + ROOM);
 }
 
-const PLACINGS: Record<Placement, Placing> = {
+const PLACINGS: Record<Way, Placing> = {
 	'below-start': { drawnAs: 'cr-ui-below-start', leftAt: keptStart, otherWay: 'above-start', roomFrom: downToTheFoot },
 	'below-end': { drawnAs: 'cr-ui-below-end', leftAt: keptEnd, otherWay: 'above-end', roomFrom: downToTheFoot },
 	'above-start': { drawnAs: 'cr-ui-above-start', leftAt: keptStart, otherWay: 'below-start', roomFrom: upToTheTop },
 	'above-end': { drawnAs: 'cr-ui-above-end', leftAt: keptEnd, otherWay: 'below-end', roomFrom: upToTheTop }
 };
 
-/** The class a placement is drawn with. */
+/** The class a placement is drawn with: that of the way it opens first. */
 export function placedAs(placement: Placement): string {
-	return PLACINGS[placement].drawnAs;
+	return PLACINGS[OPENINGS[placement].way].drawnAs;
 }
 
 /**
  * How wide a pane is drawn, and so what it holds:
  * - medium: rows — controls, keys, things to pick
  * - wide: what was written — replies, comments, a question that shows what it asks about
+ * - code: lines of code, each read whole to its way to where it stands — where a name is defined and used
  * - fitted: as wide as what it holds and no wider — a note, a question, a drawing
  * - along: as wide as what it stands over — the list of what a field can point at
  */
-export type PaneWidth = 'medium' | 'wide' | 'fitted' | 'along';
+export type PaneWidth = 'medium' | 'wide' | 'code' | 'fitted' | 'along';
 
 export const PANE_WIDTHS: Record<PaneWidth, string> = {
 	medium: 'cr-ui-pane-medium',
 	wide: 'cr-ui-pane-wide',
+	code: 'cr-ui-pane-code',
 	fitted: 'cr-ui-pane-fitted',
 	along: 'cr-ui-pane-along'
 };
@@ -148,8 +189,8 @@ const MIDDLE = 0.5;
  * and down.
  */
 export interface PaneFit {
-	/** Its own placement, or the one that opens the other way, where it would not stand whole its own way. */
-	placement: Placement;
+	/** The way it opens, as its placement chooses. */
+	placement: Way;
 	shift: number;
 	mostWidth: number;
 	mostHeight: number;
@@ -160,7 +201,17 @@ export interface PaneFit {
  * stands by. None while the control is not drawn yet.
  */
 export function arrowOffsetTo(control: HTMLElement | undefined): number {
-	return control ? control.offsetWidth * MIDDLE : 0;
+	return control ? arrowOffsetAlong(control.offsetWidth) : 0;
+}
+
+/** How far in from the edge a pane lines up with its arrow points, in pixels, along what it stands by so wide. */
+export function arrowOffsetAlong(width: number): number {
+	return width * MIDDLE;
+}
+
+/** A number of pixels as the stylesheet takes it, or none where there is no number: before a pane is measured. */
+export function pixels(measured: number | undefined): string | undefined {
+	return measured === undefined ? undefined : `${measured}px`;
 }
 
 /**
@@ -184,15 +235,25 @@ function standsOffBy({ standsBy, pane }: LaidOut): number {
 	return Math.max(pane.top - standsBy.bottom, standsBy.top - pane.bottom);
 }
 
+/** Whether a pane is fitted again as anything under it scrolls: unless its way was chosen as it opened. */
+export function fittedAsItScrolls(placement: Placement): boolean {
+	return !OPENINGS[placement].chosenAsItOpens;
+}
+
 /**
- * The way a pane opens: the way its placement says, unless it would not
- * stand whole there and the other way has more room.
+ * The way a pane opens: the way it opened already where its placement
+ * chooses once; else the way its placement opens first, unless the other
+ * way has more room and the pane would not stand whole its first way, or
+ * cannot tell whether it would.
  */
-function openedWay(laid: LaidOut, placement: Placement, offBy: number, seen: ScreenBox): Placement {
-	const { otherWay, roomFrom } = PLACINGS[placement];
+function openedWay(laid: LaidOut, placement: Placement, offBy: number, seen: ScreenBox, before: Way | null): Way {
+	const { way, keptWhereWhole, chosenAsItOpens } = OPENINGS[placement];
+	if (chosenAsItOpens && before !== null) return before;
+	const { otherWay, roomFrom } = PLACINGS[way];
 	const room = roomFrom(laid.standsBy, offBy, seen);
 	const roomTheOtherWay = PLACINGS[otherWay].roomFrom(laid.standsBy, offBy, seen);
-	return laid.wholeHeight > room && roomTheOtherWay > room ? otherWay : placement;
+	const keptWhole = keptWhereWhole && laid.wholeHeight <= room;
+	return !keptWhole && roomTheOtherWay > room ? otherWay : way;
 }
 
 /**
@@ -204,10 +265,12 @@ function openedWay(laid: LaidOut, placement: Placement, offBy: number, seen: Scr
  * as stands it whole inside, or to the room from the left edge where it
  * cannot. It reaches down to the room above the foot of what it is seen in,
  * or up to the room below its top.
+ *
+ * @param before the way it opened at its last fit while it has stood open; none as it opens
  */
-export function fitted(laid: LaidOut, placement: Placement, seen: ScreenBox): PaneFit {
+export function fitted(laid: LaidOut, placement: Placement, seen: ScreenBox, before: Way | null): PaneFit {
 	const offBy = standsOffBy(laid);
-	const opened = openedWay(laid, placement, offBy, seen);
+	const opened = openedWay(laid, placement, offBy, seen, before);
 	const { leftAt, roomFrom } = PLACINGS[opened];
 	const mostWidth = seen.right - seen.left - ROOM - ROOM;
 	const width = Math.min(laid.pane.right - laid.pane.left, mostWidth);

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { ClassValue } from 'svelte/elements';
+	import { LINE_CODE_ROLE } from '$lib/dom/line-code';
 	import type { LinePlace, LineSide } from '$lib/types';
 	import LineFailure from '$lib/ui/LineFailure.svelte';
 	import type { DrawnLine } from '$lib/utils/drawn-file';
@@ -23,6 +24,7 @@
 
 	let { drawing }: Props = $props();
 	const commenting = $derived(drawing.commenting);
+	const naming = $derived(drawing.naming);
 
 	/** Whether a cell's line changed in the way its column shows. */
 	function changed(cell: DrawnLine, column: LineSide): boolean {
@@ -113,7 +115,11 @@
 							</td>
 							<td
 								data-testid="split-old-code"
+								data-role={LINE_CODE_ROLE}
 								class={['cr-code-cell border-r border-base-300 px-2 whitespace-pre-wrap', tint(row.left, 'old')]}
+								onmousemove={(event) => row.left && naming?.point(event, event.currentTarget, row.left)}
+								onmouseleave={(event) => row.left && naming?.point(event, event.currentTarget, row.left)}
+								onclick={(event) => row.left && naming?.press(event, event.currentTarget, row.left)}
 							>
 								{#if row.left}{@html row.left.markup}{/if}
 							</td>
@@ -132,7 +138,11 @@
 							</td>
 							<td
 								data-testid="split-new-code"
+								data-role={LINE_CODE_ROLE}
 								class={['cr-side-add cr-code-cell px-2 pr-4 whitespace-pre-wrap', tint(row.right, 'new')]}
+								onmousemove={(event) => row.right && naming?.point(event, event.currentTarget, row.right)}
+								onmouseleave={(event) => row.right && naming?.point(event, event.currentTarget, row.right)}
+								onclick={(event) => row.right && naming?.press(event, event.currentTarget, row.right)}
 							>
 								{#if row.right}{@html row.right.markup}{/if}
 							</td>

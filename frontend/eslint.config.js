@@ -323,6 +323,22 @@ const NO_CODE_BOXES_OF_ITS_OWN = [
 	{ selector: `${CLASS_OF_CODE} Literal[value=${A_BOX_OF_ITS_OWN}]`, message: BOXED_BY_THE_LIBRARY },
 	{ selector: `${CLASS_OF_CODE} TemplateElement[value.raw=${A_BOX_OF_ITS_OWN}]`, message: BOXED_BY_THE_LIBRARY }
 ];
+// Lines of code picked out to read apart from their file stand in the library's frame (CodeFrame), under the
+// file's path (CodeFramePath), its lines on their ground (CodeFrameLines), and nothing outside it frames them its
+// own way: the places of a name were first framed by a copy of the frame's edge, corner and clip. So a `table`,
+// which lays out lines of code, given an edge, a corner or a ground of its own in its class list is refused;
+// collapsing its cells' borders gives it none
+const FRAMED_BY_THE_LIBRARY =
+	'Frame lines of code with lib/ui CodeFrame and CodeFrameLines, not with an edge, a corner or a ground.';
+// An edge, a corner or a ground, behind any variants, as A_BOX_OF_ITS_OWN, but `border-collapse`
+const A_FRAME_OF_ITS_OWN = '/(^|\\s)([^\\s:]+:)*(border(?!-collapse)|rounded|bg)(-\\S*)?(\\s|$)/';
+// The class list of a `table`
+const CLASS_OF_LINES = "SvelteElement[name.name='table'] > SvelteStartTag > SvelteAttribute[key.name='class']";
+const NO_CODE_FRAMES_OF_ITS_OWN = [
+	{ selector: `${CLASS_OF_LINES} SvelteLiteral[value=${A_FRAME_OF_ITS_OWN}]`, message: FRAMED_BY_THE_LIBRARY },
+	{ selector: `${CLASS_OF_LINES} Literal[value=${A_FRAME_OF_ITS_OWN}]`, message: FRAMED_BY_THE_LIBRARY },
+	{ selector: `${CLASS_OF_LINES} TemplateElement[value.raw=${A_FRAME_OF_ITS_OWN}]`, message: FRAMED_BY_THE_LIBRARY }
+];
 // A notice is drawn by the library (NoticeBar), in its tone, and nothing outside it draws one its own way: beside
 // it the page drew by hand the bar saying the review cannot be reached, the one saying it is over, the one in place
 // of a part that could not be drawn and a file's notes, from 29 to 48 px tall, their words at two sizes, one of them
@@ -380,6 +396,13 @@ const NO_MARKS_OF_UTILITIES = [
 	},
 	{ selector: `Literal[value=${A_ROUNDED_CORNER}][value=${A_GROUND}]`, message: DRAWN_AS_A_MARK },
 	{ selector: `TemplateElement[value.raw=${A_ROUNDED_CORNER}][value.raw=${A_GROUND}]`, message: DRAWN_AS_A_MARK }
+];
+// A mark over the code is drawn by the library (CodeMark), its ground and the edge round it, and nothing outside it
+// lays one: a highlight draws a ground and no edge, and the names pressed and arrived at, laid as highlights by the
+// lookup itself, stood edgeless where the design edges them
+const DRAWN_AS_A_CODE_MARK = 'Mark a stretch of the code with lib/ui CodeMark, not by laying a highlight.';
+const NO_CODE_MARKS_OF_ITS_OWN = [
+	{ selector: 'CallExpression[callee.property.name=/^(lay|takeOff)$/]', message: DRAWN_AS_A_CODE_MARK }
 ];
 // A dot or a cross written as a glyph, in words of markup or in a string, refused inside the library too: drawn at
 // the size of the words round it, it drifts with them, as the page's three dots drawn so were 7 px across beside dots
@@ -572,7 +595,7 @@ const NO_BANDS_OF_ITS_OWN = [
 const LAID_OUT_BY_THE_LIBRARY =
 	'Lay out round a part of the library with the library: the tokens of its room are its own.';
 const A_LIBRARY_ROOM =
-	'/--cr-((band|card|notice|track|button|field|turn|lists-card|listed|head)-|pane-(gap|medium|wide))/';
+	'/--cr-((band|card|notice|track|button|field|turn|lists-card|listed|head)-|pane-(gap|medium|wide|code))/';
 const NO_LAYOUT_ROUND_THE_LIBRARY = [
 	...inClassLists(A_LIBRARY_ROOM, LAID_OUT_BY_THE_LIBRARY),
 	{ selector: `Literal[value=${A_LIBRARY_ROOM}]`, message: LAID_OUT_BY_THE_LIBRARY },
@@ -639,8 +662,10 @@ const DRAWN_BY_THE_LIBRARY_ALONE = [
 	...NO_LIBRARY_CLASSES_OUTSIDE,
 	...NO_CARDS_OF_ITS_OWN,
 	...NO_CODE_BOXES_OF_ITS_OWN,
+	...NO_CODE_FRAMES_OF_ITS_OWN,
 	...NO_NOTICES_OF_THEIR_OWN,
 	...NO_MARKS_OF_ITS_OWN,
+	...NO_CODE_MARKS_OF_ITS_OWN,
 	...NO_ROWS_OF_ITS_OWN,
 	...NO_FIELDS_OF_ITS_OWN,
 	...NO_BARS_OF_ITS_OWN,
@@ -794,9 +819,14 @@ export default tseslint.config(
 		}
 	},
 	{
-		// The lines of a diff, drawn as highlight.js writes them: it escapes the source it is handed, and the
-		// marks on changed words (utils/word-diff.ts) are spans put around that escaped text, never inside an escape
-		files: ['src/lib/components/RawView.svelte', 'src/lib/components/SplitView.svelte'],
+		// Lines of code, drawn as highlight.js writes them: it escapes the source it is handed, and the marks on
+		// changed words and on a name asked about (utils/markup-marks.ts) are spans put around that escaped text,
+		// never inside an escape. A diff's lines, and each line a name stands on
+		files: [
+			'src/lib/components/RawView.svelte',
+			'src/lib/components/SplitView.svelte',
+			'src/lib/components/PlaceLine.svelte'
+		],
 		rules: { 'svelte/no-at-html-tags': 'off' }
 	},
 	{

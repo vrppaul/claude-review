@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { ClassValue } from 'svelte/elements';
+	import { LINE_CODE_ROLE } from '$lib/dom/line-code';
 	import type { DiffLine, LineSide } from '$lib/types';
 	import LineFailure from '$lib/ui/LineFailure.svelte';
 	import type { DrawnLine } from '$lib/utils/drawn-file';
@@ -27,6 +28,7 @@
 	const showsChange = $derived(drawing.showsChange);
 	const columns = $derived(showsChange ? DIFF_COLUMNS : PLAIN_COLUMNS);
 	const commenting = $derived(drawing.commenting);
+	const naming = $derived(drawing.naming);
 
 	/** A row's tint, with the reader's own mark added to the change rather than replacing it. */
 	function rowClass(kind: DiffLine['kind'], marked: boolean): ClassValue {
@@ -86,7 +88,14 @@
 									{SIGNS[drawn.line.kind]}
 								</td>
 							{/if}
-							<td class="cr-code-cell px-2 pr-4 whitespace-pre-wrap">
+							<td
+								data-testid="line-code"
+								data-role={LINE_CODE_ROLE}
+								class="cr-code-cell px-2 pr-4 whitespace-pre-wrap"
+								onmousemove={(event) => naming?.point(event, event.currentTarget, drawn)}
+								onmouseleave={(event) => naming?.point(event, event.currentTarget, drawn)}
+								onclick={(event) => naming?.press(event, event.currentTarget, drawn)}
+							>
 								{@html drawn.markup}
 							</td>
 						</tr>

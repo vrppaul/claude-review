@@ -129,17 +129,26 @@ export function highlightHunk(lines: DiffLine[], language: string | null): Highl
 	return highlighted;
 }
 
+/** One line of code highlighted on its own, where it is read apart from its file: escaped either way. */
+export function highlightLine(text: string, language: string | null): string {
+	return language ? highlighted(text, language) : escapeMarkup(text);
+}
+
 /** Highlight one version of a hunk: its context plus the lines exclusive to that side. */
 function sideLines(lines: DiffLine[], exclusive: DiffLine['kind'], language: string): string[] {
 	const text = lines
 		.filter((line) => line.kind === 'context' || line.kind === exclusive)
 		.map((line) => line.content)
 		.join('\n');
+	return splitHighlighted(highlighted(text, language));
+}
 
+/** Code highlighted as a language, or only escaped where the highlighter cannot read it. */
+function highlighted(text: string, language: string): string {
 	try {
-		return splitHighlighted(hljs.highlight(text, { language, ignoreIllegals: true }).value);
+		return hljs.highlight(text, { language, ignoreIllegals: true }).value;
 	} catch {
-		return text.split('\n').map(escapeMarkup);
+		return escapeMarkup(text);
 	}
 }
 

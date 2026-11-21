@@ -1,19 +1,22 @@
 <script lang="ts">
-	import type { Snippet } from 'svelte';
+	import { tick, type Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
-	import { seenIn } from '$lib/dom/in-sight';
+	import { clippingRound, seenIn } from '$lib/dom/in-sight';
 	import PaneHead from './PaneHead.svelte';
 	import {
 		fitted,
+		fittedAsItScrolls,
 		laidOut,
 		PANE_EDGES,
 		PANE_WIDTHS,
+		pixels,
 		placedAs,
 		type PaneEdge,
 		type PaneFit,
 		type PaneHead as Head,
 		type PaneWidth,
-		type Placement
+		type Placement,
+		type Way
 	} from './pane';
 
 	interface Props extends Omit<HTMLAttributes<HTMLDivElement>, 'class' | 'style' | 'children' | 'role' | 'aria-label'> {
@@ -34,6 +37,11 @@
 		/** Whether it comes from the control the reader pressed; a note the page puts there by itself never moves in. */
 		comesIn?: boolean;
 		head?: Head | undefined;
+		/**
+		 * Move what it stands by to where that stands now, before each fit: for a pane by a stretch of text, which
+		 * no control holds and which moves as its line wraps.
+		 */
+		place?: (() => void) | undefined;
 		testId: string;
 		/** The pane itself, held by whoever opened it: focus is moved into it and back. */
 		pane?: HTMLDivElement | undefined;
@@ -57,6 +65,7 @@
 		fading = false,
 		comesIn = false,
 		head,
+		place,
 		testId,
 		pane = $bindable(),
 		body = $bindable(),
@@ -68,29 +77,48 @@
 
 	// How the pane is fitted into what it is seen in, once it is drawn
 	let fit = $state<PaneFit | null>(null);
+	// The way it opened at its last fit, handed to the next: a placement that chooses as the pane opens keeps it
+	let opened: Way | null = null;
 
 	// Measured as it is drawn, and whenever what it is seen in changes under it
 	$effect(() => {
-		if (pane && body) measure();
+		if (pane && body) void measure();
+	});
+
+	// And as any box it is seen in changes size, the window as it was: a side column opened or put away beside the
+	// reading area the pane stands in
+	$effect(() => {
+		if (!pane) return;
+		const seenInChanging = new ResizeObserver(() => void measure());
+		for (const box of clippingRound(pane)) seenInChanging.observe(box);
+		return () => seenInChanging.disconnect();
 	});
 
 	/**
 	 * Fit the pane into what of the window it is seen in where it is drawn: the window, or the part of a reading
-	 * area not under what is kept in sight at its top (dom/in-sight.ts).
+	 * area not under what is kept in sight at its top (dom/in-sight.ts). What it stands by is moved first to where
+	 * it stands now, where whoever drew the pane places it, and the fit waits for that to be drawn.
 	 */
-	function measure() {
-		if (pane && body) fit = fitted(laidOut(pane, body), placement, seenIn(pane));
+	async function measure() {
+		if (place) {
+			place();
+			await tick();
+		}
+		if (!pane || !body) return;
+		const fitNow = fitted(laidOut(pane, body), placement, seenIn(pane), opened);
+		fit = fitNow;
+		opened = fitNow.placement;
 	}
 
-	/** A number of pixels as the stylesheet takes it, or none before the pane is measured. */
-	function pixels(measured: number | undefined): string | undefined {
-		return measured === undefined ? undefined : `${measured}px`;
+	/** Something under the pane scrolled: it is fitted again, unless it scrolls with what it stands by. */
+	function noteScroll() {
+		if (fittedAsItScrolls(placement)) void measure();
 	}
 </script>
 
 <!-- What the pane is seen in, and the place of what it stands by, change as the window is resized and as anything
 	under the pane scrolls: the pane is fitted to them again -->
-<svelte:window onresize={measure} onscrollcapture={measure} />
+<svelte:window onresize={() => void measure()} onscrollcapture={noteScroll} />
 
 <!-- One look for every pane that stands by a control, opened from it by the reader or put there by the page as a
 	note: lifted off the page, with an arrow pointing at the control, opened the way it has room and moved in to

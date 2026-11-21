@@ -252,6 +252,48 @@
 }
 
 /*
+ * A name the reader asked about, on each line the pane lists where it is
+ * defined and used: the reader's chip, edged, so it reads over any tint the
+ * line has
+ */
+.cr-name {
+	border-radius: var(--radius-field);
+	outline: var(--cr-line) solid var(--cr-mark-border);
+	background-color: var(--cr-mark-chip);
+	box-decoration-break: clone;
+	-webkit-box-decoration-break: clone;
+}
+
+/*
+ * A place a name stands in a file (PlaceLine), a row of the frame's lines
+ * (lib/ui CodeFrameLines): its line drawn by the rules of a diff's line
+ * above, on one line of its own cut where the room ends; its number and the
+ * way to it as wide as they are
+ */
+.cr-place-number {
+	width: 0;
+	padding-inline: --spacing(3) --spacing(2);
+	text-align: end;
+	white-space: nowrap;
+	user-select: none;
+}
+.cr-place-code {
+	width: 100%;
+	max-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: pre;
+}
+.cr-place-act {
+	width: 0;
+	padding-inline: --spacing(3);
+	font-family: var(--font-sans);
+	font-size: var(--text-xs);
+	text-align: end;
+	white-space: nowrap;
+}
+
+/*
  * Split layout. Each side of a row carries its own change, so the tint and
  * the edge are set per cell rather than per row.
  */

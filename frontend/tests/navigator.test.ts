@@ -236,6 +236,7 @@ describe('moving the reader in whatever view the review is read in', () => {
 			showTheChange: () => Promise.resolve(view),
 			readAlone: () => Promise.resolve(view),
 			showWhereRead: () => Promise.resolve(view),
+			showWhereFileRead: () => Promise.resolve(view),
 			show: () => view
 		};
 	}

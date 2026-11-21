@@ -32,3 +32,35 @@ export function useScrollArea(): ScrollArea {
 export function pageAsScrollArea(): Map<symbol, ScrollArea> {
 	return new Map([[SCROLL_AREA, () => null]]);
 }
+
+/**
+ * A box in the room of an area, in pixels from the start of all it scrolls: what stands there scrolls with what
+ * the area holds.
+ */
+export interface AreaBox {
+	left: number;
+	top: number;
+	width: number;
+	height: number;
+}
+
+/** Whether two boxes are one: in the same place, as large. */
+export function sameBox(first: AreaBox, second: AreaBox): boolean {
+	return (
+		first.left === second.left &&
+		first.top === second.top &&
+		first.width === second.width &&
+		first.height === second.height
+	);
+}
+
+/** A box of the window in the room of an area, as far as the area has scrolled now. */
+export function boxInArea(area: HTMLElement, box: DOMRectReadOnly): AreaBox {
+	const origin = area.getBoundingClientRect();
+	return {
+		left: box.left - origin.left + area.scrollLeft,
+		top: box.top - origin.top + area.scrollTop,
+		width: box.width,
+		height: box.height
+	};
+}

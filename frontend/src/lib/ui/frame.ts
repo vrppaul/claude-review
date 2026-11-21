@@ -6,7 +6,9 @@
  * pane and rounded; what heads the code, the step's reason, is the frame's
  * top line (CodeFrameHead), after the agent's avatar, a rule under it, and
  * the file's bar and lines follow inside; where no code is drawn, a row as
- * tall as a file's bar says what stands in its place (CodeFrameRow).
+ * tall as a file's bar says what stands in its place (CodeFrameRow). Lines
+ * picked out of one file, as where a name stands, are framed under the
+ * file's path (CodeFramePath), on their own ground (CodeFrameLines).
  *
  * A band (Band) is a block of words the reader may ask about, lit while it
  * is pointed at or holds the keyboard, offering its act; what hangs under it

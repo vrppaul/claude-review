@@ -25,6 +25,7 @@ import type {
 	KeptGuide,
 	KeptSettings,
 	MessageRequest,
+	NameResponse,
 	ReaderSettings,
 	RetakeResponse,
 	ReviewResponse,
@@ -104,6 +105,14 @@ export function readFileWindow(path: string, start: number, end: number): Promis
 /** A file of the take on screen whole, as the tree the take was written down as holds it. */
 export function readFileOfTake(path: string): Promise<FileOfTakeResponse> {
 	return read('get', '/api/file-of-take', { query: { path }, doing: `Could not read ${path}` });
+}
+
+/** A character of a file the reader points at: the file as the review names it, its side, the line, the column. */
+export type PlaceInCode = Query<'get', '/api/name'>;
+
+/** The word at a place in the code, and every place it stands as a name in the take on screen. */
+export function readName(place: PlaceInCode): Promise<NameResponse> {
+	return read('get', '/api/name', { query: place, doing: 'Could not look through the repository' });
 }
 
 /** Where each anchor now hangs on the review's diff, in the order asked. */

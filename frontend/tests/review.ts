@@ -5,7 +5,8 @@ import { PageLayout } from '$lib/reader/page-layout.svelte';
 import { PageTheme } from '$lib/reader/page-theme.svelte';
 import { ReplySound } from '$lib/reader/reply-sound';
 import { Settings } from '$lib/reader/settings.svelte';
-import { reviewContext } from '$lib/review/context';
+import { nameLookupContext, nameLookupIn, reviewContext } from '$lib/review/context';
+import type { NameLookup } from '$lib/review/name-lookup.svelte';
 import type { Review } from '$lib/review/review.svelte';
 import type {
 	DiffFile,
@@ -99,16 +100,24 @@ export async function settingsWritingStories(server: FakeServer, writing: StoryW
 	return settings;
 }
 
-/** What a component drawn on its own is handed down: the review, and how to read the area it scrolls in. */
-type HandedDown = Map<symbol, Review | ScrollArea>;
+/**
+ * What a component drawn on its own is handed down: the review, how to read the area it scrolls in, and the lookup
+ * of names pressed in it.
+ */
+type HandedDown = Map<symbol, Review | ScrollArea | NameLookup | null>;
 
 /**
  * The options a component drawn on its own needs to be drawn inside this
- * review: the review, and the page itself as the area it scrolls in.
+ * review: the review, and the page itself as the area it scrolls in and
+ * looks names up in.
  */
 export function inReview(review: Review): { context: HandedDown };
 export function inReview<Props>(review: Review, props: Props): { props: Props; context: HandedDown };
 export function inReview<Props>(review: Review, props?: Props) {
-	const context: HandedDown = new Map([...reviewContext(review), ...pageAsScrollArea()]);
+	const context: HandedDown = new Map([
+		...reviewContext(review),
+		...pageAsScrollArea(),
+		...nameLookupContext(nameLookupIn(review))
+	]);
 	return props === undefined ? { context } : { props, context };
 }

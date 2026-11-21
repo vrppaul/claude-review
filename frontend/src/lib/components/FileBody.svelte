@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { FileToDraw } from '$lib/types';
-	import { useReview } from '$lib/review/context';
+	import { useNameLookup, useReview } from '$lib/review/context';
+	import CodeMark from '$lib/ui/CodeMark.svelte';
 	import { type Extent, FileDrawing, type FileView } from './file-drawing.svelte';
 	import FileNotes from './FileNotes.svelte';
 	import PreviewView from './PreviewView.svelte';
@@ -21,9 +22,10 @@
 
 	let { sectionKey, file, language, view, extent }: Props = $props();
 	const review = useReview();
+	const names = useNameLookup();
 
 	// Made once, whichever way the lines are laid out: switching layout prepares nothing again
-	const drawing = new FileDrawing(review, {
+	const drawing = new FileDrawing(review, names, {
 		section: () => sectionKey,
 		file: () => file,
 		language: () => language,
@@ -45,4 +47,8 @@
 	<SplitView {drawing} />
 {:else}
 	<RawView {drawing} />
+{/if}
+<!-- The name the reader was taken to, marked on the line arrived at while the line is lit -->
+{#if names && drawing.arrivedName}
+	<CodeMark stretch={drawing.arrivedName.stretch} mark="arrived" marks={names.marks} testId="name-arrived" />
 {/if}

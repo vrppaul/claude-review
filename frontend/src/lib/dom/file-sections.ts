@@ -20,7 +20,7 @@
 
 import { tick } from 'svelte';
 import { Announced, type Announcement } from '$lib/dom/announced';
-import { ArrivedLine } from '$lib/dom/arrived-line.svelte';
+import { ArrivedLine, type LineArrivedAt } from '$lib/dom/arrived-line.svelte';
 import { firstInDocument } from '$lib/dom/document-order';
 import type { Jumps } from '$lib/dom/jump';
 import { focusWhatRemains, moveByLine, seenWhole } from '$lib/dom/keyboard';
@@ -264,15 +264,15 @@ export class FileSections {
 	/**
 	 * Take the reader to a line's number in a section, by the key its place
 	 * is known by, to the middle of the reading area with the keyboard on it,
-	 * the line lit while the keyboard stays there, once what is pending is
-	 * drawn: lines just read in, a file unfolded, a view just come on
-	 * screen. Rows not built yet are built as their
-	 * section is brought into view, and the line is gone to once that comes
-	 * to rest.
+	 * the line lit and the name gone to on it marked while the keyboard stays
+	 * there, once what is pending is drawn: lines just read in, a file
+	 * unfolded, a view just come on screen. Rows not built yet are built as
+	 * their section is brought into view, and the line is gone to once that
+	 * comes to rest.
 	 */
-	goToLine(sectionKey: string, lineKey: string): void {
+	goToLine(sectionKey: string, arrived: LineArrivedAt): void {
 		const taking = this.#beginTaking();
-		void tick().then(() => this.#reachLine(taking, sectionKey, lineKey));
+		void tick().then(() => this.#reachLine(taking, sectionKey, arrived));
 	}
 
 	/**
@@ -326,10 +326,23 @@ export class FileSections {
 	 * that section has no toggle.
 	 */
 	lineOrFile(path: string, lineKey: string): HTMLElement | null {
-		const ofTheFile = this.#sections.all.filter((section) => section.path === path).map((section) => section.element);
+		const ofTheFile = this.#drawing(path);
 		if (ofTheFile.length === 0) return toggleOf(firstInDocument(this.#elements()));
-		const line = ofTheFile.map((element) => lineIn(element, lineKey)).find((found) => found !== null);
-		return line ?? toggleOf(firstInDocument(ofTheFile));
+		return lineAmong(ofTheFile, lineKey) ?? toggleOf(firstInDocument(ofTheFile));
+	}
+
+	/**
+	 * A line's number as it is drawn now, in whichever section draws that
+	 * line of its file, by the key its place is known by; null where none
+	 * draws it.
+	 */
+	line(path: string, lineKey: string): HTMLElement | null {
+		return lineAmong(this.#drawing(path), lineKey);
+	}
+
+	/** The sections on the page that draw a file. */
+	#drawing(path: string): HTMLElement[] {
+		return this.#sections.all.filter((section) => section.path === path).map((section) => section.element);
 	}
 
 	/**
@@ -337,24 +350,24 @@ export class FileSections {
 	 * is taken: now where it is drawn, or once its section, brought into
 	 * view, has its rows built and has come to rest.
 	 */
-	#reachLine(taking: number, sectionKey: string, lineKey: string): void {
+	#reachLine(taking: number, sectionKey: string, arrived: LineArrivedAt): void {
 		const section = this.#sections.get(sectionKey);
 		if (taking !== this.#taken || section === undefined) return;
-		const line = lineIn(section.element, lineKey);
-		if (line) this.#arriveAtLine(sectionKey, lineKey, line);
-		else this.#jumps.land(this.#sections.band, section.element, () => this.#arriveAtLineIn(section, lineKey));
+		const line = lineIn(section.element, arrived.line);
+		if (line) this.#arriveAtLine(sectionKey, arrived, line);
+		else this.#jumps.land(this.#sections.band, section.element, () => this.#arriveAtLineIn(section, arrived));
 	}
 
 	/** Go to a line's number in a section, if it is drawn there. */
-	#arriveAtLineIn(section: Section, lineKey: string): void {
-		const line = lineIn(section.element, lineKey);
-		if (line) this.#arriveAtLine(section.key, lineKey, line);
+	#arriveAtLineIn(section: Section, arrived: LineArrivedAt): void {
+		const line = lineIn(section.element, arrived.line);
+		if (line) this.#arriveAtLine(section.key, arrived, line);
 	}
 
 	/** Go to a line's number, and light the line arrived at. */
-	#arriveAtLine(sectionKey: string, lineKey: string, line: HTMLElement): void {
+	#arriveAtLine(sectionKey: string, arrived: LineArrivedAt, line: HTMLElement): void {
 		this.#arriveAt(line);
-		this.arrived.light(sectionKey, lineKey, line);
+		this.arrived.light(sectionKey, arrived, line);
 	}
 
 	/**
@@ -480,6 +493,11 @@ export class FileSections {
 /** A line's number drawn in a section, by the key its place is known by; null where the section does not draw it. */
 function lineIn(section: HTMLElement, lineKey: string): HTMLElement | null {
 	return section.querySelector<HTMLElement>(`[data-place="${lineKey}"]`);
+}
+
+/** A line's number in the first of some sections to draw it; null where none does. */
+function lineAmong(sections: HTMLElement[], lineKey: string): HTMLElement | null {
+	return sections.map((section) => lineIn(section, lineKey)).find((found) => found !== null) ?? null;
 }
 
 /** Put the keyboard on the line gone back to, or where none is drawn on the section's own toggle, the screen left still. */

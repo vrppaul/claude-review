@@ -208,6 +208,7 @@ describe('the keys the review answers', () => {
 			'u: Fold or unfold this file',
 			'Ctrl+Shift+Enter: Finish the review',
 			'?: Show this list',
+			'Ctrl+click: Where a name in the code is defined and used',
 			'Esc: Close it'
 		]);
 	});
@@ -238,6 +239,7 @@ describe('the keys the review answers', () => {
 			'f: Show or hide the file tree',
 			'Ctrl+Shift+Enter: Finish the review',
 			'?: Show this list',
+			'Ctrl+click: Where a name in the code is defined and used',
 			'Esc: Close it'
 		]);
 	});
@@ -472,6 +474,7 @@ describe('the keys of a review read as its story', () => {
 			'f: Show or hide the contents',
 			'Ctrl+Shift+Enter: Finish the review',
 			'?: Show this list',
+			'Ctrl+click: Where a name in the code is defined and used',
 			'Esc: Close it'
 		]);
 	});

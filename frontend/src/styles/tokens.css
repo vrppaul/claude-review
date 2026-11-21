@@ -187,10 +187,12 @@
 
 	/*
 	 * How wide a pane is drawn (lib/ui/pane.ts): one of rows — controls,
-	 * keys, things to pick — and one of what was written.
+	 * keys, things to pick — one of what was written, and one of lines of
+	 * code, each read whole to its way to where it stands.
 	 */
 	--cr-pane-medium: 20rem;
 	--cr-pane-wide: 24rem;
+	--cr-pane-code: 40rem;
 	/*
 	 * How far a pane that stands by itself (lib/ui Pane) stands from the
 	 * window's edges: the guide's card in its corner, and no nearer on a
@@ -251,7 +253,8 @@
 
 	/*
 	 * What lies over what, lowest first: a light behind what it lights,
-	 * within it (an answer landing), a file's sticky header and a
+	 * within it (an answer landing), a pane that scrolls with the code it
+	 * stands in, over the code, a file's sticky header and a
 	 * column's grip over what scrolls under them, a chapter's bar over the
 	 * headers that slide away under it, the side column or the panel lying
 	 * over the diff on a narrow screen, the tour's light over the review,
@@ -260,6 +263,7 @@
 	 * it talks about.
 	 */
 	--cr-layer-behind: -1;
+	--cr-layer-with-content: 1;
 	--cr-layer-over-content: 10;
 	--cr-layer-over-headers: 15;
 	--cr-layer-column: 20;

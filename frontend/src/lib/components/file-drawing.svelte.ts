@@ -15,6 +15,11 @@
 
 import { type Numbering, STORY_PIECES_NUMBERING } from '$lib/anchors/numbering';
 import { type DrawnFile, LineCommenting } from '$lib/components/line-commenting.svelte';
+import { LineNaming } from '$lib/components/line-naming';
+import type { LineArrivedAt } from '$lib/dom/arrived-line.svelte';
+import type { FileSections } from '$lib/dom/file-sections';
+import { DrawnName } from '$lib/review/drawn-name';
+import type { NameLookup } from '$lib/review/name-lookup.svelte';
 import type { RevealedContext } from '$lib/review/revealed-context.svelte';
 import type { Review } from '$lib/review/review.svelte';
 import { type FailureFound, NO_FAILURES } from '$lib/review/checks.svelte';
@@ -39,6 +44,12 @@ export type FileView = 'preview' | 'side-by-side' | 'split' | 'raw';
 /** How a change's lines are laid out as the reader chose: in two columns where there are lines to set side by side. */
 export function linesView(layout: DiffLayout, file: FileToDraw): 'split' | 'raw' {
 	return layout === 'split' && file.hunks.length > 0 ? 'split' : 'raw';
+}
+
+/** The name gone to on a line of a file arrived at; null where the reader was taken to the line alone, or to none. */
+function nameArrivedAt(sections: FileSections, path: string, arrived: LineArrivedAt | null): DrawnName | null {
+	if (arrived === null || arrived.name === null) return null;
+	return new DrawnName(sections, path, arrived.line, arrived.name);
 }
 
 /** A file of the diff on screen, drawn as the change made to it, with what the diff left out around its hunks. */
@@ -208,6 +219,8 @@ export interface DrawingSource {
 
 export class FileDrawing implements DrawnFile {
 	readonly commenting: LineCommenting;
+	/** Asking where a name in its lines is defined and used, where the review offers it. */
+	readonly naming: LineNaming | null;
 	readonly #review: Review;
 	readonly #source: DrawingSource;
 	readonly #shownFile: FileToDraw;
@@ -215,11 +228,17 @@ export class FileDrawing implements DrawnFile {
 	readonly #end: ContextGap | null;
 	// Where the checks failed in the file, by the line of it as it stands: asked of every line drawn
 	readonly #failuresByLine: ReadonlyMap<number, readonly FailureFound[]>;
-	// The line the page took the reader to in its section, by its key, while the keyboard stays on it: asked of
-	// every line drawn
-	readonly #arrivedLine: string | null;
+	// The line the page took the reader to in its section, while the keyboard stays on it: asked of every line drawn
+	readonly #arrived: LineArrivedAt | null;
+	// The name gone to on it, found in the line as it is drawn while the line is lit
+	readonly #arrivedName: DrawnName | null;
 
-	constructor(review: Review, source: DrawingSource) {
+	/**
+	 * @param review the review it is drawn in
+	 * @param names the lookup of the area it is drawn in, where the review offers one
+	 * @param source what it is drawn from
+	 */
+	constructor(review: Review, names: NameLookup | null, source: DrawingSource) {
 		this.#review = review;
 		this.#source = source;
 		// Lines revealed from the file sit inside the hunk beside which they were
@@ -231,13 +250,20 @@ export class FileDrawing implements DrawnFile {
 		this.#failuresByLine = $derived(
 			Map.groupBy(review.checks.failuresIn(source.file().path), ({ failure }) => failure.line)
 		);
-		this.#arrivedLine = $derived(review.sections.arrived.lineIn(source.section()));
+		this.#arrived = $derived(review.sections.arrived.lineIn(source.section()));
+		this.#arrivedName = $derived(nameArrivedAt(review.sections, source.file().path, this.#arrived));
 		this.commenting = new LineCommenting(review, this);
+		this.naming = names === null ? null : new LineNaming(review, names, this, this.commenting);
 	}
 
 	/** Whether a line is the one the page took the reader to, lit while the keyboard stays on it. */
 	arrivedAt(drawn: DrawnLine): boolean {
-		return drawn.key === this.#arrivedLine;
+		return drawn.key === this.#arrived?.line;
+	}
+
+	/** The name gone to on the line arrived at, while the line is lit; null while none is. */
+	get arrivedName(): DrawnName | null {
+		return this.#arrivedName;
 	}
 
 	/**

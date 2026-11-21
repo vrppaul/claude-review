@@ -77,7 +77,13 @@ function cutTo(seen: DOMRect, clipping: HTMLElement): DOMRect {
  * shows — the reading area it scrolls in, and whatever holds that.
  */
 export function seenIn(element: HTMLElement): DOMRect {
-	return drawnInside(element)
-		.filter(clipsWhatItHolds)
-		.reduce(cutTo, new DOMRect(0, 0, innerWidth, innerHeight));
+	return clippingRound(element).reduce(cutTo, new DOMRect(0, 0, innerWidth, innerHeight));
+}
+
+/**
+ * Every box round an element that hides what reaches past its edges, the
+ * nearest first: what the element is seen in changes as any of them does.
+ */
+export function clippingRound(element: HTMLElement): HTMLElement[] {
+	return drawnInside(element).filter(clipsWhatItHolds);
 }

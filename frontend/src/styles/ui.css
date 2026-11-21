@@ -728,6 +728,9 @@
 .cr-ui-pane-wide {
 	width: var(--cr-pane-wide);
 }
+.cr-ui-pane-code {
+	width: var(--cr-pane-code);
+}
 .cr-ui-pane-fitted {
 	width: max-content;
 }
@@ -873,6 +876,25 @@
 	bottom: calc(var(--cr-arrow) / -2);
 	border-top-color: transparent;
 	border-left-color: transparent;
+}
+/*
+ * What a pane stands by where no control opens it (Popover's at): a box of
+ * the area it is drawn in, where what it is about stands, so the pane opens
+ * beside that whole and scrolls with it, under what the area keeps in sight
+ * at its top as the code goes under it. The box is no control: every press
+ * goes through it to what stands there, and only its pane takes one
+ */
+.cr-ui-popover-spot {
+	position: absolute;
+	z-index: var(--cr-layer-with-content);
+	top: var(--cr-spot-top);
+	left: var(--cr-spot-left);
+	width: var(--cr-spot-width);
+	height: var(--cr-spot-height);
+	pointer-events: none;
+}
+.cr-ui-popover-spot > .cr-ui-popover {
+	pointer-events: auto;
 }
 .cr-ui-below-start,
 .cr-ui-below-end {
@@ -1321,6 +1343,78 @@
 	color: var(--cr-muted);
 	font-size: var(--text-sm);
 	line-height: var(--text-sm--line-height);
+}
+/*
+ * Its top line where its lines are picked out of one file (CodeFramePath):
+ * the file's path, small and muted in the code's face, on a pane's ground,
+ * ruled off from the lines, cut where the room ends
+ */
+.cr-ui-code-frame-path {
+	overflow: hidden;
+	padding: --spacing(1) --spacing(3);
+	border-bottom: var(--cr-line) solid var(--cr-pane-edge);
+	background-color: var(--color-base-200);
+	color: var(--cr-muted);
+	font-family: var(--font-mono);
+	font-size: var(--text-xs);
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+/*
+ * Its lines where they are picked out of one file (CodeFrameLines), under
+ * the path: in the code's face, on the theme's first ground, a step off the
+ * path's, a hairline between them, each row as the page draws it
+ */
+.cr-ui-code-frame-lines {
+	width: 100%;
+	border-collapse: collapse;
+	background-color: var(--color-base-100);
+	font-family: var(--font-mono);
+	font-size: var(--cr-code-size);
+	line-height: var(--cr-code-leading);
+}
+.cr-ui-code-frame-lines td {
+	padding-block: --spacing(1);
+}
+.cr-ui-code-frame-lines tr + tr > td {
+	border-top: var(--cr-line) solid var(--cr-pane-edge);
+}
+/*
+ * A mark over a stretch of the code (CodeMark), its ground a highlight under
+ * the words, drawn only inside what the stretch stands in, which says so
+ * while it does (dom/code-marks.ts). The word under the pointer while the
+ * key that asks about a name is held is on the ink's tint, underlined, the
+ * pointer a hand over it
+ */
+[data-held-name]::highlight(cr-held-name),
+[data-held-name] ::highlight(cr-held-name) {
+	background-color: var(--cr-ink-tint);
+	text-decoration-line: underline;
+}
+[data-held-name] {
+	cursor: pointer;
+}
+/* The name pressed while its pane is open, and the one the reader was taken to, on the reader's chip */
+[data-pressed-name]::highlight(cr-pressed-name),
+[data-pressed-name] ::highlight(cr-pressed-name),
+[data-arrived-name]::highlight(cr-arrived-name),
+[data-arrived-name] ::highlight(cr-arrived-name) {
+	background-color: var(--cr-mark-chip);
+}
+/* The chip's edge, over the code on a layer that lets every press through: a box round each line of the stretch */
+.cr-ui-code-mark-edges {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+}
+.cr-ui-code-mark-edge {
+	position: absolute;
+	top: var(--cr-edge-top);
+	left: var(--cr-edge-left);
+	width: var(--cr-edge-width);
+	height: var(--cr-edge-height);
+	border-radius: var(--radius-field);
+	outline: var(--cr-line) solid var(--cr-mark-border);
 }
 /* What hangs under a band heading the code stands in the frame, over the code, a rule under it too */
 .cr-ui-band-heading-code + .cr-ui-band-under {

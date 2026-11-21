@@ -2,7 +2,6 @@
 
 import asyncio
 import json
-import sys
 from pathlib import Path
 
 import pytest
@@ -11,6 +10,7 @@ from playwright.async_api import Locator, Page, expect
 
 from claude_review.services.text_files import read_text_files
 from claude_review.services.transcript import read_transcript
+from tests.e2e.agent_commands import as_the_agent
 from tests.e2e.browsers_loop import in_the_browsers_loop
 from tests.e2e.page_reads import FOCUSED_TEST_ID
 from tests.helpers import (
@@ -112,27 +112,9 @@ async def _send_from_the_pane(page: Page) -> str:
     return (await (await submitted.value).json())["markdown"]
 
 
-async def _agent(review: RunningReview, command: str, *arguments: str) -> str:
-    """Run one of the agent's commands against the review, as the agent would, and return what it printed."""
-    process = await asyncio.create_subprocess_exec(
-        sys.executable,
-        "-m",
-        "claude_review",
-        command,
-        "--port",
-        str(review.port),
-        *arguments,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
-    )
-    printed, said = await process.communicate()
-    assert process.returncode == 0, said.decode()
-    return printed.decode()
-
-
 async def _next_event(review: RunningReview) -> dict:
     """Wait as the agent does for whatever the reader hands over next."""
-    return json.loads(await _agent(review, "wait", "--seconds", str(AGENT_WAIT_SECONDS)))
+    return json.loads(await as_the_agent(review, "wait", "--seconds", str(AGENT_WAIT_SECONDS)))
 
 
 async def _agent_hears_it_ended(review: RunningReview) -> bool:
@@ -407,7 +389,7 @@ async def test_a_question_asked_in_a_thread_is_answered_in_it(diff_review: Runni
     assert asked["question"]["body"] == "Was the old greeting used anywhere else?"
     assert asked["question"]["thread"]["anchor"]["quote"] == ["def hello():"]
 
-    await _agent(
+    await as_the_agent(
         diff_review,
         "reply",
         "--thread",
@@ -469,7 +451,7 @@ async def test_the_panel_carries_a_message_to_the_agent_and_back(diff_review: Ru
     assert handed_over["type"] == "message"
     assert handed_over["message"]["body"] == "Which tests cover this?"
 
-    await _agent(
+    await as_the_agent(
         diff_review, "say", "--message", handed_over["message"]["message_id"], "The e2e one, and two unit tests."
     )
 
@@ -488,7 +470,7 @@ async def test_a_thread_the_author_raises_lands_on_the_line(diff_review: Running
         await agent.post(EVENTS_ROUTE, params=GLANCE_AT_EVENTS)
     await page.get_by_test_id("panel-input").wait_for()
 
-    pointed = await _agent(diff_review, "point", "--file", MAIN_FILE, "--lines", "1", RAISED_BODY)
+    pointed = await as_the_agent(diff_review, "point", "--file", MAIN_FILE, "--lines", "1", RAISED_BODY)
     assert json.loads(pointed)["thread_id"] == "raised-1"
 
     main = _section(page, MAIN_FILE)

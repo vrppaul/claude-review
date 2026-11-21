@@ -195,6 +195,14 @@ describe('a file the change did not touch, read alone', () => {
 		expect(document.activeElement).toBe(screen.getByTestId('put-file-away'));
 	});
 
+	it('is where going to a line of it takes the reader: on the line, the keyboard on its number', async () => {
+		await review.navigator.goToLine(CALLER, 2, null);
+		await cameToRest();
+
+		expect(within(screen.getByTestId('file-alone-view')).getByTestId('file-alone-heading').textContent).toBe(CALLER);
+		expect(document.activeElement?.textContent?.trim()).toBe('2');
+	});
+
 	it('goes on at Try again to the thread n asked for, the keyboard on it', async () => {
 		const user = userEvent.setup();
 		server.refuse('GET /api/file-of-take', SERVER_FAILED, 'the repository could not be read');

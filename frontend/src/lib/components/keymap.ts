@@ -47,6 +47,15 @@ export interface Chord {
 	held: readonly Modifier[];
 }
 
+/**
+ * A press of the pointer with every modifier held with it: listed in the
+ * help as a key is, and answered by what it presses, never by a keystroke.
+ */
+export interface PointerChord {
+	pointer: 'click';
+	held: readonly Modifier[];
+}
+
 // The modifiers, in the order a chord's name writes them
 const MODIFIERS: readonly Modifier[] = ['ctrl-or-cmd', 'alt-or-option', 'shift'];
 // What is read beside a key that types a character: Shift is in the character
@@ -55,8 +64,12 @@ const MODIFIERS_BESIDE_A_CHARACTER: readonly Modifier[] = MODIFIERS.filter((modi
 // word, Enter
 const CHARACTER_KEY_LENGTH = 1;
 
-// Whether a keystroke holds each modifier: Cmd on a Mac counts as Ctrl, so a chord is pressed as each platform does
-const MODIFIER_HELD: Record<Modifier, (event: KeyboardEvent) => boolean> = {
+/** What a keystroke or a press of the pointer says of the modifiers held with it. */
+type HeldWith = Pick<KeyboardEvent, 'ctrlKey' | 'metaKey' | 'altKey' | 'shiftKey'>;
+
+// Whether a keystroke or a press holds each modifier: Cmd on a Mac counts as Ctrl, so a chord is pressed as each
+// platform does
+const MODIFIER_HELD: Record<Modifier, (event: HeldWith) => boolean> = {
 	'ctrl-or-cmd': (event) => event.ctrlKey || event.metaKey,
 	'alt-or-option': (event) => event.altKey,
 	shift: (event) => event.shiftKey
@@ -87,6 +100,12 @@ export const TALK_CHORD: Chord = { key: 'c', held: [] };
 // Enter on a line's number, which comments on the line: the number is a button
 const LINE_NUMBER_CHORD: Chord = { key: 'Enter', held: [] };
 
+/**
+ * A click on a name in the code with Ctrl held, Cmd on a Mac, which asks where the name is defined and used: the
+ * code's lines answer it (LineNaming).
+ */
+export const LOOKUP_CHORD: PointerChord = { pointer: 'click', held: ['ctrl-or-cmd'] };
+
 /** A chord of the help's, and what the review does on it. */
 interface Press {
 	chord: Chord;
@@ -97,10 +116,8 @@ interface Press {
 /** Whether a row's keys do anything, as the review stands. */
 type Live = (review: Review) => boolean;
 
-/** One line of the help: its presses, what they do, and where and when they are keys at all. */
-interface KeyRow {
-	/** One, or two that do opposite things, in the order `does` names them. */
-	presses: readonly Press[];
+/** One line of the help: what its presses do, and where and when they do anything at all. */
+interface HelpRow {
 	does: string;
 	/**
 	 * The views the keys act in. A key that is some views' own — the
@@ -115,6 +132,17 @@ interface KeyRow {
 	 * file; a story's view draws nothing until a story is told.
 	 */
 	live: Live;
+}
+
+/** A line of the help of keys the review answers. */
+interface KeyRow extends HelpRow {
+	/** One, or two that do opposite things, in the order `does` names them. */
+	presses: readonly Press[];
+}
+
+/** A line of the help of a press of the pointer, which what it presses answers. */
+interface PointerRow extends HelpRow {
+	pointer: PointerChord;
 }
 
 // The keys of every view; of the change's files alone; of the views the tree stands beside, those files and a file
@@ -135,6 +163,8 @@ const WHILE_THREADS_ARE_DRAWN: Live = (review) => review.views.onScreen.drawn().
 const WHILE_A_COMMENT_CAN_BE_ASKED: Live = (review) => review.canAsk && review.views.onScreen.drawn().threads;
 // While the page has taken the reader from a place in the diff on screen, which Back takes them to
 const WHILE_THERE_IS_A_WAY_BACK: Live = (review) => review.wayBack.top !== null;
+// While the view draws lines where names are pointed at: of a repository's change, in a browser that lends the way
+const WHILE_NAMES_ARE_LOOKED_UP: Live = (review) => review.namePointing !== null && review.views.onScreen.drawn().lines;
 
 /** A key pressed on its own. */
 function alone(key: string, run: (review: Review) => void): Press {
@@ -285,43 +315,101 @@ const KEYMAP: readonly KeyRow[] = [
 	}
 ];
 
+// The presses of the pointer the help lists after the keys
+const POINTER_ROWS: readonly PointerRow[] = [
+	{
+		pointer: LOOKUP_CHORD,
+		does: 'Where a name in the code is defined and used',
+		views: EVERY_VIEW,
+		live: WHILE_NAMES_ARE_LOOKED_UP
+	}
+];
+
 /** What a chord is called in the help and the hints: its modifiers, then its key. */
 export function chordName(chord: Chord): string {
-	const modifiers = MODIFIERS.filter((modifier) => chord.held.includes(modifier));
-	return [...modifiers.map((modifier) => MODIFIER_NAMES[modifier]), chord.key].join(CHORD_NAME_JOINER);
+	return heldWith(chord.held, chord.key);
+}
+
+/** What a press of the pointer is called in the help: its modifiers, then the press. */
+function pointerChordName(chord: PointerChord): string {
+	return heldWith(chord.held, chord.pointer);
+}
+
+/** The name of what is pressed with modifiers held: the modifiers in their order, then what is pressed. */
+function heldWith(held: readonly Modifier[], pressed: string): string {
+	const modifiers = MODIFIERS.filter((modifier) => held.includes(modifier));
+	return [...modifiers.map((modifier) => MODIFIER_NAMES[modifier]), pressed].join(CHORD_NAME_JOINER);
 }
 
 /** Whether a keystroke is the chord: its key, with its modifiers held and no other. */
 export function isPressed(chord: Chord, event: KeyboardEvent): boolean {
 	if (event.key !== chord.key) return false;
 	const read = chord.key.length === CHARACTER_KEY_LENGTH ? MODIFIERS_BESIDE_A_CHARACTER : MODIFIERS;
-	return read.every((modifier) => MODIFIER_HELD[modifier](event) === chord.held.includes(modifier));
-}
-
-/** The rows of the view on screen that do something as the review stands. */
-function liveRows(review: Review): KeyRow[] {
-	const onScreen = review.views.onScreen.name;
-	return KEYMAP.filter((row) => row.views.includes(onScreen) && row.live(review));
-}
-
-/** What the help lists: each live row's chords by name, and what they do. */
-export function keysListed(review: Review): ListedKeys[] {
-	return liveRows(review).map((row) => ({ keys: row.presses.map((press) => chordName(press.chord)), does: row.does }));
+	return holdsOnly(read, chord.held, event);
 }
 
 /**
- * Answer a keystroke the review has a key for. A key something on the page
- * has already answered is not the review's, nor one an input method is
- * composing a word with; while the help is open the keys are the help's;
- * while a field is being typed in, only a chord is the review's.
+ * Whether a press of the pointer, a move of it or a keystroke holds the modifiers of a press of the pointer, and
+ * no other: what the press is made with, and what holds the name under the pointer marked.
  */
-export function pressKey(review: Review, event: KeyboardEvent): void {
-	if (event.defaultPrevented || isComposingText(event) || review.guide.helpOpen) return;
-	const press = liveRows(review)
+export function holdsModifiersOf(chord: PointerChord, event: HeldWith): boolean {
+	return holdsOnly(MODIFIERS, chord.held, event);
+}
+
+/** Whether, of the modifiers read, the event holds those held and no other. */
+function holdsOnly(read: readonly Modifier[], held: readonly Modifier[], event: HeldWith): boolean {
+	return read.every((modifier) => MODIFIER_HELD[modifier](event) === held.includes(modifier));
+}
+
+/** The rows of a list of the view on screen that do something as the review stands. */
+function liveRows<Row extends HelpRow>(rows: readonly Row[], review: Review): Row[] {
+	const onScreen = review.views.onScreen.name;
+	return rows.filter((row) => row.views.includes(onScreen) && row.live(review));
+}
+
+/** What the help lists: each live row's chords by name, then its presses of the pointer, and what they do. */
+export function keysListed(review: Review): ListedKeys[] {
+	const keys = liveRows(KEYMAP, review).map((row) => ({
+		keys: row.presses.map((press) => chordName(press.chord)),
+		does: row.does
+	}));
+	const pointerPresses = liveRows(POINTER_ROWS, review).map((row) => ({
+		keys: [pointerChordName(row.pointer)],
+		does: row.does
+	}));
+	return [...keys, ...pointerPresses];
+}
+
+/**
+ * What the review does at a keystroke it has a key for; nothing at any
+ * other. A key something on the page has already answered is not the
+ * review's, nor one an input method is composing a word with; while the help
+ * is open the keys are the help's; while a field is being typed in, only a
+ * chord is the review's.
+ */
+function answerTo(review: Review, event: KeyboardEvent): Press['run'] {
+	if (event.defaultPrevented || isComposingText(event) || review.guide.helpOpen) return undefined;
+	const press = liveRows(KEYMAP, review)
 		.flatMap((row) => row.presses)
 		.find((candidate) => isPressed(candidate.chord, event));
 	// A chord the element it is pressed in answers is left to it
-	if (!press?.run || (press.chord.held.length === 0 && isTypingTarget(event.target))) return;
+	if (press === undefined || (press.chord.held.length === 0 && isTypingTarget(event.target))) return undefined;
+	return press.run;
+}
+
+/**
+ * Whether the review answers a keystroke, as it stands: asked by what holds
+ * the keyboard apart from where the reader reads, before the review hears
+ * the key.
+ */
+export function answersKey(review: Review, event: KeyboardEvent): boolean {
+	return answerTo(review, event) !== undefined;
+}
+
+/** Answer a keystroke the review has a key for. */
+export function pressKey(review: Review, event: KeyboardEvent): void {
+	const answer = answerTo(review, event);
+	if (answer === undefined) return;
 	event.preventDefault();
-	press.run(review);
+	answer(review);
 }

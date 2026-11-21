@@ -274,6 +274,10 @@ export type FollowResponse = Schemas['FollowResponse'];
 export type FileWindowResponse = Schemas['FileWindowResponse'];
 /** A file of the take on screen whole, every line on its new side: one the change may not have touched. */
 export type FileOfTakeResponse = Schemas['FileOfTakeResponse'];
+/** The word at a place in the code, and every place it stands as a name: none where nothing in the code is called so. */
+export type NameResponse = Schemas['NameResponse'];
+/** One place a name stands: where, the line it is on, what it defines it as, and whether the change wrote the line. */
+export type NamePlace = Schemas['NamePlace'];
 export type VersionsResponse = Schemas['VersionsResponse'];
 /** The diff taken again: how many files, which round, and what changed since it began. */
 export type RetakeResponse = Schemas['RetakeResponse'];

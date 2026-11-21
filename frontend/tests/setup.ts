@@ -56,6 +56,27 @@ if (!Element.prototype.scrollIntoView) {
 	Element.prototype.scrollIntoView = vi.fn();
 }
 Element.prototype.scrollTo ??= vi.fn();
+// A stretch of text has no box where nothing is laid out: a name pressed stands nowhere, on no line
+Range.prototype.getBoundingClientRect ??= () => new DOMRect();
+Range.prototype.getClientRects ??= () => [] as unknown as DOMRectList;
+
+/** Stands for a highlight of the page's text, which jsdom, drawing nothing, has none of: the stretches it holds. */
+class UndrawnHighlight extends Set<AbstractRange> {
+	constructor(...ranges: AbstractRange[]) {
+		super(ranges);
+	}
+}
+
+// The highlights of the page's text: kept by name, and drawn nowhere. Where jsdom has a CSS it lacks them
+globalThis.CSS ??= {} as typeof CSS;
+Object.defineProperty(CSS, 'highlights', { value: new Map(), configurable: true });
+globalThis.Highlight ??= UndrawnHighlight as unknown as typeof Highlight;
+
+// The caret under the pointer, which jsdom has no way to say: read by its position, as most browsers do, and
+// falling on nothing until a test says where. Put back before every test, as one may take it away
+beforeEach(() => {
+	Object.defineProperty(document, 'caretPositionFromPoint', { configurable: true, value: () => null });
+});
 
 /** Never reports: jsdom has no layout, so nothing it watches ever changes size. */
 class SilentResizeObserver implements ResizeObserver {

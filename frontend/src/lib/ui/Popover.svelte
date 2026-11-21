@@ -12,6 +12,17 @@
 		return pane.querySelector<HTMLElement>(FOCUSABLE);
 	}
 
+	/**
+	 * Whether a key leaves a pane by Tab at one of its ends: Shift+Tab from the pane itself or the first of what
+	 * takes the keyboard in it, Tab from the last.
+	 */
+	function leavesAtAnEnd(pane: HTMLElement, event: KeyboardEvent): boolean {
+		if (event.key !== 'Tab') return false;
+		const stops = [pane, ...pane.querySelectorAll<HTMLElement>(FOCUSABLE)];
+		const focused = document.activeElement;
+		return event.shiftKey ? focused === pane || focused === stops[1] : focused === stops.at(-1);
+	}
+
 	/** What has the keyboard, if anything on the page does. */
 	function focusedElement(): HTMLElement | null {
 		const focused = document.activeElement;
@@ -21,11 +32,29 @@
 
 <script lang="ts">
 	import { tick, untrack, type Snippet } from 'svelte';
+	import { EveryFrame } from '$lib/dom/every-frame';
 	import { isComposingText } from '$lib/dom/keyboard';
-	import { arrowOffsetTo, type PaneHead, type PaneWidth, type Placement, type TriggerProps } from './pane';
+	import { type AreaBox, boxInArea, sameBox } from '$lib/dom/scroll-area';
+	import {
+		arrowOffsetAlong,
+		pixels,
+		type PaneHead,
+		type PaneWidth,
+		type Placement,
+		type Spot,
+		type TriggerProps
+	} from './pane';
 	import PopoverPanel from './PopoverPanel.svelte';
 
-	interface Props {
+	/**
+	 * What the pane stands by: the control that opens it, drawn by whoever uses the popover, carrying the props it
+	 * is handed; or, where nothing on the page is its control, a spot in the area it is drawn in — a name pressed in
+	 * the code — which the pane follows while it is open, scrolling with what the area holds. A spot is no control:
+	 * what stands there is pressed and picked out as if no pane stood by it.
+	 */
+	type StandsBy = { trigger: Snippet<[TriggerProps]> } | { at: Spot };
+
+	type Props = StandsBy & {
 		/** Whether the pane is open: the reader's to change, by the control or by leaving the pane. */
 		open: boolean;
 		/** What the pane is called, said to whoever cannot see it. */
@@ -41,14 +70,12 @@
 		'data-tour'?: string | undefined;
 		/** A key pressed inside it, for a pane that answers one of its own. */
 		onkeydown?: ((event: KeyboardEvent) => void) | undefined;
-		/** The control that opens it, drawn by whoever uses the popover, carrying the props it is handed. */
-		trigger: Snippet<[TriggerProps]>;
 		children: Snippet;
 		/** What stays at its foot while what it holds scrolls: the act it leads to, or what it asks of the reader. */
 		foot?: Snippet | undefined;
 		/** Whether its foot asks something of the reader, standing apart from the pane on the page's plainest ground. */
 		footAsks?: boolean;
-	}
+	};
 
 	let {
 		open = $bindable(),
@@ -60,10 +87,10 @@
 		testId,
 		'data-tour': tour,
 		onkeydown,
-		trigger,
 		children,
 		foot,
-		footAsks = false
+		footAsks = false,
+		...standsBy
 	}: Props = $props();
 
 	const paneId = $props.id();
@@ -79,8 +106,12 @@
 	// which still leaves it here
 	let keyboardHere = false;
 
-	// How far in from the edge the pane lines up with the arrow points
-	const arrowOffset = $derived(open ? arrowOffsetTo(control) : 0);
+	// What the pane stands by where no control opens it, and its box in the room of the area the pane is drawn in,
+	// as it stood when last read
+	const at = $derived('at' in standsBy ? standsBy.at : null);
+	let spot = $state.raw<AreaBox | null>(null);
+	// How far in from the edge the pane lines up with the arrow points: the middle of what it stands by
+	const arrowOffset = $derived(open ? arrowOffsetAlong(spot?.width ?? control?.offsetWidth ?? 0) : 0);
 	// What heads the pane where it is headed: its heading, and the way to close it as Escape does
 	const head = $derived<PaneHead | undefined>(heading === undefined ? undefined : { heading, close, aside });
 
@@ -90,6 +121,26 @@
 		'aria-controls': open ? paneId : undefined,
 		onclick: () => (open = !open),
 		[HELD_AS_CONTROL]: holdControl
+	});
+
+	/** Move the box the pane stands by to where its spot stands now, in the room of what the box is placed in. */
+	function placeSpot() {
+		const area = around?.offsetParent;
+		const stands = at?.() ?? null;
+		if (stands === null || !(area instanceof HTMLElement)) return;
+		const read = boxInArea(area, stands);
+		// Where it stood is read apart from the fit that asks for this: the pane follows a spot that moved, and is
+		// fitted again only as its panel says
+		const stood = untrack(() => spot);
+		if (stood === null || !sameBox(read, stood)) spot = read;
+	}
+
+	// Open by a spot, the pane follows it, read where it stands each frame: its line wraps as the window narrows,
+	// and what stands above it grows with nothing scrolled or resized
+	$effect(() => {
+		if (!open || at === null) return;
+		const following = new EveryFrame(placeSpot);
+		return () => following.stop();
 	});
 
 	/** The control announces itself as it is drawn, and is let go as it goes. */
@@ -112,11 +163,12 @@
 		open = false;
 	}
 
-	// Opening, it notes what has the keyboard, before the pane is drawn and takes it; closing, it
-	// hands the keyboard back, rather than leave it nowhere
+	// Opening, it notes what has the keyboard, before the pane is drawn and takes it; closing, or going while
+	// open, as a pane by a spot goes with what it stood by, it hands the keyboard back, rather than leave it nowhere
 	$effect.pre(() => {
-		if (open) untrack(noteOpening);
-		else untrack(handBack);
+		if (!open) return;
+		untrack(noteOpening);
+		return () => untrack(handBack);
 	});
 
 	function noteOpening() {
@@ -155,6 +207,18 @@
 		if (open) open = false;
 	}
 
+	/**
+	 * A key pressed inside the pane: Tab past either end of a pane by a spot closes it, the keyboard going back to
+	 * what had it as the pane opened. Such a pane stands apart from its spot in the page's order, at the end of the
+	 * area it is drawn in, and Tab would go on from there, far from the spot. Any other key is the pane's own.
+	 */
+	function answerKey(event: KeyboardEvent) {
+		if (at !== null && pane && leavesAtAnEnd(pane, event)) {
+			event.preventDefault();
+			open = false;
+		} else onkeydown?.(event);
+	}
+
 	/** Pressing anywhere outside closes the pane, and leaves the keyboard where the reader pressed. */
 	function closeIfOutside(event: PointerEvent) {
 		if (!open || !around || !(event.target instanceof Node) || around.contains(event.target)) return;
@@ -174,8 +238,19 @@
 <svelte:document onpointerdown={closeIfOutside} />
 <svelte:window onkeydown={closeOnEscape} />
 
-<div bind:this={around} class="relative" onfocusin={() => (keyboardHere = true)} onfocusout={noteKeyboardLeaving}>
-	{@render trigger(triggerProps)}
+<div
+	bind:this={around}
+	class={at === null ? 'relative' : 'cr-ui-popover-spot'}
+	style:--cr-spot-left={pixels(spot?.left)}
+	style:--cr-spot-top={pixels(spot?.top)}
+	style:--cr-spot-width={pixels(spot?.width)}
+	style:--cr-spot-height={pixels(spot?.height)}
+	onfocusin={() => (keyboardHere = true)}
+	onfocusout={noteKeyboardLeaving}
+>
+	{#if 'trigger' in standsBy}
+		{@render standsBy.trigger(triggerProps)}
+	{/if}
 	{#if open}
 		<!-- It takes the keyboard itself, as a native dialog does, so a press on its words keeps it in -->
 		<PopoverPanel
@@ -192,8 +267,9 @@
 			comesIn
 			{arrowOffset}
 			{head}
+			place={at === null ? undefined : placeSpot}
 			{testId}
-			{onkeydown}
+			onkeydown={answerKey}
 			{foot}
 			{footAsks}
 		>

@@ -39,6 +39,7 @@ import { Rounds } from '$lib/review/rounds.svelte';
 import { ServerLink } from '$lib/review/server-link.svelte';
 import { Submission } from '$lib/review/submission.svelte';
 import { Telling } from '$lib/review/telling.svelte';
+import { type NamePointing, namePointingIn } from '$lib/review/name-lookup.svelte';
 import { Navigator } from '$lib/review/navigator';
 import { Threads } from '$lib/review/threads.svelte';
 import { WayBack } from '$lib/review/way-back.svelte';
@@ -128,6 +129,8 @@ export class Review {
 	// Where the page is taking the reader: one jump at a time, whether to a section or to a part of the story
 	readonly #jumps = new Jumps();
 	readonly sections = new FileSections(this.#jumps);
+	/** How names in the code are pointed at to look them up, wherever it is drawn: none where the gesture is not offered. */
+	readonly namePointing: NamePointing | null;
 	/** The parts of the story on the page — its overview, each chapter, what it leaves out — and which is being read. */
 	readonly parts = new ReadingParts(this.#jumps);
 	/** The ways the review is read — file by file, a file it did not touch alone, or as its story — and which is on screen. */
@@ -161,6 +164,7 @@ export class Review {
 		this.where = facts.where;
 		this.identity = facts.identity;
 		this.limits = facts.limits;
+		this.namePointing = namePointingIn(facts.where.kind);
 		this.settings = reader.settings;
 		this.layout = reader.layout;
 		this.sound = reader.sound;

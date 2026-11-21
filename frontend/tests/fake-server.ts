@@ -54,6 +54,7 @@ const ROUTES = [
 	'GET /api/versions',
 	'GET /api/file-window',
 	'GET /api/file-of-take',
+	'GET /api/name',
 	'GET /api/settings',
 	'PUT /api/settings',
 	'GET /api/guide',
