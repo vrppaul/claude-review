@@ -23,8 +23,9 @@ const IN_TWO_CHAPTERS = storyHeld({
 
 // The release the reader was shown last, as the guide keeps it
 const RELEASE_SEEN = '1.5.0';
-// What the page says of a reader who pressed Story or had the story on screen: that they tried it
-const STORY_TRIED = ['PUT /api/guide'];
+// Every request of a page that drew the change's files and whose reader pressed Story or had the story on screen:
+// the names its tree lists, then that they tried the story
+const STORY_TRIED = ['GET /api/names-touched', 'PUT /api/guide'];
 
 /** A server that keeps the reader's choices and how far they were shown around, and takes every story asked for or stopped. */
 function serving(): FakeServer {
