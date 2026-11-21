@@ -61,10 +61,15 @@
   key is held. Where the review cannot look, the pane says why, with "Try
   again". "Go to symbol" takes you to the place, the name marked on the
   line, reading in a line the diff left out, or opening a file the change
-  did not touch alone. Help lists the press. A review of files or of a
-  conversation has no repository to look through, and a browser that
-  cannot say where its caret stands or mark text offers no lookup: the
-  press does nothing there.
+  did not touch alone. Full, beside Compact in the pane's head, reads the
+  same places in a window over the page: the list on the left, and on the
+  right the code round the place chosen, nine lines either side, under its
+  file, what it stands in and whether the change wrote its line. Press a
+  place or Tab to it to choose it; "Go to symbol" at the window's foot
+  goes there, and Compact brings the pane back. Help lists the press. A
+  review of files or of a conversation has no repository to look through,
+  and a browser that cannot say where its caret stands or mark text offers
+  no lookup: the press does nothing there.
 
 ### Changed
 - **Help's "What's new" names no release.** The news it opens is of the
@@ -78,6 +83,10 @@
   `outdated`.
 
 ### Fixed
+- **A key pressed in a modal stays in it.** j pressed in the question
+  asked before a story is written stepped to the next line of the page
+  under it; a modal now keeps every key it is pressed in, and Escape
+  still closes it.
 - **The notice that files changed on disk goes once they are back.** A
   file made and removed again, or one put back as HEAD has it, left the
   notice standing over a diff that was true again. The review hears every

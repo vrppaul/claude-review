@@ -286,10 +286,9 @@ Where a thing is:
 
 What a thing is:
 
-- [ ] `feat(ui)`: the rest of the name lookup's design: the Compact | Full
-      switch and the Full window, each place's code beside the list; the
-      names a change touches in the tree, and the lookup opened from there;
-      the lookup in the news and as a stop of the tour.
+- [ ] `feat(ui)`: the rest of the name lookup's design: the names a change
+      touches in the tree, and the lookup opened from there; the lookup in
+      the news and as a stop of the tour.
 - [ ] `feat`: the agent's chip of a file the change did not touch
       (`Navigator.showFile`: an answer's file, a file a check names, the
       agent's work) says "not in the diff yet" and goes nowhere, and a
