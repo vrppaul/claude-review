@@ -3,6 +3,7 @@
 	import { filesOutsideTheChange } from '$lib/review/files-way';
 	import type { FoundOutside } from '$lib/review/names-outside.svelte';
 	import type { NameDefined } from '$lib/types';
+	import BreathingDots from '$lib/ui/BreathingDots.svelte';
 	import Heading from '$lib/ui/Heading.svelte';
 	import Row from '$lib/ui/Row.svelte';
 	import Standing from '$lib/ui/Standing.svelte';
@@ -24,6 +25,8 @@
 
 	// What the line under the names found says, counting those not listed
 	const MORE_NAMES: CountedWords = { one: 'more name', many: 'more names' };
+	// What the line under them says while the review still outlines files that may hold more
+	const LOOKING = 'Looking in more files';
 
 	const review = useReview();
 
@@ -41,7 +44,7 @@
 	}
 </script>
 
-{#if outside.length > 0 || found.names.length > 0}
+{#if outside.length > 0 || found.names.length > 0 || found.looking}
 	<!-- Under the change's own files, what it did not touch: the files the reader reads or left something in, one
 		press to read each alone; and the names the filter finds, one press to where each is defined -->
 	<div data-testid="not-in-this-change" class="mt-3 flex flex-col gap-1">
@@ -96,11 +99,16 @@
 					</li>
 				{/each}
 			</ul>
-			{#if found.more > 0}
-				<Standing tone="faint" stands="under-a-list" testId="outside-names-more"
-					>{counted(found.more, MORE_NAMES)}</Standing
-				>
-			{/if}
+		{/if}
+		{#if found.looking}
+			<!-- The review is outlining files that may hold more: what it found so far stands, and more come -->
+			<Standing tone="quiet" stands="under-a-list" testId="outside-names-looking"
+				><BreathingDots tone="quiet" testId="outside-names-looking-dots" />{LOOKING}</Standing
+			>
+		{:else if found.more > 0}
+			<Standing tone="faint" stands="under-a-list" testId="outside-names-more"
+				>{counted(found.more, MORE_NAMES)}</Standing
+			>
 		{/if}
 	</div>
 {/if}

@@ -93,9 +93,13 @@
 - **The filter finds names outside the change too.** Under the tree,
   "Not in this change" lists the functions and classes the repository
   defines whose names hold what you typed, each with its file; pressing
-  one takes you to it. Twenty are listed, and a line counts the rest. The
-  review reads each file's names once, so a later search, or the names of
-  a later round, read only the files that changed.
+  one takes you to it. Twenty are listed, and a line counts the rest. A
+  file's names are read once ever: kept in `~/.cache/claude-review` by what
+  the file holds, so a later review reads only the files that changed.
+  They are read in several processes, the files a search waits for first,
+  and the review starts on the whole tree as you come to the filter;
+  where a search outruns them, what is found so far shows over breathing
+  dots, and the rest follows.
 
 ### Changed
 - **Help's "What's new" names no release.** The news it opens is of the

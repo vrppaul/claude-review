@@ -5,7 +5,7 @@
  * diff on screen.
  */
 
-import { readNamesFound } from '$lib/api/review-api';
+import { makeNamesReady, readNamesFound } from '$lib/api/review-api';
 import type { DiffReading, ReviewDiff } from '$lib/review/review-diff.svelte';
 import type { NameDefined } from '$lib/types';
 
@@ -21,6 +21,8 @@ export interface FoundOutside {
 	 * which every name was listed. While not, none listed proves nothing.
 	 */
 	whole: boolean;
+	/** Whether the review is still outlining files that may hold more: it is asked again until it is not. */
+	looking: boolean;
 }
 
 /** What was asked: a text, of one reading of the diff. */
@@ -35,9 +37,9 @@ interface Said extends Asking {
 }
 
 // What a text nothing was asked of finds, and what a read that failed leaves: nothing is drawn of either
-const NOTHING_FOUND: FoundOutside = { names: [], more: 0, whole: true };
+const NOTHING_FOUND: FoundOutside = { names: [], more: 0, whole: true, looking: false };
 // What a text has before the review said anything of the diff on screen
-const NOTHING_SAID_YET: FoundOutside = { names: [], more: 0, whole: false };
+const NOTHING_SAID_YET: FoundOutside = { names: [], more: 0, whole: false, looking: false };
 
 /** What calls off an asking never begun: an empty text is not asked. */
 function nothingToCallOff(): void {}
@@ -47,6 +49,8 @@ export class NamesOutside {
 	#said = $state.raw<Said | null>(null);
 	// The last asked: an answer to any other is of a text or a diff no longer on screen
 	#asked: Asking | null = null;
+	// The take whose files the review was last asked to outline, ahead of any search
+	#madeReady: number | null = null;
 
 	/** @param diff the diff on screen, whose reading the names are asked of and handed out with */
 	constructor(diff: ReviewDiff) {
@@ -78,7 +82,16 @@ export class NamesOutside {
 		const narrowed = text.includes(said.text) && said.found.whole && said.found.more === 0;
 		// Lower-cased, as the text sought is and as the review matches it
 		const names = said.found.names.filter((name) => name.name.toLowerCase().includes(text));
-		return { names, more: 0, whole: narrowed };
+		return { names, more: 0, whole: narrowed, looking: said.found.looking };
+	}
+
+	/** Have the review outline every file of the diff on screen, once for each take, as the reader comes to the filter. */
+	makeReady(): void {
+		const take = this.#diff.reading.take;
+		if (this.#madeReady === take) return;
+		this.#madeReady = take;
+		// Nothing is said of a review that could not begin: the first search outlines what it needs all the same
+		makeNamesReady().catch(() => undefined);
 	}
 
 	async #ask(asking: Asking): Promise<void> {
@@ -88,11 +101,14 @@ export class NamesOutside {
 			const answer = await readNamesFound(asking.reading.asked, asking.text);
 			// Read once a retake had landed: of a take the diff on screen is not, and the new diff on its way
 			if (answer.take !== asking.reading.take) return;
-			found = { names: answer.names, more: answer.more, whole: true };
+			found = { names: answer.names, more: answer.more, whole: answer.complete, looking: !answer.complete };
 		} catch {
 			// Nothing is drawn of names that could not be found: the tree stands alone, as for a text none holds
 			found = NOTHING_FOUND;
 		}
-		if (this.#asked === asking) this.#said = { ...asking, found };
+		if (this.#asked !== asking) return;
+		this.#said = { ...asking, found };
+		// The review answered with the files it had outlined: the rest come to whoever asks again
+		if (found.looking) await this.#ask(asking);
 	}
 }

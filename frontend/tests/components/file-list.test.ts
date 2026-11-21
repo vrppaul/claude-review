@@ -973,7 +973,12 @@ describe('the names the change touched, under their files', () => {
 			line: 12,
 			column: 16
 		};
-		const failedFound: NamesFoundResponse = { take: FIRST_TAKE, names: [failedRun, failedTimes], more: 0 };
+		const failedFound: NamesFoundResponse = {
+			take: FIRST_TAKE,
+			names: [failedRun, failedTimes],
+			more: 0,
+			complete: true
+		};
 
 		it('lists them under “Not in this change”, what answered lit, each by its file, asking only what was typed last', async () => {
 			const user = userEvent.setup();
@@ -1046,8 +1051,8 @@ describe('the names the change touched, under their files', () => {
 			await user.clear(getByTestId('file-filter'));
 			await user.type(getByTestId('file-filter'), 'fai');
 			await vi.waitFor(() => expect(found.requests).toHaveLength(3));
-			found.answer(2, { take: FIRST_TAKE, names: [failedTimes], more: 0 });
-			found.answer(1, { take: FIRST_TAKE, names: [failedRun], more: 0 });
+			found.answer(2, { take: FIRST_TAKE, names: [failedTimes], more: 0, complete: true });
+			found.answer(1, { take: FIRST_TAKE, names: [failedRun], more: 0, complete: true });
 			await settled();
 
 			expect(whileAsking).toEqual(['FailedRun attempts.ts']);
@@ -1066,7 +1071,7 @@ describe('the names the change touched, under their files', () => {
 			await findAllByTestId('name-item');
 			await user.type(getByTestId('file-filter'), 'failx');
 			await vi.waitFor(() => expect(found.requests).toHaveLength(1));
-			found.answer(0, { take: FIRST_TAKE, names: [], more: 0 });
+			found.answer(0, { take: FIRST_TAKE, names: [], more: 0, complete: true });
 			await findByTestId('no-matches');
 
 			await user.keyboard('{Backspace}');
@@ -1076,6 +1081,45 @@ describe('the names the change touched, under their files', () => {
 
 			expect(whileAsking).toBeNull();
 			expect(await findAllByTestId('outside-name')).toHaveLength(2);
+		});
+
+		it('asks again while the review is still outlining files, breathing under those found so far until the rest come', async () => {
+			const user = userEvent.setup();
+			const server = fakeServer();
+			server.answer('GET /api/names-touched', namesOfHandler);
+			const found = server.hold('GET /api/names-found');
+			const review = openReview({ files: diffFiles });
+			const { findAllByTestId, getByTestId, queryAllByTestId, queryByTestId } = render(FileList, inReview(review));
+			await findAllByTestId('name-item');
+			await user.type(getByTestId('file-filter'), 'fail');
+			await vi.waitFor(() => expect(found.requests).toHaveLength(1));
+			found.answer(0, { take: FIRST_TAKE, names: [failedRun], more: 0, complete: false });
+			await vi.waitFor(() => expect(found.requests).toHaveLength(2));
+			const soFar = [queryAllByTestId('outside-name').length, queryByTestId('outside-names-looking') !== null];
+
+			found.answer(1, failedFound);
+			await settled();
+
+			expect([soFar, queryAllByTestId('outside-name').length, queryByTestId('outside-names-looking')]).toEqual([
+				[1, true],
+				2,
+				null
+			]);
+		});
+
+		it('has the names made ready once as the reader first comes to the filter', async () => {
+			const server = fakeServer();
+			server.answer('GET /api/names-touched', namesOfHandler);
+			const review = openReview({ files: diffFiles });
+			const { findAllByTestId, getByTestId } = render(FileList, inReview(review));
+			await findAllByTestId('name-item');
+
+			getByTestId('file-filter').focus();
+			getByTestId('file-filter').blur();
+			getByTestId('file-filter').focus();
+			await settled();
+
+			expect(server.requestsTo('POST /api/names-found/ready')).toHaveLength(1);
 		});
 
 		it('draws none found in a take other than the diff on screen', async () => {

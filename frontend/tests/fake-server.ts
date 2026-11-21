@@ -58,6 +58,7 @@ const ROUTES = [
 	'GET /api/name',
 	'GET /api/names-touched',
 	'GET /api/names-found',
+	'POST /api/names-found/ready',
 	'GET /api/settings',
 	'PUT /api/settings',
 	'GET /api/guide',
@@ -277,6 +278,8 @@ export function fakeServer(): FakeServer {
 	server.answer('GET /api/names-touched', NO_NAMES_TOUCHED);
 	// Its filter, while it lists names, asks for those outside the change: unless a test says otherwise, none
 	server.answer('GET /api/names-found', NO_NAMES_FOUND);
+	// and the reader coming to the filter has every file outlined ahead of any search
+	server.answer('POST /api/names-found/ready', null);
 	serversThisTest.push(server);
 	vi.stubGlobal('fetch', (input: RequestInfo | URL, init?: RequestInit) => server.receive(input, init));
 	return server;
@@ -298,7 +301,7 @@ export function failOnUnanswered(): void {
 const NO_NAMES_TOUCHED: NamesTouchedResponse = { take: FIRST_TAKE, files: [] };
 
 /** What the review says of a text no name outside the change holds, in the take a test's review opens on. */
-const NO_NAMES_FOUND: NamesFoundResponse = { take: FIRST_TAKE, names: [], more: 0 };
+const NO_NAMES_FOUND: NamesFoundResponse = { take: FIRST_TAKE, names: [], more: 0, complete: true };
 
 /** What a reader who has never chosen anything has. */
 export const NEW_READER: ReaderSettings = {

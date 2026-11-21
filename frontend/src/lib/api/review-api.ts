@@ -101,6 +101,11 @@ export function readNamesFound(asked: DiffQuery, text: string): Promise<NamesFou
 	});
 }
 
+/** Have the review begin outlining every file of the take on screen, for the searches about to be typed. */
+export function makeNamesReady(): Promise<void> {
+	return send('post', '/api/names-found/ready', { doing: 'Could not make the names ready' });
+}
+
 /**
  * The query of a route that reads the diff one way, naming only what the reader changed: whitespace counts unless they
  * said otherwise.

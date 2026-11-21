@@ -120,6 +120,11 @@
 		review.sections.scrollTo(fileSectionKey(path));
 	}
 
+	/** The reader coming to the filter is about to search names: have the review begin outlining every file. */
+	function onFilterFocus() {
+		if (namesListed) outside.makeReady();
+	}
+
 	/**
 	 * Enter goes to the first file the filter leaves, or else the first name
 	 * it finds outside the change, as a click on it would; the down arrow
@@ -256,6 +261,7 @@
 				testId="file-filter"
 				placeholder={filteredBy.placeholder}
 				onkeydown={onFilterKey}
+				onfocus={onFilterFocus}
 			/>
 		</div>
 		{#if review.names.any}
