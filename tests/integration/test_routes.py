@@ -373,10 +373,50 @@ async def test_file_window_serves_lines_the_diff_left_out(repo_backed_client: As
     }
 
 
-async def test_file_window_refuses_to_leave_the_repository(repo_backed_client: AsyncClient) -> None:
-    response = await repo_backed_client.get("/api/file-window", params={"path": "../outside.txt", "start": 1, "end": 1})
+async def test_file_window_serves_the_take_whatever_was_saved_since(
+    repo_backed_client: AsyncClient, tmp_git_repo: Path
+) -> None:
+    """Read from the disk, the lines widened in would be numbered otherwise than the hunk they stand beside."""
+    write_files(tmp_git_repo, {APP_FILE: "a line saved after the take\n"})
 
-    assert response.status_code == HTTPStatus.BAD_REQUEST
+    response = await repo_backed_client.get(
+        "/api/file-window", params={"path": APP_FILE, "start": WIDENED_FROM, "end": WIDENED_TO}
+    )
+
+    assert response.json() == {
+        "start": WIDENED_FROM,
+        "lines": [_app_line(number) for number in range(WIDENED_FROM, WIDENED_TO + 1)],
+        "total": APP_LINES,
+    }
+
+
+@pytest.mark.parametrize(
+    "path",
+    ["../outside.txt", "/etc/hostname", f"{APP_FILE}\0more"],
+    ids=["above-the-repository", "absolute", "a-file-of-the-take-then-a-null-byte"],
+)
+async def test_file_window_serves_no_path_the_take_holds_no_file_at(
+    repo_backed_client: AsyncClient, tmp_git_repo: Path, path: str
+) -> None:
+    """The browser names the path, and the take's tree holds nothing outside the repository."""
+    write_files(tmp_git_repo.parent, {"outside.txt": "private\n"})
+
+    response = await repo_backed_client.get("/api/file-window", params={"path": path, "start": 1, "end": 1})
+
+    assert response.status_code == HTTPStatus.NOT_FOUND
+
+
+async def test_file_window_widens_a_link_into_its_own_line_never_the_file_it_points_at(
+    tmp_git_repo: Path, reviews: ReviewFactory
+) -> None:
+    """A link to an ignored `.env`: git keeps where it points as its one line, and the secret is in no tree."""
+    write_files(tmp_git_repo, {".gitignore": ".env\n", ".env": "TOKEN=hunter2\n"})
+    (tmp_git_repo / "settings").symlink_to(".env")
+
+    async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as client:
+        response = await client.get("/api/file-window", params={"path": "settings", "start": 1, "end": 1})
+
+    assert response.json()["lines"] == [".env"]
 
 
 async def test_file_window_refuses_a_path_longer_than_any_file_system_hands_out(
@@ -607,7 +647,7 @@ async def test_the_review_says_which_release_serves_it(client: AsyncClient) -> N
     assert response.json()["release"] == version("claude-review")
 
 
-async def test_file_window_widens_a_tracked_file_the_reviews_own_diff_does_not_hold(
+async def test_file_window_widens_a_file_of_the_take_the_reviews_own_diff_does_not_hold(
     tmp_git_repo: Path, reviews: ReviewFactory
 ) -> None:
     """Read against another base, the diff on screen holds files the review's own does not; never an ignored one."""

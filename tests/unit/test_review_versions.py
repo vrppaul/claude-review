@@ -1,6 +1,6 @@
 """Which bases a review offers, out of the marks it has left.
 
-The right-hand side of the diff is always the working tree, so a base is the
+The right-hand side of the diff is always the take, so a base is the
 only thing there is to choose — and the only ones worth offering are the ones
 that would show something. The repository here writes down a new tree each
 time it is asked and says one file differs from every base, so what is
@@ -22,6 +22,8 @@ from tests.without_git import ROOT, RepositoryWithoutGit, opened_without_git
 MARKED_AT = 1_791_000_000_000
 # What the repository says differs from a base: one file, named after the base
 MOVED_SINCE = "moved-since-{base}.py"
+# The tree the take on screen was written down as, which the bases on offer are counted against
+THE_TAKE = "the-take"
 
 
 class TreeThatMoves(StagedTree):
@@ -62,6 +64,10 @@ class RepositoryThatMoves(RepositoryWithoutGit):
     async def staged(self, path: Path) -> AsyncGenerator[TreeThatMoves]:
         yield TreeThatMoves(self)
 
+    @override
+    async def names_changed_between(self, path: Path, earlier: list[str], later: str) -> dict[str, list[str]]:
+        return {base: [MOVED_SINCE.format(base=base)] for base in earlier}
+
 
 class MarkingReview:
     """The bases of one review over a repository that moves, and its marks left one round at a time."""
@@ -81,7 +87,7 @@ class MarkingReview:
 
 async def _rounds_offered(review: MarkingReview) -> list[VersionOnOffer]:
     """The rounds on offer."""
-    return [version for version in await review.versions.offer() if isinstance(version.key, RoundKey)]
+    return [version for version in await review.versions.offer(THE_TAKE) if isinstance(version.key, RoundKey)]
 
 
 async def test_a_round_is_remembered_as_it_began() -> None:

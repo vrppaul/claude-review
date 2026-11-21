@@ -178,12 +178,16 @@ class RepositoryWithoutGit(ReviewedRepository):
         return ITS_CHECKOUT
 
     @override
-    async def diff_between(self, path: Path, earlier: str, later: str) -> str:
+    async def diff_between(self, path: Path, earlier: str, later: str, *, ignore_whitespace: bool) -> str:
         return ""
 
     @override
-    async def is_tracked(self, root: Path, relative_path: str) -> bool:
-        return True
+    async def names_changed_between(self, path: Path, earlier: list[str], later: str) -> dict[str, list[str]]:
+        return {base: [] for base in earlier}
+
+    @override
+    async def too_large_between(self, path: Path, earlier: str, later: str, files: list[DiffFile]) -> set[str]:
+        return set()
 
     @override
     async def paths_holding(self, root: Path, tree: str, word: str) -> list[str]:
@@ -251,8 +255,20 @@ class RepositoryHeldStill(RepositoryWithoutGit):
 
     def __init__(self, diff_files: list[DiffFile]) -> None:
         self._diff_files = diff_files
+        # What the tree it stages holds against each thing it can be read against: its change against its one
+        # commit, and nothing against the tree itself, which never moves
+        self._diff_against = {ITS_COMMIT: unified_diff_of(diff_files), TREE_HELD_STILL: ""}
+        self._too_large = _too_large_in(diff_files)
 
     @override
     @contextlib.asynccontextmanager
     async def staged(self, path: Path) -> AsyncGenerator[StagingHeldStill]:
         yield StagingHeldStill(self._diff_files)
+
+    @override
+    async def diff_between(self, path: Path, earlier: str, later: str, *, ignore_whitespace: bool) -> str:
+        return self._diff_against[earlier]
+
+    @override
+    async def too_large_between(self, path: Path, earlier: str, later: str, files: list[DiffFile]) -> set[str]:
+        return {file.path for file in files} & self._too_large

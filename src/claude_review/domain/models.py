@@ -202,6 +202,14 @@ class UnshownFileOfTake(BaseModel):
 type OpenedFileOfTake = FileOfTake | UnshownFileOfTake
 
 
+class FileWindow(BaseModel):
+    """A run of lines of a file of the take, from the line it starts at, and how many lines the file has."""
+
+    start: int
+    lines: list[str]
+    total: int
+
+
 class CommentSeverity(StrEnum):
     """How the reader means a comment to be taken.
 
@@ -295,6 +303,9 @@ EpochMillis = Annotated[int, Field(ge=0)]
 
 # The most lines an anchor keeps of what it was written against
 MAX_QUOTE_LINES = 200
+
+# The most lines one read of the lines a hunk left out hands back
+MAX_WINDOW_LINES = 2000
 
 # The largest file whose lines the diff shows. Nobody reads a longer one line
 # by line — it is a log, a bundle, a dump — and one 50 MB log, read whole,

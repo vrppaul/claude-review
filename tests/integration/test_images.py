@@ -15,11 +15,10 @@ import pytest
 from httpx2 import AsyncClient
 from structlog.typing import EventDict
 
-from claude_review.domain.models import LARGEST_FILE_SHOWN_BYTES, MAX_QUOTE_LINES, TurnAuthor
+from claude_review.domain.models import LARGEST_FILE_SHOWN_BYTES, MAX_QUOTE_LINES, MAX_WINDOW_LINES, TurnAuthor
 from claude_review.hosting.workspace import ReviewWorkspace
 from claude_review.presentation.schemas.base import MAX_TEXT_LENGTH
 from claude_review.presentation.schemas.feedback import MAX_FEEDBACK_WORDS
-from claude_review.services.file_window_service import MAX_WINDOW_LINES
 from claude_review.services.image_service import MAX_IMAGE_BYTES, MAX_IMAGES_PER_MESSAGE, MAX_REVIEW_BYTES
 from tests.helpers import (
     CONVERSATION_ROUTE,

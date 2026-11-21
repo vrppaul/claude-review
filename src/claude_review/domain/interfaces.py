@@ -80,16 +80,20 @@ class Repository(ABC):
         """Return what the working tree has checked out: its branch, or the commit HEAD names when it is on none."""
 
     @abstractmethod
-    async def diff_between(self, path: Path, earlier: str, later: str) -> str:
-        """The unified diff from one tree a staging wrote down to another: what changed between two takes."""
-
-
-class TrackedPaths(ABC):
-    """Whether the repository keeps a file."""
+    async def diff_between(self, path: Path, earlier: str, later: str, *, ignore_whitespace: bool) -> str:
+        """The unified diff from a base or a tree a staging wrote down to such a tree: a take against either."""
 
     @abstractmethod
-    async def is_tracked(self, root: Path, relative_path: str) -> bool:
-        """Whether the repository tracks the file at this path."""
+    async def names_changed_between(self, path: Path, earlier: list[str], later: str) -> dict[str, list[str]]:
+        """For each base or tree written down that git will say it of, the paths that differ from such a tree.
+
+        Raises:
+            GitError: if no tree was ever written down to be read.
+        """
+
+    @abstractmethod
+    async def too_large_between(self, path: Path, earlier: str, later: str, files: list[DiffFile]) -> set[str]:
+        """Of files that diff shows no lines of, those too large to read, in the earlier or the later, by path."""
 
 
 class TreesRead(ABC):
@@ -123,7 +127,7 @@ class TreesRead(ABC):
         """
 
 
-class ReviewedRepository(Repository, TrackedPaths, TreesRead):
+class ReviewedRepository(Repository, TreesRead):
     """Everything a review asks of the repository it reviews."""
 
 

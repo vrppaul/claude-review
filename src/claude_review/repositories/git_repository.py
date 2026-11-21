@@ -77,12 +77,11 @@ GIT_SETTINGS = [argument for setting in PINNED_SETTINGS for argument in (SETTING
 # inherited from a git hook or the reader's shell: none is passed on, and a
 # command sets the ones it means. They are what `git rev-parse
 # --local-env-vars` lists, which say which repository, index, object store
-# and settings git reads; GIT_DIFF_OPTS, which beats --unified on the
-# command line; and the ways of matching a path git refuses to run beside
-# the literal one every command sets. A `safe.directory` handed down in
-# GIT_CONFIG_PARAMETERS goes with the rest; one in the reader's own
-# configuration still holds. What an option of every diff already
-# overrides, as --no-ext-diff does an external diff tool, needs no place here.
+# and settings git reads; and GIT_DIFF_OPTS, which beats --unified on the
+# command line. A `safe.directory` handed down in GIT_CONFIG_PARAMETERS goes
+# with the rest; one in the reader's own configuration still holds. What an
+# option of every diff already overrides, as --no-ext-diff does an external
+# diff tool, needs no place here.
 FOREIGN_GIT_VARIABLES = frozenset(
     {
         "GIT_ALTERNATE_OBJECT_DIRECTORIES",
@@ -101,14 +100,9 @@ FOREIGN_GIT_VARIABLES = frozenset(
         "GIT_SHALLOW_FILE",
         "GIT_COMMON_DIR",
         "GIT_DIFF_OPTS",
-        "GIT_GLOB_PATHSPECS",
-        "GIT_ICASE_PATHSPECS",
     }
 )
 
-# What every command sets: a path the review names is that path, never a
-# pattern — "[ab].py" is the file of that name, not a.py beside it
-EVERY_COMMAND_SETS = {"GIT_LITERAL_PATHSPECS": "1"}
 # What a command asked twice a second sets: it takes no lock it can do
 # without, so the agent's own `git add` never fails on `index.lock`
 WITHOUT_OPTIONAL_LOCKS = {"GIT_OPTIONAL_LOCKS": "0"}
@@ -146,8 +140,8 @@ DIFF_OF_TREES = ["diff", *DIFF_WRITTEN]
 
 # Ends the options, so a revision that follows can never be read as one
 END_OF_OPTIONS = "--end-of-options"
-# Leaves out changes that only alter whitespace
-IGNORING_WHITESPACE = "-w"
+# What a diff is asked with, by whether whitespace is left out of it: `-w` leaves out changes that only alter it
+WHITESPACE_OPTIONS = {True: ["-w"], False: []}
 # What ends each name git lists under -z, and each line it prints otherwise
 NAME_END = "\0"
 LINE_END = "\n"
@@ -168,7 +162,7 @@ OBJECTS_NAME = "objects"
 # answers a line to each: the size, or the name asked and that it is missing
 SIZES_ASKED = ["cat-file", "--batch-check=%(objectsize)"]
 # What stands between where a blob is and its path: `<base>:<path>` in a
-# base, `:<path>` in the index being staged
+# base or a tree, `:<path>` in the index being staged
 BLOB_AT = ":"
 
 # How git is asked which of a tree's files hold a word: the files by name alone, each name unquoted; the word
@@ -238,6 +232,25 @@ class OwnPaths(BaseModel):
     index: Path
 
 
+class ReadAgainst(BaseModel):
+    """What a diff reads a base against, as git is asked it: the index one staging holds, or a tree written down."""
+
+    # How the diff is asked, and what names the later side after the base
+    diff: list[str]
+    named: list[str]
+    # What stands before the colon where a blob of it is named
+    blobs_at: str
+
+
+# The index being staged: nothing names it after the base, nor before the colon of a blob in it
+AGAINST_THE_INDEX = ReadAgainst(diff=DIFF_STAGED, named=[], blobs_at="")
+
+
+def _against_tree(tree: str) -> ReadAgainst:
+    """A tree written down, as a diff reads a base against it: named after the base, and before a blob's colon."""
+    return ReadAgainst(diff=DIFF_OF_TREES, named=[tree], blobs_at=tree)
+
+
 class GitStagedTree(StagedTree):
     """The working tree as it stands, staged whole into an index of one operation's own.
 
@@ -263,8 +276,7 @@ class GitStagedTree(StagedTree):
         whitespace — a reindented block stops hiding the one line that
         actually changed inside it.
         """
-        arguments = [*DIFF_STAGED, *([IGNORING_WHITESPACE] if ignore_whitespace else [])]
-        return await _run(self._path, [*arguments, END_OF_OPTIONS, base], self._variables)
+        return await _diff(self._path, self._variables, base, AGAINST_THE_INDEX, ignore_whitespace=ignore_whitespace)
 
     @override
     async def write_tree(self) -> str:
@@ -286,54 +298,13 @@ class GitStagedTree(StagedTree):
 
     @override
     async def names_changed_since(self, bases: list[str]) -> dict[str, list[str]]:
-        """Which paths differ between each of these bases and the working tree.
-
-        The comparison a diff makes, asked for names alone: what a round
-        changed is a list of files, and reading the hunks to find it out
-        costs the whole diff. `-z` because git otherwise quotes and escapes
-        any path outside plain ASCII, and these are matched against the
-        paths already on screen.
-        """
-        changed: dict[str, list[str]] = {}
-        for base in bases:
-            try:
-                listed = await _run(
-                    self._path, [*DIFF_STAGED, "--name-only", "-z", END_OF_OPTIONS, base], self._variables
-                )
-            except GitError:
-                # One base git will not read — a repository with no HEAD, a
-                # tree that has been pruned — is one base missing from the
-                # answer, not the end of the question
-                log.warning("changed_since_refused", base=base)
-                continue
-            changed[base] = [name for name in listed.split(NAME_END) if name]
-        return changed
+        """Which paths differ between each of these bases and the working tree."""
+        return await _names_changed(self._path, self._variables, bases, AGAINST_THE_INDEX)
 
     @override
     async def too_large_to_show(self, base: str, files: list[DiffFile]) -> set[str]:
-        """Of files the diff shows no lines of, the paths of those over the size git reads, on either side.
-
-        Git reads no file over `core.bigFileThreshold` and says of it only that
-        it is binary, as it says of a file that is: the sizes stored tell the
-        two apart. Each side is asked by where it stands, a line to each, all
-        in one command; a path holding a line break cannot be asked so, and
-        stays as git said it.
-        """
-        asked = [
-            (file.path, side)
-            for file in files
-            if LINE_END not in file.path and LINE_END not in (file.old_path or "")
-            for side in _sides_stored(base, file)
-        ]
-        if not asked:
-            return set()
-        handed = "".join(f"{side}{LINE_END}" for _, side in asked)
-        sizes = _line_to_each(await _run(self._path, SIZES_ASKED, self._variables, handed=handed))
-        return {
-            path
-            for (path, _), size in zip(asked, sizes, strict=True)
-            if size.isdecimal() and int(size) > LARGEST_FILE_SHOWN_BYTES
-        }
+        """Of files the diff shows no lines of, the paths of those over the size git reads, on either side."""
+        return await _too_large(self._path, self._variables, files, base, AGAINST_THE_INDEX)
 
 
 class GitRepository(ReviewedRepository):
@@ -447,8 +418,8 @@ class GitRepository(ReviewedRepository):
         return (await _run(path, ["hash-object", "-t", "tree", os.devnull])).strip()
 
     @override
-    async def diff_between(self, path: Path, earlier: str, later: str) -> str:
-        """The unified diff from one tree written down to another, written as every diff here is.
+    async def diff_between(self, path: Path, earlier: str, later: str, *, ignore_whitespace: bool) -> str:
+        """The unified diff from a base or a tree written down to such a tree, written as every diff here is.
 
         A tree is written down only into the object store given here, which
         each staging lends the repository's own, so both are read from it.
@@ -456,8 +427,26 @@ class GitRepository(ReviewedRepository):
         Raises:
             GitError: if no object store was given, so no tree was ever written down, or git fails.
         """
-        arguments = [*DIFF_OF_TREES, END_OF_OPTIONS, earlier, later]
-        return await _run(path, arguments, self._reading_trees_written())
+        variables = self._reading_trees_written()
+        return await _diff(path, variables, earlier, _against_tree(later), ignore_whitespace=ignore_whitespace)
+
+    @override
+    async def names_changed_between(self, path: Path, earlier: list[str], later: str) -> dict[str, list[str]]:
+        """Which paths differ between each of these bases or trees and a tree written down.
+
+        Raises:
+            GitError: if no object store was given, so no tree was ever written down.
+        """
+        return await _names_changed(path, self._reading_trees_written(), earlier, _against_tree(later))
+
+    @override
+    async def too_large_between(self, path: Path, earlier: str, later: str, files: list[DiffFile]) -> set[str]:
+        """Of files that diff shows no lines of, the paths of those over the size git reads, in either tree.
+
+        Raises:
+            GitError: if no object store was given, so no tree was ever written down, or git fails.
+        """
+        return await _too_large(path, self._reading_trees_written(), files, earlier, _against_tree(later))
 
     @override
     async def paths_holding(self, root: Path, tree: str, word: str) -> list[str]:
@@ -546,15 +535,6 @@ class GitRepository(ReviewedRepository):
         return [entry[PORCELAIN_PATH_START:] for entry in listed.split(NAME_END) if entry]
 
     @override
-    async def is_tracked(self, root: Path, relative_path: str) -> bool:
-        """Whether the repository tracks the file at this path."""
-        try:
-            run = await _execute(root, ["ls-files", "--error-unmatch", "--", relative_path])
-        except GitError:
-            return False
-        return run.exit_code == 0
-
-    @override
     async def top_level(self, path: Path) -> Path | None:
         """The root of the repository containing ``path``.
 
@@ -625,13 +605,76 @@ async def _commit_named(path: Path, revision: str) -> str | None:
     return run.text.strip() if run.exit_code == 0 else None
 
 
-def _sides_stored(base: str, file: DiffFile) -> list[str]:
-    """Where each side of a file is stored, as git names a blob by where it stands: in the base, and in the index."""
+async def _diff(
+    path: Path, variables: dict[str, str], base: str, against: ReadAgainst, *, ignore_whitespace: bool
+) -> str:
+    """The unified diff from a base to what it is read against, written as every diff here is."""
+    arguments = [*against.diff, *WHITESPACE_OPTIONS[ignore_whitespace], END_OF_OPTIONS, base, *against.named]
+    return await _run(path, arguments, variables)
+
+
+async def _names_changed(
+    path: Path, variables: dict[str, str], bases: list[str], against: ReadAgainst
+) -> dict[str, list[str]]:
+    """Which paths differ between each of some bases and what they are read against, for each base git reads.
+
+    The comparison a diff makes, asked for names alone: what changed is a
+    list of files, and reading the hunks to find it out costs the whole
+    diff. `-z` because git otherwise quotes and escapes any path outside
+    plain ASCII, and these are matched against the paths already on screen.
+    """
+    changed: dict[str, list[str]] = {}
+    # Each base asked once: two rounds whose tree never moved are one tree
+    for base in dict.fromkeys(bases):
+        try:
+            listed = await _run(
+                path, [*against.diff, "--name-only", "-z", END_OF_OPTIONS, base, *against.named], variables
+            )
+        except GitError:
+            # One base git will not read — a repository with no HEAD, a
+            # tree that has been pruned — is one base missing from the
+            # answer, not the end of the question
+            log.warning("changed_since_refused", base=base)
+            continue
+        changed[base] = [name for name in listed.split(NAME_END) if name]
+    return changed
+
+
+async def _too_large(
+    path: Path, variables: dict[str, str], files: list[DiffFile], base: str, against: ReadAgainst
+) -> set[str]:
+    """Of files a diff shows no lines of, the paths of those over the size git reads, on either side of it.
+
+    Git reads no file over `core.bigFileThreshold` and says of it only that
+    it is binary, as it says of a file that is: the sizes stored tell the
+    two apart. Each side is asked by where it stands, a line to each, all
+    in one command; a path holding a line break cannot be asked so, and
+    stays as git said it.
+    """
+    asked = [
+        (file.path, side)
+        for file in files
+        if LINE_END not in file.path and LINE_END not in (file.old_path or "")
+        for side in _sides_stored(file, base, against)
+    ]
+    if not asked:
+        return set()
+    handed = "".join(f"{side}{LINE_END}" for _, side in asked)
+    sizes = _line_to_each(await _run(path, SIZES_ASKED, variables, handed=handed))
+    return {
+        path_asked
+        for (path_asked, _), size in zip(asked, sizes, strict=True)
+        if size.isdecimal() and int(size) > LARGEST_FILE_SHOWN_BYTES
+    }
+
+
+def _sides_stored(file: DiffFile, base: str, against: ReadAgainst) -> list[str]:
+    """Where each side of a file is stored, as git names a blob: in the base, and in what the base is read against."""
     sides = []
     if file.status != FileStatus.ADDED:
         sides.append(f"{base}{BLOB_AT}{file.old_path or file.path}")
     if file.status != FileStatus.DELETED:
-        sides.append(f"{BLOB_AT}{file.path}")
+        sides.append(f"{against.blobs_at}{BLOB_AT}{file.path}")
     return sides
 
 
@@ -671,7 +714,9 @@ def _line_to_each(answered: str) -> list[str]:
 def _can_be_asked(path: str) -> bool:
     """Whether git can be asked what a tree holds at a path, a line at a time and never against the working tree."""
     first_step, _, _ = path.partition(PATH_STEP_SEPARATOR)
-    return LINE_END not in path and first_step not in WORKING_TREE_STEPS
+    # Git reads a line it is asked no further than a NUL, and would answer for the path that stands before it
+    ends_its_line_early = LINE_END in path or NAME_END in path
+    return not ends_its_line_early and first_step not in WORKING_TREE_STEPS
 
 
 def _file_listed(entry: str) -> str | None:
@@ -751,7 +796,7 @@ async def _execute(
 def _git_environment(variables: dict[str, str]) -> dict[str, str]:
     """The environment a git command runs in: the inherited one without what is foreign to it, and what it sets."""
     inherited = {name: value for name, value in os.environ.items() if name not in FOREIGN_GIT_VARIABLES}
-    return inherited | EVERY_COMMAND_SETS | variables
+    return inherited | variables
 
 
 async def _stop(process: asyncio.subprocess.Process) -> None:

@@ -43,6 +43,7 @@ from claude_review.domain.models import (
     Anchor,
     CommentSeverity,
     FilePath,
+    FileWindow,
     LineAnchor,
     LineSide,
     NamedFile,
@@ -78,7 +79,6 @@ from claude_review.domain.page_events import (
 from claude_review.domain.story import Step, Story, StoryAsking, StoryHeld
 from claude_review.services.anchor_service import AnchorService, LineAnchorHandler, StoryAnchorHandler, TakeUnread
 from claude_review.services.exit_report import exit_report
-from claude_review.services.file_window_service import FileWindow
 from claude_review.services.image_service import ImageService, StoredImage
 from claude_review.services.place_words import place_in_words
 from claude_review.services.review.agent_inbox import AgentInbox, Silence

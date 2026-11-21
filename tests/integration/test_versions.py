@@ -1,6 +1,6 @@
-"""Choosing what the working tree is compared against.
+"""Choosing what the take on screen is compared against.
 
-The right-hand side of a review's diff is always the working tree, so the
+The right-hand side of a review's diff is always the take, so the
 base is the only thing there is to choose. A narrower one — the tree as some
 earlier round read it — answers "what has changed since I last looked",
 which is the question a round leaves behind.
@@ -127,6 +127,7 @@ async def test_the_diff_can_be_taken_against_a_round(tmp_git_repo: Path, reviews
     async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as client:
         await _mark(client)
         (tmp_git_repo / "answered.py").write_text("as the round asked\n")
+        await _mark(client)
 
         narrowed = (await client.get(DIFF_ROUTE, params={"base": "round:1"}, headers=LOCAL_HEADERS)).json()
 
@@ -167,6 +168,40 @@ async def test_the_review_keeps_its_own_diff_whatever_is_being_looked_at(
     assert narrowed["own_paths"] == ["from_the_start.py", "later.py", "renamed.txt"]
     assert narrowed["own_renames"] == [{"former_path": "initial.txt", "path": "renamed.txt"}]
     assert sorted(served["path"] for served in whole["files"]) == ["from_the_start.py", "later.py", "renamed.txt"]
+
+
+@pytest.mark.parametrize(
+    "asked", [{"base": "ref:HEAD"}, {"ignore_whitespace": True}], ids=["against-another-base", "whitespace-left-out"]
+)
+async def test_a_diff_read_another_way_is_of_the_take_whatever_was_saved_since(
+    tmp_git_repo: Path, reviews: ReviewFactory, asked: dict[str, str | bool]
+) -> None:
+    """Read of the tree as it stands now, its lines would be numbered otherwise than the threads on the take's."""
+    (tmp_git_repo / "initial.txt").write_text("changed in the take\n")
+
+    async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as client:
+        (tmp_git_repo / "initial.txt").write_text("saved after the take\n")
+        (tmp_git_repo / "made_since.py").write_text("made after the take\n")
+        [served] = (await client.get(DIFF_ROUTE, params=asked, headers=LOCAL_HEADERS)).json()["files"]
+
+    [hunk] = served["hunks"]
+    assert (served["path"], [line["content"] for line in hunk["lines"]]) == (
+        "initial.txt",
+        ["initial content", "changed in the take"],
+    )
+
+
+async def test_a_diff_is_not_read_another_way_of_a_take_git_wrote_no_tree_of(
+    tmp_git_repo: Path, reviews: ReviewFactory
+) -> None:
+    """The working tree as it stands is no stand-in for the take: the review's own diff stays, and says why not."""
+    (tmp_git_repo / "initial.txt").write_text("changed in the take\n")
+
+    async with http_client(reviews.app(await repository_opening(tmp_git_repo), keeps_marks=False)) as client:
+        own = await client.get(DIFF_ROUTE, headers=LOCAL_HEADERS)
+        another_way = await client.get(DIFF_ROUTE, params={"ignore_whitespace": True}, headers=LOCAL_HEADERS)
+
+    assert (own.status_code, another_way.status_code) == (HTTPStatus.OK, HTTPStatus.CONFLICT)
 
 
 async def test_the_diff_names_the_base_it_was_taken_against_and_whether_it_is_narrower_than_the_reviews(
@@ -265,12 +300,24 @@ async def test_a_count_git_will_not_take_is_not_a_count_of_zero(tmp_git_repo: Pa
     """A reader told nothing changed stops looking; one told nothing stops trusting the count."""
     (tmp_git_repo / "work.py").write_text("under review\n")
 
-    async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as client:
-        # An index git cannot read: the tree cannot be staged to be counted
-        (tmp_git_repo / ".git" / "index").write_bytes(b"not an index")
+    # No tree of the take is written down: there is nothing to count a base against
+    async with http_client(reviews.app(await repository_opening(tmp_git_repo), keeps_marks=False)) as client:
         offered = await _offered(client)
 
     assert offered[0]["changed"] is None
+
+
+async def test_a_base_counts_what_the_take_holds_since_it_whatever_was_saved_after(
+    tmp_git_repo: Path, reviews: ReviewFactory
+) -> None:
+    """The count and the diff its base opens agree: both are of the take on screen."""
+    (tmp_git_repo / "in_the_take.py").write_text("taken\n")
+
+    async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as client:
+        (tmp_git_repo / "saved_after.py").write_text("saved after the take\n")
+        [review, *_] = await _offered(client)
+
+    assert review["changed"] == 1
 
 
 async def test_the_diff_says_how_far_the_tree_has_moved_since_it_was_taken(

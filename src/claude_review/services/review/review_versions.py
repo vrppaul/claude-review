@@ -27,7 +27,7 @@ OPTION_MARK = "-"
 class ReviewVersions:
     """The bases one review offers, and what has moved since each of them.
 
-    The right-hand side of a review's diff is always the working tree, so a
+    The right-hand side of a review's diff is always its take, so a
     base is the only thing there is to choose. A ref is there to be chosen
     already; a round is not, until the tree it was read at has been written
     down — which is what `mark` does, each time the diff is taken.
@@ -75,7 +75,7 @@ class ReviewVersions:
         paths = (await staged.names_changed_since([began.tree])).get(began.tree)
         return ChangedSinceRound(round=began.round, paths=paths) if paths is not None else None
 
-    async def offer(self) -> list[VersionOnOffer]:
+    async def offer(self, taken_as: str | None) -> list[VersionOnOffer]:
         """Every base this review can be compared against, in reading order.
 
         What it opened with comes first — it is the review, and everything
@@ -87,7 +87,8 @@ class ReviewVersions:
         # under the name they gave it; offered again, it would be a second row
         # of the same name
         refs = [ref for ref in await self._refs() if ref.key != RefKey(name=self._opened.named_base or HEAD)]
-        counted = await self._counts([self._opened.pinned_base, *(mark.tree for mark in rounds)])
+        # Counted against the tree the take on screen was written down as, the one a base's diff is read of
+        counted = await self._counts([self._opened.pinned_base, *(mark.tree for mark in rounds)], taken_as)
 
         review = VersionOnOffer(key=ReviewKey(), at=None, changed=counted.get(self._opened.pinned_base))
         offered_rounds = [
@@ -186,16 +187,22 @@ class ReviewVersions:
     async def changed_since(self, bases: list[str]) -> dict[str, list[str]]:
         """The paths that differ between each base and the working tree now, for each git will say it of.
 
-        One staging of the tree, whatever the number of bases, and each base
-        asked once: two rounds whose tree never moved are one tree.
+        One staging of the tree, whatever the number of bases.
         """
         try:
             async with self._repository.staged(self._opened.root) as staged:
-                return await staged.names_changed_since(list(dict.fromkeys(bases)))
+                return await staged.names_changed_since(bases)
         except GitError as refusal:
             log.warning("staging_refused", reason=str(refusal))
             return {}
 
-    async def _counts(self, bases: list[str]) -> dict[str, int]:
-        """How many files differ from each base, when git will say: the reason to pick one base over another."""
-        return {base: len(paths) for base, paths in (await self.changed_since(bases)).items()}
+    async def _counts(self, bases: list[str], taken_as: str | None) -> dict[str, int]:
+        """How many files of a take differ from each base, when git will say: the reason to pick one over another."""
+        if taken_as is None:
+            return {}
+        try:
+            changed = await self._repository.names_changed_between(self._opened.root, bases, taken_as)
+        except GitError as refusal:
+            log.warning("bases_uncounted", reason=str(refusal))
+            return {}
+        return {base: len(paths) for base, paths in changed.items()}

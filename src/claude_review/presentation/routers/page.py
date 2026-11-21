@@ -20,7 +20,6 @@ from claude_review.domain.exceptions import (
     MessageAnsweredError,
     NoRepositoryError,
     NoWordHereError,
-    PathOutsideRepositoryError,
     QuestionNotInThreadError,
     ReviewEndedError,
     TakeNotWrittenError,
@@ -168,7 +167,10 @@ async def stop_the_story(review: ReviewDep) -> None:
     await review.stop_story()
 
 
-@router.get("/diff", responses=refusals(UnknownVersionError, NoRepositoryError, takes=Takes.PARAMETERS))
+@router.get(
+    "/diff",
+    responses=refusals(UnknownVersionError, NoRepositoryError, TakeNotWrittenError, takes=Takes.PARAMETERS),
+)
 async def get_diff(
     review: ReviewDep,
     *,
@@ -200,7 +202,7 @@ async def get_diff(
 
 @router.get("/versions")
 async def offered_versions(review: ReviewDep) -> VersionsResponse:
-    """Say what the working tree can be compared against: nothing at all, for files or a conversation."""
+    """Say what the take on screen can be compared against: nothing at all, for files or a conversation."""
     opened_against = review.standing().opened_against
     return VersionsResponse(versions=[review_version(offered, opened_against) for offered in await review.offer()])
 
@@ -209,8 +211,8 @@ async def offered_versions(review: ReviewDep) -> VersionsResponse:
     "/file-window",
     responses=refusals(
         NoRepositoryError,
+        TakeNotWrittenError,
         LineRangeError,
-        PathOutsideRepositoryError,
         FileNotInReviewError,
         FileUnreadableError,
         takes=Takes.PARAMETERS,

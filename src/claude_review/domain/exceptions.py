@@ -90,12 +90,8 @@ class LineRangeError(InvalidRequestError):
     """Raised when lines are asked for that no file could have: a range that runs backwards."""
 
 
-class PathOutsideRepositoryError(InvalidRequestError):
-    """Raised when a path is not one inside the repository under review."""
-
-
 class FileNotInReviewError(NotFoundError):
-    """Raised when a file is asked for that the review neither holds nor tracks, or that is not there."""
+    """Raised when a file is asked for that what the review reads does not hold: its diff, or the take's tree."""
 
 
 class FileUnreadableError(RefusedError):

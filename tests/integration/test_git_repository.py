@@ -183,7 +183,7 @@ async def test_what_changed_between_two_snapshots_is_what_the_work_between_them_
     later = await _written_tree(repo, tmp_git_repo)
     (tmp_git_repo / "work.txt").write_text("third pass, after both\n")
 
-    between = await repo.diff_between(tmp_git_repo, earlier, later)
+    between = await repo.diff_between(tmp_git_repo, earlier, later, ignore_whitespace=False)
 
     assert ("-first pass" in between, "+second pass" in between, "+written between" in between) == (True, True, True)
     assert ("third pass" in between, "untouched.txt" in between) == (False, False)
@@ -191,7 +191,7 @@ async def test_what_changed_between_two_snapshots_is_what_the_work_between_them_
 
 async def test_two_snapshots_are_not_compared_without_a_store_that_kept_them(tmp_git_repo: Path) -> None:
     with pytest.raises(GitError):
-        await GitRepository(objects=None).diff_between(tmp_git_repo, HEAD, HEAD)
+        await GitRepository(objects=None).diff_between(tmp_git_repo, HEAD, HEAD, ignore_whitespace=False)
 
 
 async def test_a_snapshot_is_refused_without_a_store_to_keep_it(tmp_git_repo: Path) -> None:

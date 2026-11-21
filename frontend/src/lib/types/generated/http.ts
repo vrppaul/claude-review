@@ -194,7 +194,7 @@ export interface paths {
         };
         /**
          * Offered Versions
-         * @description Say what the working tree can be compared against: nothing at all, for files or a conversation.
+         * @description Say what the take on screen can be compared against: nothing at all, for files or a conversation.
          */
         get: operations["offered_versions_api_versions_get"];
         put?: never;
@@ -2905,6 +2905,15 @@ export interface operations {
                     "application/json": components["schemas"]["Refusal"];
                 };
             };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Refusal"];
+                };
+            };
             /** @description Unprocessable Content */
             422: {
                 headers: {
@@ -2987,6 +2996,15 @@ export interface operations {
             };
             /** @description Not Found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Refusal"];
+                };
+            };
+            /** @description Conflict */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

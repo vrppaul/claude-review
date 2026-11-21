@@ -31,6 +31,7 @@ from claude_review.domain.interfaces import Clock, GitError, ReviewedRepository,
 from claude_review.domain.models import (
     ChangedSinceRound,
     DiffFile,
+    FileWindow,
     OfConversation,
     OfFiles,
     OpenedFileOfTake,
@@ -40,8 +41,7 @@ from claude_review.domain.models import (
 )
 from claude_review.services.anchor_service import LineAnchorHandler, TakeRead, TakeUnread
 from claude_review.services.code_names.lookup import NameLookup
-from claude_review.services.diff_reading import read_diff
-from claude_review.services.file_window_service import FileWindow, FileWindowService
+from claude_review.services.diff_reading import read_diff, read_diff_between
 from claude_review.services.files_of_take import FilesOfTake
 from claude_review.services.review.review_checks import TreesWritten
 from claude_review.services.review.review_content import ReviewContent, TakesCompared
@@ -50,7 +50,6 @@ from claude_review.services.review.review_versions import ReviewVersions
 from claude_review.services.review.round_tracker import RoundBeingWritten
 from claude_review.services.review.tree_watcher_service import TreeWatcherService, files_moved
 from claude_review.services.review_opening import OpenedRepository, ReviewOpening
-from claude_review.services.unified_diff import parse_unified_diff
 
 log = structlog.get_logger()
 
@@ -161,7 +160,6 @@ class RepositorySource(ContentSource):
         self._content = ReviewContent.opening_on(opening.diff_files)
         self._repository = repository
         self._watcher = TreeWatcherService(repository)
-        self._windows = FileWindowService(repository)
         self._names = NameLookup(repository, opened.root)
         self._files_of_take = FilesOfTake(repository, opened.root)
         self._versions = ReviewVersions(repository, clock, opened)
@@ -214,23 +212,23 @@ class RepositorySource(ContentSource):
 
     @override
     async def view(self, base: VersionKey | None, *, ignore_whitespace: bool) -> DiffView:
-        """The diff against a base, from git when only git can say it.
+        """The take on screen read against a base: a way of looking, which leaves what the review holds alone.
 
-        Ignoring whitespace has to come from git, since only git knows which
-        hunks vanish once whitespace stops counting; and a base names another
-        version for the same working tree to be read against. Either way, what
-        the review holds is left alone: a base is a way of looking, not a
-        change to what is under review.
+        Raises:
+            UnknownVersionError: if the review offers no such base.
+            TakeNotWrittenError: if git wrote down no tree of the take to read another way.
         """
         content = self._content
         shown = base or ReviewKey()
         files = content.files
-        # The review's own base, whitespace counted, is the diff it holds:
-        # the one its threads are anchored to
+        # The review's own base, whitespace counted, is the diff it holds: the one its threads are anchored to.
+        # Any other reading is git's to say, of the tree the take was written down as and never the working
+        # tree, so its lines are numbered as the review's own.
         if shown != ReviewKey() or ignore_whitespace:
             against = await self._versions.resolve(shown)
-            async with self._repository.staged(self._root) as staged:
-                files = await read_diff(staged, base=against, ignore_whitespace=ignore_whitespace)
+            files = await read_diff_between(
+                self._repository, self._root, against, _tree_written(content), ignore_whitespace=ignore_whitespace
+            )
         moved = await self._watcher.drift(self._root, content.tree)
         return DiffView(
             files=files,
@@ -243,7 +241,7 @@ class RepositorySource(ContentSource):
 
     @override
     async def offer(self) -> list[VersionOnOffer]:
-        return await self._versions.offer()
+        return await self._versions.offer(self._content.written_as)
 
     @override
     async def retake(self, round_being_written: RoundBeingWritten) -> Retaken:
@@ -271,9 +269,7 @@ class RepositorySource(ContentSource):
 
     @override
     async def changed_between(self, earlier: str, later: str) -> list[DiffFile]:
-        """The diff from one take's tree to another's, parsed off the event loop as every diff here is."""
-        raw = await self._repository.diff_between(self._root, earlier, later)
-        return await asyncio.to_thread(parse_unified_diff, raw)
+        return await read_diff_between(self._repository, self._root, earlier, later, ignore_whitespace=False)
 
     async def _take(self, staged: StagedTree, round_number: int) -> int:
         """Take the diff from a staging, mark it for the round, put it on screen with its trees; say how many files."""
@@ -302,7 +298,15 @@ class RepositorySource(ContentSource):
 
     @override
     async def file_window(self, path: str, start: int, end: int) -> FileWindow:
-        return await self._windows.read_window(self._root, path, start, end, in_review=self._content.paths)
+        """Read from the tree the take on screen was written down as, never the disk, so its lines are the diff's.
+
+        Raises:
+            TakeNotWrittenError: if git wrote down no tree of the take.
+            LineRangeError: if the lines run backwards, or start below the first.
+            FileNotInReviewError: if the take holds no file at the path.
+            FileUnreadableError: if the review reads no lines of the file.
+        """
+        return await self._files_of_take.window(_tree_written(self._content), path, start, end)
 
     @override
     async def name_at(self, place: CodePlace) -> NameFound:
