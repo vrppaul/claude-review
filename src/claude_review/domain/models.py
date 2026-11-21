@@ -105,6 +105,19 @@ class DiffHunk(BaseModel):
     lines: list[DiffLine]
 
 
+class LinesTouched(BaseModel):
+    """The lines a change touched in a file: those it added, numbered on the new side, and removed, on the old."""
+
+    model_config = ConfigDict(frozen=True)
+
+    added: frozenset[int]
+    removed: frozenset[int]
+
+    def touched(self, new_lines: frozenset[int], old_lines: frozenset[int]) -> bool:
+        """Whether the change touched something that stands on these lines now and stood on those before it."""
+        return not (self.added.isdisjoint(new_lines) and self.removed.isdisjoint(old_lines))
+
+
 class Unshown(StrEnum):
     """Why a file shows none of its lines: one whose content changed, or one of the take the reader opens.
 
@@ -159,6 +172,23 @@ class DiffFile(BaseModel):
             old_mode=self.old_mode,
             new_mode=self.new_mode,
         )
+
+    def lines_touched(self) -> LinesTouched:
+        """The lines the change touched in the file, read off its hunks: added on the new side, removed on the old."""
+        lines = [line for hunk in self.hunks for line in hunk.lines]
+        return LinesTouched(
+            added=frozenset(
+                line.new_number for line in lines if line.kind is LineType.ADD and line.new_number is not None
+            ),
+            removed=frozenset(
+                line.old_number for line in lines if line.kind is LineType.DELETE and line.old_number is not None
+            ),
+        )
+
+    @property
+    def path_before(self) -> str:
+        """Where the file stood before the change: where it moved from, if it moved."""
+        return self.old_path or self.path
 
     def unshown_for(self, reason: Unshown) -> DiffFile:
         """The file, with another reason why none of its lines are shown."""

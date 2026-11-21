@@ -33,7 +33,7 @@ import structlog
 from pydantic import BaseModel
 
 from claude_review.domain.checks import CheckReport
-from claude_review.domain.code_names import CodePlace, NameFound
+from claude_review.domain.code_names import CodePlace, NameFound, NamesTouched
 from claude_review.domain.exceptions import ReviewEndedError, UnknownFileError
 from claude_review.domain.interfaces import Clock, PageChannel
 from claude_review.domain.kept_review import KeptReview
@@ -269,6 +269,10 @@ class Review:
     async def name_at(self, place: CodePlace) -> NameFound:
         """The name at a place the reader points at, and every place it stands in the take on screen."""
         return await self._source.name_at(place)
+
+    async def names_touched(self) -> NamesTouched:
+        """The names the change touched in each file of the take on screen, and which take that is."""
+        return await self._source.names_touched()
 
     async def file_of_take(self, path: str) -> OpenedFileOfTake:
         """A file of the take on screen as the reader opens it: whole, or saying why none of its lines are read."""

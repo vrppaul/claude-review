@@ -60,6 +60,19 @@ HOLDS_CODE = frozenset(
 )
 
 
+# What a file is outlined by, each standing at its top: the names a change touches are told of these alone, never
+# of a method, a field, a parameter or a variable
+OUTLINES = frozenset(
+    {
+        DefinitionKind.CLASS,
+        DefinitionKind.INTERFACE,
+        DefinitionKind.TYPE,
+        DefinitionKind.ENUM,
+        DefinitionKind.FUNCTION,
+    }
+)
+
+
 class FoundAs(StrEnum):
     """How a place was found.
 
@@ -103,3 +116,45 @@ class NameFound(BaseModel):
 
     name: str
     places: list[NamePlace]
+
+
+class NameChange(StrEnum):
+    """What a change did to a name it touched.
+
+    ADDED — the file as the review's base holds it, if it holds it, outlines no name called so.
+    MODIFIED — the base's file outlines it too, and the change touched a line it is defined on, now or then.
+    """
+
+    ADDED = auto()
+    MODIFIED = auto()
+
+
+class TouchedName(BaseModel):
+    """A name outlining a file of the take that the change touched: what it is, where it stands, what became of it."""
+
+    model_config = ConfigDict(frozen=True)
+
+    name: str
+    defined_as: DefinitionKind
+    # Where the name stands on the new side, numbered as a `CodePlace` is
+    line: int
+    column: int
+    change: NameChange
+
+
+class FileNamesTouched(BaseModel):
+    """The names a file of the change outlines that the change touched, in the order of the file."""
+
+    model_config = ConfigDict(frozen=True)
+
+    path: str
+    names: list[TouchedName]
+
+
+class NamesTouched(BaseModel):
+    """The names the change touched, file by file in the order of its diff, and the take they were read in."""
+
+    model_config = ConfigDict(frozen=True)
+
+    take: int
+    files: list[FileNamesTouched]

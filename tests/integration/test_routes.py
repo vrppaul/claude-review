@@ -58,6 +58,8 @@ WIDENED_TO = 6
 
 # Where the page asks what name stands at a place in the code
 NAME_ROUTE = "/api/name"
+# Where the page asks which names the change touched
+NAMES_TOUCHED_ROUTE = "/api/names-touched"
 # Where the page asks for a file of the take whole
 FILE_OF_TAKE_ROUTE = "/api/file-of-take"
 
@@ -498,6 +500,55 @@ async def test_a_name_is_not_looked_up_in_a_take_git_wrote_no_tree_of(
 
 async def test_a_name_is_not_looked_up_without_a_repository(files_client: AsyncClient) -> None:
     response = await files_client.get(NAME_ROUTE, params={"path": "a.py", "side": "new", "line": 1, "column": 0})
+
+    assert response.status_code == HTTPStatus.NOT_FOUND
+    assert "No repository" in Refusal.model_validate_json(response.content).detail
+
+
+async def test_the_names_a_change_touched_are_answered_file_by_file_of_the_take_on_screen(
+    tmp_git_repo: Path, reviews: ReviewFactory
+) -> None:
+    """Read from the tree the take was written down as: a file saved after it is not there, and the answer says
+    which take it is of."""
+    write_files(tmp_git_repo, {"src/flags.py": "def shown() -> bool:\n    return True\n"})
+    git(tmp_git_repo, "add", ".")
+    git(tmp_git_repo, "commit", "-m", "flags")
+    write_files(
+        tmp_git_repo,
+        {"src/flags.py": "def shown() -> bool:\n    return False\n", "src/pane.py": "def drawn() -> None:\n    pass\n"},
+    )
+
+    async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as client:
+        write_files(tmp_git_repo, {"src/flags.py": "def later() -> None:\n    pass\n"})
+        response = await client.get(NAMES_TOUCHED_ROUTE)
+        take = (await client.get(DIFF_ROUTE)).json()["take"]
+
+    assert response.json() == {
+        "take": take,
+        "files": [
+            {
+                "path": "src/flags.py",
+                "names": [{"name": "shown", "defined_as": "function", "line": 1, "column": 4, "change": "modified"}],
+            },
+            {
+                "path": "src/pane.py",
+                "names": [{"name": "drawn", "defined_as": "function", "line": 1, "column": 4, "change": "added"}],
+            },
+        ],
+    }
+
+
+async def test_the_names_a_change_touched_are_not_read_in_a_take_git_wrote_no_tree_of(
+    tmp_git_repo: Path, reviews: ReviewFactory
+) -> None:
+    async with http_client(reviews.app(await repository_opening(tmp_git_repo), keeps_marks=False)) as client:
+        response = await client.get(NAMES_TOUCHED_ROUTE)
+
+    assert response.status_code == HTTPStatus.CONFLICT
+
+
+async def test_the_names_a_change_touched_are_not_read_without_a_repository(files_client: AsyncClient) -> None:
+    response = await files_client.get(NAMES_TOUCHED_ROUTE)
 
     assert response.status_code == HTTPStatus.NOT_FOUND
     assert "No repository" in Refusal.model_validate_json(response.content).detail

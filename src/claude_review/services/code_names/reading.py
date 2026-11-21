@@ -3,34 +3,58 @@
 Code is read by its language's grammar (`languages.py`): a word a comment or
 a string holds is never a place a name stands. What no grammar reads — a
 file of no language here, a Svelte component's markup — is read as text,
-each whole word in it taken for a name. Parsing is the CPU's work: whoever
-asks runs this off the event loop.
+each whole word in it taken for a name. The names outlining a file, those
+standing at its top, are read off the same definitions, each with the lines
+it is defined on. Parsing is the CPU's work: whoever asks runs this off the
+event loop.
 """
 
 import re
+import time
 from bisect import bisect_right
+from collections import defaultdict
 from itertools import accumulate
 
+import structlog
 from pydantic import BaseModel, ConfigDict
 from tree_sitter import Node, Parser, QueryCursor, Range
 
-from claude_review.domain.code_names import FIRST_COLUMN, HOLDS_CODE, DefinitionKind, FoundAs, NamePlace
+from claude_review.domain.code_names import (
+    FIRST_COLUMN,
+    HOLDS_CODE,
+    OUTLINES,
+    DefinitionKind,
+    FoundAs,
+    NameChange,
+    NamePlace,
+    TouchedName,
+)
 from claude_review.domain.exceptions import NoWordHereError
 from claude_review.domain.models import FIRST_LINE
 from claude_review.services.code_names.languages import (
     CODE_CAPTURE,
     DEFINITION_CAPTURE,
     NAME_CAPTURE,
-    CodeFiles,
     EmbeddedCode,
     Grammar,
     code_files_of,
 )
 from claude_review.services.file_lines import LINE_END, NOT_TEXT, TEXT_ENCODING, line_text, lines_of
 
+log = structlog.get_logger()
+
 # A word of text no grammar reads, and the same word standing whole, as git matches one
 WORD = re.compile(r"\w+")
 WHOLE_WORD = r"(?<!\w){word}(?!\w)"
+
+# The longest one file's parse may take before the file is read as one of no grammar. This repository's 18,199
+# lines of code parse in 0.06 s; a long run of comment lines slows Python's grammar by its square, and a parse
+# holds the interpreter, so every other request, while it runs
+LONGEST_PARSE_SECONDS = 1.0
+
+
+class ParseGivenUpError(Exception):
+    """A file's parse ran past `LONGEST_PARSE_SECONDS` and was given up: its grammar says nothing of it."""
 
 
 class LinePosition(BaseModel):
@@ -74,14 +98,19 @@ class SourceLines(BaseModel):
 
 
 class ReadCode(BaseModel):
-    """A file's code as its grammar read it: the tree, and the stretches of the file that are code."""
+    """A file's code as its grammar read it: its bytes, the tree, and the stretches of the file that are code."""
 
     model_config = ConfigDict(arbitrary_types_allowed=True, frozen=True)
 
+    content: bytes
     root: Node
     grammar: Grammar
     # The stretches of the file the grammar read; None where it read the whole file
     stretches: list[Range] | None
+
+    def text_of(self, node: Node) -> str:
+        """What a node of the tree reads, from the file's bytes: a tree parsed from a callback holds none itself."""
+        return self.content[node.start_byte : node.end_byte].decode(TEXT_ENCODING, errors=NOT_TEXT)
 
     def holds(self, offset: int) -> bool:
         """Whether the byte is one of the file's code."""
@@ -110,6 +139,32 @@ class Definition(BaseModel):
     name_start: int
     start: int
     end: int
+    # Where it starts with its decorators: the first of the lines it is defined on, though no place in them is
+    # inside it
+    wrapped_start: int
+    # Whether it stands in no scope of its own but the file's, as its grammar's scopes tell
+    at_top: bool
+
+
+class OutlinedName(BaseModel):
+    """A name standing at the top of a file: what it is, where it is first named, and every line it is defined on."""
+
+    model_config = ConfigDict(frozen=True)
+
+    name: str
+    kind: DefinitionKind
+    named_at: LinePosition
+    lines: frozenset[int]
+
+    def touched(self, change: NameChange) -> TouchedName:
+        """The name as one the change touched, with what became of it."""
+        return TouchedName(
+            name=self.name,
+            defined_as=self.kind,
+            line=self.named_at.line,
+            column=self.named_at.column,
+            change=change,
+        )
 
 
 def word_at(path: str, content: bytes, line: int, column: int) -> str:
@@ -140,42 +195,96 @@ def word_at(path: str, content: bytes, line: int, column: int) -> str:
 def places_of(path: str, content: bytes, name: str, added_lines: frozenset[int]) -> list[NamePlace]:
     """Every place a name stands in a file, in the order of the file; `added_lines` are those the change wrote."""
     source = SourceLines.of(content)
-    code = _read_code(code_files_of(path), content)
+    code = _read_code(path, content)
     named = [] if code is None else _named_places(path, source, code, name, added_lines)
     texts = _text_places(path, source, code, name, added_lines)
     return sorted([*named, *texts], key=lambda place: (place.line, place.column))
 
 
+def outline(path: str, content: bytes) -> list[OutlinedName] | None:
+    """The names outlining a file, each once, in the order of the file; none in a file of no grammar, and None
+    where its parse was given up, so nothing can be said of what it outlines."""
+    try:
+        code = _code_of(path, content)
+    except ParseGivenUpError:
+        return None
+    if code is None:
+        return []
+    source = SourceLines.of(content)
+    outlining: defaultdict[str, list[Definition]] = defaultdict(list)
+    for definition in sorted(_definitions(code).values(), key=lambda definition: definition.name_start):
+        if definition.kind in OUTLINES and definition.at_top:
+            outlining[definition.name].append(definition)
+    return [_outlined(source, defined) for defined in outlining.values()]
+
+
 def _name_at(path: str, source: SourceLines, position: LinePosition) -> str | None:
     """The name the file's grammar reads at a character, if the character is code and a name's."""
-    code = _read_code(code_files_of(path), source.content)
+    code = _read_code(path, source.content)
     start = source.offset_of(position)
     if code is None or not code.holds(start):
         return None
     character = source.text(position.line)[position.column]
     name = code.name_around(start, start + len(character.encode(TEXT_ENCODING)))
-    return None if name is None else _text_of(name)
+    return None if name is None else code.text_of(name)
 
 
-def _read_code(files: CodeFiles | None, content: bytes) -> ReadCode | None:
-    """A file's code read by its grammar; None for a file of no grammar here, or none of whose stretches is code."""
+def _read_code(path: str, content: bytes) -> ReadCode | None:
+    """A file's code read by its grammar, for the lookup; None where it has none to read, or its parse was given up:
+    the lookup then reads the file as text."""
+    try:
+        return _code_of(path, content)
+    except ParseGivenUpError:
+        return None
+
+
+def _code_of(path: str, content: bytes) -> ReadCode | None:
+    """A file's code read by its grammar; None for a file of no grammar here, or none of whose stretches is code.
+
+    Raises:
+        ParseGivenUpError: if parsing the file runs past `LONGEST_PARSE_SECONDS`.
+    """
+    files = code_files_of(path)
     if files is None:
         return None
-    if files.embedded_in is None:
-        root = Parser(files.grammar.language).parse(content).root_node
-        return ReadCode(root=root, grammar=files.grammar, stretches=None)
-    stretches = _stretches(files.embedded_in, content)
-    if not stretches:
+    deadline = time.perf_counter() + LONGEST_PARSE_SECONDS
+    stretches = None if files.embedded_in is None else _stretches(path, files.embedded_in, content, deadline)
+    # A file of another language holding no code has none to read
+    if stretches is not None and not stretches:
         return None
-    root = Parser(files.grammar.language, included_ranges=stretches).parse(content).root_node
-    return ReadCode(root=root, grammar=files.grammar, stretches=stretches)
+    parser = Parser(files.grammar.language, included_ranges=stretches)
+    root = _parsed(parser, path, content, deadline)
+    return ReadCode(content=content, root=root, grammar=files.grammar, stretches=stretches)
 
 
-def _stretches(embedded: EmbeddedCode, content: bytes) -> list[Range]:
-    """The stretches of a file that hold its code, in the order of the file."""
-    root = Parser(embedded.language).parse(content).root_node
+def _stretches(path: str, embedded: EmbeddedCode, content: bytes, deadline: float) -> list[Range]:
+    """The stretches of a file that hold its code, in the order of the file.
+
+    Raises:
+        ParseGivenUpError: if parsing the file runs past the deadline.
+    """
+    root = _parsed(Parser(embedded.language), path, content, deadline)
     captured = QueryCursor(embedded.stretches).captures(root).get(CODE_CAPTURE, [])
     return [node.range for node in sorted(captured, key=lambda node: node.start_byte)]
+
+
+def _parsed(parser: Parser, path: str, content: bytes, deadline: float) -> Node:
+    """The root of the tree a parser reads a file as.
+
+    Raises:
+        ParseGivenUpError: if the parse runs past the deadline.
+    """
+    try:
+        tree = parser.parse(
+            lambda offset, _point: content[offset:],
+            progress_callback=lambda _offset, _has_error: time.perf_counter() > deadline,
+        )
+    except ValueError as halted:
+        # What tree-sitter raises for a parse its progress callback halted
+        log.warning("parse_given_up", path=path, size=len(content))
+        msg = f"parsing {path} ran past {LONGEST_PARSE_SECONDS} s"
+        raise ParseGivenUpError(msg) from halted
+    return tree.root_node
 
 
 def _named_places(
@@ -252,23 +361,58 @@ def _definitions(code: ReadCode) -> dict[int, Definition]:
     definitions: dict[int, Definition] = {}
     matches = QueryCursor(code.grammar.definitions).matches(code.root)
     for _, captures in sorted(matches, key=lambda match: match[0]):
-        definition = _definition_of(captures)
+        definition = _definition_of(captures, code)
         definitions.setdefault(definition.name_start, definition)
     return definitions
 
 
-def _definition_of(captures: dict[str, list[Node]]) -> Definition:
+def _definition_of(captures: dict[str, list[Node]], code: ReadCode) -> Definition:
     """The definition one match of a query captures: the name, and the node of the definition under its kind."""
     [name] = captures[NAME_CAPTURE]
     [kind] = [capture for capture in captures if capture.startswith(DEFINITION_CAPTURE)]
     [defined] = captures[kind]
+    wrapped = _wrapped(defined, code.grammar.wrappers)
     return Definition(
-        name=_text_of(name),
+        name=code.text_of(name),
         kind=DefinitionKind(kind.removeprefix(DEFINITION_CAPTURE)),
         name_start=name.start_byte,
         start=defined.start_byte,
         end=defined.end_byte,
+        wrapped_start=wrapped.start_byte,
+        at_top=_at_top(wrapped, code.grammar.scopes),
     )
+
+
+def _wrapped(defined: Node, wrappers: frozenset[str]) -> Node:
+    """The outermost of the nodes that wrap a definition with its decorators, or the definition where none does."""
+    wrapping = defined
+    while wrapping.parent is not None and wrapping.parent.type in wrappers:
+        wrapping = wrapping.parent
+    return wrapping
+
+
+def _at_top(node: Node, scopes: frozenset[str]) -> bool:
+    """Whether no node holding this one opens a scope of its own."""
+    holding = node.parent
+    while holding is not None and holding.type not in scopes:
+        holding = holding.parent
+    return holding is None
+
+
+def _outlined(source: SourceLines, definitions: list[Definition]) -> OutlinedName:
+    """A name outlining a file, from its definitions in the order of the file: the first says what it is."""
+    [first, *_] = definitions
+    return OutlinedName(
+        name=first.name,
+        kind=first.kind,
+        named_at=source.position_of(first.name_start),
+        lines=frozenset(line for definition in definitions for line in _lines_of(source, definition)),
+    )
+
+
+def _lines_of(source: SourceLines, definition: Definition) -> range:
+    """The lines a definition spans, from the one its decorators start on to the one its last byte is on."""
+    return range(source.position_of(definition.wrapped_start).line, source.position_of(definition.end - 1).line + 1)
 
 
 def _inside(definitions: list[Definition], offset: int) -> str | None:
@@ -294,8 +438,3 @@ def _occurrences(content: bytes, wanted: bytes) -> list[int]:
 def _word_around(text: str, column: int) -> str | None:
     """The word of text a column stands in, if any."""
     return next((word.group() for word in WORD.finditer(text) if word.start() <= column < word.end()), None)
-
-
-def _text_of(node: Node) -> str:
-    """What a node of a tree parsed from bytes reads."""
-    return (node.text or b"").decode(TEXT_ENCODING, errors=NOT_TEXT)

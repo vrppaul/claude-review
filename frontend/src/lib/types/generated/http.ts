@@ -249,6 +249,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/names-touched": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Names Touched
+         * @description Say, of each file of the change, the names at its top the change touched, and whether it added each.
+         *
+         *     Apart from the diff, which never waits on parsing every file it holds.
+         */
+        get: operations["get_names_touched_api_names_touched_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/file-of-take": {
         parameters: {
             query?: never;
@@ -1213,6 +1235,16 @@ export interface components {
             msg: string;
         };
         /**
+         * FileNamesTouched
+         * @description The names a file of the change outlines that the change touched, in the order of the file.
+         */
+        FileNamesTouched: {
+            /** Path */
+            path: string;
+            /** Names */
+            names: components["schemas"]["TouchedName"][];
+        };
+        /**
          * FileOfTakeResponse
          * @description Response for GET /api/file-of-take — a file of the take on screen as it is opened, drawn as a diff's file is.
          */
@@ -1516,6 +1548,15 @@ export interface components {
             threads: components["schemas"]["ThreadDraft-Input"][];
         };
         /**
+         * NameChange
+         * @description What a change did to a name it touched.
+         *
+         *     ADDED — the file as the review's base holds it, if it holds it, outlines no name called so.
+         *     MODIFIED — the base's file outlines it too, and the change touched a line it is defined on, now or then.
+         * @enum {string}
+         */
+        NameChange: "added" | "modified";
+        /**
          * NamePlace
          * @description One place a name stands in the take on screen: where, the line it is on, and what it does there.
          */
@@ -1556,6 +1597,19 @@ export interface components {
             path: string;
             /** Held By Base */
             held_by_base: boolean;
+        };
+        /**
+         * NamesTouchedResponse
+         * @description Response for GET /api/names-touched — the names the change touched, file by file in the order of its diff.
+         *
+         *     A file with none is left out: one of no grammar here, not text, too
+         *     large, deleted, or whose change touched no name standing at its top.
+         */
+        NamesTouchedResponse: {
+            /** Take */
+            take: number;
+            /** Files */
+            files: components["schemas"]["FileNamesTouched"][];
         };
         /**
          * OfConversation
@@ -2522,6 +2576,20 @@ export interface components {
             left_out: components["schemas"]["LeftOut"][];
         };
         /**
+         * TouchedName
+         * @description A name outlining a file that the change touched: what it is, where it stands, and what became of it.
+         */
+        TouchedName: {
+            /** Name */
+            name: string;
+            defined_as: components["schemas"]["DefinitionKind"];
+            /** Line */
+            line: number;
+            /** Column */
+            column: number;
+            change: components["schemas"]["NameChange"];
+        };
+        /**
          * Turn
          * @description One thing said in a thread after the comment that opened it, its screenshots as files to open.
          */
@@ -3075,6 +3143,53 @@ export interface operations {
             };
             /** @description Unprocessable Content */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Refusal"];
+                };
+            };
+        };
+    };
+    get_names_touched_api_names_touched_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NamesTouchedResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Refusal"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Refusal"];
+                };
+            };
+            /** @description Conflict */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

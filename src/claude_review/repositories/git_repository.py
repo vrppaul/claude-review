@@ -672,7 +672,7 @@ def _sides_stored(file: DiffFile, base: str, against: ReadAgainst) -> list[str]:
     """Where each side of a file is stored, as git names a blob: in the base, and in what the base is read against."""
     sides = []
     if file.status != FileStatus.ADDED:
-        sides.append(f"{base}{BLOB_AT}{file.old_path or file.path}")
+        sides.append(f"{base}{BLOB_AT}{file.path_before}")
     if file.status != FileStatus.DELETED:
         sides.append(f"{against.blobs_at}{BLOB_AT}{file.path}")
     return sides

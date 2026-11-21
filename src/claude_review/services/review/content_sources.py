@@ -2,7 +2,8 @@
 
 A review of a repository can be read against other bases, widened past its
 hunks, taken again after a round, watched for the tree moving under it,
-asked where a name in it stands, and opened at a file the change did not touch.
+asked where a name in it stands and which names the change touched, and
+opened at a file the change did not touch.
 Files and a conversation can do none of that. Each kind of review answers
 for itself here, and its host picks the kind by what was opened
 (`content_source`). The one thing the review asks a source about its kind
@@ -25,7 +26,7 @@ from typing import assert_never, override
 import structlog
 from pydantic import BaseModel
 
-from claude_review.domain.code_names import CodePlace, NameFound
+from claude_review.domain.code_names import CodePlace, NameFound, NamesTouched
 from claude_review.domain.exceptions import NoRepositoryError, TakeNotWrittenError
 from claude_review.domain.interfaces import Clock, GitError, ReviewedRepository, StagedTree
 from claude_review.domain.models import (
@@ -41,6 +42,7 @@ from claude_review.domain.models import (
 )
 from claude_review.services.anchor_service import LineAnchorHandler, TakeRead, TakeUnread
 from claude_review.services.code_names.lookup import NameLookup
+from claude_review.services.code_names.touched import read_names_touched
 from claude_review.services.diff_reading import read_diff, read_diff_between
 from claude_review.services.files_of_take import FilesOfTake
 from claude_review.services.review.review_checks import TreesWritten
@@ -128,6 +130,10 @@ class ContentSource(TakesCompared, TreesWritten):
     @abstractmethod
     async def name_at(self, place: CodePlace) -> NameFound:
         """The name at a place the reader points at, and every place it stands in the take on screen."""
+
+    @abstractmethod
+    async def names_touched(self) -> NamesTouched:
+        """The names the change touched in each file of the take on screen, and which take that is."""
 
     @abstractmethod
     async def file_of_take(self, path: str) -> OpenedFileOfTake:
@@ -323,6 +329,23 @@ class RepositorySource(ContentSource):
         )
 
     @override
+    async def names_touched(self) -> NamesTouched:
+        """Read from the tree the take on screen was written down as, never the disk, so its lines are the diff's.
+
+        Raises:
+            TakeNotWrittenError: if git wrote down no tree of the take.
+        """
+        content = self._content
+        files = await read_names_touched(
+            self._repository,
+            self._root,
+            tree=_tree_written(content),
+            base=self._versions.pinned_base,
+            files=content.files,
+        )
+        return NamesTouched(take=content.take, files=files)
+
+    @override
     async def file_of_take(self, path: str) -> OpenedFileOfTake:
         """Read from the tree the take on screen was written down as, never the disk, so its lines are the diff's.
 
@@ -444,6 +467,12 @@ class FixedSource(ContentSource):
     async def name_at(self, place: CodePlace) -> NameFound:
         """Raises: NoRepositoryError, always: what was read once has no tree to look a name up in."""
         msg = "No repository to look a name up in"
+        raise NoRepositoryError(msg)
+
+    @override
+    async def names_touched(self) -> NamesTouched:
+        """Raises: NoRepositoryError, always: what was read once is no change to a repository's code."""
+        msg = "No repository whose code a change touched"
         raise NoRepositoryError(msg)
 
     @override

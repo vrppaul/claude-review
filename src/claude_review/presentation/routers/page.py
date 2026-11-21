@@ -40,7 +40,7 @@ from claude_review.presentation.schemas.agent import (
 )
 from claude_review.presentation.schemas.base import SafeId, made_or_none
 from claude_review.presentation.schemas.checks import Check
-from claude_review.presentation.schemas.code_names import NameResponse
+from claude_review.presentation.schemas.code_names import NameResponse, NamesTouchedResponse
 from claude_review.presentation.schemas.content import (
     SEND_LIMITS,
     DiffFile,
@@ -254,6 +254,15 @@ async def get_name(
     """
     found = await review.name_at(CodePlace(path=path, side=side, line=line, column=column))
     return NameResponse.from_domain(found)
+
+
+@router.get("/names-touched", responses=refusals(NoRepositoryError, TakeNotWrittenError, takes=Takes.NOTHING))
+async def get_names_touched(review: ReviewDep) -> NamesTouchedResponse:
+    """Say, of each file of the change, the names at its top the change touched, and whether it added each.
+
+    Apart from the diff, which never waits on parsing every file it holds.
+    """
+    return NamesTouchedResponse.from_domain(await review.names_touched())
 
 
 @router.get(

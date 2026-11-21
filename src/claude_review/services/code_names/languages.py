@@ -32,6 +32,10 @@ class Grammar(BaseModel):
     language: Language
     names: frozenset[str]
     definitions: Query
+    # The nodes that wrap a definition with its decorators: their lines are the definition's
+    wrappers: frozenset[str]
+    # The nodes that open a scope of their own: a definition inside none stands at the top of its file
+    scopes: frozenset[str]
 
 
 class EmbeddedCode(BaseModel):
@@ -136,6 +140,7 @@ TYPESCRIPT_PARAMETER_NAMES = f"[(identifier) @name (rest_pattern (identifier) @n
 
 TYPESCRIPT_DEFINITIONS = f"""
 {SCRIPT_DEFINITIONS}
+(function_signature name: (identifier) @name) @definition.function
 (required_parameter pattern: {TYPESCRIPT_PARAMETER_NAMES}) @definition.parameter
 (optional_parameter pattern: {TYPESCRIPT_PARAMETER_NAMES}) @definition.parameter
 (method_signature name: (property_identifier) @name) @definition.method
@@ -152,18 +157,55 @@ TYPESCRIPT_DEFINITIONS = f"""
 # Where a Svelte component's code stands: in its script elements, the module's and the instance's
 SVELTE_SCRIPTS = f"(script_element (raw_text) @{CODE_CAPTURE})"
 
-PYTHON = Grammar(language=PYTHON_LANGUAGE, names=PYTHON_NAMES, definitions=Query(PYTHON_LANGUAGE, PYTHON_DEFINITIONS))
+# What holds a definition with its decorators: Python's decorated definition, and a script's export, which
+# holds the decorators written before `export`
+PYTHON_WRAPPERS = frozenset({"decorated_definition"})
+SCRIPT_WRAPPERS = frozenset({"export_statement"})
+
+# What opens a scope of its own, as a grammar's `locals.scm` marks `@local.scope`: a function of any form, a
+# class's body, and in TypeScript a namespace. A block of an `if` or a `try` does not
+PYTHON_SCOPES = frozenset({"function_definition", "class_definition"})
+SCRIPT_SCOPES = frozenset(
+    {
+        "function_declaration",
+        "generator_function_declaration",
+        "function_expression",
+        "generator_function",
+        "arrow_function",
+        "method_definition",
+        "class_body",
+    }
+)
+TYPESCRIPT_SCOPES = SCRIPT_SCOPES | {"internal_module", "module"}
+
+PYTHON = Grammar(
+    language=PYTHON_LANGUAGE,
+    names=PYTHON_NAMES,
+    definitions=Query(PYTHON_LANGUAGE, PYTHON_DEFINITIONS),
+    wrappers=PYTHON_WRAPPERS,
+    scopes=PYTHON_SCOPES,
+)
 JAVASCRIPT = Grammar(
     language=JAVASCRIPT_LANGUAGE,
     names=JAVASCRIPT_NAMES,
     definitions=Query(JAVASCRIPT_LANGUAGE, JAVASCRIPT_DEFINITIONS),
+    wrappers=SCRIPT_WRAPPERS,
+    scopes=SCRIPT_SCOPES,
 )
 TYPESCRIPT = Grammar(
     language=TYPESCRIPT_LANGUAGE,
     names=TYPESCRIPT_NAMES,
     definitions=Query(TYPESCRIPT_LANGUAGE, TYPESCRIPT_DEFINITIONS),
+    wrappers=SCRIPT_WRAPPERS,
+    scopes=TYPESCRIPT_SCOPES,
 )
-TSX = Grammar(language=TSX_LANGUAGE, names=TYPESCRIPT_NAMES, definitions=Query(TSX_LANGUAGE, TYPESCRIPT_DEFINITIONS))
+TSX = Grammar(
+    language=TSX_LANGUAGE,
+    names=TYPESCRIPT_NAMES,
+    definitions=Query(TSX_LANGUAGE, TYPESCRIPT_DEFINITIONS),
+    wrappers=SCRIPT_WRAPPERS,
+    scopes=TYPESCRIPT_SCOPES,
+)
 
 # A Svelte component's scripts are read as TypeScript, which reads plain JavaScript as well
 CODE_FILES = [

@@ -1,14 +1,16 @@
 """Functional requirement tests for what a name is in each language the review reads, and where one stands in a file.
 
 The grammar decides: a word a comment, a string or the language holds is no
-name, and a file of no grammar is read as text, a line to each place.
+name, and a file of no grammar is read as text, a line to each place. It
+decides too which names outline a file: those standing at its top.
 """
 
 import pytest
 
 from claude_review.domain.code_names import DefinitionKind, FoundAs, NamePlace
 from claude_review.domain.exceptions import NoWordHereError
-from claude_review.services.code_names.reading import places_of, word_at
+from claude_review.services.code_names import reading
+from claude_review.services.code_names.reading import LinePosition, OutlinedName, outline, places_of, word_at
 
 PYTHON_FILE = b'''"""Reviews and their lookup."""
 
@@ -276,6 +278,28 @@ def test_a_typescript_member_is_defined_by_the_interface_and_by_the_class_and_us
     ]
 
 
+OVERLOADED = b"""export function over(a: number): number;
+export function over(a: unknown): unknown {
+  return a;
+}
+over(1);
+"""
+
+
+def test_a_typescript_overload_s_signature_defines_its_function_and_holds_its_parameter() -> None:
+    functions = places_of("over.ts", OVERLOADED, "over", frozenset())
+    parameters = places_of("over.ts", OVERLOADED, "a", frozenset())
+
+    assert [(place.line, place.defined_as, place.inside) for place in [*functions, *parameters]] == [
+        (1, DefinitionKind.FUNCTION, None),
+        (2, DefinitionKind.FUNCTION, None),
+        (5, None, None),
+        (1, DefinitionKind.PARAMETER, "over"),
+        (2, DefinitionKind.PARAMETER, "over"),
+        (3, None, "over"),
+    ]
+
+
 def test_a_svelte_name_is_read_in_its_script_and_found_as_text_in_its_markup() -> None:
     places = places_of("Pane.svelte", SVELTE_FILE, "open", frozenset())
 
@@ -327,3 +351,295 @@ def test_a_column_counts_characters_not_bytes() -> None:
     [place] = places_of("labels.py", content, "lookup", frozenset())
 
     assert (place.column, word_at("labels.py", content, 1, place.column)) == (16, "lookup")
+
+
+PYTHON_OUTLINED = b"""import os
+
+LIMIT = 3
+
+
+class Review:
+    def lookup(self) -> int:
+        return LIMIT
+
+
+@cache
+def shown() -> bool:
+    def inner() -> bool:
+        return True
+
+    return inner()
+
+
+type Shown = bool
+
+
+def untouched() -> None:
+    pass
+"""
+
+TYPESCRIPT_OUTLINED = b"""export interface Shown {
+  shown: boolean;
+}
+
+export type Showing = Shown | null;
+
+export enum Side { Old, New }
+
+@Component({})
+export class Pane implements Shown {
+  shown = false;
+  show(): void {
+    this.shown = true;
+  }
+}
+
+export function drawn(width: number): Pane;
+export function drawn(width: number, height?: number): Pane {
+  const inner = () => new Pane();
+  return inner();
+}
+
+export const LIMIT = 3;
+
+describe("suite", () => {
+  function helperInCallback(): void {}
+});
+
+namespace Space {
+  export function inNamespace(): void {}
+}
+
+if (shown) {
+  function insideIf(): void {}
+}
+"""
+
+JAVASCRIPT_OUTLINED = b"""export class Drawer {
+  toggle() {}
+}
+
+export const drawn = () => new Drawer();
+
+function* steps() {
+  yield 1;
+}
+
+(function () {
+  function insideIife() {}
+})();
+
+onMount(() => {
+  class LocalInCallback {}
+});
+"""
+
+TSX_OUTLINED = b"""export function Pane(): JSX.Element {
+  return <p>shown</p>;
+}
+
+items.forEach(() => {
+  function eachItem(): void {}
+});
+"""
+
+SVELTE_OUTLINED = b"""<script lang="ts">
+  let { open = false } = $props();
+  function toggle(): void {
+    open = !open;
+  }
+  $effect(() => {
+    function inEffect(): void {}
+  });
+</script>
+
+{#if open}<p>shown</p>{/if}
+"""
+
+
+@pytest.mark.parametrize(
+    ("path", "content", "outlined"),
+    [
+        (
+            "review.py",
+            PYTHON_OUTLINED,
+            [
+                OutlinedName(
+                    name="Review",
+                    kind=DefinitionKind.CLASS,
+                    named_at=LinePosition(line=6, column=6),
+                    lines=frozenset(range(6, 9)),
+                ),
+                OutlinedName(
+                    name="shown",
+                    kind=DefinitionKind.FUNCTION,
+                    named_at=LinePosition(line=12, column=4),
+                    lines=frozenset(range(11, 17)),
+                ),
+                OutlinedName(
+                    name="Shown",
+                    kind=DefinitionKind.TYPE,
+                    named_at=LinePosition(line=19, column=5),
+                    lines=frozenset({19}),
+                ),
+                OutlinedName(
+                    name="untouched",
+                    kind=DefinitionKind.FUNCTION,
+                    named_at=LinePosition(line=22, column=4),
+                    lines=frozenset(range(22, 24)),
+                ),
+            ],
+        ),
+        (
+            "pane.ts",
+            TYPESCRIPT_OUTLINED,
+            [
+                OutlinedName(
+                    name="Shown",
+                    kind=DefinitionKind.INTERFACE,
+                    named_at=LinePosition(line=1, column=17),
+                    lines=frozenset(range(1, 4)),
+                ),
+                OutlinedName(
+                    name="Showing",
+                    kind=DefinitionKind.TYPE,
+                    named_at=LinePosition(line=5, column=12),
+                    lines=frozenset({5}),
+                ),
+                OutlinedName(
+                    name="Side",
+                    kind=DefinitionKind.ENUM,
+                    named_at=LinePosition(line=7, column=12),
+                    lines=frozenset({7}),
+                ),
+                OutlinedName(
+                    name="Pane",
+                    kind=DefinitionKind.CLASS,
+                    named_at=LinePosition(line=10, column=13),
+                    lines=frozenset(range(9, 16)),
+                ),
+                OutlinedName(
+                    name="drawn",
+                    kind=DefinitionKind.FUNCTION,
+                    named_at=LinePosition(line=17, column=16),
+                    lines=frozenset(range(17, 22)),
+                ),
+                OutlinedName(
+                    name="insideIf",
+                    kind=DefinitionKind.FUNCTION,
+                    named_at=LinePosition(line=34, column=11),
+                    lines=frozenset({34}),
+                ),
+            ],
+        ),
+        (
+            "drawer.js",
+            JAVASCRIPT_OUTLINED,
+            [
+                OutlinedName(
+                    name="Drawer",
+                    kind=DefinitionKind.CLASS,
+                    named_at=LinePosition(line=1, column=13),
+                    lines=frozenset(range(1, 4)),
+                ),
+                OutlinedName(
+                    name="drawn",
+                    kind=DefinitionKind.FUNCTION,
+                    named_at=LinePosition(line=5, column=13),
+                    lines=frozenset({5}),
+                ),
+                OutlinedName(
+                    name="steps",
+                    kind=DefinitionKind.FUNCTION,
+                    named_at=LinePosition(line=7, column=10),
+                    lines=frozenset(range(7, 10)),
+                ),
+            ],
+        ),
+        (
+            "Pane.tsx",
+            TSX_OUTLINED,
+            [
+                OutlinedName(
+                    name="Pane",
+                    kind=DefinitionKind.FUNCTION,
+                    named_at=LinePosition(line=1, column=16),
+                    lines=frozenset(range(1, 4)),
+                )
+            ],
+        ),
+        (
+            "Pane.svelte",
+            SVELTE_OUTLINED,
+            [
+                OutlinedName(
+                    name="toggle",
+                    kind=DefinitionKind.FUNCTION,
+                    named_at=LinePosition(line=3, column=11),
+                    lines=frozenset(range(3, 6)),
+                )
+            ],
+        ),
+        ("notes.md", TEXT_FILE, []),
+        (
+            "twice.py",
+            b"def twice() -> int:\n    return 1\n\n\ndef twice() -> int:\n    return 2\n",
+            [
+                OutlinedName(
+                    name="twice",
+                    kind=DefinitionKind.FUNCTION,
+                    named_at=LinePosition(line=1, column=4),
+                    lines=frozenset({1, 2, 5, 6}),
+                )
+            ],
+        ),
+        (
+            "broken.py",
+            b"def broken(:\n    pass\n\n\ndef whole() -> int:\n    return 1\n",
+            [
+                OutlinedName(
+                    name="broken",
+                    kind=DefinitionKind.FUNCTION,
+                    named_at=LinePosition(line=1, column=4),
+                    lines=frozenset({1, 2}),
+                ),
+                OutlinedName(
+                    name="whole",
+                    kind=DefinitionKind.FUNCTION,
+                    named_at=LinePosition(line=5, column=4),
+                    lines=frozenset({5, 6}),
+                ),
+            ],
+        ),
+    ],
+    ids=[
+        "python",
+        "typescript",
+        "javascript",
+        "tsx",
+        "svelte",
+        "a-file-of-no-grammar",
+        "a-name-defined-twice-once-with-the-lines-of-both",
+        "a-file-its-grammar-reads-in-part-with-the-names-it-can",
+    ],
+)
+def test_the_names_outlining_a_file_are_those_at_its_top_each_with_every_line_it_is_defined_on(
+    path: str, content: bytes, outlined: list[OutlinedName]
+) -> None:
+    assert outline(path, content) == outlined
+
+
+# A run of comment lines Python's grammar reads in time that grows with its square: some 0.6 s for these
+SLOW_TO_PARSE = b"def big():\n" + b"    # pad\n" * 3000 + b"    pass\n"
+# How long the test lets one file's parse take, far shorter than the review's own so the test stays cheap
+SHORT_PARSE_SECONDS = 0.01
+
+
+def test_a_file_whose_parse_takes_too_long_cannot_be_outlined_and_is_looked_through_as_text(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(reading, "LONGEST_PARSE_SECONDS", SHORT_PARSE_SECONDS)
+
+    places = places_of("big.py", SLOW_TO_PARSE, "big", frozenset())
+
+    assert (outline("big.py", SLOW_TO_PARSE), [place.found_as for place in places]) == (None, [FoundAs.TEXT])

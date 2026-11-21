@@ -16,13 +16,11 @@ import structlog
 from claude_review.domain.code_names import CodePlace, NameFound, NamePlace
 from claude_review.domain.exceptions import FileNotInReviewError
 from claude_review.domain.interfaces import TreesRead
-from claude_review.domain.models import DiffFile, LineSide, LineType
+from claude_review.domain.models import DiffFile, LineSide
 from claude_review.services.code_names.reading import places_of, word_at
+from claude_review.services.code_names.timing import milliseconds_between
 
 log = structlog.get_logger()
-
-# A lookup's steps are timed in seconds and logged in milliseconds
-MILLISECONDS_PER_SECOND = 1000
 
 
 class NameLookup:
@@ -68,30 +66,22 @@ class NameLookup:
             "name_looked_up",
             files=len(holding),
             places=len(places),
-            named_ms=_milliseconds(started, named),
-            searched_ms=_milliseconds(named, searched),
-            read_ms=_milliseconds(searched, read),
-            parsed_ms=_milliseconds(read, time.perf_counter()),
+            named_ms=milliseconds_between(started, named),
+            searched_ms=milliseconds_between(named, searched),
+            read_ms=milliseconds_between(searched, read),
+            parsed_ms=milliseconds_between(read, time.perf_counter()),
         )
         return NameFound(name=name, places=places)
 
 
 def _old_path_of(path: str, files: list[DiffFile]) -> str:
     """Where a file stood before the change: where it moved from, if the take's diff says it moved."""
-    return next((file.old_path or file.path for file in files if file.path == path), path)
+    return next((file.path_before for file in files if file.path == path), path)
 
 
 def _added_lines(files: list[DiffFile]) -> dict[str, frozenset[int]]:
     """The lines the change wrote, file by file, by their number on the new side."""
-    return {
-        file.path: frozenset(
-            line.new_number
-            for hunk in file.hunks
-            for line in hunk.lines
-            if line.kind is LineType.ADD and line.new_number is not None
-        )
-        for file in files
-    }
+    return {file.path: file.lines_touched().added for file in files}
 
 
 def _places_in(contents: dict[str, bytes], name: str, added_lines: dict[str, frozenset[int]]) -> list[NamePlace]:
@@ -101,7 +91,3 @@ def _places_in(contents: dict[str, bytes], name: str, added_lines: dict[str, fro
         for path in sorted(contents)
         for place in places_of(path, contents[path], name, added_lines.get(path, frozenset()))
     ]
-
-
-def _milliseconds(began: float, ended: float) -> int:
-    return round((ended - began) * MILLISECONDS_PER_SECOND)
