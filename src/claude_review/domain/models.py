@@ -73,6 +73,13 @@ class LineSpan(BaseModel):
     first: int
     last: int
 
+    def holds_any(self, lines: frozenset[int]) -> bool:
+        """Whether any of these lines is among the span's."""
+        # Whichever is fewer is walked: the span's own lines, or those given
+        if self.last - self.first < len(lines):
+            return not lines.isdisjoint(range(self.first, self.last + 1))
+        return any(self.first <= line <= self.last for line in lines)
+
 
 def says_nothing(text: str) -> bool:
     """Whether a text says nothing: it is empty, or blanks alone."""
@@ -113,9 +120,11 @@ class LinesTouched(BaseModel):
     added: frozenset[int]
     removed: frozenset[int]
 
-    def touched(self, new_lines: frozenset[int], old_lines: frozenset[int]) -> bool:
-        """Whether the change touched something that stands on these lines now and stood on those before it."""
-        return not (self.added.isdisjoint(new_lines) and self.removed.isdisjoint(old_lines))
+    def touched(self, new_spans: list[LineSpan], old_spans: list[LineSpan]) -> bool:
+        """Whether the change touched something that stands on these spans now and stood on those before it."""
+        return any(span.holds_any(self.added) for span in new_spans) or any(
+            span.holds_any(self.removed) for span in old_spans
+        )
 
 
 class Unshown(StrEnum):

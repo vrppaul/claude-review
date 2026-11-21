@@ -32,7 +32,7 @@ from claude_review.domain.code_names import (
     TouchedName,
 )
 from claude_review.domain.exceptions import NoWordHereError
-from claude_review.domain.models import FIRST_LINE, LineSide
+from claude_review.domain.models import FIRST_LINE, LineSide, LineSpan
 from claude_review.services.code_names.languages import (
     CODE_CAPTURE,
     DEFINITION_CAPTURE,
@@ -149,18 +149,21 @@ class Definition(BaseModel):
 
 
 class OutlinedName(BaseModel):
-    """A name standing at the top of a file: what it is, where it is first named, and every line it is defined on."""
+    """A name standing at the top of a file: what it is, where it is first named, and the lines each of its
+    definitions spans, in the order of the file."""
 
     model_config = ConfigDict(frozen=True)
 
     name: str
     kind: DefinitionKind
     named_at: LinePosition
-    lines: frozenset[int]
+    spans: list[LineSpan]
 
     def lines_on(self, side: LineSide) -> LinesOnSide:
         """The lines it is defined on, first to last, numbered on the side of the diff its file is read on."""
-        return LinesOnSide(side=side, first=min(self.lines), last=max(self.lines))
+        return LinesOnSide(
+            side=side, first=min(span.first for span in self.spans), last=max(span.last for span in self.spans)
+        )
 
     def touched(self, change: NameChange, stands_on: list[LinesOnSide]) -> TouchedName:
         """The name as one the change touched, with what became of it and the lines it stands on, side by side."""
@@ -423,13 +426,15 @@ def _outlined(source: SourceLines, definitions: list[Definition]) -> OutlinedNam
         name=first.name,
         kind=first.kind,
         named_at=source.position_of(first.name_start),
-        lines=frozenset(line for definition in definitions for line in _lines_of(source, definition)),
+        spans=[_lines_of(source, definition) for definition in definitions],
     )
 
 
-def _lines_of(source: SourceLines, definition: Definition) -> range:
+def _lines_of(source: SourceLines, definition: Definition) -> LineSpan:
     """The lines a definition spans, from the one its decorators start on to the one its last byte is on."""
-    return range(source.position_of(definition.wrapped_start).line, source.position_of(definition.end - 1).line + 1)
+    return LineSpan(
+        first=source.position_of(definition.wrapped_start).line, last=source.position_of(definition.end - 1).line
+    )
 
 
 def _inside(definitions: list[Definition], offset: int) -> str | None:

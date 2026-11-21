@@ -90,7 +90,7 @@ def _touched_now(now: OutlinedName, before: OutlinedName | None, lines: LinesTou
     """
     if before is None:
         return now.touched(NameChange.ADDED, [now.lines_on(LineSide.NEW)])
-    if lines.touched(now.lines, before.lines):
+    if lines.touched(now.spans, before.spans):
         return now.touched(NameChange.MODIFIED, [now.lines_on(LineSide.NEW), before.lines_on(LineSide.OLD)])
     return None
 

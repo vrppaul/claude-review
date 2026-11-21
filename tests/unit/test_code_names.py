@@ -9,6 +9,7 @@ import pytest
 
 from claude_review.domain.code_names import DefinitionKind, FoundAs, NamePlace
 from claude_review.domain.exceptions import NoWordHereError
+from claude_review.domain.models import LineSpan
 from claude_review.services.code_names import reading
 from claude_review.services.code_names.reading import LinePosition, OutlinedName, outline, places_of, word_at
 
@@ -468,25 +469,25 @@ SVELTE_OUTLINED = b"""<script lang="ts">
                     name="Review",
                     kind=DefinitionKind.CLASS,
                     named_at=LinePosition(line=6, column=6),
-                    lines=frozenset(range(6, 9)),
+                    spans=[LineSpan(first=6, last=8)],
                 ),
                 OutlinedName(
                     name="shown",
                     kind=DefinitionKind.FUNCTION,
                     named_at=LinePosition(line=12, column=4),
-                    lines=frozenset(range(11, 17)),
+                    spans=[LineSpan(first=11, last=16)],
                 ),
                 OutlinedName(
                     name="Shown",
                     kind=DefinitionKind.TYPE,
                     named_at=LinePosition(line=19, column=5),
-                    lines=frozenset({19}),
+                    spans=[LineSpan(first=19, last=19)],
                 ),
                 OutlinedName(
                     name="untouched",
                     kind=DefinitionKind.FUNCTION,
                     named_at=LinePosition(line=22, column=4),
-                    lines=frozenset(range(22, 24)),
+                    spans=[LineSpan(first=22, last=23)],
                 ),
             ],
         ),
@@ -498,37 +499,37 @@ SVELTE_OUTLINED = b"""<script lang="ts">
                     name="Shown",
                     kind=DefinitionKind.INTERFACE,
                     named_at=LinePosition(line=1, column=17),
-                    lines=frozenset(range(1, 4)),
+                    spans=[LineSpan(first=1, last=3)],
                 ),
                 OutlinedName(
                     name="Showing",
                     kind=DefinitionKind.TYPE,
                     named_at=LinePosition(line=5, column=12),
-                    lines=frozenset({5}),
+                    spans=[LineSpan(first=5, last=5)],
                 ),
                 OutlinedName(
                     name="Side",
                     kind=DefinitionKind.ENUM,
                     named_at=LinePosition(line=7, column=12),
-                    lines=frozenset({7}),
+                    spans=[LineSpan(first=7, last=7)],
                 ),
                 OutlinedName(
                     name="Pane",
                     kind=DefinitionKind.CLASS,
                     named_at=LinePosition(line=10, column=13),
-                    lines=frozenset(range(9, 16)),
+                    spans=[LineSpan(first=9, last=15)],
                 ),
                 OutlinedName(
                     name="drawn",
                     kind=DefinitionKind.FUNCTION,
                     named_at=LinePosition(line=17, column=16),
-                    lines=frozenset(range(17, 22)),
+                    spans=[LineSpan(first=17, last=17), LineSpan(first=18, last=21)],
                 ),
                 OutlinedName(
                     name="insideIf",
                     kind=DefinitionKind.FUNCTION,
                     named_at=LinePosition(line=34, column=11),
-                    lines=frozenset({34}),
+                    spans=[LineSpan(first=34, last=34)],
                 ),
             ],
         ),
@@ -540,19 +541,19 @@ SVELTE_OUTLINED = b"""<script lang="ts">
                     name="Drawer",
                     kind=DefinitionKind.CLASS,
                     named_at=LinePosition(line=1, column=13),
-                    lines=frozenset(range(1, 4)),
+                    spans=[LineSpan(first=1, last=3)],
                 ),
                 OutlinedName(
                     name="drawn",
                     kind=DefinitionKind.FUNCTION,
                     named_at=LinePosition(line=5, column=13),
-                    lines=frozenset({5}),
+                    spans=[LineSpan(first=5, last=5)],
                 ),
                 OutlinedName(
                     name="steps",
                     kind=DefinitionKind.FUNCTION,
                     named_at=LinePosition(line=7, column=10),
-                    lines=frozenset(range(7, 10)),
+                    spans=[LineSpan(first=7, last=9)],
                 ),
             ],
         ),
@@ -564,7 +565,7 @@ SVELTE_OUTLINED = b"""<script lang="ts">
                     name="Pane",
                     kind=DefinitionKind.FUNCTION,
                     named_at=LinePosition(line=1, column=16),
-                    lines=frozenset(range(1, 4)),
+                    spans=[LineSpan(first=1, last=3)],
                 )
             ],
         ),
@@ -576,7 +577,7 @@ SVELTE_OUTLINED = b"""<script lang="ts">
                     name="toggle",
                     kind=DefinitionKind.FUNCTION,
                     named_at=LinePosition(line=3, column=11),
-                    lines=frozenset(range(3, 6)),
+                    spans=[LineSpan(first=3, last=5)],
                 )
             ],
         ),
@@ -589,7 +590,7 @@ SVELTE_OUTLINED = b"""<script lang="ts">
                     name="twice",
                     kind=DefinitionKind.FUNCTION,
                     named_at=LinePosition(line=1, column=4),
-                    lines=frozenset({1, 2, 5, 6}),
+                    spans=[LineSpan(first=1, last=2), LineSpan(first=5, last=6)],
                 )
             ],
         ),
@@ -601,13 +602,13 @@ SVELTE_OUTLINED = b"""<script lang="ts">
                     name="broken",
                     kind=DefinitionKind.FUNCTION,
                     named_at=LinePosition(line=1, column=4),
-                    lines=frozenset({1, 2}),
+                    spans=[LineSpan(first=1, last=2)],
                 ),
                 OutlinedName(
                     name="whole",
                     kind=DefinitionKind.FUNCTION,
                     named_at=LinePosition(line=5, column=4),
-                    lines=frozenset({5, 6}),
+                    spans=[LineSpan(first=5, last=6)],
                 ),
             ],
         ),
