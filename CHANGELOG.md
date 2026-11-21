@@ -93,6 +93,13 @@
   `outdated`.
 
 ### Fixed
+- **Everything on screen is of the diff as it was taken.** The lines read
+  in around a hunk came from the disk, and a diff against another base,
+  or with whitespace left out, from the working tree as it stood: once a
+  file was saved after the diff was taken, one screen numbered it two
+  ways. All are read from the tree git wrote the diff's take down as, and
+  the bases on offer count the files of that take. A change saved since
+  shows, as in the review's own diff, once the diff is taken again.
 - **A key pressed in a modal stays in it.** j pressed in the question
   asked before a story is written stepped to the next line of the page
   under it; a modal now keeps every key it is pressed in, and Escape

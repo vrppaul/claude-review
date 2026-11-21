@@ -149,14 +149,6 @@ tests. Remove items when done — don't check them off.
       window with both columns as rails), and Add to review drops alone to a
       second line; the shorter hint wrapped below 460 px. The owner's call,
       2026-11-10: left as is until the page is made for small screens.
-- [ ] `fix(server)`: not everything on screen is of the take. The lines
-      read in around a hunk come from the disk (`FileWindowService` opens
-      the path), and a diff against another base, or with whitespace left
-      out, is taken of the working tree staged afresh
-      (`RepositorySource.view`); the review's own diff, a file read whole
-      and the name lookup read the tree the take was written down as. Once
-      the tree moves, the same file is numbered two ways on one screen.
-      Read all of them from the take's tree.
 - [ ] `fix(anchors)`: a thread on a file the change then renames loses its
       file. Following looks for the thread's path, which the take holds no
       more, though the diff holds the file under its new name with
@@ -435,10 +427,10 @@ of it is built yet.
 - [ ] `line_span(start, end)` takes two numbers where `lines_named` gives
       back a `LineSpan`, so two callers take a `LineSpan` apart to say it:
       one shape, written twice.
-- [ ] Move file reading out of `FileWindowService` and `read_text_files`
-      (`services/text_files.py`) into `repositories/`, behind interfaces, the
-      way `ImageService` keeps policy and `DirectoryImageStore` touches the
-      disk. Both read files themselves today.
+- [ ] Move file reading out of `read_text_files`
+      (`services/text_files.py`) into `repositories/`, behind an interface,
+      the way `ImageService` keeps policy and `DirectoryImageStore` touches
+      the disk. It reads files itself today.
 - [ ] `refactor(server)`: three routes call two methods of the `Review`
       where the rule is that a route calls one (`.claude/rules/api.md`):
       GET /api/review (`presentation/routers/page.py:81-82`), GET
@@ -492,13 +484,12 @@ of it is built yet.
       takes: `lib/api/thread-wire.ts` and its `threadOnTheWire`,
       `Threads.onTheWire`, and comments elsewhere under `frontend/src`,
       left when the server's layer became `presentation/schemas/`.
-- [ ] `fix(server)`: two reads of git take its failure for an answer:
-      `is_tracked` reads a GitError, or `ls-files` exiting 128, as
-      untracked, and `_commit_named` reads `rev-parse --verify` exiting
-      128, outside a repository, as naming no commit, which the reader then
-      sees as an unknown version (`repositories/git_repository.py`). Exit 1
-      is the answer in both; anything else should raise, as `checked_out`
-      does since 8800edb.
+- [ ] `fix(server)`: a read of git takes its failure for an answer:
+      `_commit_named` reads `rev-parse --verify` exiting 128, outside a
+      repository, as naming no commit, which the reader then sees as an
+      unknown version (`repositories/git_repository.py`). Exit 1 is the
+      answer; anything else should raise, as `checked_out` does since
+      8800edb.
 
 ## Logic the page holds that the server could: after everything else
 

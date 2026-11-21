@@ -8,9 +8,9 @@ Everything a review does, by what you are doing at the time. How to start one is
 - The whole diff as one stream: every file on screen, and a file picked in the tree is scrolled to.
 - Unified or split, with what changed inside a replaced line marked word by word.
 - Show the lines a hunk left out, twenty at a time or all at once, or leave whitespace-only changes out.
-- Read the same working tree against something else from the header: the base the review opened with, an earlier
-  round of it, or any branch or tag, each with the number of files it would show. A thread stays where it was
-  written; one a narrower base cannot draw is counted and listed.
+- Read the same change, as the diff was last taken, against something else from the header: the base the review
+  opened with, an earlier round of it, or any branch or tag, each with the number of files it would show. A thread
+  stays where it was written; one a narrower base cannot draw is counted and listed.
 - A file the agent rewrote in a round loses the tick that said you had read it.
 - A moved file says where it was: "old → new" in the tree and over its code.
 - Fold a file away, mark it viewed, filter the tree by path; drag the tree narrower or put it away.
