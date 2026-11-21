@@ -8,7 +8,10 @@
  * the file's bar and lines follow inside; where no code is drawn, a row as
  * tall as a file's bar says what stands in its place (CodeFrameRow). Lines
  * picked out of one file, as where a name stands, are framed under the
- * file's path (CodeFramePath), on their own ground (CodeFrameLines).
+ * file's path (CodeFramePath), on their own ground (CodeFrameLines). The
+ * lines a file reads round one of them stand so too, running on, in the
+ * column of a pane that shows what is chosen beside a list (PaneColumns),
+ * whose edges frame them.
  *
  * A band (Band) is a block of words the reader may ask about, lit while it
  * is pointed at or holds the keyboard, offering its act; what hangs under it

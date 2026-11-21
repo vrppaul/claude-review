@@ -10,7 +10,7 @@ import type { NamePlace, NameResponse } from '$lib/types';
 import { counted, type CountedWords } from '$lib/utils/words';
 
 /** A place as the pane lists it, with where its way stands among the ways the pane lists: the keyboard's order. */
-interface ListedPlace {
+export interface ListedPlace {
 	place: NamePlace;
 	position: number;
 }
@@ -115,6 +115,17 @@ export function listedGroups(found: NameResponse, shownWhole: ReadonlySet<string
 		});
 	}
 	return listed;
+}
+
+/** Where the way to a place stands among the ways the groups list; none where it is not listed. */
+export function positionOf(groups: ListedGroup[], place: NamePlace): number | null {
+	const listed = groups.flatMap((group) => group.files.flatMap((file) => file.places));
+	return listed.find((shown) => shown.place === place)?.position ?? null;
+}
+
+/** The place the pane lists first: none where the review found none. */
+export function firstListed(found: NameResponse): NamePlace | null {
+	return listedGroups(found, new Set())[0]?.files[0]?.places[0]?.place ?? null;
 }
 
 /** How many definitions and uses: "2 definitions, 12 uses", "not defined here, 24 uses". */

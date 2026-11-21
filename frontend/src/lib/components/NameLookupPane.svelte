@@ -9,9 +9,10 @@
 	import EmptyNote from '$lib/ui/EmptyNote.svelte';
 	import Failure from '$lib/ui/Failure.svelte';
 	import Popover from '$lib/ui/Popover.svelte';
-	import { placeKey } from '$lib/utils/line-places';
 	import { answersKey, holdsModifiersOf, LOOKUP_CHORD } from './keymap';
-	import { countSaid } from './name-places';
+	import { firstListed } from './name-places';
+	import NameLookupAside from './NameLookupAside.svelte';
+	import NameLookupWindow from './NameLookupWindow.svelte';
 	import NamePlaces from './NamePlaces.svelte';
 
 	interface Props {
@@ -26,10 +27,17 @@
 	const LOOKING = 'Looking through the repository';
 
 	const asked = $derived(lookup.asked);
-	// Open while a name is asked about: the pane notes what had the keyboard as it opens, not as its answer comes
-	const open = $derived(asked !== null);
 	const looked = $derived(asked?.looked ?? null);
 	const found = $derived(looked?.kind === 'found' ? looked.found : null);
+	// The answer and the place chosen in it, while the answer is read in the window
+	const inTheWindow = $derived(
+		looked?.kind === 'found' && looked.read.way === 'full' ? { found: looked.found, chosen: looked.read.chosen } : null
+	);
+	// Open while a name is asked about and not read in the window: the pane notes what had the keyboard as it opens,
+	// not as its answer comes
+	const open = $derived(asked !== null && inTheWindow === null);
+	// The place the window chooses first as it opens; none while the review found none, when it is not offered
+	const first = $derived(found === null ? null : firstListed(found));
 	// What heads the pane: the word pressed, until the review says what the name is
 	const heading = $derived(found?.name ?? asked?.word ?? '');
 	let tryAgainButton: HTMLButtonElement | undefined = $state();
@@ -57,31 +65,20 @@
 
 	/** Put the keyboard back on the line a name was pressed on, as the line is drawn now. */
 	function keyboardBackToTheLine(pressed: AskedName) {
-		review.sections.keyboardBackTo(pressed.place.path, lineKeyOf(pressed));
-	}
-
-	/** The key the line a name was pressed on is known by. */
-	function lineKeyOf({ place }: AskedName): string {
-		return placeKey({ side: place.side, number: place.line });
+		review.sections.keyboardBackTo(pressed.place.path, pressed.lineKey);
 	}
 
 	// What the pane lists is of the take its name was pressed in, and it stands by the name as its line is drawn
-	// now. Once the change is taken again, or the page draws the line without the name — a story told again — the
-	// pane is of the past: looked for each frame, as nothing tells of a line drawn again
+	// now: looked for each frame, as nothing tells of a line drawn again. The window looks so for itself
 	$effect(() => {
-		if (asked === null) return;
+		if (!open) return;
 		const watching = new EveryFrame(closeOnceOfThePast);
 		return () => watching.stop();
 	});
 
-	/**
-	 * Close a pane of the past. The line's number, which had the keyboard as the pane opened, may be drawn again
-	 * or gone: what stands for the line now takes the keyboard where the pane's going leaves it on nothing.
-	 */
+	/** Close a pane of the past: the line's number, which had the keyboard as the pane opened, may be gone. */
 	function closeOnceOfThePast() {
-		if (asked === null || (asked.take === review.diff.takeOnScreen && asked.at.stretch() !== null)) return;
-		review.sections.keyboardToLine(asked.place.path, lineKeyOf(asked));
-		lookup.close();
+		if (!lookup.standsFor(review.diff.takeOnScreen)) lookup.closeToTheLine();
 	}
 
 	/** The key the gesture is held with went down or up: the word under the pointer is marked while it is held. */
@@ -93,9 +90,10 @@
 <!-- On the window: the key goes down or up wherever the keyboard is, and a window left lets it go unseen -->
 <svelte:window onkeydown={noteKey} onkeyup={noteKey} onblur={() => lookup.hold(false)} />
 
-{#snippet count()}
-	{#if found !== null && found.places.length > 0}
-		<span data-testid="name-lookup-count" class="cr-faint text-xs">{countSaid(found)}</span>
+<!-- How many places, and the way to read them in the window, the first listed chosen, once the review found any -->
+{#snippet aside()}
+	{#if found !== null && first !== null}
+		<NameLookupAside {found} readAs="compact" readTheOtherWay={() => lookup.readInTheWindow(first)} />
 	{/if}
 {/snippet}
 
@@ -106,49 +104,54 @@
 {/if}
 
 <!-- Where a name pressed in the code is defined and used, in a pane by the name, drawn while the lookup holds the
-	name: it notes what had the keyboard, the line pressed, as it is drawn, and gives the keyboard back as it goes -->
+	name and it is read there: it notes what had the keyboard, the line pressed, as it is drawn, and gives the
+	keyboard back as it goes; or in the window, read there -->
 {#if asked}
 	<CodeMark stretch={asked.at.stretch} mark="pressed" marks={lookup.marks} testId="name-pressed" />
-	<Popover
-		at={asked.at.box}
-		bind:open={() => open, (opened) => !opened && lookup.close()}
-		label="Where {heading} is defined and used"
-		{heading}
-		aside={count}
-		placement="roomier-start"
-		width="code"
-		testId="name-lookup"
-		onkeydown={pressAtTheLine}
-	>
-		<div class="flex flex-col gap-4 p-3">
-			{#if looked?.kind === 'looking'}
-				<p data-testid="name-lookup-looking" class="cr-muted flex items-center gap-2 text-xs">
-					<BreathingDots tone="quiet" testId="name-lookup-dots" />
-					{LOOKING}
-				</p>
-			{:else if looked?.kind === 'failed'}
-				<div class="flex flex-col items-start gap-2">
-					<Failure stands="apart" testId="name-lookup-failed" said={looked.why} />
-					<Button
-						bind:element={tryAgainButton}
-						tone="secondary"
-						size="xs"
-						testId="look-again"
-						onclick={() => lookup.tryAgain()}
-					>
-						Try again
-					</Button>
-				</div>
-			{:else if found !== null && found.places.length === 0}
-				<EmptyNote within="list" testId="name-lookup-nothing">
-					Nothing in the code is called “{found.name}”. Here it stands in a comment or a string, or is a word of the
-					language.
-				</EmptyNote>
-			{:else if found !== null}
-				{#key found}
-					<NamePlaces {found} goTo={(place: NamePlace) => goTo(place, found.name)} />
-				{/key}
-			{/if}
-		</div>
-	</Popover>
+	{#if inTheWindow !== null}
+		<NameLookupWindow {lookup} found={inTheWindow.found} chosen={inTheWindow.chosen} {goTo} />
+	{:else}
+		<Popover
+			at={asked.at.box}
+			bind:open={() => open, (opened) => !opened && lookup.close()}
+			label="Where {heading} is defined and used"
+			{heading}
+			{aside}
+			placement="roomier-start"
+			width="code"
+			testId="name-lookup"
+			onkeydown={pressAtTheLine}
+		>
+			<div class="flex flex-col gap-4 p-3">
+				{#if looked?.kind === 'looking'}
+					<p data-testid="name-lookup-looking" class="cr-muted flex items-center gap-2 text-xs">
+						<BreathingDots tone="quiet" testId="name-lookup-dots" />
+						{LOOKING}
+					</p>
+				{:else if looked?.kind === 'failed'}
+					<div class="flex flex-col items-start gap-2">
+						<Failure stands="apart" testId="name-lookup-failed" said={looked.why} />
+						<Button
+							bind:element={tryAgainButton}
+							tone="secondary"
+							size="xs"
+							testId="look-again"
+							onclick={() => lookup.tryAgain()}
+						>
+							Try again
+						</Button>
+					</div>
+				{:else if found !== null && found.places.length === 0}
+					<EmptyNote within="list" testId="name-lookup-nothing">
+						Nothing in the code is called “{found.name}”. Here it stands in a comment or a string, or is a word of the
+						language.
+					</EmptyNote>
+				{:else if found !== null}
+					{#key found}
+						<NamePlaces {found} goTo={(place: NamePlace) => goTo(place, found.name)} />
+					{/key}
+				{/if}
+			</div>
+		</Popover>
+	{/if}
 {/if}

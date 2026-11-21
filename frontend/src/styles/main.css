@@ -292,6 +292,32 @@
 	text-align: end;
 	white-space: nowrap;
 }
+/*
+ * A place where places are chosen, in the window of a name: pressed anywhere on its row, lit under the pointer; the
+ * one chosen lit as the row the reader is at, but a line the change wrote, which keeps the change's tint alone, as
+ * the board draws it
+ */
+.cr-place-choosable {
+	cursor: pointer;
+}
+.cr-place-choosable:hover {
+	background-image: linear-gradient(var(--cr-hover), var(--cr-hover));
+}
+.cr-place-chosen:not(.cr-row-add),
+.cr-place-chosen:not(.cr-row-add):hover {
+	background-image: linear-gradient(var(--cr-selected), var(--cr-selected));
+}
+
+/*
+ * The code round a place chosen, beside the places: each line whole on its line, the column cut at its edge; the
+ * place's line, where the change did not write it, lit as the line the reader is at
+ */
+.cr-run-code {
+	padding-inline-end: --spacing(3);
+}
+.cr-row-at {
+	background: var(--cr-selected);
+}
 
 /*
  * Split layout. Each side of a row carries its own change, so the tint and

@@ -719,9 +719,14 @@ function refusedSyntax(...besides) {
 // A pane opened from a control is a Popover, which stands by the control; a modal stands over the whole review,
 // by none. The modals the page asks in, each with why: the question before stories are turned on, asked on the
 // way into Story from whichever control the reader pressed — the switch, Story's introduction, the news, whose
-// card goes as it is asked; and a story's diagram at its own size, as large as the window allows, which no pane
-// by its button could hold
-const MODALS = ['src/lib/components/StoryOptIn.svelte', 'src/lib/components/StoryDiagram.svelte'];
+// card goes as it is asked; a story's diagram at its own size, as large as the window allows, which no pane
+// by its button could hold; and where a name is defined and used with the code round each place, a list and the
+// code beside it, which no pane by the name could hold
+const MODALS = [
+	'src/lib/components/StoryOptIn.svelte',
+	'src/lib/components/StoryDiagram.svelte',
+	'src/lib/components/NameLookupWindow.svelte'
+];
 
 const A_PANE_OF_A_CONTROL =
 	'A pane opened from a control is a Popover: a modal (Dialog) is only for what MODALS in eslint.config.js lists, with why.';
@@ -821,11 +826,12 @@ export default tseslint.config(
 	{
 		// Lines of code, drawn as highlight.js writes them: it escapes the source it is handed, and the marks on
 		// changed words and on a name asked about (utils/markup-marks.ts) are spans put around that escaped text,
-		// never inside an escape. A diff's lines, and each line a name stands on
+		// never inside an escape. A diff's lines, each line a name stands on, and the code round one of them
 		files: [
 			'src/lib/components/RawView.svelte',
 			'src/lib/components/SplitView.svelte',
-			'src/lib/components/PlaceLine.svelte'
+			'src/lib/components/PlaceLine.svelte',
+			'src/lib/components/PlaceCode.svelte'
 		],
 		rules: { 'svelte/no-at-html-tags': 'off' }
 	},

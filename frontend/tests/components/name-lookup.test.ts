@@ -3,7 +3,7 @@ import { fireEvent, render, screen, within } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import ReviewScreen from '$lib/components/ReviewScreen.svelte';
 import type { Review } from '$lib/review/review.svelte';
-import type { DiffFile, NamePlace, NameResponse } from '$lib/types';
+import type { DiffFile, FileOfTakeResponse, NamePlace, NameResponse } from '$lib/types';
 import { caretByRangeAlone, caretFallsAt, caretRangeFallsAt, noCaretUnderThePointer } from '../caret';
 import { A_LATER_TAKE, addedLine, contextLine, diffFile, diffResponse, hunk, OF_FILES, removedLine } from '../diff';
 import { type FakeServer, fakeServer, SERVER_ERROR } from '../fake-server';
@@ -375,5 +375,210 @@ describe('going to a place of a name', () => {
 		await frames();
 
 		expect(document.activeElement?.textContent?.trim()).toBe('20');
+	});
+});
+
+/** A file of the take whole, as the review reads one: a line to each text, numbered from the first. */
+function fileOfTake(path: string, texts: string[]): FileOfTakeResponse {
+	const lines = texts.map((text, offset) => contextLine(null, offset + 1, text));
+	return { path, hunk: hunk(lines, { header: '' }), commentable: true };
+}
+
+// The files of the take the places of TOTAL stand in: the change's, and one the change did not touch, whose line 9
+// is the use found there
+const FILES_OF_THE_TAKE: Record<string, FileOfTakeResponse> = {
+	'src/notes.txt': fileOfTake(
+		'src/notes.txt',
+		['total = 0', 'say(😀, total)', '# keeps the total'].concat(Array.from({ length: 37 }, (_, at) => `line ${at + 4}`))
+	),
+	'src/report.txt': fileOfTake(
+		'src/report.txt',
+		Array.from({ length: 8 }, (_, at) => `line ${at + 1}`)
+			.concat(['print(total)'])
+			.concat(Array.from({ length: 21 }, (_, at) => `line ${at + 10}`))
+	)
+};
+
+// The places of TOTAL, the use outside the change standing inside a function
+const TOTAL_IN_A_REPORT: NameResponse = {
+	name: 'total',
+	places: [
+		place({ line: 1, column: 0, text: 'total = 0', defined_as: 'variable' }),
+		place({ path: 'src/report.txt', line: 9, column: 6, text: 'print(total)', inside: 'report' }),
+		place({ line: 2, column: 7, text: 'say(😀, total)', added: true })
+	]
+};
+
+/** Answer every read of a file of the take with that file. */
+function answeringFilesOfTheTake(): void {
+	server.answerWith('GET /api/file-of-take', (request) => FILES_OF_THE_TAKE[request.query.path]);
+}
+
+/** Press the name on the change's line 2, let the review answer, and read the answer in the window. */
+async function openedInTheWindow(): Promise<void> {
+	server.answer('GET /api/name', TOTAL_IN_A_REPORT);
+	answeringFilesOfTheTake();
+	opened();
+	await pressWithTheKey(1, 8);
+	await userEvent.setup().click(screen.getByTestId('read-full'));
+	await settled();
+}
+
+/** What the window's code says it is of, and its lines, each its number and its code. */
+function codeShown(): string[] {
+	const window = screen.getByTestId('name-lookup-window');
+	return [
+		within(window).getByTestId('name-window-path').textContent.replace(/\s+/g, ' ').trim(),
+		...within(window)
+			.getAllByTestId('name-window-line')
+			.map((line) => line.textContent)
+	];
+}
+
+/** Lines of a file of the take, each its number and its code, from the first to the last. */
+function linesOf(path: string, first: number, last: number): string[] {
+	return FILES_OF_THE_TAKE[path].hunk.lines.slice(first - 1, last).map((line) => `${line.new_number}${line.content}`);
+}
+
+describe('reading where a name stands in a window', () => {
+	it('offers Compact and Full in the pane’s head once the places come, and neither while the review looks', async () => {
+		const looking = server.hold('GET /api/name');
+		opened();
+		await pressWithTheKey(1, 8);
+		const offeredWhileLooking = screen.queryByTestId('read-full');
+
+		looking.answer(0, TOTAL);
+		await settled();
+
+		expect([offeredWhileLooking, screen.getByTestId('read-compact').textContent.trim()]).toEqual([null, 'Compact']);
+		expect(screen.getByTestId('read-full').textContent.trim()).toBe('Full');
+	});
+
+	it('opens Full in a window, the places listed, the first chosen and its code beside them, asking nothing again', async () => {
+		await openedInTheWindow();
+
+		const window = screen.getByTestId('name-lookup-window');
+		expect(within(window).getByTestId('name-lookup-window-heading').textContent).toBe('total');
+		expect(within(window).getByTestId('name-lookup-count').textContent).toBe('1 definition, 2 uses');
+		expect(
+			within(window)
+				.getAllByTestId('name-place')
+				.map((row) => row.textContent)
+		).toEqual(['1total = 0Go to symbol', '9print(total)Go to symbol', '2say(😀, total)Go to symbol']);
+		expect(codeShown()).toEqual(['src/notes.txt not in this change', ...linesOf('src/notes.txt', 1, 10)]);
+		expect(namesAsked()).toHaveLength(1);
+	});
+
+	it('says a place on a line the change wrote is in this change', async () => {
+		await openedInTheWindow();
+
+		await userEvent.setup().click(screen.getAllByTestId('name-place')[2]);
+		await settled();
+
+		expect(codeShown()).toEqual(['src/notes.txt in this change', ...linesOf('src/notes.txt', 1, 11)]);
+	});
+
+	it('shows the code round a place chosen with the pointer, with what it stands in and that the change leaves it', async () => {
+		await openedInTheWindow();
+
+		await userEvent.setup().click(screen.getAllByTestId('name-place')[1]);
+		await settled();
+
+		expect(codeShown()).toEqual(['src/report.txt, in report not in this change', ...linesOf('src/report.txt', 1, 18)]);
+		expect(document.activeElement).toBe(screen.getAllByTestId('go-to-symbol')[1]);
+	});
+
+	it('chooses the place whose way the keyboard is on, Tab walking on from the first', async () => {
+		await openedInTheWindow();
+		screen.getAllByTestId('go-to-symbol')[0].focus();
+
+		await userEvent.setup().tab();
+		await settled();
+
+		expect(codeShown()).toEqual(['src/report.txt, in report not in this change', ...linesOf('src/report.txt', 1, 18)]);
+	});
+
+	it('takes the reader to the place chosen at Go to symbol, the window put away, the keyboard on its line', async () => {
+		await openedInTheWindow();
+
+		await userEvent.setup().click(screen.getByTestId('go-to-chosen-symbol'));
+		await settled();
+		await frames();
+
+		expect(screen.queryByTestId('name-lookup-window')).toBeNull();
+		expect(document.activeElement?.textContent?.trim()).toBe('1');
+	});
+
+	it('takes the reader to a place at its own way in the list, the window put away, the keyboard on its line', async () => {
+		await openedInTheWindow();
+
+		await userEvent.setup().click(screen.getAllByTestId('go-to-symbol')[0]);
+		await settled();
+		await frames();
+
+		expect(screen.queryByTestId('name-lookup-window')).toBeNull();
+		expect(document.activeElement?.textContent?.trim()).toBe('1');
+	});
+
+	it('brings the pane back by the name at Compact, the same places in it, asking nothing again', async () => {
+		await openedInTheWindow();
+
+		await userEvent.setup().click(within(screen.getByTestId('name-lookup-window')).getByTestId('read-compact'));
+		await settled();
+
+		expect(screen.queryByTestId('name-lookup-window')).toBeNull();
+		expect(within(screen.getByTestId('name-lookup')).getAllByTestId('name-place')).toHaveLength(3);
+		expect(namesAsked()).toHaveLength(1);
+	});
+
+	it('puts the keyboard back on the line pressed at Escape in the pane brought back from the window', async () => {
+		await openedInTheWindow();
+		const user = userEvent.setup();
+		await user.click(within(screen.getByTestId('name-lookup-window')).getByTestId('read-compact'));
+		await settled();
+
+		await user.keyboard('{Escape}');
+		await settled();
+
+		expect(screen.queryByTestId('name-lookup')).toBeNull();
+		expect(document.activeElement?.textContent?.trim()).toBe('2');
+	});
+
+	it('says why the code round a place could not be read, where it would stand, and reads it again at Try again', async () => {
+		server.answer('GET /api/name', TOTAL_IN_A_REPORT);
+		server.refuse('GET /api/file-of-take', SERVER_ERROR, 'git stopped with "fatal: bad object"');
+		opened();
+		await pressWithTheKey(1, 8);
+		const user = userEvent.setup();
+		await user.click(screen.getByTestId('read-full'));
+		await settled();
+		const said = screen.getByTestId('name-window-failed').textContent;
+
+		answeringFilesOfTheTake();
+		await user.click(screen.getByTestId('read-code-again'));
+		await settled();
+
+		expect(said).toBe('git stopped with "fatal: bad object"');
+		expect(codeShown()).toEqual(['src/notes.txt not in this change', ...linesOf('src/notes.txt', 1, 10)]);
+		expect(document.activeElement).toBe(screen.getAllByTestId('go-to-symbol')[0]);
+	});
+
+	it('keeps a key of the review pressed in the window to the window: the line under it is not stepped to', async () => {
+		await openedInTheWindow();
+		const keyboardOn = document.activeElement;
+
+		await userEvent.setup().keyboard('j');
+		await settled();
+
+		expect([screen.queryByTestId('name-lookup-window') !== null, document.activeElement]).toEqual([true, keyboardOn]);
+	});
+
+	it('closes once the change is taken again, what it shows being of the take before, the keyboard on the line pressed', async () => {
+		await openedInTheWindow();
+
+		await takenAgainAs([NOTES]);
+
+		expect(screen.queryByTestId('name-lookup-window')).toBeNull();
+		expect(document.activeElement?.textContent?.trim()).toBe('2');
 	});
 });

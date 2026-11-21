@@ -159,6 +159,15 @@ export const PANE_WIDTHS: Record<PaneWidth, string> = {
 };
 
 /**
+ * How wide a modal is drawn (Dialog): as a pane of one of the widths, as tall as what it holds; or as the window:
+ * over most of it, its size its own whatever it holds — what is read beside a list, which keeps its place as the
+ * reader chooses in the list.
+ */
+export type DialogWidth = PaneWidth | 'window';
+
+export const DIALOG_WIDTHS: Record<DialogWidth, string> = { ...PANE_WIDTHS, window: 'cr-ui-dialog-window' };
+
+/**
  * What a pane says by its edge: that it speaks for the agent, invites the reader's own word, speaks of what the agent
  * brought that is not read yet, or of what failed.
  */

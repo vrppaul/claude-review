@@ -201,6 +201,16 @@
 	--cr-window-room: --spacing(4);
 	--cr-pane-standing-widest: calc(100vw - 2 * var(--cr-window-room));
 	--cr-pane-standing-tallest: calc(100dvh - 2 * var(--cr-window-room));
+	/*
+	 * A modal as large as the window (lib/ui Dialog): as large as what it is read beside asks, a list and the code
+	 * round what is chosen in it, a line of code read whole beside the list; and no nearer the window's edges than
+	 * twice the room a pane standing by itself keeps, so the page under it is still seen round it
+	 */
+	--cr-dialog-window-room: calc(2 * var(--cr-window-room));
+	--cr-dialog-window-width: min(72rem, 100vw - 2 * var(--cr-dialog-window-room));
+	--cr-dialog-window-height: min(40rem, 100dvh - 2 * var(--cr-dialog-window-room));
+	/* The list a pane in two columns holds at its start (lib/ui PaneColumns): a place's line read to its way */
+	--cr-pane-columns-list: 28rem;
 	/* The tallest the list of threads to mention stands over the field, before it scrolls itself */
 	--cr-mention-list-tallest: 15rem;
 	/*

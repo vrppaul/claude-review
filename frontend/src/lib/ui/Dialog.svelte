@@ -1,23 +1,32 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import type { Closing } from './dialog-closing';
-	import { PANE_WIDTHS, type PaneWidth } from './pane';
+	import { DIALOG_WIDTHS, type DialogWidth } from './pane';
 	import PaneHead from './PaneHead.svelte';
 
 	interface Props {
 		/** What the dialog is called, said to whoever cannot see it. */
 		label: string;
-		width: PaneWidth;
+		width: DialogWidth;
 		/** What heads it, beside the way to close it: none for a question, whose answers are its ways out. */
 		heading?: string | undefined;
+		/** What stands beside its heading: a count, a way of reading what it holds. */
+		aside?: Snippet | undefined;
+		/**
+		 * Whether it stands open. Whoever drew it closes it from outside by turning this false: it closes as Escape
+		 * closes it, the browser giving the keyboard back, and says so by onClose.
+		 */
+		open?: boolean;
 		testId: string;
 		/** Called once it closes, by Escape, a press outside it or its own words, for whoever drew it to stop drawing it. */
 		onClose: () => void;
 		/** What it holds, handed the ways to close it. */
 		children: Snippet<[closing: Closing]>;
+		/** What stays at its foot under what it holds, handed the ways to close it: the act it leads to. */
+		foot?: Snippet<[closing: Closing]> | undefined;
 	}
 
-	let { label, width, heading, testId, onClose, children }: Props = $props();
+	let { label, width, heading, aside, open = true, testId, onClose, children, foot }: Props = $props();
 
 	let dialog = $state<HTMLDialogElement>();
 	// What the dialog's own words asked to be done once it has closed: nothing, where it is closed any other way
@@ -29,7 +38,12 @@
 	// A real modal from the moment it is drawn: the keyboard is held inside it,
 	// and the page under it takes no keys or presses until it closes
 	$effect(() => {
-		if (dialog && !dialog.open) dialog.showModal();
+		if (dialog && open && !dialog.open) dialog.showModal();
+	});
+
+	// Closed by whoever drew it
+	$effect(() => {
+		if (dialog && !open) close();
 	});
 
 	/** A press on the backdrop lands on the dialog itself, outside what it holds. */
@@ -64,6 +78,14 @@
 		onClose();
 		asked?.();
 	}
+
+	/**
+	 * A key pressed in it is its own: the page under it, which takes no presses, hears no keys either. Escape, which
+	 * the browser answers by closing it, still closes it.
+	 */
+	function keepKeyInside(event: KeyboardEvent) {
+		event.stopPropagation();
+	}
 </script>
 
 <!-- A modal, drawn as the browser's own `<dialog>` and shown with `showModal()`, in the look of every pane: a
@@ -74,16 +96,20 @@
 	bind:this={dialog}
 	aria-label={label}
 	data-testid={testId}
-	class={['cr-ui-pane cr-ui-dialog', PANE_WIDTHS[width]]}
+	class={['cr-ui-pane cr-ui-dialog', DIALOG_WIDTHS[width]]}
 	onclose={closed}
 	onpointerdown={notePress}
 	onclick={closeOnBackdrop}
+	onkeydown={keepKeyInside}
 >
 	{#if heading !== undefined}
-		<PaneHead head={{ heading, close }} {testId} />
+		<PaneHead head={{ heading, close, aside }} {testId} />
 	{/if}
 	<!-- What it holds, inside its edge: a press here is not a press outside it -->
 	<div class="cr-scroller cr-ui-pane-body">
 		{@render children({ close, closeThen })}
 	</div>
+	{#if foot}
+		<div class="cr-ui-pane-foot">{@render foot({ close, closeThen })}</div>
+	{/if}
 </dialog>

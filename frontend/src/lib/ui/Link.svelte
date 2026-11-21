@@ -8,11 +8,13 @@
 		testId: string;
 		/** The link itself, for whoever hands the keyboard to it: the first way a pane lists, as the pane fills. */
 		element?: HTMLElement | undefined;
+		/** Whether a modal it stands in gives it the keyboard as it opens, by the browser's own word for it. */
+		autofocus?: boolean;
 		/** Its words, at the size of the line they stand in. */
 		children: Snippet;
 	};
 
-	let { testId, element = $bindable(), children, ...goes }: Props = $props();
+	let { testId, element = $bindable(), autofocus = false, children, ...goes }: Props = $props();
 </script>
 
 <!-- Words that lead somewhere or do something, in the colour of the reader's controls as words. One that leads
@@ -30,7 +32,9 @@
 		{@render children()}
 	</a>
 {:else}
-	<button bind:this={element} type="button" data-testid={testId} class="cr-ui-link" onclick={goes.onclick}>
+	<!-- Autofocus is how a modal names what takes the keyboard as it opens: it acts nowhere else -->
+	<!-- svelte-ignore a11y_autofocus -->
+	<button bind:this={element} type="button" {autofocus} data-testid={testId} class="cr-ui-link" onclick={goes.onclick}>
 		{@render children()}
 	</button>
 {/if}

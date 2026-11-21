@@ -994,6 +994,43 @@
 .cr-ui-dialog::backdrop {
 	background: var(--cr-shade);
 }
+/* A modal as large as the window: its size its own, whatever it holds, kept its room from the window's edges */
+.cr-ui-dialog-window {
+	width: var(--cr-dialog-window-width);
+	height: var(--cr-dialog-window-height);
+}
+
+/*
+ * What a pane holds in two columns (PaneColumns): as tall as the pane's body, the list at its start at one width,
+ * ruled off from what is chosen in it, which fills the rest on the reading ground and scrolls both ways
+ */
+.cr-ui-pane-columns {
+	display: grid;
+	grid-template-columns: var(--cr-pane-columns-list) minmax(0, 1fr);
+	grid-template-rows: minmax(0, 1fr);
+	height: 100%;
+}
+.cr-ui-pane-columns-list {
+	border-inline-end: var(--cr-line) solid var(--cr-pane-edge);
+}
+/* What is chosen: its head kept above, and under it what scrolls */
+.cr-ui-pane-columns-beside {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+	min-height: 0;
+	background-color: var(--color-base-100);
+}
+.cr-ui-pane-columns-beside-body {
+	flex: 1;
+	min-height: 0;
+	/* stylelint-disable-next-line declaration-property-value-disallowed-list -- a long line of code, cut at the column's edge, is scrolled to sideways */
+	overflow: auto;
+}
+/* The keyboard's ring inside it: outside, the pane's edge and its foot would cut two of the ring's sides */
+.cr-ui-pane-columns-beside-body:focus-visible {
+	outline-offset: calc(-1 * var(--cr-focus-ring-width));
+}
 
 /*
  * A bar across the top of what it heads (Bar): on the bars' ground, ruled off
@@ -1347,18 +1384,30 @@
 /*
  * Its top line where its lines are picked out of one file (CodeFramePath):
  * the file's path, small and muted in the code's face, on a pane's ground,
- * ruled off from the lines, cut where the room ends
+ * ruled off from the lines, cut where the room ends; what it says of them
+ * at its end, in the page's own face, never cut
  */
 .cr-ui-code-frame-path {
-	overflow: hidden;
+	display: flex;
+	align-items: baseline;
+	gap: --spacing(3);
 	padding: --spacing(1) --spacing(3);
 	border-bottom: var(--cr-line) solid var(--cr-pane-edge);
 	background-color: var(--color-base-200);
 	color: var(--cr-muted);
 	font-family: var(--font-mono);
 	font-size: var(--text-xs);
-	text-overflow: ellipsis;
 	white-space: nowrap;
+}
+.cr-ui-code-frame-path-where {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.cr-ui-code-frame-path-said {
+	flex: none;
+	font-family: var(--font-sans);
 }
 /*
  * Its lines where they are picked out of one file (CodeFrameLines), under
@@ -1378,6 +1427,19 @@
 }
 .cr-ui-code-frame-lines tr + tr > td {
 	border-top: var(--cr-line) solid var(--cr-pane-edge);
+}
+/*
+ * Lines running on one from another (CodeFrameLines, running), as a file's lines are drawn: touching, no rule
+ * between them, each read whole on its line however long
+ */
+.cr-ui-code-frame-lines-running {
+	white-space: pre;
+}
+.cr-ui-code-frame-lines-running td {
+	padding-block: 0;
+}
+.cr-ui-code-frame-lines-running tr + tr > td {
+	border-top: none;
 }
 /*
  * A mark over a stretch of the code (CodeMark), its ground a highlight under

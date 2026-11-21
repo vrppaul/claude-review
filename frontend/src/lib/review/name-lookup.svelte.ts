@@ -1,7 +1,8 @@
 /**
  * Where a name in the code is defined and used, asked of the review from
- * one reading area: the name the reader pressed there, and what the review
- * answered of it, held while its pane is open and gone once it closes.
+ * one reading area: the name the reader pressed there, what the review
+ * answered of it, and how the reader reads that, held while its pane or its
+ * window is open and gone once it closes.
  *
  * What a name is, the review says at the press: the page only finds the
  * word under the pointer, to mark it while the key is held and to say
@@ -15,7 +16,7 @@ import { type Caret, type CaretReader, caretReaderOfThisBrowser, rangeOfText, te
 import { type CodeMarks, codeMarksOfThisBrowser } from '$lib/dom/code-marks';
 import type { FileSections } from '$lib/dom/file-sections';
 import { DrawnName } from '$lib/review/drawn-name';
-import type { NameResponse, ReviewMode } from '$lib/types';
+import type { NamePlace, NameResponse, ReviewMode } from '$lib/types';
 import { columnOf, wordAtCaret } from '$lib/utils/code-words';
 import { messageOf } from '$lib/utils/errors';
 import { placeKey } from '$lib/utils/line-places';
@@ -51,12 +52,27 @@ export function namePointingIn(mode: ReviewMode): NamePointing | null {
 	return marks === null ? null : { caretAt, marks };
 }
 
-/** What asking came to: on its way, the review's answer, or why it could not be had. */
-type Looked = { kind: 'looking' } | { kind: 'found'; found: NameResponse } | { kind: 'failed'; why: string };
+/**
+ * How the reader reads what the review answered: in the pane by the name, a line to each place; or in a window over
+ * the page, one place chosen at all times, its code beside the list.
+ */
+export type AnswerRead = { way: 'compact' } | { way: 'full'; chosen: NamePlace };
+
+// How every answer is read as it comes
+const IN_THE_PANE: AnswerRead = { way: 'compact' };
+
+/**
+ * What asking came to: on its way, the review's answer and how the reader reads it, or why it could not be had.
+ * Only an answer is read one way or another: there is no window while the review looks, or once it failed.
+ */
+type Looked =
+	{ kind: 'looking' } | { kind: 'found'; found: NameResponse; read: AnswerRead } | { kind: 'failed'; why: string };
 
 /** The name the reader pressed: the place asked about, the word pressed, where it stands, and what asking came to. */
 export interface AskedName {
 	place: PlaceInCode;
+	/** The key the line pressed is known by among its file's lines. */
+	lineKey: string;
 	/** The word under the pointer, which heads the pane until the review says what the name is. */
 	word: string;
 	/** The word where it stands in its line, found there as the line is drawn now. */
@@ -90,7 +106,7 @@ const LOOKING: Looked = { kind: 'looking' };
 /** Ask the review about a place, and say what that came to: whatever it refuses, in its own words. */
 async function lookedUp(place: PlaceInCode): Promise<Looked> {
 	try {
-		return { kind: 'found', found: await readName(place) };
+		return { kind: 'found', found: await readName(place), read: IN_THE_PANE };
 	} catch (error) {
 		return { kind: 'failed', why: messageOf(error) };
 	}
@@ -172,6 +188,7 @@ export class NameLookup {
 		const lineKey = placeKey({ side: line.side, number: line.line });
 		const asked: AskedName = {
 			place: { ...line, column: pressed.column },
+			lineKey,
 			word: pressed.word,
 			at: new DrawnName(this.#sections, line.path, lineKey, { column: pressed.starts, name: pressed.word }),
 			take,
@@ -190,8 +207,51 @@ export class NameLookup {
 		void this.#lookUp(again);
 	}
 
-	/** Close the pane: what was asked is gone. */
+	/** Read the review's answer in the window, or choose another place there. */
+	readInTheWindow(chosen: NamePlace): void {
+		this.#readAnswer({ way: 'full', chosen });
+	}
+
+	/**
+	 * Bring the pane back by the name, from the window. The keyboard goes to the line pressed first, as at the
+	 * press: the pane notes what has it as it opens, and gives it back there as it goes.
+	 */
+	readInThePane(): void {
+		const asked = this.#asked;
+		if (asked === null) return;
+		this.#sections.keyboardBackTo(asked.place.path, asked.lineKey);
+		this.#readAnswer(IN_THE_PANE);
+	}
+
+	/** Read the review's answer about the name asked about so, while there is one. */
+	#readAnswer(read: AnswerRead): void {
+		const asked = this.#asked;
+		if (asked?.looked.kind === 'found') this.#asked = { ...asked, looked: { ...asked.looked, read } };
+	}
+
+	/**
+	 * Whether what the lookup holds stands for the code on screen: asked of the take on screen, and its name drawn
+	 * where it was pressed. Once the change is taken again, or the page draws the line without the name — a story
+	 * told again — it is of the past.
+	 */
+	standsFor(takeOnScreen: number): boolean {
+		const asked = this.#asked;
+		return asked !== null && asked.take === takeOnScreen && asked.at.stretch() !== null;
+	}
+
+	/** Close the pane, or the window: what was asked is gone. */
 	close(): void {
+		this.#asked = null;
+	}
+
+	/**
+	 * Close the pane or the window, the keyboard going to what stands for the line pressed where their going leaves
+	 * it on nothing: the line's number drawn again, or the file's toggle where the line is gone.
+	 */
+	closeToTheLine(): void {
+		const asked = this.#asked;
+		if (asked === null) return;
+		this.#sections.keyboardToLine(asked.place.path, asked.lineKey);
 		this.#asked = null;
 	}
 

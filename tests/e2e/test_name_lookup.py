@@ -49,9 +49,9 @@ WHOLE = 1
 # The ways a reader walks with Tab: to the definition, to the uses the pane lists at first, and on to Show more
 TABS_THROUGH_THE_PANE = 7
 # Out of the pane from the first way in it: on past Show more and the ways to the change's import and call, its
-# last stop, or back past its close
+# last stop, or back past its close and the two ways to read it, Full and Compact
 TABS_OUT_OF_THE_PANE = TABS_THROUGH_THE_PANE + 3
-TABS_BACK_OUT_OF_THE_PANE = 2
+TABS_BACK_OUT_OF_THE_PANE = 4
 # The number of the line the change's call stands on: after the import, a blank line and the lines before it
 PRESSED_LINE_NUMBER = str(LINES_BEFORE + 3)
 
@@ -197,6 +197,36 @@ async def test_the_first_ctrl_click_on_the_line_arrived_at_opens_where_its_name_
     await defining.click(modifiers=["Control"], position=ON_THE_DEFINED_NAME)
 
     await expect(page.get_by_test_id("name-lookup").get_by_test_id("name-lookup-heading")).to_have_text(NAME)
+
+
+async def _read_in_the_window(page: Page, review: RunningReview) -> None:
+    """Press the change's call, and read where its name stands in the window."""
+    await page.goto(review.url)
+    await _press_the_call(page)
+    await page.get_by_test_id("name-lookup").get_by_test_id("read-full").click()
+
+
+async def test_the_window_gives_the_keyboard_to_the_way_to_the_first_place_as_it_opens(
+    review: RunningReview, page: Page
+) -> None:
+    await _read_in_the_window(page, review)
+
+    window = page.get_by_test_id("name-lookup-window")
+    await expect(window.get_by_test_id("name-window-path")).to_contain_text(FLAGS)
+    await expect(page.locator(FOCUSED_ELEMENT)).to_have_text("Go to symbol")
+    await expect(window.get_by_test_id("name-defined").get_by_test_id("go-to-symbol")).to_be_focused()
+
+
+async def test_escape_closes_the_window_and_puts_the_keyboard_back_on_the_line_pressed(
+    review: RunningReview, page: Page
+) -> None:
+    await _read_in_the_window(page, review)
+    await expect(page.get_by_test_id("name-lookup-window")).to_be_visible()
+
+    await page.keyboard.press("Escape")
+
+    await expect(page.get_by_test_id("name-lookup-window")).to_have_count(0)
+    await expect(page.locator(FOCUSED_ELEMENT)).to_have_text(PRESSED_LINE_NUMBER)
 
 
 async def test_a_drag_over_the_line_arrived_at_selects_its_words(review: RunningReview, page: Page) -> None:

@@ -9,17 +9,27 @@
 	import Link from '$lib/ui/Link.svelte';
 	import { withNameMarked } from '$lib/utils/code-words';
 	import { highlightLine, languageOf } from '$lib/utils/highlight';
-	import { type ListedGroup, listedGroups, notesOn } from './name-places';
+	import { type ListedGroup, type ListedPlace, listedGroups, notesOn, positionOf } from './name-places';
 	import PlaceLine from './PlaceLine.svelte';
+
+	/** Where one place of those listed is chosen at all times: which, and how the reader chooses another. */
+	interface Choosing {
+		chosen: NamePlace;
+		choose: (place: NamePlace) => void;
+	}
 
 	interface Props {
 		/** What the review answered of the name: one that stands somewhere. */
 		found: NameResponse;
 		/** Take the reader to a place. */
 		goTo: (place: NamePlace) => void;
+		/** In the window, where the code of the place chosen stands beside the list; none in the pane. */
+		choosing?: Choosing | undefined;
+		/** The way to the place chosen, as it is drawn: for whoever hands the keyboard on to it. */
+		chosenWay?: HTMLElement | undefined;
 	}
 
-	let { found, goTo }: Props = $props();
+	let { found, goTo, choosing, chosenWay = $bindable() }: Props = $props();
 	const review = useReview();
 
 	const GO_TO_SYMBOL = 'Go to symbol';
@@ -30,6 +40,12 @@
 	// The way to each place listed, in the order they are listed
 	const ways: HTMLElement[] = $state([]);
 
+	// The way to the place chosen follows the choice
+	$effect(() => {
+		const position = choosing === undefined ? null : positionOf(groups, choosing.chosen);
+		chosenWay = position === null ? undefined : ways[position];
+	});
+
 	// The first way to a place takes the keyboard as the places come: the pane holds nothing else to act on
 	$effect(() => {
 		ways[0]?.focus({ preventScroll: true });
@@ -39,6 +55,15 @@
 	function showWhole(group: ListedGroup) {
 		shownWhole = new Set([...shownWhole, group.testId]);
 		focusWhatRemains(() => ways[group.firstWaiting]);
+	}
+
+	/**
+	 * Choose a place, the keyboard on its way: the place chosen is the one the keyboard is at, so Tab walks on from
+	 * the place pressed.
+	 */
+	function chooseAt(listed: ListedPlace, { choose }: Choosing) {
+		choose(listed.place);
+		ways[listed.position]?.focus({ preventScroll: true });
 	}
 
 	/** A place's line as it is listed: from its first word, highlighted as its file is, the name marked where it stands. */
@@ -66,16 +91,24 @@
 		{#each group.files as file (file.path)}
 			<CodeFrame testId="name-places-in-file">
 				<CodeFramePath path={file.path} testId="name-places-path" />
-				<CodeFrameLines testId="name-places-lines">
+				<CodeFrameLines reads="picked" testId="name-places-lines">
 					{#each file.places as listed (listed.position)}
 						<PlaceLine
 							number={listed.place.line}
 							markup={lineOf(listed.place)}
 							written={listed.place.added}
+							chosen={choosing?.chosen === listed.place}
+							choose={choosing && (() => chooseAt(listed, choosing))}
 							testId="name-place"
 						>
 							{#snippet act()}
-								<Link bind:element={ways[listed.position]} testId="go-to-symbol" onclick={() => goTo(listed.place)}>
+								<!-- In the window, the way to the place chosen as it opens takes the keyboard -->
+								<Link
+									bind:element={ways[listed.position]}
+									autofocus={choosing?.chosen === listed.place}
+									testId="go-to-symbol"
+									onclick={() => goTo(listed.place)}
+								>
 									{GO_TO_SYMBOL}
 								</Link>
 							{/snippet}
