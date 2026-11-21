@@ -286,16 +286,18 @@ Where a thing is:
 
 What a thing is:
 
-- [ ] `feat(ui)`: where a name is defined and where it is used, on the
-      page: Ctrl+click a name in the code, and the lookup's pane and window
-      show what `GET /api/name` answers, the uses the change did not touch
-      set apart, which are what the agent may have forgotten.
-- [ ] `feat(ui)`: a file outside the change, opened from a place the
-      lookup found: the lookup takes the reader into the file read alone,
-      on the line it names, as a thread on it already does. Going to a line
-      of such a file (`Navigator.goToLine`) and the agent's chip of one
+- [ ] `feat(ui)`: the rest of the name lookup's design: the Compact | Full
+      switch and the Full window, each place's code beside the list; the
+      names a change touches in the tree, and the lookup opened from there;
+      the lookup in the news and as a stop of the tour.
+- [ ] `feat`: the agent's chip of a file the change did not touch
       (`Navigator.showFile`: an answer's file, a file a check names, the
-      agent's work) still go to the change's files, and show nothing.
+      agent's work) says "not in the diff yet" and goes nowhere, and a
+      check's failure in such a file is said and not pressable
+      (`ChecksChip`), though going to a line of one opens it alone. The
+      page cannot tell a file the take holds outside the change from one it
+      does not hold: the server says that of each file the agent names
+      first, and then such a chip opens the file alone.
 - [ ] `feat`: what the server does not find yet. A Svelte component is
       defined by its file, which the lookup reports as no definition
       (`CommentThread` gave 13 places and none defining it); a loop's

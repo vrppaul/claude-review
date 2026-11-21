@@ -49,6 +49,22 @@
   takes you back where you came from. n and p walk its threads after the
   change's; a retake leaves you in it, or puts you among the change's
   files once the change touches it.
+- **Where a name is defined and used.** Ctrl+click a name in the code,
+  Cmd+click on a Mac, and a pane by the name, on whichever side of it had
+  more room as it opened, lists its places: where it is defined, where it
+  is used on lines the change did not touch, and where the change uses it,
+  each line under its file with the name marked on it. The pane scrolls
+  with the code and follows the name wherever it moves; Tab out of it goes
+  back to the line pressed, and a key of the review pressed in it acts
+  from that line. It closes once the change is taken again: what it lists
+  is of the take before. The name under the pointer is marked while the
+  key is held. Where the review cannot look, the pane says why, with "Try
+  again". "Go to symbol" takes you to the place, the name marked on the
+  line, reading in a line the diff left out, or opening a file the change
+  did not touch alone. Help lists the press. A review of files or of a
+  conversation has no repository to look through, and a browser that
+  cannot say where its caret stands or mark text offers no lookup: the
+  press does nothing there.
 
 ### Changed
 - **Help's "What's new" names no release.** The news it opens is of the
