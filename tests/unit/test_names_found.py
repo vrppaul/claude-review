@@ -24,6 +24,7 @@ from claude_review.domain.code_names import (
 )
 from claude_review.domain.interfaces import GitError
 from claude_review.domain.models import FilesRead, LineSide
+from claude_review.services.code_names import reading
 from claude_review.services.code_names.found import FoundSoFar, read_names_found
 from claude_review.services.code_names.outlines import NamesParsing, Outlines
 from tests.without_git import WORKERS_IN_TESTS, OutlinesHeld, TreesHeld, held_object_id, parsing_in_tests
@@ -197,6 +198,21 @@ async def test_a_file_outlined_in_one_review_is_never_read_again_in_the_next() -
     found_next = await search(Outlines(held, ROOT, parsing), "fail", TAKE)
 
     assert (held.blobs_read_count, len(found_next.names)) == (1, 2)
+
+
+async def test_a_file_one_review_could_say_nothing_of_is_outlined_again_in_the_next(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A parse given up on a busy machine is no verdict on the file: what later reviews keep is only what was read."""
+    held = TreesHeld({TAKE: FilesRead(contents={"src/attempts.py": ATTEMPTS}, too_large=frozenset())})
+    parsing = parsing_in_tests()
+    monkeypatch.setattr(reading, "LONGEST_PARSE_SECONDS", 0)
+    await search(Outlines(held, ROOT, parsing), "fail", TAKE)
+    monkeypatch.undo()
+
+    found_next = await search(Outlines(held, ROOT, parsing), "fail", TAKE)
+
+    assert len(found_next.names) == 2
 
 
 async def test_a_search_answers_with_what_is_outlined_in_time_and_lists_the_rest_asked_again() -> None:

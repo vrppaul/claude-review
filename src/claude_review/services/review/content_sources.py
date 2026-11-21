@@ -186,17 +186,17 @@ class RepositorySource(ContentSource):
         opening: ReviewOpening,
         opened: OpenedRepository,
         *,
-        repository: ReviewedRepository,
+        code: CodeRead,
         clock: Clock,
-        parsing: NamesParsing,
     ) -> None:
+        repository = code.repository
         self._opening = opening
         self._root = opened.root
         self._content = ReviewContent.opening_on(opening.diff_files)
         self._repository = repository
         self._watcher = TreeWatcherService(repository)
         self._names = NameLookup(repository, opened.root)
-        self._outlines = Outlines(repository, opened.root, parsing)
+        self._outlines = Outlines(repository, opened.root, code.parsing)
         self._files_of_take = FilesOfTake(repository, opened.root)
         self._versions = ReviewVersions(repository, clock, opened)
         # Held while the diff is taken again, so two retakes never interleave
@@ -618,7 +618,7 @@ def content_source(opening: ReviewOpening, *, code: CodeRead, clock: Clock) -> C
     """Where this review's content comes from: a repository's change from the repository, whenever it is taken."""
     match opening.source:
         case OpenedRepository() as opened:
-            return RepositorySource(opening, opened, repository=code.repository, clock=clock, parsing=code.parsing)
+            return RepositorySource(opening, opened, code=code, clock=clock)
         case OfFiles() | OfConversation():
             return FixedSource(opening)
         case _:

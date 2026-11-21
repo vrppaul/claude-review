@@ -47,8 +47,7 @@ log = structlog.get_logger()
 
 # What stops a review the way closing it does: Ctrl+C, and `kill`
 STOP_SIGNALS = (signal.SIGINT, signal.SIGTERM)
-# The most processes a review parses names in: past four, a repository of 724 files gains little, and the reader's
-# machine keeps its other cores
+# The most processes a review parses names in: the reader's machine keeps its other cores
 MOST_PARSING_WORKERS = 4
 
 
@@ -140,7 +139,7 @@ async def hold_open(
         review_workspace(
             opening.identity_digest, writes_trees=isinstance(opening.source, OpenedRepository), announcer=announcer
         ) as workspace,
-        _names_parsing() as parsing,
+        _names_parsing(reads_code=isinstance(opening.source, OpenedRepository)) as parsing,
     ):
         hosted = host_review(
             opening,
@@ -158,22 +157,26 @@ async def hold_open(
 
 
 @contextlib.asynccontextmanager
-async def _names_parsing() -> AsyncGenerator[NamesParsing]:
+async def _names_parsing(*, reads_code: bool) -> AsyncGenerator[NamesParsing]:
     """Lend the review processes to parse the names outlining files in while it runs, and where every review keeps
-    them; the processes start when first given a file, and are let go of with the review, unfinished work dropped."""
+    them. A review of a repository starts them as it opens, apart from its opening; any other never starts one. They
+    are let go of with the review, unfinished work dropped."""
     workers = min(MOST_PARSING_WORKERS, os.process_cpu_count() or 1)
     generation = await asyncio.to_thread(outlines_generation)
     executor = ProcessPoolExecutor(max_workers=workers)
+    starting = asyncio.create_task(asyncio.to_thread(_processes_started, executor, workers)) if reads_code else None
     try:
-        await asyncio.to_thread(_processes_started, executor, workers)
         yield NamesParsing(executor=executor, workers=workers, kept=OutlinesFile(outlines_file(generation)))
     finally:
+        if starting is not None:
+            starting.cancel()
         executor.shutdown(wait=False, cancel_futures=True)
 
 
 def _processes_started(executor: ProcessPoolExecutor, workers: int) -> None:
-    """Start the processes now, off the event loop: the first to start has the review's code imported, and the
-    pool starts it inside the first call handed to it, which would hold every request a second or more."""
+    """Start every process now, off the event loop: the pool starts the first inside the first call handed to it,
+    which would hold every request for the second it takes to import the review's code."""
+    # Each handed something to do at once, so none stands idle to take the next and the pool starts them all
     for started in [executor.submit(os.getpid) for _ in range(workers)]:
         started.result()
 

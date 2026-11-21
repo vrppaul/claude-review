@@ -1,34 +1,26 @@
-"""The names outlining the files of a review's trees: each content outlined once, and a search never behind another.
+"""The names outlining the files of a review's trees: each content outlined once ever, a search never behind another.
 
-What outlines a file follows from its path's language and its content
-alone, and git names each content by an id it gives without reading it, so
-an outline kept by both never goes stale. It is kept across reviews
-(`OutlinesKept`): a file is parsed once for as long as nobody changes it.
-What is not kept yet is parsed in a pool of processes, a chunk of files at
-a time, as one interpreter parses 724 files in 0.8 s and four processes in
-0.34 s, while threads, which tree-sitter holds the interpreter in, do no
-better than one. The files a search waits for go to the front of what is
-waiting to be parsed, so a search for a rare name is never behind one for a
-frequent word, nor behind the whole tree being made ready ahead of the
-reader's first search; and a search answers with what is outlined so far
-when the rest takes longer than it waits.
+An outline follows from a file's language and content alone, and git names
+each content by an id, so one kept by both never goes stale (`OutlinesKept`).
+Parsing runs in processes, as tree-sitter holds the interpreter while it
+parses, and what the last search waits for is parsed first.
 """
 
 import asyncio
 import hashlib
+import heapq
 import importlib.metadata
 from collections.abc import Coroutine
 from concurrent.futures import Executor
 from concurrent.futures.process import BrokenProcessPool
 from pathlib import Path, PurePosixPath
-from types import ModuleType
+from typing import Self
 
 import structlog
 from pydantic import BaseModel, ConfigDict, TypeAdapter, ValidationError
 
-from claude_review.domain import code_names
+import claude_review
 from claude_review.domain.interfaces import GitError, OutlinesKept, TreesRead
-from claude_review.services.code_names import languages, reading
 from claude_review.services.code_names.languages import code_files_of
 from claude_review.services.code_names.reading import OutlinedName, outline
 
@@ -39,22 +31,13 @@ log = structlog.get_logger()
 FILES_A_CHUNK = 32
 # What a file only made ready is waited for by: no search, so after every file one waits for
 NO_SEARCH = 0
-
-# What decides the names outlining a file: the code that reads them, and the grammars it reads with. An outline
-# kept under another generation was read by other code, and is never read back
-OUTLINED_BY: list[ModuleType] = [reading, languages, code_names]
-GRAMMARS = [
-    "tree-sitter",
-    "tree-sitter-python",
-    "tree-sitter-javascript",
-    "tree-sitter-typescript",
-    "tree-sitter-svelte",
-]
+# The distributions whose grammars read the code, by the prefix of their names
+GRAMMARS_PREFIX = "tree-sitter"
 GENERATION_DIGEST_BYTES = 8
 
 # The names outlining one file; None where its parse was given up, so nothing can be said of what it outlines
 type Outline = list[OutlinedName] | None
-OUTLINE_KEPT_AS = TypeAdapter[Outline](list[OutlinedName] | None)
+OUTLINE_KEPT_AS = TypeAdapter[list[OutlinedName]](list[OutlinedName])
 
 
 class NamesParsing(BaseModel):
@@ -80,6 +63,22 @@ class FileHeld(BaseModel):
     def kept_as(self) -> str:
         """The key its outline is kept under across reviews: of its content, read as its path's language reads it."""
         return f"{self.object_id}{PurePosixPath(self.path).suffix}"
+
+
+class Queued(BaseModel):
+    """A file waiting to be parsed: by the last search waiting for it, then by when it was read."""
+
+    model_config = ConfigDict(frozen=True)
+
+    search: int
+    read_at: int
+    file: FileHeld
+
+    def __lt__(self, other: Self) -> bool:
+        """Whether it is parsed first: waited for by a later search, or read sooner."""
+        if self.search != other.search:
+            return self.search > other.search
+        return self.read_at < other.read_at
 
 
 class FileRead(BaseModel):
@@ -135,10 +134,12 @@ class Outlines:
         self._parsing = parsing
         # Every file asked about, its outline done or on its way: whoever asks for it again waits for that
         self._outlines: dict[FileHeld, asyncio.Future[Outline]] = {}
-        # Read and waiting to be parsed, in the order read
+        # Read and waiting to be parsed, each queued by what waits for it; an entry outdated by a later search is
+        # passed over when it comes up
         self._waiting: dict[FileHeld, bytes] = {}
-        # The files searches wait for, each by the last search waiting for it, counted from the first: a file the
-        # last search waits for is parsed before any other, and one no search waits for after every one that is
+        self._queue: list[Queued] = []
+        self._read_count = 0
+        # The files searches wait for and are not outlined yet, each by the last search waiting, counted from one
         self._searches = 0
         self._wanted: dict[FileHeld, int] = {}
         # How many chunks the processes are outlining now
@@ -189,12 +190,15 @@ class Outlines:
         """
         at = await self._repository.blobs_at(self._root, tree, paths)
         held = {path: FileHeld(path=path, object_id=object_id) for path, object_id in at.object_ids.items()}
-        if wanted:
-            self._searches += 1
-            self._wanted.update(dict.fromkeys(held.values(), self._searches))
         new = [file for file in held.values() if file not in self._outlines]
         loop = asyncio.get_running_loop()
         self._outlines.update((file, loop.create_future()) for file in new)
+        if wanted:
+            self._searches += 1
+            for file in held.values():
+                if not self._outlines[file].done():
+                    self._wanted[file] = self._searches
+                    self._queue_if_waiting(file)
         if new:
             self._run(self._fetch(new))
         return FilesAsked(outlines={path: self._outlines[file] for path, file in held.items()}, too_large=at.too_large)
@@ -202,42 +206,60 @@ class Outlines:
     async def _fetch(self, files: list[FileHeld]) -> None:
         """Take the outlines of these files from what is kept, and read the rest to be parsed."""
         kept = await self._parsing.kept.read([file.kept_as for file in files])
-        unread = [file for file in files if not self._taken_from(kept.get(file.kept_as), file)]
+        unread = [file for file in files if not self._set_from_kept(kept.get(file.kept_as), file)]
         if not unread:
             return
         try:
             contents = await self._repository.blobs_read(self._root, [file.object_id for file in unread])
         except GitError as failed:
             for file in unread:
+                self._wanted.pop(file, None)
                 self._outlines.pop(file).set_exception(failed)
             return
-        self._waiting.update(zip(unread, contents, strict=True))
+        for file, content in zip(unread, contents, strict=True):
+            self._waiting[file] = content
+            self._queue_if_waiting(file)
         self._feed()
 
-    def _taken_from(self, kept: bytes | None, file: FileHeld) -> bool:
-        """Whether the file's outline was kept and is taken from there: one kept by other code is not."""
+    def _set_from_kept(self, kept: bytes | None, file: FileHeld) -> bool:
+        """Set a file's outline from what was kept of it, and say whether it was: not where nothing was, or what was
+        kept is in a form this code does not read."""
         if kept is None:
             return False
         try:
-            self._outlines[file].set_result(OUTLINE_KEPT_AS.validate_json(kept))
+            names = OUTLINE_KEPT_AS.validate_json(kept)
         except ValidationError:
             return False
+        self._wanted.pop(file, None)
+        self._outlines[file].set_result(names)
         return True
+
+    def _queue_if_waiting(self, file: FileHeld) -> None:
+        """Queue a file waiting to be parsed by the last search waiting for it."""
+        if file in self._waiting:
+            self._read_count += 1
+            queued = Queued(search=self._wanted.get(file, NO_SEARCH), read_at=self._read_count, file=file)
+            heapq.heappush(self._queue, queued)
 
     def _feed(self) -> None:
         """Hand the processes what waits, a chunk to each process free: what the last search waits for first."""
         while self._waiting and self._chunks_parsed < self._parsing.workers:
-            # Sorted stably, so files no search tells apart keep the order they were read in
-            by_search = sorted(self._waiting, key=lambda file: self._wanted.get(file, NO_SEARCH), reverse=True)
-            chunk = by_search[:FILES_A_CHUNK]
-            read = [FileRead(path=file.path, content=self._waiting.pop(file)) for file in chunk]
-            for file in chunk:
-                self._wanted.pop(file, None)
+            chunk: list[FileHeld] = []
+            read: list[FileRead] = []
+            while self._queue and len(chunk) < FILES_A_CHUNK:
+                queued = heapq.heappop(self._queue)
+                # Passed over: taken already, or queued again since by a later search
+                if queued.file in self._waiting and self._wanted.get(queued.file, NO_SEARCH) == queued.search:
+                    chunk.append(queued.file)
+                    read.append(FileRead(path=queued.file.path, content=self._waiting.pop(queued.file)))
+                    self._wanted.pop(queued.file, None)
+            if not chunk:
+                return
             self._chunks_parsed += 1
             self._run(self._parse(chunk, read))
 
     async def _parse(self, files: list[FileHeld], read: list[FileRead]) -> None:
-        """Outline a chunk of files in a process, hand each its outline, and keep them for later reviews."""
+        """Outline a chunk of files in a process, hand each its outline, and keep those outlined for later reviews."""
         # Where the processes say nothing, a file has nothing that can be said of it: no search waits on it for ever
         outlines: list[Outline] = [None for _ in files]
         try:
@@ -249,8 +271,13 @@ class Outlines:
             for file, names in zip(files, outlines, strict=True):
                 self._outlines[file].set_result(names)
             self._feed()
+        # A file nothing could be said of, given up or lost with its process, is outlined again by a later review
         await self._parsing.kept.keep(
-            {file.kept_as: OUTLINE_KEPT_AS.dump_json(names) for file, names in zip(files, outlines, strict=True)}
+            {
+                file.kept_as: OUTLINE_KEPT_AS.dump_json(names)
+                for file, names in zip(files, outlines, strict=True)
+                if names is not None
+            }
         )
 
     def _run(self, work: Coroutine[None, None, None]) -> None:
@@ -261,12 +288,17 @@ class Outlines:
 
 
 def outlines_generation() -> str:
-    """A digest of what decides the names outlining a file: the code that reads them, and the grammars' versions."""
+    """A digest of all that can decide the names outlining a file: the review's own code and every grammar's version."""
     digest = hashlib.blake2b(digest_size=GENERATION_DIGEST_BYTES)
-    for module in OUTLINED_BY:
-        digest.update(Path(str(module.__file__)).read_bytes())
-    for grammar in GRAMMARS:
-        digest.update(importlib.metadata.version(grammar).encode())
+    package = Path(str(claude_review.__file__)).parent
+    for source in sorted(package.rglob("*.py")):
+        digest.update(source.read_bytes())
+    grammars = sorted(
+        f"{distribution.name}=={distribution.version}"
+        for distribution in importlib.metadata.distributions()
+        if distribution.name.startswith(GRAMMARS_PREFIX)
+    )
+    digest.update("\n".join(grammars).encode())
     return digest.hexdigest()
 
 

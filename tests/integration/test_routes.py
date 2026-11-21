@@ -62,8 +62,6 @@ NAME_ROUTE = "/api/name"
 NAMES_TOUCHED_ROUTE = "/api/names-touched"
 # Where the page asks which names outside the change hold what the tree's filter was typed
 NAMES_FOUND_ROUTE = "/api/names-found"
-# Where the page asks the review to begin outlining every file, as the reader comes to the filter
-NAMES_READY_ROUTE = "/api/names-found/ready"
 # Where the page asks for a file of the take whole
 FILE_OF_TAKE_ROUTE = "/api/file-of-take"
 
@@ -658,25 +656,6 @@ async def test_the_names_found_outside_the_change_are_answered_of_the_take_on_sc
         "more": 0,
         "complete": True,
     }
-
-
-async def test_the_names_of_the_take_on_screen_are_made_ready_for_the_filter(
-    tmp_git_repo: Path, reviews: ReviewFactory
-) -> None:
-    """Begun at once and answered before it is done: a search after it finds what it outlined."""
-    write_files(tmp_git_repo, {"src/menu.py": "class ShowMenu:\n    pass\n"})
-    git(tmp_git_repo, "add", ".")
-    git(tmp_git_repo, "commit", "-m", "menu")
-    write_files(tmp_git_repo, {"src/pane.py": "def drawn() -> None:\n    pass\n"})
-
-    async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as client:
-        made_ready = await client.post(NAMES_READY_ROUTE)
-        found = await client.get(NAMES_FOUND_ROUTE, params={"text": "menu"})
-
-    assert (made_ready.status_code, [name["name"] for name in found.json()["names"]]) == (
-        HTTPStatus.NO_CONTENT,
-        ["ShowMenu"],
-    )
 
 
 async def test_a_file_of_the_take_is_served_whole_as_the_take_holds_it(
