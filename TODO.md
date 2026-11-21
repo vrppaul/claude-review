@@ -41,6 +41,10 @@ tests. Remove items when done — don't check them off.
 
 ## Bugs
 
+- [ ] `fix(server)`: a file git takes for text may hold a NUL past its
+      first 8,000 bytes, and the read callback that feeds a parse
+      (`services/code_names/reading.py`, `_parsed`) hands tree-sitter
+      nothing past it, so no name after it is read.
 - [ ] `fix(test)`: `tests/e2e/test_name_lookup.py`,
       `test_the_first_ctrl_click_on_the_line_arrived_at_opens_where_its_name_is_defined_and_used`,
       failed twice in about forty whole runs and passes alone; the cause is
