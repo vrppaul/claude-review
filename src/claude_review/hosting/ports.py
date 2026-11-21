@@ -48,7 +48,9 @@ def bind(port: int, *, may_fall_back: bool) -> socket.socket:
     Raises:
         PortUnavailableError: If a port that was asked for is already taken.
     """
-    listening = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    # The protocol named, as asyncio sets TCP_NODELAY on an accepted socket only where it is: without it, every
+    # answer after a connection's first waits some 40 ms for the browser's delayed acknowledgement
+    listening = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
     listening.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     try:
         listening.bind((LOOPBACK, port))
