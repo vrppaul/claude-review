@@ -41,6 +41,23 @@ tests. Remove items when done — don't check them off.
 
 ## Bugs
 
+- [ ] `fix(test)`: `tests/e2e/test_name_lookup.py`,
+      `test_the_first_ctrl_click_on_the_line_arrived_at_opens_where_its_name_is_defined_and_used`,
+      failed twice in about forty whole runs and passes alone; the cause is
+      not found. Measured: after "Go to symbol" the page calls `focus()`
+      once, and a press that lands before that call opens a pane the
+      arrival then takes the keyboard from.
+- [ ] `fix(ui)`: a press with the lookup's key on the `$` of `$state` asks
+      nothing: the page's word is letters, digits and `_`
+      (`utils/code-words.ts`), and only a word it finds is asked of the
+      server.
+- [ ] `fix(ui)`: an empty text file read alone draws its bar and nothing
+      under it: it comes as one hunk of no lines, which `FileNotes` takes
+      for lines to draw.
+- [ ] `fix(ui)`: in a window narrowed to 900 px with both side columns
+      open, the agent's panel lies over the reading area from 521 px: a
+      file's "Put away" and whatever is centred in the area stand under it,
+      in the change's files as in a file read alone.
 - [ ] `fix(ui)`: with the keyboard on a thread's fold toggle, or on a line's
       number, `u` folds the file it stands in and leaves the keyboard on
       nothing (BODY), with less motion asked for or not; page.md says what
