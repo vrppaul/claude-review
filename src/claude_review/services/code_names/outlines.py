@@ -311,7 +311,7 @@ class Outlines:
         whole = self._whole
         if whole is not None and whole.tree == code.tree:
             return whole.names
-        # A file git failed to read is asked about anew, so a tree holding one is never whole
+        # A file git failed to read is asked about anew: a tree holding one is not whole until that file is read
         if not all((outline := self._outlines.get(file.key)) is not None and outline.done() for file in code.files):
             return None
         names = await _gathered(self._held(code.files))

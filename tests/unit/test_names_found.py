@@ -104,15 +104,6 @@ class TextSearchedSlowly(TextSearched):
         return await super().blobs_read(root, object_ids)
 
 
-class BlobsSlow(TreesHeld):
-    """Trees held in memory whose contents take a while to read."""
-
-    @override
-    async def blobs_read(self, root: Path, object_ids: list[str]) -> list[bytes]:
-        await asyncio.sleep(READ_A_WHILE_SECONDS)
-        return await super().blobs_read(root, object_ids)
-
-
 class ChunksRecorded(ThreadPoolExecutor):
     """Threads to outline in that note the paths of each chunk of files they are given, in the order given."""
 
@@ -235,7 +226,7 @@ async def test_a_file_one_review_could_say_nothing_of_is_outlined_again_in_the_n
 
 
 async def test_a_search_answers_with_what_is_outlined_in_time_and_lists_the_rest_asked_again() -> None:
-    held = BlobsSlow({TAKE: FilesRead(contents={"src/attempts.py": ATTEMPTS}, too_large=frozenset())})
+    held = TextSearchedSlowly({TAKE: FilesRead(contents={"src/attempts.py": ATTEMPTS}, too_large=frozenset())})
     outlines = Outlines(held, ROOT, parsing_in_tests())
 
     found_at_once = await read_names_found(outlines, text="fail", tree=TAKE, touched=[], waits=AT_ONCE)
