@@ -270,9 +270,9 @@ class Review:
         """The name at a place the reader points at, and every place it stands in the take on screen."""
         return await self._source.name_at(place)
 
-    async def names_touched(self) -> NamesTouched:
-        """The names the change touched in each file of the take on screen, and which take that is."""
-        return await self._source.names_touched()
+    async def names_touched(self, base: VersionKey | None, *, ignore_whitespace: bool) -> NamesTouched:
+        """The names the change touched in each file of the diff `view` reads alike, and which take that is."""
+        return await self._source.names_touched(base, ignore_whitespace=ignore_whitespace)
 
     async def file_of_take(self, path: str) -> OpenedFileOfTake:
         """A file of the take on screen as the reader opens it: whole, or saying why none of its lines are read."""

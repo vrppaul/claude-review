@@ -6,6 +6,7 @@ from pydantic import StrictBool
 
 from claude_review.domain import code_names
 from claude_review.domain.code_names import DefinitionKind, FoundAs, NameChange
+from claude_review.domain.models import LineSide
 from claude_review.presentation.schemas.base import Schema
 
 
@@ -55,30 +56,49 @@ class NameResponse(Schema):
         return cls(name=found.name, places=[NamePlace.from_domain(place) for place in found.places])
 
 
+class LinesOnSide(Schema):
+    """Lines of a file on one side of the diff, the first and the last both among them."""
+
+    side: LineSide
+    first: int
+    last: int
+
+    @classmethod
+    def from_domain(cls, lines: code_names.LinesOnSide) -> Self:
+        return cls(side=lines.side, first=lines.first, last=lines.last)
+
+
 class TouchedName(Schema):
-    """A name outlining a file that the change touched: what it is, where it stands, and what became of it."""
+    """A name outlining a file on either side that the change touched: what it is and became, and where it stands."""
 
     name: str
     defined_as: DefinitionKind
-    # Where the name stands on the new side, as `GET /api/name` is asked a place: lines from 1, columns in
-    # characters from 0
+    change: NameChange
+    # The side its place is numbered on: the old for a name the change removed, the new for any other
+    side: LineSide
+    # Where the name is written, as `GET /api/name` is asked a place: lines from 1, columns in characters from 0
     line: int
     column: int
-    change: NameChange
+    # The lines it is defined on, first to last, on each side it stands on: the new, the old, or both for a name
+    # the change modified
+    stands_on: list[LinesOnSide]
 
     @classmethod
     def from_domain(cls, touched: code_names.TouchedName) -> Self:
         return cls(
             name=touched.name,
             defined_as=touched.defined_as,
+            change=touched.change,
+            side=touched.side,
             line=touched.line,
             column=touched.column,
-            change=touched.change,
+            stands_on=[LinesOnSide.from_domain(lines) for lines in touched.stands_on],
         )
 
 
 class FileNamesTouched(Schema):
-    """The names a file of the change outlines that the change touched, in the order of the file."""
+    """The names outlining a file of the change that the change touched, in the order a reader meets them down
+    its diff: a removed name where its lines were removed."""
 
     path: str
     names: list[TouchedName]
@@ -92,10 +112,10 @@ class NamesTouchedResponse(Schema):
     """Response for GET /api/names-touched — the names the change touched, file by file in the order of its diff.
 
     A file with none is left out: one of no grammar here, not text, too
-    large, deleted, or whose change touched no name standing at its top.
+    large, or whose change touched no name standing at its top.
     """
 
-    # The take the names were read in: a page holds them only while its diff is of the same take
+    # The take the names were read in: a page holds them only while its diff is of the same take, read the same way
     take: int
     files: list[FileNamesTouched]
 

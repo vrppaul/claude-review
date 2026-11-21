@@ -258,7 +258,7 @@ export interface paths {
         };
         /**
          * Get Names Touched
-         * @description Say, of each file of the change, the names at its top the change touched, and whether it added each.
+         * @description Say, of each file of the diff `GET /api/diff` serves asked alike, the names the change touched at its top.
          *
          *     Apart from the diff, which never waits on parsing every file it holds.
          */
@@ -1236,7 +1236,8 @@ export interface components {
         };
         /**
          * FileNamesTouched
-         * @description The names a file of the change outlines that the change touched, in the order of the file.
+         * @description The names outlining a file of the change that the change touched, in the order a reader meets them down
+         *     its diff: a removed name where its lines were removed.
          */
         FileNamesTouched: {
             /** Path */
@@ -1521,6 +1522,17 @@ export interface components {
          * @enum {string}
          */
         LineType: "context" | "add" | "delete";
+        /**
+         * LinesOnSide
+         * @description Lines of a file on one side of the diff, the first and the last both among them.
+         */
+        LinesOnSide: {
+            side: components["schemas"]["LineSide"];
+            /** First */
+            first: number;
+            /** Last */
+            last: number;
+        };
         /** MessageEvent */
         MessageEvent: {
             /**
@@ -1551,11 +1563,12 @@ export interface components {
          * NameChange
          * @description What a change did to a name it touched.
          *
-         *     ADDED — the file as the review's base holds it, if it holds it, outlines no name called so.
+         *     ADDED — the file as the base holds it, if it holds it, outlines no name called so.
          *     MODIFIED — the base's file outlines it too, and the change touched a line it is defined on, now or then.
+         *     REMOVED — the base's file outlines it, and the take's, if it holds the file, does not.
          * @enum {string}
          */
-        NameChange: "added" | "modified";
+        NameChange: "added" | "modified" | "removed";
         /**
          * NamePlace
          * @description One place a name stands in the take on screen: where, the line it is on, and what it does there.
@@ -1603,7 +1616,7 @@ export interface components {
          * @description Response for GET /api/names-touched — the names the change touched, file by file in the order of its diff.
          *
          *     A file with none is left out: one of no grammar here, not text, too
-         *     large, deleted, or whose change touched no name standing at its top.
+         *     large, or whose change touched no name standing at its top.
          */
         NamesTouchedResponse: {
             /** Take */
@@ -2577,17 +2590,20 @@ export interface components {
         };
         /**
          * TouchedName
-         * @description A name outlining a file that the change touched: what it is, where it stands, and what became of it.
+         * @description A name outlining a file on either side that the change touched: what it is and became, and where it stands.
          */
         TouchedName: {
             /** Name */
             name: string;
             defined_as: components["schemas"]["DefinitionKind"];
+            change: components["schemas"]["NameChange"];
+            side: components["schemas"]["LineSide"];
             /** Line */
             line: number;
             /** Column */
             column: number;
-            change: components["schemas"]["NameChange"];
+            /** Stands On */
+            stands_on: components["schemas"]["LinesOnSide"][];
         };
         /**
          * Turn
@@ -3154,7 +3170,10 @@ export interface operations {
     };
     get_names_touched_api_names_touched_get: {
         parameters: {
-            query?: never;
+            query?: {
+                ignore_whitespace?: boolean;
+                base?: string | null;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -3168,6 +3187,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["NamesTouchedResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Refusal"];
                 };
             };
             /** @description Forbidden */
@@ -3190,6 +3218,15 @@ export interface operations {
             };
             /** @description Conflict */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Refusal"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

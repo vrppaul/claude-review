@@ -256,13 +256,22 @@ async def get_name(
     return NameResponse.from_domain(found)
 
 
-@router.get("/names-touched", responses=refusals(NoRepositoryError, TakeNotWrittenError, takes=Takes.NOTHING))
-async def get_names_touched(review: ReviewDep) -> NamesTouchedResponse:
-    """Say, of each file of the change, the names at its top the change touched, and whether it added each.
+@router.get(
+    "/names-touched",
+    responses=refusals(UnknownVersionError, NoRepositoryError, TakeNotWrittenError, takes=Takes.PARAMETERS),
+)
+async def get_names_touched(
+    review: ReviewDep,
+    *,
+    ignore_whitespace: bool = False,
+    base: Annotated[str | None, Query(max_length=MAX_ID_LENGTH)] = None,
+) -> NamesTouchedResponse:
+    """Say, of each file of the diff `GET /api/diff` serves asked alike, the names the change touched at its top.
 
     Apart from the diff, which never waits on parsing every file it holds.
     """
-    return NamesTouchedResponse.from_domain(await review.names_touched())
+    touched = await review.names_touched(made_or_none(key_of, base), ignore_whitespace=ignore_whitespace)
+    return NamesTouchedResponse.from_domain(touched)
 
 
 @router.get(

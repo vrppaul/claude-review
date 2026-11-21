@@ -121,29 +121,57 @@ class NameFound(BaseModel):
 class NameChange(StrEnum):
     """What a change did to a name it touched.
 
-    ADDED — the file as the review's base holds it, if it holds it, outlines no name called so.
+    ADDED — the file as the base holds it, if it holds it, outlines no name called so.
     MODIFIED — the base's file outlines it too, and the change touched a line it is defined on, now or then.
+    REMOVED — the base's file outlines it, and the take's, if it holds the file, does not.
     """
 
     ADDED = auto()
     MODIFIED = auto()
+    REMOVED = auto()
+
+
+# The side of the diff a name the change touched is written on: a removed name stands on the old side alone
+SIDE_OF_CHANGE = {
+    NameChange.ADDED: LineSide.NEW,
+    NameChange.MODIFIED: LineSide.NEW,
+    NameChange.REMOVED: LineSide.OLD,
+}
+
+
+class LinesOnSide(BaseModel):
+    """Lines of a file on one side of the diff, the first and the last both among them."""
+
+    model_config = ConfigDict(frozen=True)
+
+    side: LineSide
+    first: int
+    last: int
 
 
 class TouchedName(BaseModel):
-    """A name outlining a file of the take that the change touched: what it is, where it stands, what became of it."""
+    """A name outlining a file on either side that the change touched: what it is and became, and where it stands."""
 
     model_config = ConfigDict(frozen=True)
 
     name: str
     defined_as: DefinitionKind
-    # Where the name stands on the new side, numbered as a `CodePlace` is
+    change: NameChange
+    # Where the name is written, numbered as a `CodePlace` is on its `side`
     line: int
     column: int
-    change: NameChange
+    # The lines it is defined on, first to last, on each side it stands on: a modified name on both
+    stands_on: list[LinesOnSide]
+
+    @property
+    def side(self) -> LineSide:
+        """The side of the diff its place is numbered on."""
+        return SIDE_OF_CHANGE[self.change]
 
 
 class FileNamesTouched(BaseModel):
-    """The names a file of the change outlines that the change touched, in the order of the file."""
+    """The names outlining a file of the change that the change touched, in the order a reader meets them down
+    its diff."""
 
     model_config = ConfigDict(frozen=True)
 

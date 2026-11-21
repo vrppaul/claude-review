@@ -25,12 +25,13 @@ from claude_review.domain.code_names import (
     OUTLINES,
     DefinitionKind,
     FoundAs,
+    LinesOnSide,
     NameChange,
     NamePlace,
     TouchedName,
 )
 from claude_review.domain.exceptions import NoWordHereError
-from claude_review.domain.models import FIRST_LINE
+from claude_review.domain.models import FIRST_LINE, LineSide
 from claude_review.services.code_names.languages import (
     CODE_CAPTURE,
     DEFINITION_CAPTURE,
@@ -156,14 +157,19 @@ class OutlinedName(BaseModel):
     named_at: LinePosition
     lines: frozenset[int]
 
-    def touched(self, change: NameChange) -> TouchedName:
-        """The name as one the change touched, with what became of it."""
+    def lines_on(self, side: LineSide) -> LinesOnSide:
+        """The lines it is defined on, first to last, numbered on the side of the diff its file is read on."""
+        return LinesOnSide(side=side, first=min(self.lines), last=max(self.lines))
+
+    def touched(self, change: NameChange, stands_on: list[LinesOnSide]) -> TouchedName:
+        """The name as one the change touched, with what became of it and the lines it stands on, side by side."""
         return TouchedName(
             name=self.name,
             defined_as=self.kind,
+            change=change,
             line=self.named_at.line,
             column=self.named_at.column,
-            change=change,
+            stands_on=stands_on,
         )
 
 

@@ -74,6 +74,14 @@ class DiffView(BaseModel):
     take: int
 
 
+class DiffRead(BaseModel):
+    """The take read one way: the base it was read against as the page names it and as git does, and its files."""
+
+    shown: VersionKey
+    against: str
+    files: list[DiffFile]
+
+
 class Retaken(BaseModel):
     """The diff taken again: how many files it holds, for which round, and which changed since that round began."""
 
@@ -132,8 +140,8 @@ class ContentSource(TakesCompared, TreesWritten):
         """The name at a place the reader points at, and every place it stands in the take on screen."""
 
     @abstractmethod
-    async def names_touched(self) -> NamesTouched:
-        """The names the change touched in each file of the take on screen, and which take that is."""
+    async def names_touched(self, base: VersionKey | None, *, ignore_whitespace: bool) -> NamesTouched:
+        """The names the change touched in each file of the diff `view` reads alike, and which take that is."""
 
     @abstractmethod
     async def file_of_take(self, path: str) -> OpenedFileOfTake:
@@ -225,25 +233,35 @@ class RepositorySource(ContentSource):
             TakeNotWrittenError: if git wrote down no tree of the take to read another way.
         """
         content = self._content
-        shown = base or ReviewKey()
-        files = content.files
-        # The review's own base, whitespace counted, is the diff it holds: the one its threads are anchored to.
-        # Any other reading is git's to say, of the tree the take was written down as and never the working
-        # tree, so its lines are numbered as the review's own.
-        if shown != ReviewKey() or ignore_whitespace:
-            against = await self._versions.resolve(shown)
-            files = await read_diff_between(
-                self._repository, self._root, against, _tree_written(content), ignore_whitespace=ignore_whitespace
-            )
+        reading = await self._read(content, base, ignore_whitespace=ignore_whitespace)
         moved = await self._watcher.drift(self._root, content.tree)
         return DiffView(
-            files=files,
+            files=reading.files,
             own_paths=content.paths,
             own_renames=content.renames,
-            shown=shown,
+            shown=reading.shown,
             moved=moved,
             take=content.take,
         )
+
+    async def _read(self, content: ReviewContent, base: VersionKey | None, *, ignore_whitespace: bool) -> DiffRead:
+        """The take read against a base the review offers, its own when None, with whitespace counted or not.
+
+        Raises:
+            UnknownVersionError: if the review offers no such base.
+            TakeNotWrittenError: if git wrote down no tree of the take to read another way.
+        """
+        shown = base or ReviewKey()
+        against = await self._versions.resolve(shown)
+        # The review's own base, whitespace counted, is the diff it holds: the one its threads are anchored to.
+        # Any other reading is git's to say, of the tree the take was written down as and never the working
+        # tree, so its lines are numbered as the review's own.
+        if shown == ReviewKey() and not ignore_whitespace:
+            return DiffRead(shown=shown, against=against, files=content.files)
+        files = await read_diff_between(
+            self._repository, self._root, against, _tree_written(content), ignore_whitespace=ignore_whitespace
+        )
+        return DiffRead(shown=shown, against=against, files=files)
 
     @override
     async def offer(self) -> list[VersionOnOffer]:
@@ -329,19 +347,17 @@ class RepositorySource(ContentSource):
         )
 
     @override
-    async def names_touched(self) -> NamesTouched:
+    async def names_touched(self, base: VersionKey | None, *, ignore_whitespace: bool) -> NamesTouched:
         """Read from the tree the take on screen was written down as, never the disk, so its lines are the diff's.
 
         Raises:
+            UnknownVersionError: if the review offers no such base.
             TakeNotWrittenError: if git wrote down no tree of the take.
         """
         content = self._content
+        reading = await self._read(content, base, ignore_whitespace=ignore_whitespace)
         files = await read_names_touched(
-            self._repository,
-            self._root,
-            tree=_tree_written(content),
-            base=self._versions.pinned_base,
-            files=content.files,
+            self._repository, self._root, tree=_tree_written(content), base=reading.against, files=reading.files
         )
         return NamesTouched(take=content.take, files=files)
 
@@ -470,7 +486,7 @@ class FixedSource(ContentSource):
         raise NoRepositoryError(msg)
 
     @override
-    async def names_touched(self) -> NamesTouched:
+    async def names_touched(self, base: VersionKey | None, *, ignore_whitespace: bool) -> NamesTouched:
         """Raises: NoRepositoryError, always: what was read once is no change to a repository's code."""
         msg = "No repository whose code a change touched"
         raise NoRepositoryError(msg)

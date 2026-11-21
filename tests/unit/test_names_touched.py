@@ -10,8 +10,8 @@ from pathlib import Path
 
 import pytest
 
-from claude_review.domain.code_names import DefinitionKind, FileNamesTouched, NameChange, TouchedName
-from claude_review.domain.models import DiffFile, DiffLine, FilesRead, FileStatus, Unshown
+from claude_review.domain.code_names import DefinitionKind, FileNamesTouched, LinesOnSide, NameChange, TouchedName
+from claude_review.domain.models import DiffFile, DiffHunk, DiffLine, FilesRead, FileStatus, LineSide, Unshown
 from claude_review.services.code_names import reading
 from claude_review.services.code_names.touched import read_names_touched
 from tests.helpers import HUNK_HEADER, added_line, context_line, diff_file, removed_line
@@ -54,7 +54,15 @@ def trees(take: dict[str, bytes], base: dict[str, bytes]) -> TreesHeld:
             ],
             [
                 TouchedName(
-                    name="first", defined_as=DefinitionKind.FUNCTION, line=1, column=4, change=NameChange.MODIFIED
+                    name="first",
+                    defined_as=DefinitionKind.FUNCTION,
+                    change=NameChange.MODIFIED,
+                    line=1,
+                    column=4,
+                    stands_on=[
+                        LinesOnSide(side=LineSide.NEW, first=1, last=2),
+                        LinesOnSide(side=LineSide.OLD, first=1, last=2),
+                    ],
                 )
             ],
         ),
@@ -64,7 +72,15 @@ def trees(take: dict[str, bytes], base: dict[str, bytes]) -> TreesHeld:
             [context_line(1, 1, "def first():"), context_line(2, 2, "    run()"), removed_line(3, "    return 1")],
             [
                 TouchedName(
-                    name="first", defined_as=DefinitionKind.FUNCTION, line=1, column=4, change=NameChange.MODIFIED
+                    name="first",
+                    defined_as=DefinitionKind.FUNCTION,
+                    change=NameChange.MODIFIED,
+                    line=1,
+                    column=4,
+                    stands_on=[
+                        LinesOnSide(side=LineSide.NEW, first=1, last=2),
+                        LinesOnSide(side=LineSide.OLD, first=1, last=3),
+                    ],
                 )
             ],
         ),
@@ -83,7 +99,16 @@ def trees(take: dict[str, bytes], base: dict[str, bytes]) -> TreesHeld:
                 context_line(9, 5, "def last():"),
                 context_line(10, 6, "    pass"),
             ],
-            [],
+            [
+                TouchedName(
+                    name="gone",
+                    defined_as=DefinitionKind.FUNCTION,
+                    change=NameChange.REMOVED,
+                    line=5,
+                    column=4,
+                    stands_on=[LinesOnSide(side=LineSide.OLD, first=5, last=6)],
+                )
+            ],
         ),
         (
             b"def first():\n    pass\n",
@@ -96,7 +121,16 @@ def trees(take: dict[str, bytes], base: dict[str, bytes]) -> TreesHeld:
                 added_line(5, "def second():"),
                 added_line(6, "    pass"),
             ],
-            [TouchedName(name="second", defined_as=DefinitionKind.FUNCTION, line=5, column=4, change=NameChange.ADDED)],
+            [
+                TouchedName(
+                    name="second",
+                    defined_as=DefinitionKind.FUNCTION,
+                    change=NameChange.ADDED,
+                    line=5,
+                    column=4,
+                    stands_on=[LinesOnSide(side=LineSide.NEW, first=5, last=6)],
+                )
+            ],
         ),
         (
             b"def first():\n    pass\n",
@@ -104,8 +138,21 @@ def trees(take: dict[str, bytes], base: dict[str, bytes]) -> TreesHeld:
             [removed_line(1, "def first():"), added_line(1, "def renamed():"), context_line(2, 2, "    pass")],
             [
                 TouchedName(
-                    name="renamed", defined_as=DefinitionKind.FUNCTION, line=1, column=4, change=NameChange.ADDED
-                )
+                    name="first",
+                    defined_as=DefinitionKind.FUNCTION,
+                    change=NameChange.REMOVED,
+                    line=1,
+                    column=4,
+                    stands_on=[LinesOnSide(side=LineSide.OLD, first=1, last=2)],
+                ),
+                TouchedName(
+                    name="renamed",
+                    defined_as=DefinitionKind.FUNCTION,
+                    change=NameChange.ADDED,
+                    line=1,
+                    column=4,
+                    stands_on=[LinesOnSide(side=LineSide.NEW, first=1, last=2)],
+                ),
             ],
         ),
         (
@@ -114,7 +161,15 @@ def trees(take: dict[str, bytes], base: dict[str, bytes]) -> TreesHeld:
             [added_line(1, "@cache"), context_line(1, 2, "def first():"), context_line(2, 3, "    pass")],
             [
                 TouchedName(
-                    name="first", defined_as=DefinitionKind.FUNCTION, line=2, column=4, change=NameChange.MODIFIED
+                    name="first",
+                    defined_as=DefinitionKind.FUNCTION,
+                    change=NameChange.MODIFIED,
+                    line=2,
+                    column=4,
+                    stands_on=[
+                        LinesOnSide(side=LineSide.NEW, first=1, last=3),
+                        LinesOnSide(side=LineSide.OLD, first=1, last=2),
+                    ],
                 )
             ],
         ),
@@ -122,9 +177,9 @@ def trees(take: dict[str, bytes], base: dict[str, bytes]) -> TreesHeld:
     ids=[
         "a-signature-rewritten-is-modified",
         "the-last-lines-removed-touch-it",
-        "a-function-removed-whole-between-two-touches-neither",
+        "a-function-removed-whole-is-removed-on-the-lines-it-stood-on",
         "a-function-written-beside-is-added",
-        "a-function-renamed-is-added-and-the-old-name-not-said",
+        "a-function-renamed-is-the-old-name-removed-and-the-new-added",
         "a-decorator-added-touches-its-function",
     ],
 )
@@ -136,6 +191,55 @@ async def test_what_became_of_a_name_is_judged_against_the_base(
     )
 
     assert [name for file in names for name in file.names] == touched
+
+
+@pytest.mark.parametrize(
+    ("base", "take", "hunk", "met"),
+    [
+        (
+            FIRST_GONE_LAST.replace(b"    pass\n", b"    return 1\n"),
+            b"def added():\n    pass\n\n\ndef first():\n    return 1\n\n\ndef last():\n    return 2\n",
+            DiffHunk(
+                header=HUNK_HEADER,
+                old_start=1,
+                new_start=1,
+                lines=[
+                    added_line(1, "def added():"),
+                    added_line(2, "    pass"),
+                    added_line(3, ""),
+                    added_line(4, ""),
+                    context_line(1, 5, "def first():"),
+                    context_line(2, 6, "    return 1"),
+                    context_line(3, 7, ""),
+                    context_line(4, 8, ""),
+                    removed_line(5, "def gone():"),
+                    removed_line(6, "    return 1"),
+                    removed_line(7, ""),
+                    removed_line(8, ""),
+                    context_line(9, 9, "def last():"),
+                    removed_line(10, "    return 1"),
+                    added_line(10, "    return 2"),
+                ],
+            ),
+            ["added", "gone", "last"],
+        ),
+        (
+            b"def first():\n    pass\ndef gone():\n    return 1\n",
+            b"def first():\n    pass\nclass Holder:\n    def gone():\n        return 1\n",
+            DiffHunk(header=HUNK_HEADER, old_start=3, new_start=3, lines=[added_line(3, "class Holder:")]),
+            ["Holder", "gone"],
+        ),
+    ],
+    ids=["a-removed-name-stands-where-its-lines-were-removed", "a-name-on-a-line-no-hunk-shows-stands-where-it-is-now"],
+)
+async def test_the_names_of_a_file_stand_in_the_order_a_reader_meets_them_down_its_diff(
+    base: bytes, take: bytes, hunk: DiffHunk, met: list[str]
+) -> None:
+    file = DiffFile(path=PATH, status=FileStatus.MODIFIED, hunks=[hunk])
+
+    names = await read_names_touched(trees({PATH: take}, {PATH: base}), ROOT, tree=TAKE, base=BASE, files=[file])
+
+    assert [name.name for file in names for name in file.names] == met
 
 
 async def test_a_renamed_file_s_names_are_judged_against_the_file_it_moved_from() -> None:
@@ -162,7 +266,15 @@ async def test_a_renamed_file_s_names_are_judged_against_the_file_it_moved_from(
             path="src/new.py",
             names=[
                 TouchedName(
-                    name="first", defined_as=DefinitionKind.FUNCTION, line=1, column=4, change=NameChange.MODIFIED
+                    name="first",
+                    defined_as=DefinitionKind.FUNCTION,
+                    change=NameChange.MODIFIED,
+                    line=1,
+                    column=4,
+                    stands_on=[
+                        LinesOnSide(side=LineSide.NEW, first=1, last=2),
+                        LinesOnSide(side=LineSide.OLD, first=1, last=2),
+                    ],
                 )
             ],
         )
@@ -170,8 +282,8 @@ async def test_a_renamed_file_s_names_are_judged_against_the_file_it_moved_from(
 
 
 async def test_the_names_a_change_touched_are_said_file_by_file_in_the_order_of_its_diff() -> None:
-    """A file the change added has every name added; a file of no grammar, one added that is not text, one too
-    large, one deleted and one whose change touched no name say none, and are left out."""
+    """A file the change added has every name added, and one it deleted every name removed; a file of no grammar,
+    one added that is not text, one too large and one whose change touched no name say none, and are left out."""
     take_files = {
         PATH: b"def first():\n    return 2\n",
         "src/flags.py": b"def shown():\n    pass\n\n\ndef hidden():\n    pass\n",
@@ -220,7 +332,15 @@ async def test_the_names_a_change_touched_are_said_file_by_file_in_the_order_of_
             path=PATH,
             names=[
                 TouchedName(
-                    name="first", defined_as=DefinitionKind.FUNCTION, line=1, column=4, change=NameChange.MODIFIED
+                    name="first",
+                    defined_as=DefinitionKind.FUNCTION,
+                    change=NameChange.MODIFIED,
+                    line=1,
+                    column=4,
+                    stands_on=[
+                        LinesOnSide(side=LineSide.NEW, first=1, last=2),
+                        LinesOnSide(side=LineSide.OLD, first=1, last=2),
+                    ],
                 )
             ],
         ),
@@ -228,11 +348,34 @@ async def test_the_names_a_change_touched_are_said_file_by_file_in_the_order_of_
             path="src/flags.py",
             names=[
                 TouchedName(
-                    name="shown", defined_as=DefinitionKind.FUNCTION, line=1, column=4, change=NameChange.ADDED
+                    name="shown",
+                    defined_as=DefinitionKind.FUNCTION,
+                    change=NameChange.ADDED,
+                    line=1,
+                    column=4,
+                    stands_on=[LinesOnSide(side=LineSide.NEW, first=1, last=2)],
                 ),
                 TouchedName(
-                    name="hidden", defined_as=DefinitionKind.FUNCTION, line=5, column=4, change=NameChange.ADDED
+                    name="hidden",
+                    defined_as=DefinitionKind.FUNCTION,
+                    change=NameChange.ADDED,
+                    line=5,
+                    column=4,
+                    stands_on=[LinesOnSide(side=LineSide.NEW, first=5, last=6)],
                 ),
+            ],
+        ),
+        FileNamesTouched(
+            path="src/gone.py",
+            names=[
+                TouchedName(
+                    name="gone",
+                    defined_as=DefinitionKind.FUNCTION,
+                    change=NameChange.REMOVED,
+                    line=1,
+                    column=4,
+                    stands_on=[LinesOnSide(side=LineSide.OLD, first=1, last=2)],
+                )
             ],
         ),
     ]

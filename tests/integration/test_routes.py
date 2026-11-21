@@ -528,14 +528,78 @@ async def test_the_names_a_change_touched_are_answered_file_by_file_of_the_take_
         "files": [
             {
                 "path": "src/flags.py",
-                "names": [{"name": "shown", "defined_as": "function", "line": 1, "column": 4, "change": "modified"}],
+                "names": [
+                    {
+                        "name": "shown",
+                        "defined_as": "function",
+                        "change": "modified",
+                        "side": "new",
+                        "line": 1,
+                        "column": 4,
+                        "stands_on": [{"side": "new", "first": 1, "last": 2}, {"side": "old", "first": 1, "last": 2}],
+                    }
+                ],
             },
             {
                 "path": "src/pane.py",
-                "names": [{"name": "drawn", "defined_as": "function", "line": 1, "column": 4, "change": "added"}],
+                "names": [
+                    {
+                        "name": "drawn",
+                        "defined_as": "function",
+                        "change": "added",
+                        "side": "new",
+                        "line": 1,
+                        "column": 4,
+                        "stands_on": [{"side": "new", "first": 1, "last": 2}],
+                    }
+                ],
             },
         ],
     }
+
+
+async def test_the_names_a_change_touched_are_answered_of_the_diff_read_against_another_base(
+    tmp_git_repo: Path, reviews: ReviewFactory
+) -> None:
+    """Judged against the base asked for: a name it held that the take does not is removed, on the old side."""
+    write_files(
+        tmp_git_repo, {"src/flags.py": "def shown() -> bool:\n    return True\n\n\ndef gone() -> None:\n    pass\n"}
+    )
+    git(tmp_git_repo, "add", ".")
+    git(tmp_git_repo, "commit", "-m", "flags")
+    git(tmp_git_repo, "branch", "earlier")
+    write_files(tmp_git_repo, {"src/flags.py": "def shown() -> bool:\n    return True\n"})
+    git(tmp_git_repo, "commit", "-am", "gone")
+    write_files(tmp_git_repo, {"src/flags.py": "def shown() -> bool:\n    return False\n"})
+
+    async with http_client(reviews.app(await repository_opening(tmp_git_repo))) as client:
+        response = await client.get(NAMES_TOUCHED_ROUTE, params={"base": "ref:earlier"})
+
+    assert response.json()["files"] == [
+        {
+            "path": "src/flags.py",
+            "names": [
+                {
+                    "name": "shown",
+                    "defined_as": "function",
+                    "change": "modified",
+                    "side": "new",
+                    "line": 1,
+                    "column": 4,
+                    "stands_on": [{"side": "new", "first": 1, "last": 2}, {"side": "old", "first": 1, "last": 2}],
+                },
+                {
+                    "name": "gone",
+                    "defined_as": "function",
+                    "change": "removed",
+                    "side": "old",
+                    "line": 5,
+                    "column": 4,
+                    "stands_on": [{"side": "old", "first": 5, "last": 6}],
+                },
+            ],
+        }
+    ]
 
 
 async def test_the_names_a_change_touched_are_not_read_in_a_take_git_wrote_no_tree_of(
