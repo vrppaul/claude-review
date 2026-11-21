@@ -78,6 +78,11 @@ beforeEach(() => {
 	Object.defineProperty(document, 'caretPositionFromPoint', { configurable: true, value: () => null });
 });
 
+// What stands at a point of the window, which jsdom, laying nothing out, cannot say: nothing, until a test says what
+beforeEach(() => {
+	Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: () => null });
+});
+
 /** Never reports: jsdom has no layout, so nothing it watches ever changes size. */
 class SilentResizeObserver implements ResizeObserver {
 	observe = vi.fn();

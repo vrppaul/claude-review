@@ -87,7 +87,7 @@
 	/** Take the reader to the line of a file where a check failed, the pane put away. */
 	function goTo(path: string, line: number) {
 		open = false;
-		void review.navigator.goToLine(path, line, null);
+		void review.navigator.goToLine(path, { side: 'new', number: line }, null);
 	}
 
 	/** When a check was reported: the round too, where it is not the one being written. */

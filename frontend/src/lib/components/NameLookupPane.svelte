@@ -1,26 +1,30 @@
-<script lang="ts">
+<script lang="ts" generics="From extends AskedFrom">
+	import type { Snippet } from 'svelte';
 	import { EveryFrame } from '$lib/dom/every-frame';
 	import { useReview } from '$lib/review/context';
-	import type { AskedName, NameLookup } from '$lib/review/name-lookup.svelte';
+	import type { AskedFrom, NameLookup } from '$lib/review/name-lookup.svelte';
 	import type { NamePlace } from '$lib/types';
 	import BreathingDots from '$lib/ui/BreathingDots.svelte';
 	import Button from '$lib/ui/Button.svelte';
-	import CodeMark from '$lib/ui/CodeMark.svelte';
 	import EmptyNote from '$lib/ui/EmptyNote.svelte';
 	import Failure from '$lib/ui/Failure.svelte';
 	import Popover from '$lib/ui/Popover.svelte';
-	import { answersKey, holdsModifiersOf, LOOKUP_CHORD } from './keymap';
+	import { answersKey } from './keymap';
 	import { firstListed } from './name-places';
 	import NameLookupAside from './NameLookupAside.svelte';
 	import NameLookupWindow from './NameLookupWindow.svelte';
 	import NamePlaces from './NamePlaces.svelte';
 
 	interface Props {
-		/** The lookup of the reading area the pane stands in. */
-		lookup: NameLookup;
+		/** The lookup whose answer the pane shows, of the name asked about where it stands. */
+		lookup: NameLookup<From>;
+		/** What the pane says at its foot, under what it lists: another way to open it. */
+		foot?: Snippet | undefined;
+		/** Whether the name asked about is one the change removed, which is why nothing in the code may be called so. */
+		removed?: boolean;
 	}
 
-	let { lookup }: Props = $props();
+	let { lookup, foot, removed = false }: Props = $props();
 	const review = useReview();
 
 	// What the pane says while the review reads the repository
@@ -38,7 +42,7 @@
 	const open = $derived(asked !== null && inTheWindow === null);
 	// The place the window chooses first as it opens; none while the review found none, when it is not offered
 	const first = $derived(found === null ? null : firstListed(found));
-	// What heads the pane: the word pressed, until the review says what the name is
+	// What heads the pane: the word asked about, until the review says what the name is
 	const heading = $derived(found?.name ?? asked?.word ?? '');
 	let tryAgainButton: HTMLButtonElement | undefined = $state();
 
@@ -50,45 +54,32 @@
 	/** Take the reader to a place, the pane put away, the name marked on the line they arrive at. */
 	function goTo(place: NamePlace, name: string) {
 		lookup.close();
-		void review.navigator.goToLine(place.path, place.line, { column: place.column, name });
+		void review.navigator.goToLine(place.path, { side: 'new', number: place.line }, { column: place.column, name });
 	}
 
 	/**
-	 * A key of the review pressed in the pane is pressed at the line the pane stands by. The pane is drawn apart
-	 * from the line, at the end of its area, where a file's frame does not cut it, and a key that acts from where
-	 * the keyboard is — the next line, the file being read — would act from there. So the keyboard goes back to the
-	 * line before the review hears the key, which closes the pane.
+	 * A key of the review pressed in the pane is pressed where the name was asked from. The pane is drawn apart from
+	 * that, where nothing round it cuts it, and a key that acts from where the keyboard is — the next line, the file
+	 * being read — would act from there. So the keyboard goes back before the review hears the key, which closes the
+	 * pane.
 	 */
-	function pressAtTheLine(event: KeyboardEvent) {
-		if (asked !== null && answersKey(review, event)) keyboardBackToTheLine(asked);
+	function pressWhereAsked(event: KeyboardEvent) {
+		if (answersKey(review, event)) lookup.keyboardBack();
 	}
 
-	/** Put the keyboard back on the line a name was pressed on, as the line is drawn now. */
-	function keyboardBackToTheLine(pressed: AskedName) {
-		review.sections.keyboardBackTo(pressed.place.path, pressed.lineKey);
-	}
-
-	// What the pane lists is of the take its name was pressed in, and it stands by the name as its line is drawn
-	// now: looked for each frame, as nothing tells of a line drawn again. The window looks so for itself
+	// What the pane lists is of the take its name was asked in, and it stands by what it was asked from as that is
+	// drawn now: looked for each frame, as nothing tells of a line or a row drawn again. The window looks so for itself
 	$effect(() => {
 		if (!open) return;
 		const watching = new EveryFrame(closeOnceOfThePast);
 		return () => watching.stop();
 	});
 
-	/** Close a pane of the past: the line's number, which had the keyboard as the pane opened, may be gone. */
+	/** Close a pane of the past: what had the keyboard as the pane opened may be gone. */
 	function closeOnceOfThePast() {
-		if (!lookup.standsFor(review.diff.takeOnScreen)) lookup.closeToTheLine();
-	}
-
-	/** The key the gesture is held with went down or up: the word under the pointer is marked while it is held. */
-	function noteKey(event: KeyboardEvent) {
-		lookup.hold(holdsModifiersOf(LOOKUP_CHORD, event));
+		if (!lookup.standsFor(review.diff.takeOnScreen)) lookup.closeToWhereAsked();
 	}
 </script>
-
-<!-- On the window: the key goes down or up wherever the keyboard is, and a window left lets it go unseen -->
-<svelte:window onkeydown={noteKey} onkeyup={noteKey} onblur={() => lookup.hold(false)} />
 
 <!-- How many places, and the way to read them in the window, the first listed chosen, once the review found any -->
 {#snippet aside()}
@@ -97,22 +88,15 @@
 	{/if}
 {/snippet}
 
-<!-- The word under the pointer while the key is held, and the name pressed while its pane is open, marked over the
-	code of the area -->
-{#if lookup.held}
-	<CodeMark stretch={() => lookup.held} mark="held" marks={lookup.marks} testId="name-held" />
-{/if}
-
-<!-- Where a name pressed in the code is defined and used, in a pane by the name, drawn while the lookup holds the
-	name and it is read there: it notes what had the keyboard, the line pressed, as it is drawn, and gives the
-	keyboard back as it goes; or in the window, read there -->
+<!-- Where a name is defined and used, in a pane by what it was asked from, drawn while the lookup holds the name and
+	it is read there: it notes what had the keyboard as it is drawn, and gives the keyboard back as it goes; or in the
+	window, read there -->
 {#if asked}
-	<CodeMark stretch={asked.at.stretch} mark="pressed" marks={lookup.marks} testId="name-pressed" />
 	{#if inTheWindow !== null}
 		<NameLookupWindow {lookup} found={inTheWindow.found} chosen={inTheWindow.chosen} {goTo} />
 	{:else}
 		<Popover
-			at={asked.at.box}
+			{...asked.from.standsBy}
 			bind:open={() => open, (opened) => !opened && lookup.close()}
 			label="Where {heading} is defined and used"
 			{heading}
@@ -120,7 +104,8 @@
 			placement="roomier-start"
 			width="code"
 			testId="name-lookup"
-			onkeydown={pressAtTheLine}
+			onkeydown={pressWhereAsked}
+			{foot}
 		>
 			<div class="flex flex-col gap-4 p-3">
 				{#if looked?.kind === 'looking'}
@@ -143,8 +128,12 @@
 					</div>
 				{:else if found !== null && found.places.length === 0}
 					<EmptyNote within="list" testId="name-lookup-nothing">
-						Nothing in the code is called “{found.name}”. Here it stands in a comment or a string, or is a word of the
-						language.
+						{#if removed}
+							Nothing in the code is called “{found.name}” now: the change removed it.
+						{:else}
+							Nothing in the code is called “{found.name}”. Here it stands in a comment or a string, or is a word of the
+							language.
+						{/if}
 					</EmptyNote>
 				{:else if found !== null}
 					{#key found}

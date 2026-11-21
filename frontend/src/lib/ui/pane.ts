@@ -14,8 +14,8 @@
  * scrolling inside. What it is seen in is measured as it opens and again as the
  * window is resized, a box it is seen in changes size, or anything under
  * the pane scrolls, so a pane never keeps the room of a place it is no
- * longer in; a pane whose way is chosen as it opens scrolls with what it
- * stands by instead, and keeps its way.
+ * longer in; a pane drawn at a spot in what scrolls scrolls with it
+ * instead, as a card in the code does.
  */
 
 import type { Snippet } from 'svelte';
@@ -47,8 +47,7 @@ export type Placement = Way | 'roomier-start';
  * How a placement chooses the way a pane opens: the way it opens first;
  * whether it keeps to it where it stands whole, which only a pane that
  * knows what it holds as it is drawn can tell; and whether the way is
- * chosen once, as the pane opens, the pane then scrolling with what it
- * stands by as a card in the code does, fitted again only to a window resized.
+ * chosen once, as the pane opens, and kept however it is fitted again.
  */
 interface Opening {
 	way: Way;
@@ -242,11 +241,6 @@ export function laidOut(pane: HTMLElement, body: HTMLElement): LaidOut {
 /** How far a pane stands off what it stands by, below it or above it: the room its arrow takes. */
 function standsOffBy({ standsBy, pane }: LaidOut): number {
 	return Math.max(pane.top - standsBy.bottom, standsBy.top - pane.bottom);
-}
-
-/** Whether a pane is fitted again as anything under it scrolls: unless its way was chosen as it opened. */
-export function fittedAsItScrolls(placement: Placement): boolean {
-	return !OPENINGS[placement].chosenAsItOpens;
 }
 
 /**

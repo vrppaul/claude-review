@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { focusWhatRemains } from '$lib/dom/keyboard';
 	import { provideScrollArea } from '$lib/dom/scroll-area';
-	import { provideNameLookup, useReview } from '$lib/review/context';
+	import { provideNamesInTheCode, useReview } from '$lib/review/context';
 	import { fileSectionKey } from '$lib/review/reading-view';
 	import Bar from '$lib/ui/Bar.svelte';
 	import Button from '$lib/ui/Button.svelte';
@@ -10,7 +10,7 @@
 	import { EVERY_LINE } from './file-drawing.svelte';
 	import FileTitle from './FileTitle.svelte';
 	import LinesSection from './LinesSection.svelte';
-	import NameLookupPane from './NameLookupPane.svelte';
+	import CodeNameLookup from './CodeNameLookup.svelte';
 
 	// What the bar says of the file, where a file of the change says what became of it
 	const NOT_IN_THIS_CHANGE = 'not in this change';
@@ -26,7 +26,7 @@
 	// The file's section scrolls in this area, and builds its rows as it comes near it
 	provideScrollArea(() => container ?? null);
 	// A name pressed in the file is looked up in this area, its pane standing by it
-	const names = provideNameLookup(review);
+	const names = provideNamesInTheCode(review);
 	// What takes the keyboard once a read asked for again is done and nothing else took it, the button that asked
 	// for it gone
 	let putAwayButton: HTMLButtonElement | undefined = $state();
@@ -122,6 +122,6 @@
 		{/key}
 	{/if}
 	{#if names}
-		<NameLookupPane lookup={names} />
+		<CodeNameLookup {names} />
 	{/if}
 </main>

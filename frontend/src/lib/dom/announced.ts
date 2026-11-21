@@ -45,6 +45,11 @@ export class Announced<Said extends Announcement> {
 		return this.#byKey.get(key);
 	}
 
+	/** The one an element is, where it is one of them. */
+	of(element: Element): Said | undefined {
+		return this.#byElement.get(element);
+	}
+
 	/** The area they are read in, while it is watched; null while none is. */
 	get area(): HTMLElement | null {
 		return this.band.area;

@@ -207,7 +207,7 @@ describe('a file the change did not touch, read alone', () => {
 	});
 
 	it('is where going to a line of it takes the reader: on the line, the keyboard on its number', async () => {
-		await review.navigator.goToLine(CALLER, 2, null);
+		await review.navigator.goToLine(CALLER, { side: 'new', number: 2 }, null);
 		await cameToRest();
 
 		expect(within(screen.getByTestId('file-alone-view')).getByTestId('file-alone-heading').textContent).toBe(CALLER);

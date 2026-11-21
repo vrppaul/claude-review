@@ -164,6 +164,12 @@ export const ICONS = {
 		paths: ['M2.5 8a5.5 5.5 0 1 0 11 0a5.5 5.5 0 1 0 -11 0', 'M6 8a2 2 0 1 0 4 0a2 2 0 1 0 -4 0'],
 		drawn: TRACED_FIRM
 	},
+	// A magnifying glass: where a name is defined and used, looked up in the repository
+	lookup: {
+		viewBox: '0 0 16 16',
+		paths: ['M2.75 7a4.25 4.25 0 1 0 8.5 0a4.25 4.25 0 1 0 -8.5 0', 'M10.1 10.1l3.4 3.4'],
+		drawn: TRACED
+	},
 	// A triangle with a mark in it: what to look at, where a story says to doubt its change
 	warning: { viewBox: '0 0 16 16', paths: ['M8 2.5l6 11H2z', 'M8 7v2.8', 'M8 11.6v.1'], drawn: TRACED_FIRM },
 	notice: {

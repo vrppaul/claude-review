@@ -11,8 +11,9 @@ import svelteConfig from './svelte.config.js';
 // components.
 const LAYERS = {
 	// The component library: what the page is drawn with, building on nothing of the page but what the page does to
-	// the document, which builds on nothing itself: a pane asks it what of the window the pane is seen in
-	ui: ['dom'],
+	// the document, which builds on nothing itself: a pane asks it what of the window the pane is seen in; and on
+	// plain helpers over plain data, as it lays its own mark into a line's highlighted markup
+	ui: ['dom', 'utils'],
 	types: [],
 	// Plain helpers over plain data; nothing of the page in them
 	utils: ['types'],
@@ -1070,6 +1071,7 @@ export default tseslint.config(
 		// still refuses `void` on a call that returns nothing
 		files: [
 			'src/lib/components/DiffView.svelte',
+			'src/lib/components/FileNames.svelte',
 			'src/lib/components/ReviewScreen.svelte',
 			'src/lib/components/StoryHead.svelte',
 			'src/lib/components/StoryWaiting.svelte',

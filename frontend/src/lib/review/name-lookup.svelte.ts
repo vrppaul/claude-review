@@ -1,56 +1,20 @@
 /**
- * Where a name in the code is defined and used, asked of the review from
- * one reading area: the name the reader pressed there, what the review
- * answered of it, and how the reader reads that, held while its pane or its
- * window is open and gone once it closes.
+ * Where a name in the code is defined and used, asked of the review: the
+ * place asked about, what the review answered of it, and how the reader
+ * reads that, held while its pane or its window is open and gone once it
+ * closes.
  *
- * What a name is, the review says at the press: the page only finds the
- * word under the pointer, to mark it while the key is held and to say
- * which character was pressed. One lookup belongs to each area a view
- * scrolls in, so it goes when its view goes, and its pane stands in the
- * area, by the name pressed, scrolling with the code.
+ * A name is asked about from two places — pressed in a reading area's code,
+ * or by the icon on its row in the tree of files — and each keeps its own
+ * lookup. What differs between them is only where the question was asked
+ * from (`AskedFrom`): where the pane stands, whether that is still drawn,
+ * and what takes the keyboard as the pane or the window goes.
  */
 
 import { type PlaceInCode, readName } from '$lib/api/review-api';
-import { type Caret, type CaretReader, caretReaderOfThisBrowser, rangeOfText, textOffsetIn } from '$lib/dom/caret-text';
-import { type CodeMarks, codeMarksOfThisBrowser } from '$lib/dom/code-marks';
-import type { FileSections } from '$lib/dom/file-sections';
-import { DrawnName } from '$lib/review/drawn-name';
-import type { NamePlace, NameResponse, ReviewMode } from '$lib/types';
-import { columnOf, wordAtCaret } from '$lib/utils/code-words';
+import { focusWhatRemains } from '$lib/dom/keyboard';
+import type { NamePlace, NameResponse } from '$lib/types';
 import { messageOf } from '$lib/utils/errors';
-import { placeKey } from '$lib/utils/line-places';
-
-/**
- * Whether each kind of review looks names up: only a review of a
- * repository's change has a repository to look through, and the key does
- * nothing in the others.
- */
-const LOOKS_UP_NAMES: Record<ReviewMode, boolean> = { diff: true, files: false, transcript: false };
-
-/**
- * What a browser lends the lookup: where its caret under the pointer stands,
- * which says the word under it and the character pressed, and the marks it
- * draws over the code.
- */
-export interface NamePointing {
-	caretAt: CaretReader;
-	marks: CodeMarks;
-}
-
-/**
- * How names are pointed at in a review of a kind, in this browser, asked
- * once as the review opens: none where the review looks no names up, or the
- * browser cannot say its caret under the pointer or draw marks over text,
- * and then the gesture is not offered at all.
- */
-export function namePointingIn(mode: ReviewMode): NamePointing | null {
-	if (!LOOKS_UP_NAMES[mode]) return null;
-	const caretAt = caretReaderOfThisBrowser();
-	if (caretAt === null) return null;
-	const marks = codeMarksOfThisBrowser();
-	return marks === null ? null : { caretAt, marks };
-}
 
 /**
  * How the reader reads what the review answered: in the pane by the name, a line to each place; or in a window over
@@ -68,40 +32,34 @@ const IN_THE_PANE: AnswerRead = { way: 'compact' };
 type Looked =
 	{ kind: 'looking' } | { kind: 'found'; found: NameResponse; read: AnswerRead } | { kind: 'failed'; why: string };
 
-/** The name the reader pressed: the place asked about, the word pressed, where it stands, and what asking came to. */
-export interface AskedName {
+// A lookup on its way
+const LOOKING: Looked = { kind: 'looking' };
+
+/**
+ * What the lookup's pane stands by: a stretch of the code, where it stands in the window now and null while it is
+ * not drawn; or the control pressed to ask, drawn apart from the pane.
+ */
+type PaneStandsBy = { at: () => DOMRectReadOnly | null } | { control: HTMLElement };
+
+/** Where a name was asked about from, which is all the lookup's pane and window need of it. */
+export interface AskedFrom {
+	standsBy: PaneStandsBy;
+	/** Whether what the pane stands by is still drawn for the name asked about. */
+	standsThere: () => boolean;
+	/** What takes the keyboard as the pane or the window goes: what was pressed, or what stands for it once it is gone. */
+	keyboardTo: () => HTMLElement | null;
+}
+
+/** A name asked about: the place, the word asked, where it was asked from, and what asking came to. */
+export interface AskedName<From extends AskedFrom> {
 	place: PlaceInCode;
-	/** The key the line pressed is known by among its file's lines. */
-	lineKey: string;
-	/** The word under the pointer, which heads the pane until the review says what the name is. */
+	/** The word asked about, which heads the pane until the review says what the name is. */
 	word: string;
-	/** The word where it stands in its line, found there as the line is drawn now. */
-	at: DrawnName;
-	/** The take of the review the name was pressed in, which what the review answers of it is of. */
+	from: From;
+	/** The take of the review the name was asked in, which what the review answers of it is of. */
 	take: number;
 	looked: Looked;
 }
-
-/**
- * The word under the pointer in a line of code: what it says, the columns it starts at and of the character
- * pressed, and its range.
- */
-export interface PointedWord {
-	word: string;
-	starts: number;
-	column: number;
-	range: Range;
-}
-
-/** Where the pointer was last over a line's code that takes the gesture, in the window. */
-interface PointerOverCode {
-	code: HTMLElement;
-	windowX: number;
-	windowY: number;
-}
-
-// A lookup on its way
-const LOOKING: Looked = { kind: 'looking' };
 
 /** Ask the review about a place, and say what that came to: whatever it refuses, in its own words. */
 async function lookedUp(place: PlaceInCode): Promise<Looked> {
@@ -112,88 +70,26 @@ async function lookedUp(place: PlaceInCode): Promise<Looked> {
 	}
 }
 
-/** The word in a line's code at the caret, if the caret is in the line and touches one. */
-function wordAt(code: HTMLElement, caret: Caret | null): PointedWord | null {
-	const offset = caret === null ? null : textOffsetIn(code, caret);
-	const text = code.textContent;
-	const word = offset === null ? null : wordAtCaret(text, offset);
-	if (word === null) return null;
-	return {
-		word: text.slice(word.start, word.end),
-		starts: columnOf(text, word.start),
-		column: columnOf(text, word.pressed),
-		range: rangeOfText(code, word.start, word.end)
-	};
+/** Put the keyboard on what a name was asked from, so the pane opening by it notes it and gives it back there. */
+function keyboardToWhereAsked(from: AskedFrom): void {
+	from.keyboardTo()?.focus({ preventScroll: true });
 }
 
-export class NameLookup {
-	#asked = $state.raw<AskedName | null>(null);
-	readonly #caretAt: CaretReader;
-	readonly #sections: FileSections;
-	/** The page's marks over the code, which the words this lookup marks are drawn with. */
-	readonly marks: CodeMarks;
-	// Read again as the key goes down or up, the pointer still: kept only to mark what is under it
-	#pointer: PointerOverCode | null = null;
-	#held = $state.raw<Range | null>(null);
+export class NameLookup<From extends AskedFrom> {
+	#asked = $state.raw<AskedName<From> | null>(null);
 
-	/**
-	 * @param pointing what the browser lends the lookup: the caret under the pointer, and the page's marks over the
-	 * code, which the words it marks are drawn with
-	 * @param sections where each line of the review is drawn, which the name pressed is found in while its pane is
-	 * open
-	 */
-	constructor({ caretAt, marks }: NamePointing, sections: FileSections) {
-		this.#caretAt = caretAt;
-		this.marks = marks;
-		this.#sections = sections;
-	}
-
-	/** The name pressed, while its pane is open, and marked; null once it closes, or before any is pressed. */
-	get asked(): AskedName | null {
+	/** The name asked about, while its pane or its window is open; null once it closes, or before any is asked. */
+	get asked(): AskedName<From> | null {
 		return this.#asked;
 	}
 
-	/** The word under the pointer while the key is held, and marked; null while none is. */
-	get held(): Range | null {
-		return this.#held;
-	}
-
 	/**
-	 * The pointer moved over a line's code that takes the gesture: the word
-	 * under it is marked while the key is held, and unmarked once it is not,
-	 * or the pointer is over no word.
+	 * Ask the review about the word at a place, from where the reader asked, in the take on screen. The keyboard
+	 * goes there first, as the pane notes what has it as it opens.
 	 */
-	point(code: HTMLElement, event: MouseEvent, held: boolean): void {
-		this.#pointer = { code, windowX: event.clientX, windowY: event.clientY };
-		this.hold(held);
-	}
-
-	/** The key went down or up, the pointer where it was: the word under it is marked, or no longer. */
-	hold(held: boolean): void {
-		const pointer = this.#pointer;
-		const pointed = held && pointer !== null ? this.wordUnder(pointer.code, pointer.windowX, pointer.windowY) : null;
-		this.#held = pointed?.range ?? null;
-	}
-
-	/** The word under a point of the window in a line's code, if the browser's caret there touches one. */
-	wordUnder(code: HTMLElement, windowX: number, windowY: number): PointedWord | null {
-		return wordAt(code, this.#caretAt(windowX, windowY));
-	}
-
-	/**
-	 * Ask about a word pressed in a line's code, the place of the line saying where it is, and the take of the
-	 * review the line is drawn from.
-	 */
-	ask(line: Omit<PlaceInCode, 'column'>, pressed: PointedWord, take: number): void {
-		const lineKey = placeKey({ side: line.side, number: line.line });
-		const asked: AskedName = {
-			place: { ...line, column: pressed.column },
-			lineKey,
-			word: pressed.word,
-			at: new DrawnName(this.#sections, line.path, lineKey, { column: pressed.starts, name: pressed.word }),
-			take,
-			looked: LOOKING
-		};
+	ask(place: PlaceInCode, word: string, from: From, take: number): void {
+		const asked: AskedName<From> = { place, word, from, take, looked: LOOKING };
+		keyboardToWhereAsked(from);
 		this.#asked = asked;
 		void this.#lookUp(asked);
 	}
@@ -212,31 +108,30 @@ export class NameLookup {
 		this.#readAnswer({ way: 'full', chosen });
 	}
 
-	/**
-	 * Bring the pane back by the name, from the window. The keyboard goes to the line pressed first, as at the
-	 * press: the pane notes what has it as it opens, and gives it back there as it goes.
-	 */
+	/** Bring the pane back from the window, the keyboard first on where the name was asked from, as at the asking. */
 	readInThePane(): void {
 		const asked = this.#asked;
 		if (asked === null) return;
-		this.#sections.keyboardBackTo(asked.place.path, asked.lineKey);
+		keyboardToWhereAsked(asked.from);
 		this.#readAnswer(IN_THE_PANE);
 	}
 
-	/** Read the review's answer about the name asked about so, while there is one. */
-	#readAnswer(read: AnswerRead): void {
+	/**
+	 * Put the keyboard back where the name was asked from, before the review hears a key pressed in the pane: the
+	 * pane stands apart from that in the page's order, and a key that acts from where the keyboard is would act there.
+	 */
+	keyboardBack(): void {
 		const asked = this.#asked;
-		if (asked?.looked.kind === 'found') this.#asked = { ...asked, looked: { ...asked.looked, read } };
+		if (asked !== null) keyboardToWhereAsked(asked.from);
 	}
 
 	/**
-	 * Whether what the lookup holds stands for the code on screen: asked of the take on screen, and its name drawn
-	 * where it was pressed. Once the change is taken again, or the page draws the line without the name — a story
-	 * told again — it is of the past.
+	 * Whether what the lookup holds stands for what is on screen: asked of the take on screen, and what it was asked
+	 * from still drawn. Once the change is taken again, or that is drawn no more, it is of the past.
 	 */
 	standsFor(takeOnScreen: number): boolean {
 		const asked = this.#asked;
-		return asked !== null && asked.take === takeOnScreen && asked.at.stretch() !== null;
+		return asked !== null && asked.take === takeOnScreen && asked.from.standsThere();
 	}
 
 	/** Close the pane, or the window: what was asked is gone. */
@@ -245,18 +140,24 @@ export class NameLookup {
 	}
 
 	/**
-	 * Close the pane or the window, the keyboard going to what stands for the line pressed where their going leaves
-	 * it on nothing: the line's number drawn again, or the file's toggle where the line is gone.
+	 * Close the pane or the window, the keyboard going to where the name was asked from, or what stands for that,
+	 * where their going leaves it on nothing.
 	 */
-	closeToTheLine(): void {
+	closeToWhereAsked(): void {
 		const asked = this.#asked;
 		if (asked === null) return;
-		this.#sections.keyboardToLine(asked.place.path, asked.lineKey);
+		focusWhatRemains(asked.from.keyboardTo);
 		this.#asked = null;
 	}
 
+	/** Read the review's answer about the name asked about so, while there is one. */
+	#readAnswer(read: AnswerRead): void {
+		const asked = this.#asked;
+		if (asked?.looked.kind === 'found') this.#asked = { ...asked, looked: { ...asked.looked, read } };
+	}
+
 	/** Look a name up, and hold what came of it while it is still the one asked about. */
-	async #lookUp(asked: AskedName): Promise<void> {
+	async #lookUp(asked: AskedName<From>): Promise<void> {
 		const looked = await lookedUp(asked.place);
 		if (this.#asked === asked) this.#asked = { ...asked, looked };
 	}

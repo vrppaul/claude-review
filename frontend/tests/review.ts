@@ -5,8 +5,8 @@ import { PageLayout } from '$lib/reader/page-layout.svelte';
 import { PageTheme } from '$lib/reader/page-theme.svelte';
 import { ReplySound } from '$lib/reader/reply-sound';
 import { Settings } from '$lib/reader/settings.svelte';
-import { nameLookupContext, nameLookupIn, reviewContext } from '$lib/review/context';
-import type { NameLookup } from '$lib/review/name-lookup.svelte';
+import { namesInTheCodeContext, namesInTheCodeOf, reviewContext } from '$lib/review/context';
+import type { NamesInTheCode } from '$lib/review/names-in-the-code.svelte';
 import type { Review } from '$lib/review/review.svelte';
 import type {
 	DiffFile,
@@ -101,10 +101,10 @@ export async function settingsWritingStories(server: FakeServer, writing: StoryW
 }
 
 /**
- * What a component drawn on its own is handed down: the review, how to read the area it scrolls in, and the lookup
- * of names pressed in it.
+ * What a component drawn on its own is handed down: the review, how to read the area it scrolls in, and the names
+ * of the code pressed in it.
  */
-type HandedDown = Map<symbol, Review | ScrollArea | NameLookup | null>;
+type HandedDown = Map<symbol, Review | ScrollArea | NamesInTheCode | null>;
 
 /**
  * The options a component drawn on its own needs to be drawn inside this
@@ -117,7 +117,7 @@ export function inReview<Props>(review: Review, props?: Props) {
 	const context: HandedDown = new Map([
 		...reviewContext(review),
 		...pageAsScrollArea(),
-		...nameLookupContext(nameLookupIn(review))
+		...namesInTheCodeContext(namesInTheCodeOf(review))
 	]);
 	return props === undefined ? { context } : { props, context };
 }

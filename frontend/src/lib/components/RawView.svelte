@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { ClassValue } from 'svelte/elements';
 	import { LINE_CODE_ROLE } from '$lib/dom/line-code';
+	import { LINE_ROW_ROLE } from '$lib/dom/line-read-from.svelte';
 	import type { DiffLine, LineSide } from '$lib/types';
 	import LineFailure from '$lib/ui/LineFailure.svelte';
 	import type { DrawnLine } from '$lib/utils/drawn-file';
@@ -72,6 +73,7 @@
 				<tbody>
 					{#each hunk.lines as drawn (drawn.key)}
 						<tr
+							data-role={LINE_ROW_ROLE}
 							class={['cr-row', rowClass(drawn.line.kind, marked(drawn))]}
 							onmouseenter={() => commenting.enter(drawn)}
 						>

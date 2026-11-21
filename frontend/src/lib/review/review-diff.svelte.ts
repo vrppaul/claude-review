@@ -8,11 +8,20 @@
  */
 
 import type { Numbering } from '$lib/anchors/numbering';
-import { offeredVersions, retakeDiff, takeDiff } from '$lib/api/review-api';
+import { type DiffQuery, offeredVersions, retakeDiff, takeDiff } from '$lib/api/review-api';
 import { RevealedContext } from '$lib/review/revealed-context.svelte';
 import { TreeMoved } from '$lib/review/tree-moved.svelte';
 import type { DiffFile, DiffResponse, ReviewVersion } from '$lib/types';
 import { messageOf } from '$lib/utils/errors';
+
+/**
+ * One reading of the diff on screen: how it was asked for, and the take the server read. Made anew with every diff
+ * that comes on screen, so whatever was read of one reading — the names it touched — is told from another's by it.
+ */
+export interface DiffReading {
+	asked: DiffQuery;
+	take: number;
+}
 
 export class ReviewDiff {
 	/** Files changed on disk since this diff was taken. */
@@ -26,6 +35,8 @@ export class ReviewDiff {
 	// before it knows everything the diff could be compared against; it is
 	// null in a review compared against nothing.
 	#onScreen: DiffResponse;
+	// How the diff on screen was asked for, and its take
+	#reading: DiffReading;
 	// Lines revealed above the hunks of the diff on screen; every diff starts with none
 	#revealed = $state.raw(new RevealedContext());
 	// Which base the reader last asked for, null for the review's own. Set the
@@ -42,13 +53,19 @@ export class ReviewDiff {
 	#asking = 0;
 
 	/**
-	 * @param first the diff the review opened on, against its own base
+	 * @param first the diff the review opened on, against its own base, whitespace counted as the reader says now
 	 * @param whitespaceIgnored whether the reader has whitespace-only changes left out
 	 */
 	constructor(first: DiffResponse, whitespaceIgnored: () => boolean) {
 		this.#whitespaceIgnored = whitespaceIgnored;
 		this.#onScreen = $state.raw(first);
+		this.#reading = $state.raw({ asked: { ignoreWhitespace: whitespaceIgnored(), base: null }, take: first.take });
 		this.#noteWhatCameWithIt();
+	}
+
+	/** How the diff on screen was asked for and which take it is: a reading of its own for every diff put on screen. */
+	get reading(): DiffReading {
+		return this.#reading;
 	}
 
 	get files(): DiffFile[] {
@@ -128,11 +145,9 @@ export class ReviewDiff {
 	 */
 	async read(): Promise<() => void> {
 		const mine = ++this.#asking;
-		const data = await takeDiff({
-			ignoreWhitespace: this.#whitespaceIgnored(),
-			base: this.#requestedBase
-		});
-		return () => this.#showIfLatest(mine, data);
+		const asked: DiffQuery = { ignoreWhitespace: this.#whitespaceIgnored(), base: this.#requestedBase };
+		const data = await takeDiff(asked);
+		return () => this.#showIfLatest(mine, { asked, take: data.take }, data);
 	}
 
 	/**
@@ -199,13 +214,14 @@ export class ReviewDiff {
 	}
 
 	/** Put a diff read on screen, unless a later read was asked for since: only the latest is drawn. */
-	#showIfLatest(asked: number, data: DiffResponse): void {
-		if (asked === this.#asking) this.#show(data);
+	#showIfLatest(asking: number, reading: DiffReading, data: DiffResponse): void {
+		if (asking === this.#asking) this.#show(reading, data);
 	}
 
-	/** Put a diff that has arrived on screen, with everything that came with it. */
-	#show(data: DiffResponse): void {
+	/** Put a diff that has arrived on screen, read as it was asked for, with everything that came with it. */
+	#show(reading: DiffReading, data: DiffResponse): void {
 		this.#onScreen = data;
+		this.#reading = reading;
 		this.#noteWhatCameWithIt();
 	}
 

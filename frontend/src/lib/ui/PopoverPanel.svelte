@@ -5,7 +5,6 @@
 	import PaneHead from './PaneHead.svelte';
 	import {
 		fitted,
-		fittedAsItScrolls,
 		laidOut,
 		PANE_EDGES,
 		PANE_WIDTHS,
@@ -42,6 +41,11 @@
 		 * no control holds and which moves as its line wraps.
 		 */
 		place?: (() => void) | undefined;
+		/**
+		 * Whether it is drawn at a spot inside what scrolls, and scrolls with it as a card in the code does, fitted
+		 * again only as what it is seen in changes size; any other pane is fitted again as anything under it scrolls.
+		 */
+		scrollsWithItsSpot?: boolean;
 		testId: string;
 		/** The pane itself, held by whoever opened it: focus is moved into it and back. */
 		pane?: HTMLDivElement | undefined;
@@ -66,6 +70,7 @@
 		comesIn = false,
 		head,
 		place,
+		scrollsWithItsSpot = false,
 		testId,
 		pane = $bindable(),
 		body = $bindable(),
@@ -110,9 +115,9 @@
 		opened = fitNow.placement;
 	}
 
-	/** Something under the pane scrolled: it is fitted again, unless it scrolls with what it stands by. */
+	/** Something under the pane scrolled: it is fitted again, unless it scrolls with the spot it stands by. */
 	function noteScroll() {
-		if (fittedAsItScrolls(placement)) void measure();
+		if (!scrollsWithItsSpot) void measure();
 	}
 </script>
 

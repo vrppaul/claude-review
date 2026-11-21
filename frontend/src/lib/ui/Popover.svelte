@@ -28,6 +28,11 @@
 		const focused = document.activeElement;
 		return focused instanceof HTMLElement && focused !== document.body ? focused : null;
 	}
+
+	/** Where a control drawn apart from its pane stands in the window; null once it is no longer drawn. */
+	function boxOfControl(control: HTMLElement): DOMRectReadOnly | null {
+		return control.isConnected ? control.getBoundingClientRect() : null;
+	}
 </script>
 
 <script lang="ts">
@@ -48,11 +53,14 @@
 
 	/**
 	 * What the pane stands by: the control that opens it, drawn by whoever uses the popover, carrying the props it
-	 * is handed; or, where nothing on the page is its control, a spot in the area it is drawn in — a name pressed in
-	 * the code — which the pane follows while it is open, scrolling with what the area holds. A spot is no control:
-	 * what stands there is pressed and picked out as if no pane stood by it.
+	 * is handed; where nothing on the page is its control, a spot in the area it is drawn in — a name pressed in the
+	 * code — which the pane follows while it is open, scrolling with what the area holds; or a control drawn apart,
+	 * in a list that would cut the pane, followed as a spot is but fitted again as what is under it scrolls, as a
+	 * trigger's pane is: it stands over the page, not in what scrolls. A spot is no control: what stands there is
+	 * pressed and picked out as if no pane stood by it. A control drawn apart says itself whether its pane is open,
+	 * and answers a press on it, which is no press outside the pane.
 	 */
-	type StandsBy = { trigger: Snippet<[TriggerProps]> } | { at: Spot };
+	type StandsBy = { trigger: Snippet<[TriggerProps]> } | { at: Spot } | { control: HTMLElement };
 
 	type Props = StandsBy & {
 		/** Whether the pane is open: the reader's to change, by the control or by leaving the pane. */
@@ -94,21 +102,32 @@
 	}: Props = $props();
 
 	const paneId = $props.id();
-	let control = $state<HTMLElement>();
+	// The trigger drawn here, as it announced itself
+	let trigger = $state<HTMLElement>();
+	// What opens the pane and gets the keyboard back where nothing else had it: the trigger, or a control drawn apart
+	const control = $derived('control' in standsBy ? standsBy.control : trigger);
 	let pane = $state<HTMLDivElement>();
 	let body = $state<HTMLDivElement>();
 	let around = $state<HTMLElement>();
 	// What had the keyboard as the pane opened — its control, or a field a key opened it from —
 	// which gets it back when the pane closes with the keyboard in it
 	let keyboardWasOn: HTMLElement | null = null;
+	// The control as the pane opened, which gets the keyboard back where that is gone: read then, as a pane by a
+	// control drawn apart may go with what it was handed, and what it stood by with it
+	let controlAtOpening: HTMLElement | undefined;
 	// Whether the keyboard is this popover's: it came in, and has gone to nothing else since. A
 	// button disabled under it, or a press on the pane's words, sends it to no element at all,
 	// which still leaves it here
 	let keyboardHere = false;
 
-	// What the pane stands by where no control opens it, and its box in the room of the area the pane is drawn in,
-	// as it stood when last read
-	const at = $derived('at' in standsBy ? standsBy.at : null);
+	// Where the pane stands where no trigger drawn here opens it, and its box in the room of what the pane is drawn
+	// in, as it stood when last read
+	const at = $derived.by((): Spot | null => {
+		if ('at' in standsBy) return standsBy.at;
+		if (!('control' in standsBy)) return null;
+		const apart = standsBy.control;
+		return () => boxOfControl(apart);
+	});
 	let spot = $state.raw<AreaBox | null>(null);
 	// How far in from the edge the pane lines up with the arrow points: the middle of what it stands by
 	const arrowOffset = $derived(open ? arrowOffsetAlong(spot?.width ?? control?.offsetWidth ?? 0) : 0);
@@ -125,6 +144,8 @@
 
 	/** Move the box the pane stands by to where its spot stands now, in the room of what the box is placed in. */
 	function placeSpot() {
+		// A frame may come between the pane closing and its following being stopped, when what it stood by is gone
+		if (!open) return;
 		const area = around?.offsetParent;
 		const stands = at?.() ?? null;
 		if (stands === null || !(area instanceof HTMLElement)) return;
@@ -143,10 +164,15 @@
 		return () => following.stop();
 	});
 
-	/** The control announces itself as it is drawn, and is let go as it goes. */
+	/** The trigger announces itself as it is drawn, and is let go as it goes. */
 	function holdControl(element: HTMLElement): () => void {
-		control = element;
-		return () => (control = undefined);
+		trigger = element;
+		return () => (trigger = undefined);
+	}
+
+	/** Whether something is the popover's own: inside its pane or its trigger, or its control drawn apart. */
+	function isOwn(node: Node): boolean {
+		return around?.contains(node) === true || control?.contains(node) === true;
 	}
 
 	// An open pane gives the keyboard to the first of what it holds, unless something in it already has it — a
@@ -173,6 +199,7 @@
 
 	function noteOpening() {
 		keyboardWasOn = focusedElement();
+		controlAtOpening = control;
 		keyboardHere = false;
 	}
 
@@ -194,23 +221,23 @@
 	/** Give the keyboard back to what had it before the pane opened, if it is where the pane's going left it. */
 	function giveBack() {
 		const focused = focusedElement();
-		if (focused !== null && focused !== control) return;
-		const back = keyboardWasOn?.isConnected ? keyboardWasOn : control;
+		if (focused !== null && focused !== controlAtOpening) return;
+		const back = keyboardWasOn?.isConnected ? keyboardWasOn : controlAtOpening;
 		back?.focus({ preventScroll: true });
 	}
 
 	/** The keyboard went somewhere: to anything outside, which closes the pane; to nothing, which keeps it. */
 	function noteKeyboardLeaving(event: FocusEvent) {
 		const next = event.relatedTarget;
-		if (!(next instanceof Node) || around?.contains(next)) return;
+		if (!(next instanceof Node) || isOwn(next)) return;
 		keyboardHere = false;
 		if (open) open = false;
 	}
 
 	/**
-	 * A key pressed inside the pane: Tab past either end of a pane by a spot closes it, the keyboard going back to
-	 * what had it as the pane opened. Such a pane stands apart from its spot in the page's order, at the end of the
-	 * area it is drawn in, and Tab would go on from there, far from the spot. Any other key is the pane's own.
+	 * A key pressed inside the pane: Tab past either end of a pane by a spot or a control drawn apart closes it, the
+	 * keyboard going back to what had it as the pane opened. Such a pane stands apart from what it stands by in the
+	 * page's order, and Tab would go on from there, far from it. Any other key is the pane's own.
 	 */
 	function answerKey(event: KeyboardEvent) {
 		if (at !== null && pane && leavesAtAnEnd(pane, event)) {
@@ -221,7 +248,7 @@
 
 	/** Pressing anywhere outside closes the pane, and leaves the keyboard where the reader pressed. */
 	function closeIfOutside(event: PointerEvent) {
-		if (!open || !around || !(event.target instanceof Node) || around.contains(event.target)) return;
+		if (!open || !(event.target instanceof Node) || isOwn(event.target)) return;
 		keyboardHere = false;
 		open = false;
 	}
@@ -268,6 +295,7 @@
 			{arrowOffset}
 			{head}
 			place={at === null ? undefined : placeSpot}
+			scrollsWithItsSpot={'at' in standsBy}
 			{testId}
 			onkeydown={answerKey}
 			{foot}

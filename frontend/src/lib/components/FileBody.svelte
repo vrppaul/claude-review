@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { FileToDraw } from '$lib/types';
-	import { useNameLookup, useReview } from '$lib/review/context';
+	import { useNamesInTheCode, useReview } from '$lib/review/context';
 	import CodeMark from '$lib/ui/CodeMark.svelte';
 	import { type Extent, FileDrawing, type FileView } from './file-drawing.svelte';
 	import FileNotes from './FileNotes.svelte';
@@ -22,7 +22,7 @@
 
 	let { sectionKey, file, language, view, extent }: Props = $props();
 	const review = useReview();
-	const names = useNameLookup();
+	const names = useNamesInTheCode();
 
 	// Made once, whichever way the lines are laid out: switching layout prepares nothing again
 	const drawing = new FileDrawing(review, names, {

@@ -9,11 +9,25 @@
 	 *   face, on one line, cut where the row ends
 	 * - title: what is called by words — a part of a story, what a fold holds, the tour — in the page's own face,
 	 *   wrapped onto as many lines as it takes and read whole
+	 * - code-name: a name in the code — a function, a class — as a path is drawn, at the weight of what is read
 	 */
-	type Names = 'path' | 'title';
+	type Names = 'path' | 'title' | 'code-name';
+
+	// The classes of each in the library's stylesheet
+	const NAMED: Record<Names, string | null> = {
+		path: 'cr-ui-row-path',
+		title: null,
+		'code-name': 'cr-ui-row-path cr-ui-row-code-name'
+	};
+
+	/**
+	 * Where a row hangs as a branch off the row above it, in the tree of files: the first under what it hangs on,
+	 * its branch drawn from under that row's mark; or the next, its branch going on from the one above.
+	 */
+	type Branch = 'first' | 'next';
 
 	// The class of each in the library's stylesheet
-	const NAMED: Record<Names, string | null> = { path: 'cr-ui-row-path', title: null };
+	const BRANCHES: Record<Branch, string> = { first: 'cr-ui-row-branch-first', next: 'cr-ui-row-branch-next' };
 
 	interface Props extends Omit<HTMLButtonAttributes, 'class' | 'style' | 'type' | 'children' | 'aria-expanded'> {
 		names: Names;
@@ -22,6 +36,8 @@
 		folded?: boolean | undefined;
 		/** How many folders deep it stands in the tree of files, which sets it in; none in any other list. */
 		depth?: number;
+		/** Where it hangs as a branch off the row above it; nowhere in a list that is no such tree. */
+		branch?: Branch | undefined;
 		/** Whether it is the one of its list the reader is at. */
 		current?: boolean;
 		/** Whether the reader has finished with what it leads to: it steps back. */
@@ -34,6 +50,8 @@
 		said?: Snippet;
 		/** What stands at its end: a count, the lines a file changes, how long ago. */
 		trailing?: Snippet;
+		/** The row itself, for whoever hands the keyboard to it. */
+		element?: HTMLButtonElement | undefined;
 	}
 
 	let {
@@ -41,12 +59,14 @@
 		testId,
 		folded,
 		depth = 0,
+		branch,
 		current = false,
 		viewed = false,
 		leading,
 		label,
 		said,
 		trailing,
+		element = $bindable(),
 		...attributes
 	}: Props = $props();
 </script>
@@ -55,11 +75,18 @@
 	says of that, what stands at its end, and, where it folds what is under it, the chevron that says whether that
 	is open -->
 <button
+	bind:this={element}
 	type="button"
 	{...attributes}
 	aria-expanded={folded === undefined ? undefined : !folded}
 	data-testid={testId}
-	class={['cr-ui-row cr-pressable', NAMED[names], current && 'cr-ui-row-current', viewed && 'cr-ui-row-viewed']}
+	class={[
+		'cr-ui-row cr-pressable',
+		NAMED[names],
+		branch && BRANCHES[branch],
+		current && 'cr-ui-row-current',
+		viewed && 'cr-ui-row-viewed'
+	]}
 	style:--cr-depth={depth}
 >
 	<span class="cr-ui-row-line">

@@ -2,9 +2,30 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, within } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import FileList from '$lib/components/FileList.svelte';
-import { addedLine, diffFile, hunk, OF_A_CONVERSATION, OF_FILES, removedLine, wholeFile } from '../diff';
+import { LINE_NUMBER_ROLE } from '$lib/dom/keyboard';
+import { LINE_ROW_ROLE } from '$lib/dom/line-read-from.svelte';
+import type { Review } from '$lib/review/review.svelte';
+import type { NameResponse, NamesTouchedResponse, TouchedName } from '$lib/types';
+import { stopsTogether } from '$lib/utils/stops';
+import {
+	A_LATER_TAKE,
+	addedLine,
+	diffFile,
+	diffResponse,
+	FIRST_TAKE,
+	hunk,
+	OF_A_CONVERSATION,
+	OF_FILES,
+	removedLine,
+	sinceRound,
+	wholeFile
+} from '../diff';
 import { failedCheck, failure } from '../checks';
+import { fakeServer, keepingSettings } from '../fake-server';
+import { frames } from '../frames';
 import { inReview, openReview } from '../review';
+import { settled } from '../settled';
+import { storyResponse } from '../story';
 
 const diffFiles = [
 	diffFile({
@@ -366,5 +387,562 @@ describe('where the checks failed, in the tree', () => {
 		const { getByTestId } = render(FileList, inReview(review));
 
 		expect(getByTestId('file-failures').textContent).toContain('1 place the checks failed, out of date');
+	});
+});
+
+describe('the names the change touched, under their files', () => {
+	const HANDLER = 'src/handler.ts';
+	const handle: TouchedName = {
+		name: 'handle',
+		defined_as: 'function',
+		change: 'modified',
+		side: 'new',
+		line: 4,
+		column: 16,
+		stands_on: [
+			{ side: 'new', first: 4, last: 9 },
+			{ side: 'old', first: 4, last: 11 }
+		]
+	};
+	const retired: TouchedName = {
+		name: 'Retired',
+		defined_as: 'class',
+		change: 'removed',
+		side: 'old',
+		line: 12,
+		column: 6,
+		stands_on: [{ side: 'old', first: 12, last: 20 }]
+	};
+	const namesOfHandler: NamesTouchedResponse = {
+		take: FIRST_TAKE,
+		files: [{ path: HANDLER, names: [handle, retired] }]
+	};
+	// What the review answers of handle: defined where the tree says, used nowhere
+	const HANDLE_LOOKED_UP: NameResponse = {
+		name: 'handle',
+		places: [
+			{
+				path: HANDLER,
+				line: 4,
+				column: 16,
+				text: 'export function handle() {',
+				defined_as: 'function',
+				inside: null,
+				added: true,
+				found_as: 'name'
+			}
+		]
+	};
+
+	/** A section of a file as an area draws it: the file, and what is drawn in it from the top down. */
+	interface DrawnSection {
+		path: string;
+		drawn: HTMLElement[];
+	}
+
+	/** The row of a line, its number carrying the key the line's place is known by. */
+	function lineRow(lineKey: string): HTMLElement {
+		const row = document.createElement('div');
+		const number = document.createElement('button');
+		row.dataset.role = LINE_ROW_ROLE;
+		number.dataset.role = LINE_NUMBER_ROLE;
+		number.dataset.place = lineKey;
+		row.append(number);
+		return row;
+	}
+
+	// What the area the sections are drawn in is known by, and where a line scrolled up out of it stands in the window
+	const READING_AREA = 'reading-area';
+	const ABOVE_THE_AREA = new DOMRect(0, -40, 10, 20);
+
+	/** Sections drawn in a watched area, the first on the page the one being read, and what stands where the reader reads from. */
+	function readingAt(review: Review, sections: DrawnSection[], atSpot: Element): () => void {
+		const area = document.createElement('div');
+		area.dataset.testid = READING_AREA;
+		const unregister = sections.map(({ path, drawn }) => {
+			const section = document.createElement('div');
+			section.append(...drawn);
+			area.append(section);
+			return review.sections.register(path, path, section);
+		});
+		document.body.append(area);
+		Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: () => atSpot });
+		return stopsTogether(...unregister, review.sections.watchInView(area), () => area.remove());
+	}
+
+	it('lists under each file the names it touched, what became of each said in a word', async () => {
+		fakeServer().answer('GET /api/names-touched', namesOfHandler);
+		const review = openReview({ files: diffFiles });
+
+		const { findAllByTestId } = render(FileList, inReview(review));
+		const [modified, removed] = await findAllByTestId('name-item');
+
+		expect(modified.textContent?.replace(/\s+/g, ' ').trim()).toBe('M modified handle()');
+		expect(removed.textContent?.replace(/\s+/g, ' ').trim()).toBe('D removed Retired');
+	});
+
+	it('folds a file’s names by the chevron at its row’s end, the row itself still going to the file', async () => {
+		const user = userEvent.setup();
+		fakeServer().answer('GET /api/names-touched', namesOfHandler);
+		const review = openReview({ files: diffFiles });
+		const section = document.createElement('div');
+		section.scrollIntoView = vi.fn();
+		const unregister = review.sections.register(HANDLER, HANDLER, section);
+
+		const { findAllByTestId, getByRole, queryAllByTestId } = render(FileList, inReview(review));
+		await findAllByTestId('name-item');
+		await user.click(getByRole('button', { name: 'Fold its names' }));
+		await user.click(getByRole('button', { name: /handler\.ts/ }));
+
+		expect(queryAllByTestId('name-item')).toHaveLength(0);
+		expect(getByRole('button', { name: 'Show its names' }).getAttribute('aria-expanded')).toBe('false');
+		expect(section.scrollIntoView).toHaveBeenCalled();
+		unregister();
+	});
+
+	it('keeps the keyboard on a file’s row as its names arrive under it', async () => {
+		const names = fakeServer().hold('GET /api/names-touched');
+		const review = openReview({ files: diffFiles });
+
+		const { findAllByTestId, getAllByTestId } = render(FileList, inReview(review));
+		await vi.waitFor(() => expect(names.requests).toHaveLength(1));
+		const row = getAllByTestId('file-item')[0];
+		row.focus();
+		names.answer(0, namesOfHandler);
+		await findAllByTestId('name-item');
+
+		expect(document.activeElement).toBe(row);
+	});
+
+	it.each([
+		{
+			what: 'another reading of the diff, its names on their way',
+			takeOut: (review: Review) => review.setIgnoreWhitespace(true)
+		},
+		{ what: 'its file’s names folded', takeOut: (review: Review) => review.layout.fileTree.toggleNames(HANDLER) },
+		{ what: 'the names turned off', takeOut: (review: Review) => review.layout.fileTree.toggleNamesListed() },
+		{ what: 'a filter it does not answer', takeOut: (review: Review) => review.layout.fileTree.setFilter('retir') }
+	])('hands the keyboard on a name’s row to its file’s row as $what takes the row out', async ({ takeOut }) => {
+		const server = fakeServer();
+		const names = server.hold('GET /api/names-touched');
+		keepingSettings(server);
+		server.answer('GET /api/diff', diffResponse({ files: diffFiles, take: FIRST_TAKE }));
+		const review = openReview({ files: diffFiles });
+		const { findAllByTestId, getAllByTestId } = render(FileList, inReview(review));
+		await vi.waitFor(() => expect(names.requests).toHaveLength(1));
+		names.answer(0, namesOfHandler);
+		const [modified] = await findAllByTestId('name-item');
+		modified.focus();
+
+		await takeOut(review);
+		await settled();
+
+		expect(document.activeElement).toBe(getAllByTestId('file-item')[0]);
+	});
+
+	it('finds a name under a file whose path does not answer, only the names that do, and lights what answered', async () => {
+		const user = userEvent.setup();
+		fakeServer().answer('GET /api/names-touched', namesOfHandler);
+		const review = openReview({ files: diffFiles });
+
+		const { findAllByTestId, getAllByTestId, getByTestId } = render(FileList, inReview(review));
+		await findAllByTestId('name-item');
+		await user.type(getByTestId('file-filter'), 'RETIR');
+
+		expect(getAllByTestId('file-item').map((row) => row.textContent?.includes('handler.ts'))).toEqual([true]);
+		expect(getAllByTestId('name-item').map((row) => row.textContent?.replace(/\s+/g, ' ').trim())).toEqual([
+			'D removed Retired'
+		]);
+		expect(getByTestId('name-sought').textContent).toBe('Retir');
+		expect(getByTestId('sidebar-heading').textContent).toBe('1 of 2');
+	});
+
+	it('keeps every name under a file whose path answers, as well as a name does', async () => {
+		const user = userEvent.setup();
+		fakeServer().answer('GET /api/names-touched', namesOfHandler);
+		const review = openReview({ files: diffFiles });
+
+		const { findAllByTestId, getAllByTestId, getByTestId } = render(FileList, inReview(review));
+		await findAllByTestId('name-item');
+		await user.type(getByTestId('file-filter'), 'handle');
+
+		expect(getAllByTestId('name-item')).toHaveLength(2);
+		expect(getByTestId('name-sought').textContent).toBe('handle');
+	});
+
+	it('says no file or name matches, in a field that finds either', async () => {
+		const user = userEvent.setup();
+		fakeServer().answer('GET /api/names-touched', namesOfHandler);
+		const review = openReview({ files: diffFiles });
+
+		const { findAllByTestId, getByTestId } = render(FileList, inReview(review));
+		await findAllByTestId('name-item');
+		await user.type(getByTestId('file-filter'), 'zzz');
+
+		expect(getByTestId('file-filter').getAttribute('placeholder')).toBe('Find a file or name');
+		expect(getByTestId('no-matches').textContent?.trim()).toBe('No file or name matches “zzz”.');
+	});
+
+	it('lists the files alone once the reader turns the names off, the filter then finding files alone', async () => {
+		const user = userEvent.setup();
+		fakeServer().answer('GET /api/names-touched', namesOfHandler);
+		const review = openReview({ files: diffFiles });
+
+		const { findAllByTestId, getByRole, getByTestId, queryAllByTestId } = render(FileList, inReview(review));
+		await findAllByTestId('name-item');
+		await user.click(getByRole('button', { name: 'List the names under each file' }));
+		await user.type(getByTestId('file-filter'), 'retir');
+
+		expect(queryAllByTestId('name-item')).toHaveLength(0);
+		expect(getByRole('button', { name: 'List the names under each file' }).getAttribute('aria-pressed')).toBe('false');
+		expect(getByTestId('file-filter').getAttribute('placeholder')).toBe('Jump to a file');
+		expect(getByTestId('no-matches').textContent?.trim()).toBe('No file matches “retir”.');
+	});
+
+	it('offers no way to list names where the diff on screen has none', async () => {
+		fakeServer().answer('GET /api/names-touched', { take: FIRST_TAKE, files: [] });
+		const review = openReview({ files: diffFiles });
+
+		const { queryByRole } = render(FileList, inReview(review));
+		await settled();
+
+		expect(queryByRole('button', { name: /names under each file/ })).toBeNull();
+	});
+
+	it('takes the reader to where a name is defined, on the side its lines are numbered on', async () => {
+		const user = userEvent.setup();
+		fakeServer().answer('GET /api/names-touched', namesOfHandler);
+		const review = openReview({ files: diffFiles });
+		const goToLine = vi.spyOn(review.navigator, 'goToLine').mockResolvedValue();
+
+		const { findAllByTestId } = render(FileList, inReview(review));
+		const [modified, removed] = await findAllByTestId('name-item');
+		await user.click(modified);
+		await user.click(removed);
+
+		expect(goToLine.mock.calls).toEqual([
+			[HANDLER, { side: 'new', number: 4 }, { column: 16, name: 'handle' }],
+			[HANDLER, { side: 'old', number: 12 }, { column: 6, name: 'Retired' }]
+		]);
+	});
+
+	it('marks the name the reader is in as where they are, in place of its file', async () => {
+		fakeServer().answer('GET /api/names-touched', namesOfHandler);
+		const review = openReview({ files: diffFiles });
+		const row = lineRow('old:15');
+		const stop = readingAt(review, [{ path: HANDLER, drawn: [row] }], row);
+
+		const { findAllByTestId, getAllByTestId } = render(FileList, inReview(review));
+		const [modified, removed] = await findAllByTestId('name-item');
+		await frames(1);
+
+		expect(removed.getAttribute('aria-current')).toBe('true');
+		expect(modified.getAttribute('aria-current')).toBeNull();
+		expect(getAllByTestId('file-item')[0].getAttribute('aria-current')).toBeNull();
+		stop();
+	});
+
+	it('marks a modified name as where the reader is on a line the change removed from it', async () => {
+		fakeServer().answer('GET /api/names-touched', namesOfHandler);
+		const review = openReview({ files: diffFiles });
+		const row = lineRow('old:10');
+		const stop = readingAt(review, [{ path: HANDLER, drawn: [row] }], row);
+
+		const { findAllByTestId } = render(FileList, inReview(review));
+		const [modified] = await findAllByTestId('name-item');
+		await frames(1);
+
+		expect(modified.getAttribute('aria-current')).toBe('true');
+		stop();
+	});
+
+	it('keeps the name the reader is in as where they are while a card under one of its lines stands there', async () => {
+		fakeServer().answer('GET /api/names-touched', namesOfHandler);
+		const review = openReview({ files: diffFiles });
+		const card = document.createElement('div');
+		const words = document.createElement('p');
+		card.append(words);
+		const stop = readingAt(review, [{ path: HANDLER, drawn: [lineRow('new:5'), card] }], words);
+
+		const { findAllByTestId } = render(FileList, inReview(review));
+		const [modified] = await findAllByTestId('name-item');
+		await frames(1);
+
+		expect(modified.getAttribute('aria-current')).toBe('true');
+		stop();
+	});
+
+	it('marks no name of the file in view by a line of another file read from', async () => {
+		fakeServer().answer('GET /api/names-touched', namesOfHandler);
+		const review = openReview({ files: diffFiles });
+		const row = lineRow('new:5');
+		const stop = readingAt(
+			review,
+			[
+				{ path: HANDLER, drawn: [] },
+				{ path: 'src/utils.ts', drawn: [row] }
+			],
+			row
+		);
+
+		const { findAllByTestId, getAllByTestId } = render(FileList, inReview(review));
+		const [modified] = await findAllByTestId('name-item');
+		await frames(1);
+
+		expect(modified.getAttribute('aria-current')).toBeNull();
+		expect(getAllByTestId('file-item')[0].getAttribute('aria-current')).toBe('true');
+		stop();
+	});
+
+	it('marks the file as where the reader is while they read a line of no name in it', async () => {
+		fakeServer().answer('GET /api/names-touched', namesOfHandler);
+		const review = openReview({ files: diffFiles });
+		const row = lineRow('new:2');
+		const stop = readingAt(review, [{ path: HANDLER, drawn: [row] }], row);
+
+		const { findAllByTestId, getAllByTestId } = render(FileList, inReview(review));
+		await findAllByTestId('name-item');
+		await frames(1);
+
+		expect(getAllByTestId('file-item')[0].getAttribute('aria-current')).toBe('true');
+		stop();
+	});
+
+	it('marks the name of the line the reader was taken to as where they are, though the file above stands at the top', async () => {
+		fakeServer().answer('GET /api/names-touched', namesOfHandler);
+		const review = openReview({ files: diffFiles });
+		const atTheTop = lineRow('new:2');
+		const stop = readingAt(
+			review,
+			[
+				{ path: 'src/utils.ts', drawn: [atTheTop] },
+				{ path: HANDLER, drawn: [lineRow('new:2'), lineRow('old:12')] }
+			],
+			atTheTop
+		);
+
+		const { findAllByTestId, getAllByTestId } = render(FileList, inReview(review));
+		const [, removed] = await findAllByTestId('name-item');
+		await frames(1);
+		review.sections.goToLine(HANDLER, { line: 'old:12', name: { column: 6, name: 'Retired' } });
+		await settled();
+
+		expect(removed.getAttribute('aria-current')).toBe('true');
+		expect(getAllByTestId('file-item').map((row) => row.getAttribute('aria-current'))).toEqual([null, null]);
+		stop();
+	});
+
+	it('marks the file at the top as where the reader is once they scroll the line they were taken to out of sight', async () => {
+		fakeServer().answer('GET /api/names-touched', namesOfHandler);
+		const review = openReview({ files: diffFiles });
+		const atTheTop = lineRow('new:2');
+		const takenTo = lineRow('old:12');
+		const stop = readingAt(
+			review,
+			[
+				{ path: 'src/utils.ts', drawn: [atTheTop] },
+				{ path: HANDLER, drawn: [lineRow('new:2'), takenTo] }
+			],
+			atTheTop
+		);
+
+		const { findAllByTestId, getAllByTestId, getByTestId } = render(FileList, inReview(review));
+		const [, removed] = await findAllByTestId('name-item');
+		await frames(1);
+		review.sections.goToLine(HANDLER, { line: 'old:12', name: { column: 6, name: 'Retired' } });
+		await settled();
+		vi.spyOn(within(takenTo).getByRole('button'), 'getBoundingClientRect').mockReturnValue(ABOVE_THE_AREA);
+		getByTestId(READING_AREA).dispatchEvent(new Event('scroll'));
+		await frames(1);
+
+		expect(removed.getAttribute('aria-current')).toBeNull();
+		expect(getAllByTestId('file-item').map((row) => row.getAttribute('aria-current'))).toEqual([null, 'true']);
+		stop();
+	});
+
+	it('hands the keyboard on the chevron that folds a file’s names to the file’s row as the names go', async () => {
+		const server = fakeServer();
+		const names = server.hold('GET /api/names-touched');
+		keepingSettings(server);
+		server.answer('GET /api/diff', diffResponse({ files: diffFiles, take: FIRST_TAKE }));
+		const review = openReview({ files: diffFiles });
+		const { findAllByTestId, getAllByTestId, getByTestId } = render(FileList, inReview(review));
+		await vi.waitFor(() => expect(names.requests).toHaveLength(1));
+		names.answer(0, namesOfHandler);
+		await findAllByTestId('name-item');
+		getByTestId('file-item-names-fold').focus();
+
+		await review.setIgnoreWhitespace(true);
+		await settled();
+
+		expect(document.activeElement).toBe(getAllByTestId('file-item')[0]);
+	});
+
+	it('draws no names of a diff read another way, until those of it arrive', async () => {
+		const server = fakeServer();
+		const names = server.hold('GET /api/names-touched');
+		keepingSettings(server);
+		server.answer('GET /api/diff', diffResponse({ files: diffFiles, take: FIRST_TAKE }));
+		const review = openReview({ files: diffFiles });
+
+		const { findAllByTestId, queryAllByTestId } = render(FileList, inReview(review));
+		await vi.waitFor(() => expect(names.requests).toHaveLength(1));
+		names.answer(0, namesOfHandler);
+		await findAllByTestId('name-item');
+		await review.setIgnoreWhitespace(true);
+
+		expect(queryAllByTestId('name-item')).toHaveLength(0);
+		await vi.waitFor(() => expect(names.requests).toHaveLength(2));
+		names.answer(1, namesOfHandler);
+		expect(await findAllByTestId('name-item')).toHaveLength(2);
+		expect(names.requests[1].query.ignore_whitespace).toBe('true');
+	});
+
+	it('asks the review about a name by its place at the icon at its row’s end, and opens the lookup by it', async () => {
+		const user = userEvent.setup();
+		const server = fakeServer();
+		server.answer('GET /api/names-touched', namesOfHandler);
+		server.answer('GET /api/name', HANDLE_LOOKED_UP);
+		const review = openReview({ files: diffFiles });
+
+		const { findAllByTestId, getByTestId } = render(FileList, inReview(review));
+		await user.click((await findAllByTestId('name-look-up'))[0]);
+		await settled();
+
+		expect(server.requestsTo('GET /api/name').map((request) => request.query)).toEqual([
+			{ path: HANDLER, side: 'new', line: '4', column: '16' }
+		]);
+		expect(getByTestId('name-lookup-heading').textContent).toBe('handle');
+		expect(getByTestId('name-lookup-count').textContent).toBe('1 definition, 0 uses');
+	});
+
+	it('says the change removed a name it removed that nothing in the code is called now', async () => {
+		const user = userEvent.setup();
+		const server = fakeServer();
+		server.answer('GET /api/names-touched', namesOfHandler);
+		server.answer('GET /api/name', { name: 'Retired', places: [] });
+		const review = openReview({ files: diffFiles });
+
+		const { findAllByTestId, getByTestId } = render(FileList, inReview(review));
+		await user.click((await findAllByTestId('name-look-up'))[1]);
+		await settled();
+
+		expect(getByTestId('name-lookup-nothing').textContent?.replace(/\s+/g, ' ').trim()).toBe(
+			'Nothing in the code is called “Retired” now: the change removed it.'
+		);
+	});
+
+	it('says at the foot of the pane opened from the tree how to open it from the code', async () => {
+		const user = userEvent.setup();
+		const server = fakeServer();
+		server.answer('GET /api/names-touched', namesOfHandler);
+		server.answer('GET /api/name', HANDLE_LOOKED_UP);
+		const review = openReview({ files: diffFiles });
+
+		const { findAllByTestId, getByTestId } = render(FileList, inReview(review));
+		await user.click((await findAllByTestId('name-look-up'))[0]);
+		await settled();
+
+		expect(getByTestId('name-lookup-foot').textContent?.replace(/\s+/g, ' ').trim()).toBe(
+			'Ctrl+click on any name in the code opens this.'
+		);
+	});
+
+	it('gives the keyboard back to the icon as the pane closes at Escape', async () => {
+		const user = userEvent.setup();
+		const server = fakeServer();
+		server.answer('GET /api/names-touched', namesOfHandler);
+		server.answer('GET /api/name', HANDLE_LOOKED_UP);
+		const review = openReview({ files: diffFiles });
+
+		const { findAllByTestId, queryByTestId } = render(FileList, inReview(review));
+		const [icon] = await findAllByTestId('name-look-up');
+		await user.click(icon);
+		await settled();
+		await user.keyboard('{Escape}');
+		await settled();
+
+		expect([queryByTestId('name-lookup'), document.activeElement]).toEqual([null, icon]);
+	});
+
+	it('closes at a second press on its icon, asking nothing again', async () => {
+		const user = userEvent.setup();
+		const server = fakeServer();
+		server.answer('GET /api/names-touched', namesOfHandler);
+		server.answer('GET /api/name', HANDLE_LOOKED_UP);
+		const review = openReview({ files: diffFiles });
+
+		const { findAllByTestId, queryByTestId } = render(FileList, inReview(review));
+		const [icon] = await findAllByTestId('name-look-up');
+		await user.click(icon);
+		await settled();
+		await user.click(icon);
+		await settled();
+
+		expect(queryByTestId('name-lookup')).toBeNull();
+		expect(server.requestsTo('GET /api/name')).toHaveLength(1);
+	});
+
+	it('closes once the tree is scrolled until its icon is out of sight, the keyboard back on the icon', async () => {
+		const user = userEvent.setup();
+		const server = fakeServer();
+		server.answer('GET /api/names-touched', namesOfHandler);
+		server.answer('GET /api/name', HANDLE_LOOKED_UP);
+		const review = openReview({ files: diffFiles });
+		const { findAllByTestId, queryByTestId } = render(FileList, inReview(review));
+		const [icon] = await findAllByTestId('name-look-up');
+		await user.click(icon);
+		await settled();
+
+		icon.getBoundingClientRect = () => new DOMRect(0, -window.innerHeight, icon.offsetWidth, icon.offsetHeight);
+		await frames();
+		await settled();
+
+		expect([queryByTestId('name-lookup'), document.activeElement]).toEqual([null, icon]);
+	});
+
+	it('closes once the change is taken again, its row gone until the names of the take come, the keyboard on its file', async () => {
+		const user = userEvent.setup();
+		const server = fakeServer();
+		server.answer('GET /api/names-touched', namesOfHandler);
+		server.answer('GET /api/name', HANDLE_LOOKED_UP);
+		const review = openReview({ files: diffFiles });
+		const { findAllByTestId, getAllByTestId, queryByTestId } = render(FileList, inReview(review));
+		await user.click((await findAllByTestId('name-look-up'))[0]);
+		await settled();
+
+		server.hold('GET /api/names-touched');
+		server.answer('POST /api/anchors/follow', { anchors: [] });
+		server.answer('GET /api/diff', diffResponse({ files: diffFiles, take: A_LATER_TAKE }));
+		server.answer('GET /api/story', storyResponse());
+		await review.takeRetakenDiff();
+		await frames();
+		await settled();
+
+		expect(queryByTestId('name-lookup')).toBeNull();
+		expect(document.activeElement).toBe(getAllByTestId('file-item')[0]);
+	});
+
+	it('offers no lookup of a removed name while the diff on screen is read against another base', async () => {
+		const server = fakeServer();
+		server.answer('GET /api/names-touched', namesOfHandler);
+		const review = openReview({ files: diffFiles });
+		server.answer('GET /api/diff', diffResponse({ files: diffFiles, base: sinceRound(1) }));
+		await review.diff.setBase('round:1');
+
+		const { findAllByTestId, queryByRole } = render(FileList, inReview(review));
+		await findAllByTestId('name-item');
+
+		expect(queryByRole('button', { name: 'Where handle is defined and used' })).not.toBeNull();
+		expect(queryByRole('button', { name: 'Where Retired is defined and used' })).toBeNull();
+	});
+
+	it('asks for no names in a review of files, which has no change to a repository’s code', () => {
+		const server = fakeServer();
+		const review = openReview({ files: [wholeFile('/tmp/plan.md', '# Plan')], facts: { where: OF_FILES } });
+
+		render(FileList, inReview(review));
+
+		expect(server.requestsTo('GET /api/names-touched')).toHaveLength(0);
 	});
 });

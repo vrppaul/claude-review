@@ -12,7 +12,7 @@ function rowsOf(nodes: TreeNode[], depth = 0): string[] {
 }
 
 function treeOf(...paths: string[]) {
-	return fileTree(paths.map((path) => diffFile({ path })));
+	return fileTree(paths.map((path) => ({ file: diffFile({ path }), names: [] })));
 }
 
 describe('the files of a review as a tree', () => {

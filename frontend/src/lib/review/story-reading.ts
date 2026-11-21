@@ -39,7 +39,7 @@ import type { ReviewStory } from '$lib/review/review-story.svelte';
 import type { ChapterListed, FileListed } from '$lib/review/story-contents';
 import { OVERVIEW_PART } from '$lib/review/story-keys';
 import type { Threads } from '$lib/review/threads.svelte';
-import type { StoryBlock, Thread, ToldStory } from '$lib/types';
+import type { LinePlace, StoryBlock, Thread, ToldStory } from '$lib/types';
 import { namesTheFileAsItStands } from '$lib/utils/line-places';
 
 // What the way back calls the parts of a story that are no chapter: its overview, and what no step tells
@@ -187,8 +187,13 @@ export class StoryReading implements ReadingView {
 	}
 
 	/** A line a piece draws: a piece reads nothing in around what it tells. */
-	drawLine(path: string, line: number): Promise<string | null> {
-		const drawing = this.#story.pieces.drawing({ file: path, side: 'new', start_line: line, end_line: line });
+	drawLine(path: string, line: LinePlace): Promise<string | null> {
+		const drawing = this.#story.pieces.drawing({
+			file: path,
+			side: line.side,
+			start_line: line.number,
+			end_line: line.number
+		});
 		return Promise.resolve(drawing?.key ?? null);
 	}
 

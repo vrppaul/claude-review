@@ -65,6 +65,8 @@ interface ForkOption {
 export interface TourContext {
 	attached: boolean;
 	route: CommentRoute;
+	/** Whether the review reads the names in its code, as a review of a repository's change does. */
+	readsNames: boolean;
 }
 
 /**
@@ -106,6 +108,13 @@ export const TOUR_STEPS: TourStep[] = [
 		targets: ['file-tree'],
 		title: 'Everything that changed',
 		body: 'Each file, with what it added and removed. Mark one viewed when you are through with it; a file the agent rewrites later loses that mark.'
+	},
+	{
+		id: 'names',
+		targets: ['file-tree'],
+		title: 'Find your way by name',
+		body: 'Under each file stand the functions and classes the change touches: press one to go to it. Ctrl+click any name in the code to see where it is defined and where it is used.',
+		applies: (context) => context.readsNames
 	},
 	{
 		id: 'story',

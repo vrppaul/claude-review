@@ -19,7 +19,7 @@ import { LineNaming } from '$lib/components/line-naming';
 import type { LineArrivedAt } from '$lib/dom/arrived-line.svelte';
 import type { FileSections } from '$lib/dom/file-sections';
 import { DrawnName } from '$lib/review/drawn-name';
-import type { NameLookup } from '$lib/review/name-lookup.svelte';
+import type { NamesInTheCode } from '$lib/review/names-in-the-code.svelte';
 import type { RevealedContext } from '$lib/review/revealed-context.svelte';
 import type { Review } from '$lib/review/review.svelte';
 import { type FailureFound, NO_FAILURES } from '$lib/review/checks.svelte';
@@ -235,10 +235,10 @@ export class FileDrawing implements DrawnFile {
 
 	/**
 	 * @param review the review it is drawn in
-	 * @param names the lookup of the area it is drawn in, where the review offers one
+	 * @param names the names of the code of the area it is drawn in, where the review offers the gesture
 	 * @param source what it is drawn from
 	 */
-	constructor(review: Review, names: NameLookup | null, source: DrawingSource) {
+	constructor(review: Review, names: NamesInTheCode | null, source: DrawingSource) {
 		this.#review = review;
 		this.#source = source;
 		// Lines revealed from the file sit inside the hunk beside which they were

@@ -278,6 +278,16 @@ export type FileOfTakeResponse = Schemas['FileOfTakeResponse'];
 export type NameResponse = Schemas['NameResponse'];
 /** One place a name stands: where, the line it is on, what it defines it as, and whether the change wrote the line. */
 export type NamePlace = Schemas['NamePlace'];
+/** The names the change touched, file by file in the order of the diff they were read of, and the take it is of. */
+export type NamesTouchedResponse = Schemas['NamesTouchedResponse'];
+/** The names the change touched in one file of it, by the file's path. */
+export type FileNamesTouched = Schemas['FileNamesTouched'];
+/** A name the change touched: what it is and became, where it is written and the lines it stands on, on its side. */
+export type TouchedName = Schemas['TouchedName'];
+/** What the change did to a name it touched. */
+export type NameChange = Schemas['NameChange'];
+/** What a definition of a name defines, as the grammars tell them apart. */
+export type DefinitionKind = Schemas['DefinitionKind'];
 export type VersionsResponse = Schemas['VersionsResponse'];
 /** The diff taken again: how many files, which round, and what changed since it began. */
 export type RetakeResponse = Schemas['RetakeResponse'];

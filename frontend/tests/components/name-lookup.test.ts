@@ -174,6 +174,15 @@ describe('asking where a name is defined and used', () => {
 		expect(within(pane).getByTestId('name-lookup-looking').textContent).toContain('Looking through the repository');
 	});
 
+	it('says nothing at its foot of the gesture it was opened by', async () => {
+		server.answer('GET /api/name', TOTAL);
+		opened();
+
+		await pressWithTheKey(1, 8);
+
+		expect(screen.queryByTestId('name-lookup-foot')).toBeNull();
+	});
+
 	it('lists where the name is defined, used where the change did not touch, and used in the change, with a count', async () => {
 		server.answer('GET /api/name', TOTAL);
 		opened();

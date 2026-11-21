@@ -31,6 +31,11 @@ export class ArrivedLine {
 	// What hears the keyboard leave the line arrived at
 	#leaving = new AbortController();
 
+	/** The line arrived at, in whichever section; null once the keyboard left it. */
+	get lit(): ArrivedInSection | null {
+		return this.#at;
+	}
+
 	/** The line arrived at in a section; null in any other section, and once the keyboard left it. */
 	lineIn(section: string): LineArrivedAt | null {
 		const at = this.#at;

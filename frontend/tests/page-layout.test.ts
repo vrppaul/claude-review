@@ -122,6 +122,12 @@ describe('the contents beside a story, which the reader puts away apart from the
 		expect(layout.fileTree.width).toBe(WIDTH_AS_LEFT);
 	});
 
+	it('list no names under the tree’s files when the page opens again, once the reader turned them off', () => {
+		new PageLayout().fileTree.toggleNamesListed();
+
+		expect(new PageLayout().fileTree.namesListed).toBe(false);
+	});
+
 	it('are as wide as the reader left either when the page opens again', () => {
 		new PageLayout().fileTree.setWidth(WIDTH_AS_LEFT);
 

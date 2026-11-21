@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { ClassValue } from 'svelte/elements';
 	import { LINE_CODE_ROLE } from '$lib/dom/line-code';
+	import { LINE_ROW_ROLE } from '$lib/dom/line-read-from.svelte';
 	import type { LinePlace, LineSide } from '$lib/types';
 	import LineFailure from '$lib/ui/LineFailure.svelte';
 	import type { DrawnLine } from '$lib/utils/drawn-file';
@@ -100,7 +101,7 @@
 					{#each splitRows(hunk.lines) as row (row.key)}
 						{@const leftNotes = notedIn(row.left, 'old')}
 						{@const rightNotes = notedIn(row.right, 'new')}
-						<tr data-testid="split-row" class="cr-side-del">
+						<tr data-testid="split-row" data-role={LINE_ROW_ROLE} class="cr-side-del">
 							<td
 								class={[
 									'cr-gutter w-(--cr-line-number-width) p-0 text-right select-none',

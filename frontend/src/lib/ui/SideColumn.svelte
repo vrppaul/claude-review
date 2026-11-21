@@ -51,6 +51,11 @@
 		/** What its rail says is behind it, once it is put away. */
 		marks?: Snippet | undefined;
 		children: Snippet;
+		/**
+		 * What lies over the column and past it while it stands open, outside the list that scrolls in it, which would
+		 * cut it at the column's edge: a pane opened from a row of the list.
+		 */
+		over?: Snippet | undefined;
 		/** What stands at its foot, ruled off from what is above it: what the reader writes there. */
 		foot?: Snippet | undefined;
 		/**
@@ -74,6 +79,7 @@
 		heading,
 		marks,
 		children,
+		over,
 		foot,
 		back
 	}: Props = $props();
@@ -162,6 +168,9 @@
 				<div class="cr-ui-column-foot">
 					<BackTo place={back.called} whole={back.calledInFull} testId={testIds.back} onclick={back.go} />
 				</div>
+			{/if}
+			{#if over}
+				<div class="cr-ui-column-over">{@render over()}</div>
 			{/if}
 		</svelte:element>
 	{:else}

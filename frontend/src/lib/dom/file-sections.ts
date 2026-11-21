@@ -24,6 +24,7 @@ import { ArrivedLine, type LineArrivedAt } from '$lib/dom/arrived-line.svelte';
 import { firstInDocument } from '$lib/dom/document-order';
 import type { Jumps } from '$lib/dom/jump';
 import { focusWhatRemains, moveByLine, seenWhole } from '$lib/dom/keyboard';
+import { LineReadFrom } from '$lib/dom/line-read-from.svelte';
 import { bringBack, goBackAmong, type ReadingPlace, readingPlaceIn } from '$lib/dom/reading-place';
 
 /**
@@ -61,11 +62,25 @@ interface Mark {
 	timer: ReturnType<typeof setTimeout>;
 }
 
+/** Lines the reader reads from, by the keys their places are known by, and the file they are of. */
+interface LinesRead {
+	path: string;
+	lines: readonly string[];
+}
+
+/** Stop following the sections of an area and the line read from in it. */
+function stopWatching(stopSections: () => void, stopLine: () => void): void {
+	stopSections();
+	stopLine();
+}
+
 export class FileSections {
 	/** The line the reader was last taken to, lit while the keyboard stays on it. */
 	readonly arrived = new ArrivedLine();
 	// Every section on the page, and which of them the reader is in, while the reading area is watched
 	readonly #sections = new Announced<Section>();
+	// The line the reader reads from, and the section it is drawn in, as they scroll
+	readonly #lineReadFrom = new LineReadFrom((element) => this.#sectionHolding(element));
 	readonly #threads = new Map<string, HTMLElement>();
 	// What offers each block of the story's words to be asked about, by what the block is known by
 	readonly #blocks = new Map<string, HTMLElement>();
@@ -133,12 +148,33 @@ export class FileSections {
 	}
 
 	/**
-	 * Follow which section the reader is in as they scroll an area, so the
-	 * sidebar can follow the scroll instead of driving it. Sections drawn
-	 * later are watched as they arrive. Returns how to stop.
+	 * Follow which section the reader is in, and the line they read from, as
+	 * they scroll an area, so the sidebar can follow the scroll instead of
+	 * driving it. Sections drawn later are watched as they arrive. Returns
+	 * how to stop.
 	 */
 	watchInView(root: HTMLElement): () => void {
-		return this.#sections.watch(root);
+		const stopSections = this.#sections.watch(root);
+		const stopLine = this.#lineReadFrom.watch(root);
+		return () => stopWatching(stopSections, stopLine);
+	}
+
+	/**
+	 * The lines the reader reads from and the file they are of: the line they were taken to while it is lit and
+	 * they see it, else the line at the top of the area while it is of the file in view.
+	 */
+	get linesRead(): LinesRead | null {
+		// Read first: whether the reader still sees the line they were taken to is looked at again as the top moves
+		const read = this.#lineReadFrom.read;
+		// A jump stands its line in the middle of the area, where the top is another line, or near a file's head the
+		// file above: the reader reads from the line all the same, until they scroll it out of sight
+		const arrived = this.arrived.lit;
+		if (arrived !== null && this.seesLine(arrived.section, arrived.line)) {
+			return this.#linesOf(arrived.section, [arrived.line]);
+		}
+		const atTheTop = read === null ? null : this.#linesOf(read.section, read.lines);
+		// After a jump to a file the area cannot scroll up to, the line at the top is the file above's
+		return atTheTop?.path === this.fileInView ? atTheTop : null;
 	}
 
 	/**
@@ -343,6 +379,21 @@ export class FileSections {
 	/** The sections on the page that draw a file. */
 	#drawing(path: string): HTMLElement[] {
 		return this.#sections.all.filter((section) => section.path === path).map((section) => section.element);
+	}
+
+	/** Lines drawn in a section, by their keys, and the file they are of; null for a section not drawn. */
+	#linesOf(sectionKey: string, lines: readonly string[]): LinesRead | null {
+		const path = this.fileOf(sectionKey);
+		return path === null ? null : { path, lines };
+	}
+
+	/** The section an element is drawn in, where it is in one: the nearest of its own and the elements round it. */
+	#sectionHolding(element: Element): Section | null {
+		for (let looked: Element | null = element; looked !== null; looked = looked.parentElement) {
+			const section = this.#sections.of(looked);
+			if (section !== undefined) return section;
+		}
+		return null;
 	}
 
 	/**

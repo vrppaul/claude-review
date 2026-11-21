@@ -13,7 +13,8 @@
  */
 import { vi } from 'vitest';
 import type { paths } from '$lib/types/generated/http';
-import type { ReaderSettings, SettingsChange } from '$lib/types';
+import type { NamesTouchedResponse, ReaderSettings, SettingsChange } from '$lib/types';
+import { FIRST_TAKE } from './diff';
 
 /** What a route answers when it did what it was asked and has nothing to add: no body at all. */
 type Done = null;
@@ -55,6 +56,7 @@ const ROUTES = [
 	'GET /api/file-window',
 	'GET /api/file-of-take',
 	'GET /api/name',
+	'GET /api/names-touched',
 	'GET /api/settings',
 	'PUT /api/settings',
 	'GET /api/guide',
@@ -269,6 +271,9 @@ const serversThisTest: FakeServer[] = [];
 /** Put a server in place of the network for the rest of the test. */
 export function fakeServer(): FakeServer {
 	const server = new FakeServer();
+	// The tree of a review of a change reads the names it touched as soon as it is drawn, whatever the test is about:
+	// unless a test says otherwise, the change touched none
+	server.answer('GET /api/names-touched', NO_NAMES_TOUCHED);
 	serversThisTest.push(server);
 	vi.stubGlobal('fetch', (input: RequestInfo | URL, init?: RequestInit) => server.receive(input, init));
 	return server;
@@ -285,6 +290,9 @@ export function failOnUnanswered(): void {
 		throw new Error(`The page asked what the test did not say how to answer: ${asked}`);
 	}
 }
+
+/** What the review says of a change that touched no name, in the take a test's review opens on. */
+const NO_NAMES_TOUCHED: NamesTouchedResponse = { take: FIRST_TAKE, files: [] };
 
 /** What a reader who has never chosen anything has. */
 export const NEW_READER: ReaderSettings = {

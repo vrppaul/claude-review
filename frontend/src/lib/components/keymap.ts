@@ -330,8 +330,8 @@ export function chordName(chord: Chord): string {
 	return heldWith(chord.held, chord.key);
 }
 
-/** What a press of the pointer is called in the help: its modifiers, then the press. */
-function pointerChordName(chord: PointerChord): string {
+/** What a press of the pointer is called in the help and the hints: its modifiers, then the press. */
+export function pointerChordName(chord: PointerChord): string {
 	return heldWith(chord.held, chord.pointer);
 }
 

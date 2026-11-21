@@ -7,7 +7,8 @@
 	import CodeFramePath from '$lib/ui/CodeFramePath.svelte';
 	import Heading from '$lib/ui/Heading.svelte';
 	import Link from '$lib/ui/Link.svelte';
-	import { withNameMarked } from '$lib/utils/code-words';
+	import { markedSought } from '$lib/ui/sought';
+	import { stretchOfName } from '$lib/utils/code-words';
 	import { highlightLine, languageOf } from '$lib/utils/highlight';
 	import { type ListedGroup, type ListedPlace, listedGroups, notesOn, positionOf } from './name-places';
 	import PlaceLine from './PlaceLine.svelte';
@@ -72,7 +73,7 @@
 		const shown = place.text.trimStart();
 		const indent = place.text.length - shown.length;
 		const markup = highlightLine(shown, languageOf(review.mode, place.path));
-		return withNameMarked(markup, shown, place.column - indent, found.name);
+		return markedSought(markup, stretchOfName(shown, place.column - indent, found.name));
 	}
 </script>
 

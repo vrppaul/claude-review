@@ -252,19 +252,6 @@
 }
 
 /*
- * A name the reader asked about, on each line the pane lists where it is
- * defined and used: the reader's chip, edged, so it reads over any tint the
- * line has
- */
-.cr-name {
-	border-radius: var(--radius-field);
-	outline: var(--cr-line) solid var(--cr-mark-border);
-	background-color: var(--cr-mark-chip);
-	box-decoration-break: clone;
-	-webkit-box-decoration-break: clone;
-}
-
-/*
  * A place a name stands in a file (PlaceLine), a row of the frame's lines
  * (lib/ui CodeFrameLines): its line drawn by the rules of a diff's line
  * above, on one line of its own cut where the room ends; its number and the

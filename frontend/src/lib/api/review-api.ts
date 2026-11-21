@@ -26,6 +26,7 @@ import type {
 	KeptSettings,
 	MessageRequest,
 	NameResponse,
+	NamesTouchedResponse,
 	ReaderSettings,
 	RetakeResponse,
 	ReviewResponse,
@@ -80,7 +81,18 @@ export function takeDiff(asked: DiffQuery): Promise<DiffResponse> {
 	return read('get', '/api/diff', { query: routeQueryOf(asked), doing: 'Could not take the diff' });
 }
 
-/** The diff route's query, naming only what the reader changed: whitespace counts unless they said otherwise. */
+/** The names the change touched in each file of the diff asked for alike, apart from the diff, which never waits on them. */
+export function readNamesTouched(asked: DiffQuery): Promise<NamesTouchedResponse> {
+	return read('get', '/api/names-touched', {
+		query: routeQueryOf(asked),
+		doing: 'Could not read the names the change touched'
+	});
+}
+
+/**
+ * The query of a route that reads the diff one way, naming only what the reader changed: whitespace counts unless they
+ * said otherwise.
+ */
 function routeQueryOf({ ignoreWhitespace, base }: DiffQuery): Query<'get', '/api/diff'> {
 	const query: Query<'get', '/api/diff'> = { base };
 	if (ignoreWhitespace) query.ignore_whitespace = true;

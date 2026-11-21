@@ -5,7 +5,8 @@
 	import Button from '$lib/ui/Button.svelte';
 	import CodeFrameLines from '$lib/ui/CodeFrameLines.svelte';
 	import Failure from '$lib/ui/Failure.svelte';
-	import { withNameMarked } from '$lib/utils/code-words';
+	import { markedSought } from '$lib/ui/sought';
+	import { stretchOfName } from '$lib/utils/code-words';
 
 	interface Props {
 		/** The place chosen, whose code this is. */
@@ -34,7 +35,9 @@
 			<tr data-testid="name-window-line" class={['cr-row', isThePlace && (place.added ? 'cr-row-add' : 'cr-row-at')]}>
 				<td class="cr-gutter cr-place-number">{drawn.line.new_number}</td>
 				<td class="cr-code-cell cr-run-code"
-					>{@html isThePlace ? withNameMarked(drawn.markup, drawn.line.content, place.column, name) : drawn.markup}</td
+					>{@html isThePlace
+						? markedSought(drawn.markup, stretchOfName(drawn.line.content, place.column, name))
+						: drawn.markup}</td
 				>
 			</tr>
 		{/each}

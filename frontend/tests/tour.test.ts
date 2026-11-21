@@ -11,7 +11,7 @@ import Guide from '$lib/components/Guide.svelte';
 import GuideCard from '$lib/components/GuideCard.svelte';
 import ReviewHeader from '$lib/components/ReviewHeader.svelte';
 import { TOUR_TARGETS, type TourTarget } from '$lib/guide/tour';
-import { addedLine, diffFile, diffResponse, hunk } from './diff';
+import { addedLine, diffFile, diffResponse, hunk, OF_FILES } from './diff';
 import { fakeServer } from './fake-server';
 import { guideServer } from './guide-server';
 import { newComment } from './new-comment';
@@ -53,6 +53,24 @@ function closeComment(line: number) {
 	if (!field) throw new Error(`No comment is open on line ${line}`);
 	review.threads.writing.discard(field);
 	review.guide.notice({ type: 'closed', kind: 'new' });
+}
+
+/** Start the tour on a page that draws the tree, and take it past the tree's two stops: its files and their names. */
+function startTourPastTheTree() {
+	review.guide.startTour();
+	review.guide.next();
+	review.guide.next();
+}
+
+/** The steps the tour of a review takes, from its start to its end, by name. */
+function stepsTaken(reviewed: Review): string[] {
+	reviewed.guide.startTour();
+	const seen: string[] = [];
+	while (reviewed.guide.step) {
+		seen.push(reviewed.guide.step.id);
+		reviewed.guide.next();
+	}
+	return seen;
 }
 
 /** The header of a review an agent is attached to, once its diff has arrived. */
@@ -158,6 +176,14 @@ describe('the tour', () => {
 		expect(seen).not.toContain('finish');
 	});
 
+	it('shows how to find the way by name after the files, only in a review of a repository’s change', () => {
+		const ofTheChange = stepsTaken(openReview());
+		const ofFiles = stepsTaken(openReview({ facts: { where: OF_FILES } }));
+
+		expect(ofTheChange[ofTheChange.indexOf('files') + 1]).toBe('names');
+		expect(ofFiles).not.toContain('names');
+	});
+
 	it('stays on the same part of the tour when an agent joins in the middle of it', () => {
 		review.guide.startTour();
 		while (review.guide.step && review.guide.step.id !== 'comment-save') review.guide.next();
@@ -200,8 +226,7 @@ describe('the tour', () => {
 
 	it('waits for a comment on a line, not for a reply', () => {
 		pageWith('file-tree', 'line-number', 'comment-field');
-		review.guide.startTour();
-		review.guide.next();
+		startTourPastTheTree();
 		expect(review.guide.step?.id).toBe('comment-line');
 
 		review.guide.notice({ type: 'opened', kind: 'reply' });
@@ -215,8 +240,7 @@ describe('the tour', () => {
 
 	it('moves on from a comment opened only once the page has drawn its field, never to what follows the field', () => {
 		pageWith('file-tree', 'line-number', 'unsent-count', 'send');
-		review.guide.startTour();
-		review.guide.next();
+		startTourPastTheTree();
 		expect(review.guide.step?.id).toBe('comment-line');
 
 		openComment(1);
@@ -228,8 +252,7 @@ describe('the tour', () => {
 
 	it('moves on once the page reports, though what it has drawn is as it was', () => {
 		pageWith('file-tree', 'line-number', 'comment-field', 'unsent-count');
-		review.guide.startTour();
-		review.guide.next();
+		startTourPastTheTree();
 		review.guide.notice({ type: 'opened', kind: 'new' });
 		pageWith('file-tree', 'line-number', 'comment-field', 'unsent-count');
 
@@ -243,8 +266,7 @@ describe('the tour', () => {
 		pageWith('file-tree', 'line-number', 'comment-field');
 		openComment(1);
 
-		review.guide.startTour();
-		review.guide.next();
+		startTourPastTheTree();
 
 		expect(review.guide.step?.id).toBe('comment-save');
 	});
@@ -252,8 +274,7 @@ describe('the tour', () => {
 	it('follows the comment where the reader sent it', () => {
 		review.answerer.setAttached(true);
 		pageWith('file-tree', 'line-number', 'comment-field', 'awaited-answer', 'unsent-count');
-		review.guide.startTour();
-		review.guide.next();
+		startTourPastTheTree();
 		review.guide.notice({ type: 'opened', kind: 'new' });
 		pageWith('file-tree', 'line-number', 'comment-field', 'awaited-answer', 'unsent-count');
 		expect(review.guide.step?.id).toBe('comment-route');
@@ -267,8 +288,7 @@ describe('the tour', () => {
 	it('goes back a step when the comment is closed without being sent', () => {
 		review.answerer.setAttached(true);
 		pageWith('file-tree', 'line-number', 'comment-field');
-		review.guide.startTour();
-		review.guide.next();
+		startTourPastTheTree();
 		review.guide.notice({ type: 'opened', kind: 'new' });
 		pageWith('file-tree', 'line-number', 'comment-field');
 
@@ -294,8 +314,7 @@ describe('the tour', () => {
 		review = openReview();
 		pageWith('file-tree', 'line-number', 'comment-field');
 
-		review.guide.startTour();
-		review.guide.next();
+		startTourPastTheTree();
 
 		expect(review.guide.step?.id).toBe('comment-save');
 	});
@@ -303,8 +322,7 @@ describe('the tour', () => {
 	it('keeps waiting for a comment while another one on a line is still open', () => {
 		review.answerer.setAttached(true);
 		pageWith('file-tree', 'line-number', 'comment-field');
-		review.guide.startTour();
-		review.guide.next();
+		startTourPastTheTree();
 		openComment(1);
 		openComment(2);
 		pageWith('file-tree', 'line-number', 'comment-field');
@@ -330,8 +348,8 @@ describe('the tour', () => {
 		flushSync();
 
 		expect(review.guide.step?.id).toBe('comment-route');
-		expect(before).toBe(`3 of ${announced}`);
-		expect(getByText(STEP_COUNT).textContent).toBe(`4 of ${announced}`);
+		expect(before).toBe(`4 of ${announced}`);
+		expect(getByText(STEP_COUNT).textContent).toBe(`5 of ${announced}`);
 	});
 
 	it('forgets what the page had drawn once nothing watches it any more', async () => {
@@ -364,9 +382,9 @@ describe('the tour', () => {
 
 		expect(review.guide.stepPosition).toBe(0);
 		expect(review.guide.canGoBack).toBe(false);
-		// The files, a line to comment on, the field the reader opens there to write in, and the count on Send their
-		// comment brings
-		expect(review.guide.stepCount).toBe(4);
+		// The files, their names, a line to comment on, the field the reader opens there to write in, and the count on
+		// Send their comment brings
+		expect(review.guide.stepCount).toBe(5);
 	});
 
 	it('moves on from a step it landed on before the page said what it has drawn', () => {
@@ -417,6 +435,7 @@ describe('the tour', () => {
 		render(Guide, inReview(review));
 		await tick();
 		pageWith('file-tree', 'line-number', 'comment-field');
+		review.guide.next();
 		review.guide.next();
 
 		review.commentFields.report({ type: 'opened', kind: 'new' });

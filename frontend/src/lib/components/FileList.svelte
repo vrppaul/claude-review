@@ -1,13 +1,12 @@
 <script lang="ts">
-	import type { DiffFile, ReviewMode } from '$lib/types';
+	import type { ReviewMode, TouchedName } from '$lib/types';
 	import { fileStats } from '$lib/utils/file-stats';
-	import { fileTree, type TreeNode } from '$lib/utils/file-tree';
+	import { filesFound, fileTree, type ListedFile, type TreeNode } from '$lib/utils/file-tree';
 	import { isComposingText } from '$lib/dom/keyboard';
-	import { fileName, folderOf, formerName } from '$lib/utils/paths';
+	import { formerName } from '$lib/utils/paths';
 	import { counted, type CountedWords, FILES } from '$lib/utils/words';
 	import { tourStop } from '$lib/guide/tour';
 	import { useReview } from '$lib/review/context';
-	import { filesOutsideTheChange } from '$lib/review/files-way';
 	import { fileSectionKey } from '$lib/review/reading-view';
 	import Dot from '$lib/ui/Dot.svelte';
 	import EmptyNote from '$lib/ui/EmptyNote.svelte';
@@ -15,26 +14,49 @@
 	import Filter from '$lib/ui/Filter.svelte';
 	import Heading from '$lib/ui/Heading.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
+	import IconButton from '$lib/ui/IconButton.svelte';
 	import SideColumn from '$lib/ui/SideColumn.svelte';
 	import ChangedLines from './ChangedLines.svelte';
+	import FileNames from './FileNames.svelte';
 	import FileRow from './FileRow.svelte';
 	import FileTreeFolder from './FileTreeFolder.svelte';
+	import OutsideFiles from './OutsideFiles.svelte';
 	import { chordName, COLUMN_CHORD } from './keymap';
+	import { LookupFromTheTree } from './tree-name-lookup';
+	import TreeNameLookup from './TreeNameLookup.svelte';
 	import { wayBackOf } from './way-back';
 
-	/** What the tree lists, in words: counted in its heading, looked for in its filter. */
-	interface Listed extends CountedWords {
-		/** One of them, as the filter looks for it, and what of it the filter reads. */
+	/** What the tree's filter says it finds: in the field, to whoever cannot see the field, and where nothing answers. */
+	interface FilterWords {
+		placeholder: string;
+		label: string;
+		/** What it looks for, as it says nothing of it matches. */
 		sought: string;
-		soughtBy: string;
 	}
 
-	// What the tree lists, in each kind of review
-	const COUNTED_AS: Record<ReviewMode, Listed> = {
-		diff: { one: 'changed file', many: 'changed files', sought: 'file', soughtBy: 'path' },
-		files: { ...FILES, sought: 'file', soughtBy: 'path' },
-		transcript: { one: 'message', many: 'messages', sought: 'message', soughtBy: 'name' }
+	// What the tree lists, counted in its heading, in each kind of review
+	const COUNTED_AS: Record<ReviewMode, CountedWords> = {
+		diff: { one: 'changed file', many: 'changed files' },
+		files: FILES,
+		transcript: { one: 'message', many: 'messages' }
 	};
+	// What its filter finds by, in each kind of review, while the tree lists no names
+	const BY_PATH: FilterWords = { placeholder: 'Jump to a file', label: 'Find a file by its path', sought: 'file' };
+	const FILTERED_BY: Record<ReviewMode, FilterWords> = {
+		diff: BY_PATH,
+		files: BY_PATH,
+		transcript: { placeholder: 'Jump to a message', label: 'Find a message by its name', sought: 'message' }
+	};
+	// What it finds by while the tree lists names under its files
+	const FILTERED_BY_NAMES: FilterWords = {
+		placeholder: 'Find a file or name',
+		label: 'Find a file by its path or by a name in it',
+		sought: 'file or name'
+	};
+	// What the toggle beside the filter is called, pressed or not: its state is said apart, as pressed
+	const LIST_NAMES = 'List the names under each file';
+	// What a file lists under it while the tree lists no names
+	const NO_NAMES: readonly TouchedName[] = [];
 	// What the mark of the checks' failures on a file's row says, counted
 	const PLACES_FAILED: CountedWords = { one: 'place the checks failed', many: 'places the checks failed' };
 	const OUT_OF_DATE_SAID = ', out of date';
@@ -47,27 +69,42 @@
 	const layout = review.layout.fileTree;
 
 	const isDiffMode = $derived(review.mode === 'diff');
-	const listed = $derived(COUNTED_AS[review.mode]);
+	// Names are listed under the files where the reader wants them and the diff on screen has any
+	const namesListed = $derived(layout.namesListed && review.names.any);
+	const filteredBy = $derived(namesListed ? FILTERED_BY_NAMES : FILTERED_BY[review.mode]);
 	const query = $derived(layout.filter.trim().toLowerCase());
-	const matching = $derived(
-		query === '' ? review.diff.files : review.diff.files.filter((file) => file.path.toLowerCase().includes(query))
+	const found = $derived(
+		filesFound(review.diff.files, namesListed ? (path: string) => review.names.of(path) : () => NO_NAMES, query)
 	);
 	// Only a diff is a tree: the files of a plan, or the messages of a transcript, are a list
-	const tree = $derived(isDiffMode ? fileTree(matching) : []);
-
-	// The files the change did not touch, under its own, and the one of them read alone now
-	const readAlone = $derived(review.views.fileReadAlone);
-	const outside = $derived(filesOutsideTheChange(review.threads, review.diff, readAlone));
+	const tree = $derived(isDiffMode ? fileTree(found) : []);
 
 	const headedBy = $derived.by(() => {
 		const total = review.diff.files.length;
-		const shown = matching.length;
-		const count = shown === total ? counted(total, listed) : `${shown} of ${total}`;
+		const shown = found.length;
+		const count = shown === total ? counted(total, COUNTED_AS[review.mode]) : `${shown} of ${total}`;
 		return review.reading.viewedCount > 0 ? `${count} · ${review.reading.viewedCount} viewed` : count;
+	});
+
+	// The names the change touched are read once the tree is drawn, and again for every diff that comes on screen
+	$effect(() => {
+		void review.names.follow();
+	});
+
+	// The name of the line the reader reads from, where the tree lists it, unfolded: its row is the current one
+	const nameInView = $derived.by(() => {
+		const read = review.sections.linesRead;
+		if (read === null || layout.areNamesFolded(read.path)) return null;
+		const standing = review.names.standingOn(read.path, read.lines);
+		const listedThere = found.find((listed) => listed.file.path === read.path)?.names ?? NO_NAMES;
+		return standing !== null && listedThere.includes(standing) ? standing : null;
 	});
 
 	// What the filter leaves, drawn: where it looks for the first file to go to
 	let list: HTMLElement | undefined = $state();
+
+	// Where a name the tree lists is defined and used, asked from the icon on its row; its pane lies over the column
+	const lookup = new LookupFromTheTree(review.diff);
 
 	/** Go to a file of the change, among the change's files: a file read alone gives way to them. */
 	function goToFile(path: string) {
@@ -89,17 +126,19 @@
 	}
 </script>
 
-{#snippet fileRow(file: DiffFile, shownAs: string, depth: number)}
+{#snippet fileRow({ file, names }: ListedFile, shownAs: string, depth: number)}
 	{@const viewed = review.reading.isViewed(file.path)}
+	{@const namesFolded = layout.areNamesFolded(file.path)}
 	<FileRow
 		testId="file-item"
 		role={FILE_ROW_ROLE}
 		{depth}
 		status={isDiffMode ? file.status : null}
-		current={review.sections.fileInView === file.path}
+		current={review.sections.fileInView === file.path && nameInView === null}
 		{viewed}
 		threads={review.threads.onLinesOf(file.path).length}
 		onclick={() => goToFile(file.path)}
+		namesFold={names.length === 0 ? undefined : { folded: namesFolded, toggle: () => layout.toggleNames(file.path) }}
 	>
 		{#snippet name()}
 			{#if file.old_path}
@@ -135,12 +174,24 @@
 				<ChangedLines changed={fileStats(file)} />
 			{/if}
 		{/snippet}
+		{#snippet under(row: HTMLButtonElement | undefined)}
+			<FileNames
+				path={file.path}
+				names={namesFolded ? NO_NAMES : names}
+				sought={query}
+				depth={depth + 1}
+				{nameInView}
+				{viewed}
+				fileRow={row}
+				{lookup}
+			/>
+		{/snippet}
 	</FileRow>
 {/snippet}
 
 {#snippet treeNode(node: TreeNode, depth: number)}
 	{#if node.kind === 'file'}
-		{@render fileRow(node.file, node.name, depth)}
+		{@render fileRow(node.listed, node.name, depth)}
 	{:else}
 		<FileTreeFolder
 			folder={node}
@@ -182,22 +233,42 @@
 		<Icon name="files" size="xs" />
 		<span data-testid="sidebar-rail-count" class="text-2xs font-semibold">{review.diff.files.length}</span>
 	{/snippet}
+	<!-- Where a name of the tree is defined and used, in a pane by its icon over the column and the code beside it -->
+	{#snippet over()}
+		<TreeNameLookup {lookup} />
+	{/snippet}
 
-	<div class="mb-2">
-		<Filter
-			bind:value={() => layout.filter, (next: string) => layout.setFilter(next)}
-			label="Find a {listed.sought} by its {listed.soughtBy}"
-			testId="file-filter"
-			placeholder="Jump to a {listed.sought}"
-			onkeydown={onFilterKey}
-		/>
+	<!-- The filter, and beside it, where the diff on screen has names to list, the way to list the files alone -->
+	<div data-testid="file-filter-row" class="mb-2 flex items-center gap-1.5">
+		<div class="flex min-w-0 flex-1">
+			<Filter
+				bind:value={() => layout.filter, (next: string) => layout.setFilter(next)}
+				label={filteredBy.label}
+				testId="file-filter"
+				placeholder={filteredBy.placeholder}
+				onkeydown={onFilterKey}
+			/>
+		</div>
+		{#if review.names.any}
+			<IconButton
+				tone="quiet"
+				size="xs"
+				shape="square"
+				label={LIST_NAMES}
+				testId="tree-names-toggle"
+				aria-pressed={layout.namesListed}
+				onclick={() => layout.toggleNamesListed()}
+			>
+				<Icon name="steps" size="sm" />
+			</IconButton>
+		{/if}
 	</div>
 
 	{#if review.diff.files.length === 0}
 		<!-- An empty diff, the work undone, say: there is nothing a filter could have missed -->
-		<EmptyNote within="list" testId="no-files">No {listed.many}.</EmptyNote>
-	{:else if matching.length === 0}
-		<EmptyNote within="list" testId="no-matches">No {listed.sought} matches “{layout.filter}”.</EmptyNote>
+		<EmptyNote within="list" testId="no-files">No {COUNTED_AS[review.mode].many}.</EmptyNote>
+	{:else if found.length === 0}
+		<EmptyNote within="list" testId="no-matches">No {filteredBy.sought} matches “{layout.filter}”.</EmptyNote>
 	{:else}
 		<ul bind:this={list}>
 			{#if isDiffMode}
@@ -205,37 +276,12 @@
 					{@render treeNode(node, 0)}
 				{/each}
 			{:else}
-				{#each matching as file (file.path)}
-					{@render fileRow(file, file.path, 0)}
+				{#each found as listed (listed.file.path)}
+					{@render fileRow(listed, listed.file.path, 0)}
 				{/each}
 			{/if}
 		</ul>
 	{/if}
 
-	{#if outside.length > 0}
-		<!-- Under the change's own files, those it did not touch that the reader reads or left something in: one
-			press to read each alone -->
-		<div data-testid="outside-files" class="mt-3 flex flex-col gap-1">
-			<Heading tag="h3" heads="list" testId="outside-files-heading">Not in this change</Heading>
-			<ul>
-				{#each outside as path (path)}
-					<FileRow
-						testId="outside-file"
-						status={null}
-						current={path === readAlone}
-						threads={review.threads.onLinesOf(path).length}
-						title={path}
-						onclick={() => void review.navigator.readAlone(path)}
-					>
-						{#snippet name()}
-							{fileName(path)}
-						{/snippet}
-						{#snippet end()}
-							<span class="cr-faint text-xs">{folderOf(path)}</span>
-						{/snippet}
-					</FileRow>
-				{/each}
-			</ul>
-		</div>
-	{/if}
+	<OutsideFiles />
 </SideColumn>

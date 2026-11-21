@@ -16,7 +16,7 @@ import type { FileSections } from '$lib/dom/file-sections';
 import { fileSectionKey, type ReadingView, type ReadingViewName } from '$lib/review/reading-view';
 import type { Threads } from '$lib/review/threads.svelte';
 import type { PlaceLeft, WayBack } from '$lib/review/way-back.svelte';
-import type { Thread } from '$lib/types';
+import type { LinePlace, Thread } from '$lib/types';
 import { placeKey } from '$lib/utils/line-places';
 
 /** The views the review is read in, as moving the reader needs them. */
@@ -217,19 +217,19 @@ export class Navigator {
 	}
 
 	/**
-	 * Take the reader to a line of a file as it stands, with the keyboard on
-	 * its number, in the middle of the reading area: where the view on
-	 * screen draws it, its file unfolded and what the diff left out around
-	 * it read in, or else in the view of the Files way of reading that draws
-	 * the file, which comes on screen for it: among the change's files, or
-	 * the file read alone. A line drawn nowhere is not gone to. A name on the
-	 * line the reader is taken to stands marked on it while the line is lit.
-	 * Where the reader was is read first, and noted for Back once they are
-	 * taken somewhere else.
+	 * Take the reader to a line of a file, with the keyboard on its number,
+	 * in the middle of the reading area: where the view on screen draws it,
+	 * its file unfolded and, for a line of the file as it stands, what the
+	 * diff left out around it read in; or else in the view of the Files way
+	 * of reading that draws the file, which comes on screen for it: among the
+	 * change's files, or the file read alone. A line drawn nowhere is not
+	 * gone to. A name on the line the reader is taken to stands marked on it
+	 * while the line is lit. Where the reader was is read first, and noted
+	 * for Back once they are taken somewhere else.
 	 */
-	async goToLine(path: string, line: number, name: NameOnLine | null): Promise<void> {
+	async goToLine(path: string, line: LinePlace, name: NameOnLine | null): Promise<void> {
 		const left = this.#placeRead();
-		const arrived = { line: placeKey({ side: 'new', number: line }), name };
+		const arrived = { line: placeKey(line), name };
 		const onScreen = await this.#views.onScreen.drawLine(path, line);
 		if (onScreen !== null) {
 			this.#goToLineFrom(left, onScreen, arrived);

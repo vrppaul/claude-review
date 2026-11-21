@@ -62,11 +62,10 @@ export interface ReadingView {
 	/** Bring out lines the view has folded away, so what hangs on them can be drawn. */
 	unfold: (lines: FileLines) => void;
 	/**
-	 * Bring a line of a file as it stands into what the view draws, and hand
-	 * back the section it is drawn in, by its key; null where the view
-	 * cannot draw it.
+	 * Bring a line of a file into what the view draws, and hand back the
+	 * section it is drawn in, by its key; null where the view cannot draw it.
 	 */
-	drawLine: (path: string, line: number) => Promise<string | null>;
+	drawLine: (path: string, line: LinePlace) => Promise<string | null>;
 	/** Where the reader reads in it, and what to call that place; null while nothing of it is being read. */
 	placeRead: () => PlaceRead | null;
 	/**
@@ -178,15 +177,16 @@ export class FilesReading implements ReadingView {
 	}
 
 	/**
-	 * Any line of a file the diff on screen holds, whatever base it is read
-	 * against, as the file as it stands is the review's own side: its file
-	 * unfolded, and what the diff left out around it read in.
+	 * Any line of a file the diff on screen holds: its file unfolded, and for
+	 * a line of the file as it stands, whatever base it is read against,
+	 * what the diff left out around it read in. A line of the old side is
+	 * one the diff draws, as it removed it.
 	 */
-	async drawLine(path: string, line: number): Promise<string | null> {
+	async drawLine(path: string, line: LinePlace): Promise<string | null> {
 		const file = this.#diff.files.find((held) => held.path === path);
 		if (file === undefined) return null;
 		this.#reading.unfold(path);
-		await this.#diff.revealed.revealLine(file, line, this.#longestRead);
+		if (line.side === 'new') await this.#diff.revealed.revealLine(file, line.number, this.#longestRead);
 		return fileSectionKey(path);
 	}
 
@@ -228,7 +228,7 @@ export class FilesReading implements ReadingView {
 	/** Draw a place read: its line read in where the diff on screen leaves it out, its file unfolded. */
 	async #drawPlace(place: ReadingPlace): Promise<void> {
 		const line = place.line === null ? null : placeOfKey(place.line);
-		if (line?.side === 'new') await this.drawLine(place.within, line.number);
+		if (line?.side === 'new') await this.drawLine(place.within, line);
 		else if (line !== null) this.#reading.unfold(place.within);
 	}
 }

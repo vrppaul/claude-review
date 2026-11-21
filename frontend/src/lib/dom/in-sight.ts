@@ -80,6 +80,13 @@ export function seenIn(element: HTMLElement): DOMRect {
 	return clippingRound(element).reduce(cutTo, new DOMRect(0, 0, innerWidth, innerHeight));
 }
 
+/** Whether the reader sees any of an element, or it touches what they see: scrolled out of sight, they do not. */
+export function seenAtAll(element: HTMLElement): boolean {
+	const box = element.getBoundingClientRect();
+	const seen = seenIn(element);
+	return box.bottom >= seen.top && box.top <= seen.bottom && box.right >= seen.left && box.left <= seen.right;
+}
+
 /**
  * Every box round an element that hides what reaches past its edges, the
  * nearest first: what the element is seen in changes as any of them does.

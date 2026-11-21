@@ -35,6 +35,9 @@ const AGENT_PANEL_WIDTH: WidthBounds = { min: 280, max: 720, fallback: 380 };
 
 // The names each choice is kept under in this port's storage
 const FILE_TREE_OPEN_KEY = 'sidebar-open';
+const FILE_TREE_NAMES_KEY = 'tree-names';
+// The tree lists the names the change touched under each file until the reader turns them off
+const NAMES_LISTED_UNCHOSEN = true;
 const SIDE_COLUMN_WIDTH_KEY = 'sidebar-width';
 const STORY_CONTENTS_OPEN_KEY = 'contents-open';
 const AGENT_PANEL_OPEN_KEY = 'panel-open';
@@ -163,11 +166,14 @@ class PutAwayColumn {
 /**
  * The file tree: a column the reader puts away, and how they left it — what
  * they were looking for in it, and the folders they folded. Those two
- * outlive the tree being put away and brought back, not a reload.
+ * outlive the tree being put away and brought back, not a reload; whether
+ * it lists the names the change touched under each file outlives a reload.
  */
 class FileTreeLayout extends PutAwayColumn {
 	#filter = $state('');
+	#namesListed = $state(readFlag(FILE_TREE_NAMES_KEY, NAMES_LISTED_UNCHOSEN));
 	readonly #foldedFolders = new SvelteSet<string>();
+	readonly #filesWithNamesFolded = new SvelteSet<string>();
 
 	/** @param width how wide it is, as wide as a story's contents */
 	constructor(width: StoredWidth) {
@@ -190,6 +196,26 @@ class FileTreeLayout extends PutAwayColumn {
 	toggleFolder(path: string): void {
 		if (this.#foldedFolders.has(path)) this.#foldedFolders.delete(path);
 		else this.#foldedFolders.add(path);
+	}
+
+	/** Whether the reader wants the names the change touched listed under each file, or the files alone. */
+	get namesListed(): boolean {
+		return this.#namesListed;
+	}
+
+	toggleNamesListed(): void {
+		this.#namesListed = !this.#namesListed;
+		writeChoice(FILE_TREE_NAMES_KEY, this.#namesListed);
+	}
+
+	/** Whether the reader folded away the names under a file, by its path. */
+	areNamesFolded(path: string): boolean {
+		return this.#filesWithNamesFolded.has(path);
+	}
+
+	toggleNames(path: string): void {
+		if (this.#filesWithNamesFolded.has(path)) this.#filesWithNamesFolded.delete(path);
+		else this.#filesWithNamesFolded.add(path);
 	}
 }
 

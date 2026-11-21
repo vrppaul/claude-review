@@ -31,6 +31,8 @@ import { FileAloneReading } from '$lib/review/file-alone-reading.svelte';
 import { FilesReading } from '$lib/review/reading-view';
 import { ReadingViews } from '$lib/review/reading-views.svelte';
 import { ReviewDiff } from '$lib/review/review-diff.svelte';
+import { READS_NAMES } from '$lib/review/reads-names';
+import { TouchedNames } from '$lib/review/touched-names.svelte';
 import { ReviewStory } from '$lib/review/review-story.svelte';
 import type { StepListed } from '$lib/review/story-contents';
 import { StoryReading } from '$lib/review/story-reading';
@@ -39,7 +41,7 @@ import { Rounds } from '$lib/review/rounds.svelte';
 import { ServerLink } from '$lib/review/server-link.svelte';
 import { Submission } from '$lib/review/submission.svelte';
 import { Telling } from '$lib/review/telling.svelte';
-import { type NamePointing, namePointingIn } from '$lib/review/name-lookup.svelte';
+import { type NamePointing, namePointingIn } from '$lib/review/names-in-the-code.svelte';
 import { Navigator } from '$lib/review/navigator';
 import { Threads } from '$lib/review/threads.svelte';
 import { WayBack } from '$lib/review/way-back.svelte';
@@ -115,6 +117,8 @@ export class Review {
 	readonly answerer: Answerer;
 	readonly checks: Checks;
 	readonly diff: ReviewDiff;
+	/** The names the change touched in each file of the diff on screen, once read. */
+	readonly names: TouchedNames;
 	/** How far the reader has got through the files. */
 	readonly reading: ReadingProgress;
 	readonly lastRetake = new LastRetake();
@@ -179,6 +183,7 @@ export class Review {
 		this.answerer = new Answerer(facts.answerer_attached, facts.agent, facts.work);
 		this.checks = new Checks(facts.checks);
 		this.diff = new ReviewDiff(firstDiff, () => this.settings.current.ignore_whitespace);
+		this.names = new TouchedNames(facts.where.kind, this.diff);
 		this.reading = new ReadingProgress(kept.files);
 		this.threads = new Threads(this.rounds, kept, this.commentFields);
 		// A page with no draft — another browser, a private window — would
@@ -201,6 +206,7 @@ export class Review {
 			comments: this.threads.writing,
 			release: facts.release,
 			takesAStory: facts.takes_a_story,
+			readsNames: READS_NAMES[facts.where.kind],
 			storyOffered: () => this.storyOffered,
 			notKept: (way, error) => this.conversation.note(introductionNotKeptNote(way, error))
 		});

@@ -54,24 +54,26 @@
 }
 /*
  * A control pressed down — a segment of a track, a toggle that is on — or
- * one of the header's whose pane is open: a small thing chosen, so reversed,
- * in ink whatever its tone (tokens.css). One in a turn or a card whose
- * question or menu is open keeps its look, as the boards TakeBack and
- * ThreadKinds draw it: what it asks stands beside it. Where it stands adds
- * nothing to how strongly the rule holds (:where): a rule that draws a
- * chosen segment its own way still wins by coming later
+ * one of the header's, or a row's act, whose pane is open: a small thing
+ * chosen, so reversed, in ink whatever its tone (tokens.css). One in a turn
+ * or a card whose question or menu is open keeps its look, as the boards
+ * TakeBack and ThreadKinds draw it: what it asks stands beside it. Where it
+ * stands adds nothing to how strongly the rule holds (:where): a rule that
+ * draws a chosen segment its own way still wins by coming later
  */
-.cr-pressable:is([aria-pressed='true'], :where(.cr-ui-bar-page) [aria-haspopup][aria-expanded='true']) {
+.cr-pressable:is([aria-pressed='true'], :where(.cr-ui-bar-page, .cr-ui-row-act) [aria-haspopup][aria-expanded='true']) {
 	background-color: var(--color-base-content);
 	color: var(--cr-on-ink);
 }
 /* A key on it is part of its name, not a mark of a colour of its own: in its words, edged in them */
-.cr-pressable:is([aria-pressed='true'], :where(.cr-ui-bar-page) [aria-haspopup][aria-expanded='true']) .cr-ui-key {
+.cr-pressable:is([aria-pressed='true'], :where(.cr-ui-bar-page, .cr-ui-row-act) [aria-haspopup][aria-expanded='true'])
+	.cr-ui-key {
 	border-color: currentColor;
 	color: inherit;
 }
 /* An icon on it is in its words too: a hue of its own would sit on the ink ground, as a green tick would */
-.cr-pressable:is([aria-pressed='true'], :where(.cr-ui-bar-page) [aria-haspopup][aria-expanded='true']) .cr-ui-icon {
+.cr-pressable:is([aria-pressed='true'], :where(.cr-ui-bar-page, .cr-ui-row-act) [aria-haspopup][aria-expanded='true'])
+	.cr-ui-icon {
 	color: inherit;
 }
 /*
@@ -529,11 +531,28 @@
 .cr-ui-field-message {
 	min-height: var(--cr-field-message-least);
 }
-/* A filter (Filter): small, in the code's face, as the paths and names it is matched against are */
+/*
+ * A filter (Filter): in the code's face, as the paths and names it is
+ * matched against are, and as tall as the small control that may stand
+ * beside it
+ */
 .cr-ui-filter {
-	padding: --spacing(1) --spacing(2);
+	height: var(--cr-button-xs);
+	padding: 0 --spacing(2);
 	font-family: var(--font-mono);
 	font-size: var(--text-xs);
+}
+/*
+ * What the reader asked for, where it stands (Sought, and a name marked on
+ * a line of the code): the reader's chip, edged, so it reads over any tint
+ * the line or the row has
+ */
+.cr-ui-sought {
+	border-radius: var(--radius-field);
+	outline: var(--cr-line) solid var(--cr-mark-border);
+	background-color: var(--cr-mark-chip);
+	box-decoration-break: clone;
+	-webkit-box-decoration-break: clone;
 }
 /* A field not begun (FieldButton): a line tall, saying what the field it opens says before anything is in it */
 .cr-ui-field-button {
@@ -616,29 +635,46 @@
 	transform: scale(1);
 }
 /*
+ * A branch of a tree, off what stands above it: a line down from under it,
+ * rounded at its turn into this one's words, in the colour and width of the
+ * line that joins a conversation's turns. Whatever hangs so says how far
+ * above its own top the branch starts (--cr-branch-from), how far down it
+ * turns (--cr-branch-meets), how far in its line stands (--cr-branch-at),
+ * and how far it reaches past its turn (--cr-branch-reach): a setting on the
+ * one above it, a name of the code under its file (Row `branch`)
+ */
+.cr-ui-setting-hanging::before,
+.cr-ui-row-branch-first::before,
+.cr-ui-row-branch-next::before {
+	content: '';
+	position: absolute;
+	inset-block-start: calc(var(--cr-branch-from) * -1);
+	inset-inline-start: var(--cr-branch-at);
+	width: var(--cr-branch-reach);
+	height: calc(var(--cr-branch-from) + var(--cr-branch-meets));
+	border-inline-start: var(--cr-line) solid var(--cr-axis);
+	border-block-end: var(--cr-line) solid var(--cr-axis);
+	border-end-start-radius: --spacing(1.5);
+	pointer-events: none;
+}
+/*
  * A setting that hangs on the one above it (Checkbox `hangs`), as board
- * StoryWriting draws it: a branch of a tree off that setting, a line from
- * under its words, rounded at its turn, into this one's, in the colour and
- * width of the line that joins a conversation's turns, across the settings'
- * gap above it (--cr-settings-gap, which whatever stacks them stands them
- * apart by); its words a step in, past room kept for a padlock, so locking
- * it moves no word
+ * StoryWriting draws it: its branch from under that setting's words, across
+ * the settings' gap above it (--cr-settings-gap, which whatever stacks them
+ * stands them apart by); its words a step in, past room kept for a padlock,
+ * so locking it moves no word
  */
 .cr-ui-setting-hanging {
+	--cr-branch-from: var(--cr-settings-gap);
+	--cr-branch-meets: var(--cr-setting-branch-meets);
+	--cr-branch-at: --spacing(1.5);
+	--cr-branch-reach: --spacing(6);
+
 	position: relative;
 	padding-inline-start: --spacing(8);
 	transition: color var(--cr-state-change) ease;
 }
 .cr-ui-setting-hanging::before {
-	content: '';
-	position: absolute;
-	inset-block-start: calc(var(--cr-settings-gap) * -1);
-	inset-inline-start: --spacing(1.5);
-	width: --spacing(6);
-	height: calc(var(--cr-settings-gap) + var(--cr-setting-branch-meets));
-	border-inline-start: var(--cr-line) solid var(--cr-axis);
-	border-block-end: var(--cr-line) solid var(--cr-axis);
-	border-end-start-radius: --spacing(1.5);
 	transition: width var(--cr-state-change) ease-out;
 }
 /* Where the branch ends while the setting is locked, centred on its first line as the branch meets it */
@@ -1156,6 +1192,18 @@
 	flex-direction: column;
 	min-width: 0;
 	min-height: 0;
+}
+/*
+ * What lies over the column and past it (SideColumn's over): placed from
+ * the column's corner, of no size so it covers nothing of the column, and
+ * layered over the reading area beside it as a pane is, so what that keeps
+ * in sight at its top does not cover it
+ */
+.cr-ui-column-over {
+	position: absolute;
+	inset-block-start: 0;
+	inset-inline-start: 0;
+	z-index: var(--cr-layer-popover);
 }
 /* Brought back by the reader, it comes in faded as its room widens */
 .cr-ui-column-coming {
@@ -2179,7 +2227,8 @@
 .cr-ui-primary .cr-ui-count {
 	margin-inline-start: --spacing(1.5);
 }
-.cr-ui-primary:not([aria-pressed='true'], :where(.cr-ui-bar-page) [aria-haspopup][aria-expanded='true']) .cr-ui-count {
+.cr-ui-primary:not([aria-pressed='true'], :where(.cr-ui-bar-page, .cr-ui-row-act) [aria-haspopup][aria-expanded='true'])
+	.cr-ui-count {
 	background-color: var(--cr-on-control);
 	color: var(--cr-control-fill);
 }
@@ -2395,6 +2444,78 @@
 .cr-ui-band-current {
 	background-color: var(--cr-selected);
 	color: var(--color-base-content);
+}
+/* A name of the code (Row `code-name`): in the code's face as a path is, at the weight of what is read */
+.cr-ui-row-code-name {
+	font-weight: var(--font-weight-normal);
+}
+/*
+ * A row that hangs as a branch off the row above it (Row `branch`): its
+ * branch's line stands under the mark of the row it hangs on, a step out,
+ * and turns at its middle a step in, into room of its own a step further in
+ * than its depth sets a row, before its mark. The first starts where the
+ * row it hangs on ends; the next goes on from the turn of the one above,
+ * half a row up
+ */
+.cr-ui-row-branch-first,
+.cr-ui-row-branch-next {
+	--cr-branch-at: calc(
+		(var(--cr-depth) - 1) * var(--cr-list-row-indent) + var(--cr-list-row-room) + var(--cr-list-row-mark-slot) / 2
+	);
+	--cr-branch-meets: calc(var(--cr-list-row-height) / 2);
+	--cr-branch-reach: var(--cr-list-row-indent);
+
+	position: relative;
+	padding-inline-start: calc((var(--cr-depth) + 1) * var(--cr-list-row-indent) + var(--cr-list-row-room));
+}
+.cr-ui-row-branch-first {
+	--cr-branch-from: 0px;
+}
+.cr-ui-row-branch-next {
+	--cr-branch-from: calc(var(--cr-list-row-height) / 2);
+}
+/*
+ * A row with an act of its own at its end (RowWithAct): the act a small
+ * icon button over the row's end, the icon of one always in sight where a
+ * row that folds draws its chevron, and the row's words ending before it
+ * while it is in sight. The row is lit under the pointer while the pointer
+ * is on its act too
+ */
+.cr-ui-row-with-act {
+	position: relative;
+}
+.cr-ui-row-act-always:has(> .cr-ui-row-act > *) > .cr-ui-row {
+	padding-inline-end: calc(var(--cr-list-row-room) + var(--text-xs) + var(--cr-list-row-gap));
+}
+.cr-ui-row-with-act:hover > .cr-ui-row:not(.cr-ui-row-current) {
+	background-image: linear-gradient(var(--cr-pointer-light), var(--cr-pointer-light));
+}
+.cr-ui-row-act {
+	display: flex;
+	position: absolute;
+	inset-block: 0;
+	inset-inline-end: calc(var(--cr-list-row-room) - (var(--cr-button-xs) - var(--text-xs)) / 2);
+	align-items: center;
+}
+/*
+ * An act seldom taken, in sight while the pointer or the keyboard is on the
+ * row, and while what it opened is open. It is drawn pressed then, so its
+ * box, not its icon, ends where the row's room starts, inside the row's light.
+ * Only then does it take room: at rest the row's words reach the row's end
+ */
+.cr-ui-row-act-while-reached > .cr-ui-row-act {
+	inset-inline-end: var(--cr-list-row-room);
+}
+/* Out of sight it still takes the keyboard, which its pane gives back to it as it closes */
+.cr-ui-row-act-while-reached:not(:hover, :focus-within, :has(> .cr-ui-row-act [aria-expanded='true']))
+	> .cr-ui-row-act {
+	opacity: 0;
+}
+.cr-ui-row-act-while-reached:is(:hover, :focus-within, :has(> .cr-ui-row-act [aria-expanded='true'])):has(
+		> .cr-ui-row-act > *
+	)
+	> .cr-ui-row {
+	padding-inline-end: calc(var(--cr-list-row-room) + var(--cr-button-xs) + var(--cr-list-row-gap));
 }
 
 /*

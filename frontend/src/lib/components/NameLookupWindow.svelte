@@ -1,9 +1,9 @@
-<script lang="ts">
+<script lang="ts" generics="From extends AskedFrom">
 	import { untrack } from 'svelte';
 	import { EveryFrame } from '$lib/dom/every-frame';
 	import { focusWhatRemains } from '$lib/dom/keyboard';
 	import { useReview } from '$lib/review/context';
-	import type { NameLookup } from '$lib/review/name-lookup.svelte';
+	import type { AskedFrom, NameLookup } from '$lib/review/name-lookup.svelte';
 	import { PlacesCode } from '$lib/review/places-code.svelte';
 	import type { NamePlace, NameResponse } from '$lib/types';
 	import Actions from '$lib/ui/Actions.svelte';
@@ -17,8 +17,8 @@
 	import PlaceCode from './PlaceCode.svelte';
 
 	interface Props {
-		/** The lookup of the reading area the name was pressed in, which holds what the window shows. */
-		lookup: NameLookup;
+		/** The lookup that holds what the window shows. */
+		lookup: NameLookup<From>;
 		/** What the review found of the name: one that stands somewhere. */
 		found: NameResponse;
 		/** The place chosen, whose code stands beside the list. */
@@ -50,8 +50,8 @@
 		untrack(() => code.read(path));
 	});
 
-	// What the window shows is of the take its name was pressed in, by the name as its line is drawn now: looked
-	// for each frame, as nothing tells of a line drawn again
+	// What the window shows is of the take its name was asked in, while what it was asked from is drawn: looked for
+	// each frame, as nothing tells of a line or a row drawn again
 	$effect(() => {
 		const watching = new EveryFrame(closeOnceOfThePast);
 		return () => watching.stop();
@@ -89,11 +89,11 @@
 	/**
 	 * The window has closed, the keyboard on nothing: the browser gives it back to what had it as the window opened,
 	 * the pane's Full, gone with the pane. The pane comes back where the reader asked for it, or the lookup is over;
-	 * either way the keyboard goes to the line pressed.
+	 * either way the keyboard goes to where the name was asked from.
 	 */
 	function closed() {
 		if (backToThePane) lookup.readInThePane();
-		else lookup.closeToTheLine();
+		else lookup.closeToWhereAsked();
 	}
 </script>
 

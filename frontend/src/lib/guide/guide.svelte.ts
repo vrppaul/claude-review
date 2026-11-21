@@ -58,6 +58,8 @@ export interface GuideOpening {
 	release: string;
 	/** Whether the review can tell a story: where it cannot, Story is introduced nowhere in it. */
 	takesAStory: boolean;
+	/** Whether the review reads the names in its code: where it does not, the tour says nothing of them. */
+	readsNames: boolean;
 	/** Whether the note of a story that arrived stands under the header now, where no introduction stands with it. */
 	storyOffered: () => boolean;
 	/** Say that whether a way is introduced again could not be kept, as the page says what a request came to. */
@@ -131,7 +133,7 @@ export class Guide {
 	// ? list's and the tour's own
 	readonly #stops: TourStep[];
 
-	constructor({ answerer, comments, release, takesAStory, storyOffered, notKept }: GuideOpening) {
+	constructor({ answerer, comments, release, takesAStory, readsNames, storyOffered, notKept }: GuideOpening) {
 		this.#answerer = answerer;
 		this.#comments = comments;
 		this.#release = release;
@@ -145,7 +147,7 @@ export class Guide {
 			(introduced) => keepGuide({ feedback_introduced: introduced }),
 			(error) => notKept('feedback', error)
 		);
-		this.#steps = $derived(stepsFor({ attached: this.#answerer.attached, route: this.#route }));
+		this.#steps = $derived(stepsFor({ attached: this.#answerer.attached, route: this.#route, readsNames }));
 		this.#stepIndex = $derived(indexOfStep(this.#steps, this.#stepId));
 		this.#stops = $derived(this.#steps.filter((step) => this.#isStop(step)));
 	}

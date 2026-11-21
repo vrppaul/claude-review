@@ -7,14 +7,12 @@
  * units; what is asked of the review, or said by it, is in columns.
  */
 
-import { markRanges, type TextRange } from '$lib/utils/markup-marks';
+import type { TextRange } from '$lib/utils/markup-marks';
 
 // A word as the review reads one where no grammar reads the line: letters, digits and underscores
 const WORDS = /[\p{L}\p{N}_]+/gu;
 // A word's last character, whole: one past the first plane is two units
 const LAST_CHARACTER = /.$/u;
-// The mark a name the reader asked about is drawn in on its line (main.css)
-const NAME_MARK = 'cr-name';
 
 /** A word of a line by its units, and the character of it the caret stands at or after. */
 export interface WordAtCaret extends TextRange {
@@ -41,11 +39,6 @@ export function wordAtCaret(text: string, caret: number): WordAtCaret | null {
 /** The column a place of a line stands at: the characters before it. */
 export function columnOf(text: string, offset: number): number {
 	return Array.from(text.slice(0, offset)).length;
-}
-
-/** A line's markup with a name on it marked: the name the reader asked about, at the column the review says. */
-export function withNameMarked(markup: string, text: string, column: number, name: string): string {
-	return markRanges(markup, [stretchOfName(text, column, name)], NAME_MARK);
 }
 
 /** Where a name at a column of a line stands in it, in units. */
