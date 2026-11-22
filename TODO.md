@@ -299,7 +299,6 @@ Where a thing is:
 
 What a thing is:
 
-- [ ] `docs`: the name lookup in the release's news.
 - [ ] `perf(names)`: a text most files hold, searched while a large tree is
       first outlined, holds the loop 50–100 ms at an answer on a busy
       machine: each answer gathers the outlines of every file holding it

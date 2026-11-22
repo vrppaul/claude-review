@@ -65,5 +65,16 @@ export const RELEASE_NEWS: ReleaseNews[] = [
 		title: 'Alt+Enter asks the agent now',
 		body: 'In a comment or a reply you are writing, Alt+Enter (Option+Enter on a Mac) sends your question at once, as Ask agent now does, and the answer comes in its thread.',
 		also: ['PHP is highlighted, in a diff and in Files.']
+	},
+	{
+		release: '1.8.0',
+		title: 'Where a name is defined and used',
+		body: 'Ctrl+click a name in the code (Cmd+click on a Mac), and a pane by it lists where it is defined, where it is used, and where the change uses it. Full reads each place with the code around it.',
+		also: [
+			'The file tree lists under each file the functions and classes the change touched, and its filter finds names across the whole repository.',
+			'The agent reports the checks it ran: a chip says how they stand, a failure is drawn under its line, and a check goes out of date once a file changes after it.',
+			'The agent can point at a file the change did not touch, and the page opens it alone.',
+			'The review answers every request some 40 ms sooner.'
+		]
 	}
 ];
