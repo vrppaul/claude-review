@@ -35,6 +35,8 @@ FILES_A_CHUNK = 32
 # How many kept outlines are read back at a time: a search waits for no more than these of what a large tree kept,
 # and the loop hands each piece out in some milliseconds
 KEPT_READ_AT_ONCE = 500
+# How many files a search marks as wanted at a time before the loop answers anything else
+WANTED_AT_ONCE = 2000
 # What a file only made ready is waited for by: no search, so after every file one waits for
 NO_SEARCH = 0
 # A search's files too large to outline: none it needs to name, as they outline no name it could find
@@ -43,9 +45,53 @@ NONE_TOO_LARGE: frozenset[str] = frozenset()
 GRAMMARS_PREFIX = "tree-sitter"
 GENERATION_DIGEST_BYTES = 8
 
-# The names outlining one file; None where its parse was given up, so nothing can be said of what it outlines
-type Outline = list[OutlinedName] | None
 OUTLINE_KEPT_AS = TypeAdapter[list[OutlinedName]](list[OutlinedName])
+# What stands between two names lower-cased: no name holds it
+NAMES_APART = "\n"
+
+
+class HeldOutline(BaseModel):
+    """The names outlining a file, held in the form they are kept in, each name beside it as a search matches it."""
+
+    model_config = ConfigDict(frozen=True)
+
+    # A name becomes a model only where one is asked for: a large tree's tens of thousands held as models give the
+    # collector hundreds of thousands of objects to walk, the loop waiting while it does
+    kept: bytes
+    names: list[str]
+    # Each name lower-cased, as the tree's filter matches names, and all of them together, one to a line: a file
+    # holding none of a text is passed over in one look
+    lowered: list[str]
+    lowered_together: str
+
+    @classmethod
+    def of(cls, outlining: list[OutlinedName]) -> HeldOutline:
+        """The names a parse outlined, made ready to keep."""
+        return cls._held(OUTLINE_KEPT_AS.dump_json(outlining), outlining)
+
+    @classmethod
+    def read_back(cls, kept: bytes) -> HeldOutline:
+        """The names kept for a file, read back.
+
+        Raises:
+            ValidationError: if they were kept in a form this code does not read.
+        """
+        return cls._held(kept, OUTLINE_KEPT_AS.validate_json(kept))
+
+    @classmethod
+    def _held(cls, kept: bytes, outlining: list[OutlinedName]) -> HeldOutline:
+        """The names as kept, each read out beside them."""
+        names = [name.name for name in outlining]
+        lowered = [name.lower() for name in names]
+        return cls(kept=kept, names=names, lowered=lowered, lowered_together=NAMES_APART.join(lowered))
+
+    def outlining(self) -> list[OutlinedName]:
+        """Every name, as a model."""
+        return OUTLINE_KEPT_AS.validate_json(self.kept)
+
+
+# The names outlining one file; None where its parse was given up, so nothing can be said of what it outlines
+type Outline = HeldOutline | None
 
 
 class NamesParsing(BaseModel):
@@ -87,7 +133,8 @@ class FileHeld(BaseModel):
 
 
 class CodeOfTree(BaseModel):
-    """The files of a tree a grammar reads and the review outlines: none too large to read."""
+    """The files of a tree a grammar reads and the review outlines, in the order of their paths: none too large to
+    read."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -101,14 +148,14 @@ class CodeOfTree(BaseModel):
             tree=tree,
             files=[
                 FileHeld.at(path, object_id)
-                for path, object_id in blobs.object_ids.items()
+                for path, object_id in sorted(blobs.object_ids.items())
                 if code_files_of(path) is not None
             ],
         )
 
 
 class TextSought(BaseModel):
-    """The files of a tree's code that git says hold a text."""
+    """The files of a tree's code that git says hold a text, in the order of their paths."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -127,17 +174,21 @@ class FileRead(BaseModel):
 
 
 class FilesOutlined(BaseModel):
-    """Files of a tree by path, each with the names outlining it, None where nothing can be said of them, and whether
-    every file asked about is among them."""
+    """Files of a tree by path, in the order asked, each with the names outlining it, None where nothing can be said
+    of them, and whether every file asked about is among them."""
 
     model_config = ConfigDict(frozen=True)
 
     outlined: dict[str, Outline]
     complete: bool
 
-    def outline_of(self, path: str) -> Outline:
-        """The names outlining a file: none where the tree holds no file at the path."""
-        return self.outlined.get(path, [])
+    def outline_of(self, path: str) -> list[OutlinedName] | None:
+        """The names outlining a file: none where the tree holds no file at the path, None where nothing can be said
+        of it."""
+        if path not in self.outlined:
+            return []
+        held = self.outlined[path]
+        return None if held is None else held.outlining()
 
 
 class FilesAsked(BaseModel):
@@ -161,46 +212,13 @@ class FilesAsked(BaseModel):
         )
 
 
-class FileNames(BaseModel):
-    """The names outlining one file, in the order of its lines, each beside it lower-cased, as the tree's filter
-    matches names."""
-
-    model_config = ConfigDict(frozen=True)
-
-    path: str
-    names: list[OutlinedName]
-    lowered: list[str]
-
-
-class NamesOutlining(BaseModel):
-    """The names outlining files, file by file in the order of their paths, and whether those are every file asked
-    about."""
-
-    model_config = ConfigDict(frozen=True)
-
-    files: list[FileNames]
-    complete: bool
-
-    @classmethod
-    def of(cls, outlined: FilesOutlined) -> NamesOutlining:
-        """The names outlining the files outlined, a file whose parse was given up left out."""
-        return cls(
-            files=[
-                FileNames(path=path, names=names, lowered=[name.name.lower() for name in names])
-                for path in sorted(outlined.outlined)
-                if (names := outlined.outline_of(path))
-            ],
-            complete=outlined.complete,
-        )
-
-
 class NamesOfTree(BaseModel):
-    """Every name outlining a tree's files, once every one is outlined: what a search of it reads from then on."""
+    """Every file of a tree outlined, once every one is: what a search of it reads from then on."""
 
     model_config = ConfigDict(frozen=True)
 
     tree: str
-    names: NamesOutlining
+    outlined: FilesOutlined
 
 
 class Outlines:
@@ -226,7 +244,9 @@ class Outlines:
         # asks again for the same text until every file holding it is outlined
         self._listed: CodeOfTree | None = None
         self._sought: TextSought | None = None
-        # Every name of the last tree listed, once its every file is outlined
+        # Done once the files the last text sought waited for, when it was first asked, are outlined
+        self._sought_outlined: asyncio.Future[list[Outline | BaseException]] | None = None
+        # Every file of the last tree listed, once each is outlined
         self._whole: NamesOfTree | None = None
         # The work going on, held so the loop does not lose it
         self._running: set[asyncio.Task[None]] = set()
@@ -239,13 +259,14 @@ class Outlines:
         """
         at = await self._repository.blobs_at(self._root, tree, paths)
         files = [FileHeld.at(path, object_id) for path, object_id in at.object_ids.items()]
-        asked = FilesAsked(outlines=self._asked(files, wanted=True), too_large=at.too_large)
+        asked = FilesAsked(outlines=self._asked(files), too_large=at.too_large)
+        await self._want(files)
         # Shielded: a request let go of leaves each outline to whoever else waits for it
         await asyncio.gather(*(asyncio.shield(outline) for outline in asked.outlines.values()))
         return asked.so_far()
 
-    async def names_holding_text(self, tree: str, text: str, *, waits: SearchWaits) -> NamesOutlining:
-        """The names outlining the files of the tree that may hold a text, whatever its case, of as many files
+    async def holding_text(self, tree: str, text: str, *, waits: SearchWaits) -> FilesOutlined:
+        """The files of the tree that may hold a text, whatever its case, in the order of their paths, as many
         outlined as are by the time it waits: every file of a grammar the review reads where all of them are
         outlined, else those git says hold it.
 
@@ -253,19 +274,27 @@ class Outlines:
             GitError: if git cannot read the tree.
         """
         code = await self._code_of(tree)
-        whole = await self._whole_of(code)
+        whole = self._whole_of(code)
         if whole is not None:
             return whole
         last_sought = self._sought
         sought = await self._holding(code, text)
-        # Asked again for the same text, the files it waits for are queued already
-        asked_again = sought is last_sought
-        asked = self._asked(sought.files, wanted=not asked_again)
-        waiting = [outline for outline in asked.values() if not outline.done()]
-        if waiting:
+        asked = self._asked(sought.files)
+        # Asked again for the same text, the files it waits for are queued already, and one wait stands for them all
+        asked_again = sought is last_sought and self._sought_outlined is not None
+        if not asked_again:
+            await self._want(sought.files)
+            # Gathered once for every asking of the text: waiting on thousands of outlines each time costs the loop
+            # tens of milliseconds
+            self._sought_outlined = asyncio.gather(
+                *(outline for outline in asked.values() if not outline.done()), return_exceptions=True
+            )
+        if self._sought_outlined is not None and not self._sought_outlined.done():
             # Waiting leaves the outlines it stops waiting for on their way
-            await asyncio.wait(waiting, timeout=waits.again_seconds if asked_again else waits.first_seconds)
-        return await _gathered(asked)
+            await asyncio.wait(
+                {self._sought_outlined}, timeout=waits.again_seconds if asked_again else waits.first_seconds
+            )
+        return FilesAsked(outlines=asked, too_large=NONE_TOO_LARGE).so_far()
 
     async def make_ready(self, tree: str) -> None:
         """Have every file of the tree outlined, behind whatever a search waits for.
@@ -274,7 +303,7 @@ class Outlines:
             GitError: if git cannot list the tree.
         """
         code = await self._code_of(tree)
-        self._asked(code.files, wanted=False)
+        self._asked(code.files)
 
     async def _code_of(self, tree: str) -> CodeOfTree:
         """The files of a tree a grammar reads, listed once for as long as it is the last tree listed.
@@ -305,37 +334,44 @@ class Outlines:
         self._sought = sought
         return sought
 
-    async def _whole_of(self, code: CodeOfTree) -> NamesOutlining | None:
-        """Every name outlining a tree's files, gathered once its every file is outlined, so a search of it needs
-        nothing of git; None until then."""
+    def _whole_of(self, code: CodeOfTree) -> FilesOutlined | None:
+        """Every file of a tree outlined, gathered once each is, so a search of it needs nothing of git; None until
+        then."""
         whole = self._whole
         if whole is not None and whole.tree == code.tree:
-            return whole.names
+            return whole.outlined
         # A file git failed to read is asked about anew: a tree holding one is not whole until that file is read
         if not all((outline := self._outlines.get(file.key)) is not None and outline.done() for file in code.files):
             return None
-        names = await _gathered(self._held(code.files))
-        self._whole = NamesOfTree(tree=code.tree, names=names)
-        return names
+        outlined = FilesAsked(outlines=self._held(code.files), too_large=NONE_TOO_LARGE).so_far()
+        self._whole = NamesOfTree(tree=code.tree, outlined=outlined)
+        return outlined
 
-    def _asked(self, files: list[FileHeld], *, wanted: bool) -> dict[str, asyncio.Future[Outline]]:
-        """These files' outlines by path, each on its way: kept, being parsed, or now queued to be; wanted, they are
-        parsed before whatever else waits."""
+    def _asked(self, files: list[FileHeld]) -> dict[str, asyncio.Future[Outline]]:
+        """These files' outlines by path, each on its way: kept, being parsed, or now queued to be."""
         new = {file.key: file for file in files if file.key not in self._outlines}
         loop = asyncio.get_running_loop()
         self._outlines.update((key, loop.create_future()) for key in new)
-        if wanted:
-            self._searches += 1
-            for file in files:
-                if not self._outlines[file.key].done():
-                    self._wanted[file.key] = self._searches
-                    self._queue_if_waiting(file.key)
         if new:
             self._run(self._fetch(list(new.values())))
         return self._held(files)
 
+    async def _want(self, files: list[FileHeld]) -> None:
+        """Have these files parsed before whatever else waits, a piece at a time, as a search of a large tree's every
+        file wants tens of thousands."""
+        self._searches += 1
+        search = self._searches
+        for piece in batched(files, WANTED_AT_ONCE, strict=False):
+            for file in piece:
+                # A later search, asked while this one gave the loop its turn, keeps the files it wants first
+                if not self._outlines[file.key].done() and self._wanted.get(file.key, NO_SEARCH) < search:
+                    self._wanted[file.key] = search
+                    self._queue_if_waiting(file.key)
+            # The loop's turn: other requests are answered between pieces
+            await asyncio.sleep(0)
+
     def _held(self, files: list[FileHeld]) -> dict[str, asyncio.Future[Outline]]:
-        """The outlines of files asked about already, done or on their way, by path."""
+        """The outlines of files asked about already, done or on their way, by path, in the order of the files."""
         return {file.path: self._outlines[file.key] for file in files}
 
     async def _fetch(self, files: list[FileHeld]) -> None:
@@ -346,13 +382,13 @@ class Outlines:
             # Off the loop: kept outlines take the interpreter a while to read back
             read_back = await asyncio.to_thread(_read_back, kept) if kept else {}
             for file in piece:
-                names = read_back.get(file.key)
-                if names is None:
+                held = read_back.get(file.key)
+                if held is None:
                     self._waiting[file.key] = file
                     self._queue_if_waiting(file.key)
                 else:
                     self._wanted.pop(file.key, None)
-                    self._outlines[file.key].set_result(names)
+                    self._outlines[file.key].set_result(held)
             self._feed()
 
     def _queue_if_waiting(self, key: str) -> None:
@@ -398,11 +434,7 @@ class Outlines:
             return
         # A file nothing could be said of, given up or lost with its process, is outlined again by a later review
         await self._parsing.kept.keep(
-            {
-                file.key: OUTLINE_KEPT_AS.dump_json(names)
-                for file, names in zip(files, outlines, strict=True)
-                if names is not None
-            }
+            {file.key: held.kept for file, held in zip(files, outlines, strict=True) if held is not None}
         )
 
     async def _outlined(self, files: list[FileHeld]) -> list[Outline]:
@@ -415,17 +447,18 @@ class Outlines:
         contents = await self._repository.blobs_read(self._root, [file.object_id for file in files])
         read = [FileRead(path=file.path, content=content) for file, content in zip(files, contents, strict=True)]
         try:
-            return await asyncio.get_running_loop().run_in_executor(self._parsing.executor, _outlines_of, read)
+            outlinings = await asyncio.get_running_loop().run_in_executor(self._parsing.executor, _outlines_of, read)
         except BrokenProcessPool:
             log.exception("outline_process_died", files=len(files))
             return [None for _ in files]
+        return [None if outlining is None else HeldOutline.of(outlining) for outlining in outlinings]
 
     def _settle(self, files: list[FileHeld], outlines: list[Outline], unread: GitError | None) -> None:
         """Hand each of a chunk of files its outline, or, where git could not read them, the failure: a file
         that failed is asked about anew by whoever asks next."""
-        for file, names in zip(files, outlines, strict=True):
+        for file, held in zip(files, outlines, strict=True):
             if unread is None:
-                self._outlines[file.key].set_result(names)
+                self._outlines[file.key].set_result(held)
             else:
                 self._outlines.pop(file.key).set_exception(unread)
 
@@ -451,26 +484,15 @@ def outlines_generation() -> str:
     return digest.hexdigest()
 
 
-async def _gathered(outlines: dict[str, asyncio.Future[Outline]]) -> NamesOutlining:
-    """The names outlining the files asked about that are outlined by now, gathered off the loop: a large tree's
-    take the interpreter a while.
-
-    Raises:
-        GitError: if git could not read a file outlined by now.
-    """
-    outlined = FilesAsked(outlines=outlines, too_large=NONE_TOO_LARGE).so_far()
-    return await asyncio.to_thread(NamesOutlining.of, outlined)
-
-
-def _read_back(kept: dict[str, bytes]) -> dict[str, list[OutlinedName]]:
+def _read_back(kept: dict[str, bytes]) -> dict[str, HeldOutline]:
     """The outlines kept under each key, read back; one kept in a form this code does not read is left out."""
-    read_back: dict[str, list[OutlinedName]] = {}
+    read_back: dict[str, HeldOutline] = {}
     for key, outline_kept in kept.items():
         with suppress(ValidationError):
-            read_back[key] = OUTLINE_KEPT_AS.validate_json(outline_kept)
+            read_back[key] = HeldOutline.read_back(outline_kept)
     return read_back
 
 
-def _outlines_of(files: list[FileRead]) -> list[Outline]:
+def _outlines_of(files: list[FileRead]) -> list[list[OutlinedName] | None]:
     """The names outlining each file, in the order given: run in a process of the pool."""
     return [outline(file.path, file.content) for file in files]

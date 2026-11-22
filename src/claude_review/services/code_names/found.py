@@ -6,10 +6,13 @@ file is outlined once for the review's life (`Outlines`), and a search reads
 a large tree's every name: only those an answer lists are written out.
 """
 
+import asyncio
+
 from pydantic import BaseModel, ConfigDict
 
 from claude_review.domain.code_names import NAMES_FOUND_LISTED, FileNamesTouched, NameDefined, NamesFound
-from claude_review.services.code_names.outlines import Outlines, SearchWaits
+from claude_review.services.code_names.outlines import FilesOutlined, Outlines, SearchWaits
+from claude_review.services.code_names.reading import OutlinedName
 
 # The names the tree lists of a file the change did not touch
 NONE_LISTED: frozenset[str] = frozenset()
@@ -42,21 +45,35 @@ async def read_names_found(
     Raises:
         GitError: if git cannot read the tree.
     """
-    holding = await outlines.names_holding_text(tree, text, waits=waits)
+    holding = await outlines.holding_text(tree, text, waits=waits)
     listed_in_tree = {file.path: frozenset(name.name for name in file.names) for file in touched}
+    # Off the loop: a large tree's every name is read
+    return await asyncio.to_thread(_found_in, holding, text, listed_in_tree)
+
+
+def _found_in(holding: FilesOutlined, text: str, listed_in_tree: dict[str, frozenset[str]]) -> FoundSoFar:
+    """The names outlining these files that hold the text, those the tree lists left out."""
     # Lower-cased, as the page's filter matches the names the tree lists
     sought = text.lower()
     starting: list[NameDefined] = []
     holding_within: list[NameDefined] = []
     found_count = 0
-    for file in holding.files:
-        left_to_tree = listed_in_tree.get(file.path, NONE_LISTED)
-        for lowered, name in zip(file.lowered, file.names, strict=True):
-            if sought not in lowered or name.name in left_to_tree:
+    # A file whose parse was given up outlines nothing that can be said
+    for path, held in holding.outlined.items():
+        if held is None or sought not in held.lowered_together:
+            continue
+        left_to_tree = listed_in_tree.get(path, NONE_LISTED)
+        # Made only where one of its names is listed, and once for all of them
+        outlining: list[OutlinedName] | None = None
+        # By position, as the names stand beside their models
+        for position, lowered in enumerate(held.lowered):
+            if sought not in lowered or held.names[position] in left_to_tree:
                 continue
             found_count += 1
             run = starting if lowered.startswith(sought) else holding_within
             if len(run) < NAMES_FOUND_LISTED:
-                run.append(name.defined_in(file.path))
+                if outlining is None:
+                    outlining = held.outlining()
+                run.append(outlining[position].defined_in(path))
     names = [*starting, *holding_within][:NAMES_FOUND_LISTED]
     return FoundSoFar(names=names, more=found_count - len(names), complete=holding.complete)
