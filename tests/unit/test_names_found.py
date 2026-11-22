@@ -95,6 +95,24 @@ class TextSearched(TreesHeld):
         return [path for path, content in read.contents.items() if text.lower().encode() in content.lower()]
 
 
+class TextSearchedFailingFirst(TextSearched):
+    """Trees held in memory, each search of one counted, where git fails the first read of any content and reads
+    every later one a while later."""
+
+    def __init__(self, trees: dict[str, FilesRead]) -> None:
+        super().__init__(trees)
+        self.reads_count = 0
+
+    @override
+    async def blobs_read(self, root: Path, object_ids: list[str]) -> list[bytes]:
+        self.reads_count += 1
+        if self.reads_count == 1:
+            msg = "git could not read the content"
+            raise GitError(msg)
+        await asyncio.sleep(READ_A_WHILE_SECONDS)
+        return await super().blobs_read(root, object_ids)
+
+
 class TextSearchedSlowly(TextSearched):
     """Trees held in memory, each search of one counted, whose contents take a while to read."""
 
@@ -304,3 +322,15 @@ async def test_a_text_asked_again_while_its_files_are_outlined_is_searched_for_o
     found_again = await search(outlines, "fail", TAKE)
 
     assert (held.searches_count, len(found_again.names)) == (1, 2)
+
+
+async def test_a_text_asked_again_after_git_failed_to_read_one_of_its_files_waits_for_that_file_anew() -> None:
+    """As the page asks again at once while an answer is not whole: never an answer at once, asked again at once."""
+    held = TextSearchedFailingFirst({TAKE: FilesRead(contents={"src/attempts.py": ATTEMPTS}, too_large=frozenset())})
+    outlines = Outlines(held, ROOT, parsing_in_tests())
+    with pytest.raises(GitError):
+        await search(outlines, "fail", TAKE)
+
+    found_again = await search(outlines, "fail", TAKE)
+
+    assert (found_again.complete, len(found_again.names)) == (True, 2)
