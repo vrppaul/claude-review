@@ -32,11 +32,9 @@ log = structlog.get_logger()
 # How many files one process outlines at a time: few enough that a search asked meanwhile soon has a process free,
 # enough that handing them over costs little beside parsing them
 FILES_A_CHUNK = 32
-# How many kept outlines are read back at a time: a search waits for no more than these of what a large tree kept,
-# and the loop hands each piece out in some milliseconds
+# How many kept outlines are read back at a time: the loop hands each piece out in some milliseconds, and a file is
+# waited for no longer than its own piece is read
 KEPT_READ_AT_ONCE = 500
-# How many files a search marks as wanted at a time before the loop answers anything else
-WANTED_AT_ONCE = 2000
 # What a file only made ready is waited for by: no search, so after every file one waits for
 NO_SEARCH = 0
 # A search's files too large to outline: none it needs to name, as they outline no name it could find
@@ -155,13 +153,29 @@ class CodeOfTree(BaseModel):
 
 
 class TextSought(BaseModel):
-    """The files of a tree's code that git says hold a text, in the order of their paths."""
+    """The files of a tree's code that git says hold a text, in the order of their paths, and what every asking of
+    the text waits on."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(arbitrary_types_allowed=True, frozen=True)
 
     tree: str
     text: str
     files: list[FileHeld]
+    # Done once the files that were not outlined when it was made are: one wait for every asking, as waiting on
+    # thousands of outlines each time costs the loop tens of milliseconds
+    outlined: asyncio.Future[list[Outline | BaseException]]
+
+    @classmethod
+    def waiting(
+        cls, tree: str, text: str, files: list[FileHeld], outlines: list[asyncio.Future[Outline]]
+    ) -> TextSought:
+        """The files holding a text, waiting on those of their outlines not done yet."""
+        pending = [outline for outline in outlines if not outline.done()]
+        return cls(tree=tree, text=text, files=files, outlined=asyncio.gather(*pending, return_exceptions=True))
+
+    def is_of(self, tree: str, text: str) -> bool:
+        """Whether it is what git said of this text in this tree."""
+        return self.tree == tree and self.text == text
 
 
 class FileRead(BaseModel):
@@ -244,8 +258,6 @@ class Outlines:
         # asks again for the same text until every file holding it is outlined
         self._listed: CodeOfTree | None = None
         self._sought: TextSought | None = None
-        # Done once the files the last text sought waited for, when it was first asked, are outlined
-        self._sought_outlined: asyncio.Future[list[Outline | BaseException]] | None = None
         # Every file of the last tree listed, once each is outlined
         self._whole: NamesOfTree | None = None
         # The work going on, held so the loop does not lose it
@@ -260,7 +272,7 @@ class Outlines:
         at = await self._repository.blobs_at(self._root, tree, paths)
         files = [FileHeld.at(path, object_id) for path, object_id in at.object_ids.items()]
         asked = FilesAsked(outlines=self._asked(files), too_large=at.too_large)
-        await self._want(files)
+        self._want(files)
         # Shielded: a request let go of leaves each outline to whoever else waits for it
         await asyncio.gather(*(asyncio.shield(outline) for outline in asked.outlines.values()))
         return asked.so_far()
@@ -277,23 +289,24 @@ class Outlines:
         whole = self._whole_of(code)
         if whole is not None:
             return whole
-        last_sought = self._sought
-        sought = await self._holding(code, text)
-        asked = self._asked(sought.files)
-        # Asked again for the same text, the files it waits for are queued already, and one wait stands for them all
-        asked_again = sought is last_sought and self._sought_outlined is not None
-        if not asked_again:
-            await self._want(sought.files)
-            # Gathered once for every asking of the text: waiting on thousands of outlines each time costs the loop
-            # tens of milliseconds
-            self._sought_outlined = asyncio.gather(
-                *(outline for outline in asked.values() if not outline.done()), return_exceptions=True
-            )
-        if self._sought_outlined is not None and not self._sought_outlined.done():
+        sought = self._sought
+        if sought is not None and sought.is_of(tree, text):
+            # Asked again for the same text: the files it waits for are queued already
+            timeout = waits.again_seconds
+            asked = self._asked(sought.files)
+            if sought.outlined.done() and not all(outline.done() for outline in asked.values()):
+                # A file git failed to read is asked about anew, and waited on anew
+                sought = TextSought.waiting(tree, text, sought.files, list(asked.values()))
+        else:
+            timeout = waits.first_seconds
+            files = await self._holding(code, text)
+            asked = self._asked(files)
+            self._want(files)
+            sought = TextSought.waiting(tree, text, files, list(asked.values()))
+        self._sought = sought
+        if not sought.outlined.done():
             # Waiting leaves the outlines it stops waiting for on their way
-            await asyncio.wait(
-                {self._sought_outlined}, timeout=waits.again_seconds if asked_again else waits.first_seconds
-            )
+            await asyncio.wait({sought.outlined}, timeout=timeout)
         return FilesAsked(outlines=asked, too_large=NONE_TOO_LARGE).so_far()
 
     async def make_ready(self, tree: str) -> None:
@@ -320,19 +333,14 @@ class Outlines:
         self._listed = listed
         return listed
 
-    async def _holding(self, code: CodeOfTree, text: str) -> TextSought:
-        """The files of a tree a grammar reads that hold a text, as git said for the last text sought, or says now.
+    async def _holding(self, code: CodeOfTree, text: str) -> list[FileHeld]:
+        """The files of a tree a grammar reads that git says hold a text, in the order of their paths.
 
         Raises:
             GitError: if git cannot search the tree.
         """
-        sought = self._sought
-        if sought is not None and sought.tree == code.tree and sought.text == text:
-            return sought
         holding = frozenset(await self._repository.paths_with_text(self._root, code.tree, text))
-        sought = TextSought(tree=code.tree, text=text, files=[file for file in code.files if file.path in holding])
-        self._sought = sought
-        return sought
+        return [file for file in code.files if file.path in holding]
 
     def _whole_of(self, code: CodeOfTree) -> FilesOutlined | None:
         """Every file of a tree outlined, gathered once each is, so a search of it needs nothing of git; None until
@@ -356,19 +364,13 @@ class Outlines:
             self._run(self._fetch(list(new.values())))
         return self._held(files)
 
-    async def _want(self, files: list[FileHeld]) -> None:
-        """Have these files parsed before whatever else waits, a piece at a time, as a search of a large tree's every
-        file wants tens of thousands."""
+    def _want(self, files: list[FileHeld]) -> None:
+        """Have these files, asked about already, parsed before whatever else waits."""
         self._searches += 1
-        search = self._searches
-        for piece in batched(files, WANTED_AT_ONCE, strict=False):
-            for file in piece:
-                # A later search, asked while this one gave the loop its turn, keeps the files it wants first
-                if not self._outlines[file.key].done() and self._wanted.get(file.key, NO_SEARCH) < search:
-                    self._wanted[file.key] = search
-                    self._queue_if_waiting(file.key)
-            # The loop's turn: other requests are answered between pieces
-            await asyncio.sleep(0)
+        for file in files:
+            if not self._outlines[file.key].done():
+                self._wanted[file.key] = self._searches
+                self._queue_if_waiting(file.key)
 
     def _held(self, files: list[FileHeld]) -> dict[str, asyncio.Future[Outline]]:
         """The outlines of files asked about already, done or on their way, by path, in the order of the files."""
@@ -447,11 +449,10 @@ class Outlines:
         contents = await self._repository.blobs_read(self._root, [file.object_id for file in files])
         read = [FileRead(path=file.path, content=content) for file, content in zip(files, contents, strict=True)]
         try:
-            outlinings = await asyncio.get_running_loop().run_in_executor(self._parsing.executor, _outlines_of, read)
+            return await asyncio.get_running_loop().run_in_executor(self._parsing.executor, _outlines_of, read)
         except BrokenProcessPool:
             log.exception("outline_process_died", files=len(files))
             return [None for _ in files]
-        return [None if outlining is None else HeldOutline.of(outlining) for outlining in outlinings]
 
     def _settle(self, files: list[FileHeld], outlines: list[Outline], unread: GitError | None) -> None:
         """Hand each of a chunk of files its outline, or, where git could not read them, the failure: a file
@@ -493,6 +494,7 @@ def _read_back(kept: dict[str, bytes]) -> dict[str, HeldOutline]:
     return read_back
 
 
-def _outlines_of(files: list[FileRead]) -> list[list[OutlinedName] | None]:
-    """The names outlining each file, in the order given: run in a process of the pool."""
-    return [outline(file.path, file.content) for file in files]
+def _outlines_of(files: list[FileRead]) -> list[Outline]:
+    """The names outlining each file, in the order given, held as they are kept: run in a process of the pool."""
+    outlinings = [outline(file.path, file.content) for file in files]
+    return [None if outlining is None else HeldOutline.of(outlining) for outlining in outlinings]
