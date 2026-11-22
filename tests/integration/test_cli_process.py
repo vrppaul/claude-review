@@ -230,12 +230,13 @@ class CliProcesses:
 
 @pytest.fixture
 def cli(tmp_path_factory: pytest.TempPathFactory) -> Iterator[CliProcesses]:
-    """The command line, run with the reader's files and the temporary directories under this test's own."""
+    """The command line, run with the reader's files, the cache and the temporary directories under this test's own."""
     reader_home = tmp_path_factory.mktemp("reader")
     environment = {
         **os.environ,
         "XDG_CONFIG_HOME": str(reader_home / "config"),
         "XDG_STATE_HOME": str(reader_home / "state"),
+        "XDG_CACHE_HOME": str(reader_home / "cache"),
         "TMPDIR": str(tmp_path_factory.mktemp("temporary")),
     }
     processes = CliProcesses(environment)

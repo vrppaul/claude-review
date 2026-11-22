@@ -10,11 +10,14 @@ from collections.abc import AsyncGenerator
 from pathlib import Path
 from typing import BinaryIO
 
+import structlog
 from pydantic import BaseModel
 
 from claude_review.hosting.address import review_url
 from claude_review.hosting.announcer import ReviewAnnouncer
 from claude_review.hosting.errors import ReviewAlreadyOpenError, WorkspaceRefusedError
+
+log = structlog.get_logger()
 
 # Where every review of one user keeps what it kept of itself, in the system's
 # temporary directory: named by the user's id, so each user has one
@@ -50,6 +53,8 @@ GUIDE_FILE = "guide.json"
 CACHE_HOME_VARIABLE = "XDG_CACHE_HOME"
 CACHE_HOME_FALLBACK = Path(".cache")
 OUTLINES_FILE = "names-{generation}.sqlite"
+# The file of every generation, with the journals SQLite writes beside it under its name (-wal, -shm)
+OUTLINES_OF_ANY_GENERATION = OUTLINES_FILE.format(generation="*") + "*"
 
 
 class ReviewWorkspace(BaseModel):
@@ -245,6 +250,24 @@ def outlines_file(generation: str) -> Path:
     """Where this machine's reviews keep the names outlining files, as code of this generation outlines them."""
     cache = _base_directory(CACHE_HOME_VARIABLE, CACHE_HOME_FALLBACK)
     return cache / READER_DIRECTORY / OUTLINES_FILE.format(generation=generation)
+
+
+async def forget_outlines_of_other_code(generation: str) -> None:
+    """Remove the names every other generation of the code outlined: no review of this code reads them."""
+    # A review of other code still running keeps again what it outlines next
+    try:
+        await asyncio.to_thread(_forget_all_but, outlines_file(generation))
+    except OSError:
+        # A file left is only room taken: the review opens all the same
+        log.warning("outlines_not_forgotten", exc_info=True)
+
+
+def _forget_all_but(kept: Path) -> None:
+    """Remove the outlines of every generation beside these, with their journals."""
+    for outlines in kept.parent.glob(OUTLINES_OF_ANY_GENERATION):
+        if not outlines.name.startswith(kept.name):
+            # Another review of the same other code may have removed it first
+            outlines.unlink(missing_ok=True)
 
 
 def _base_directory(variable: str, fallback: Path) -> Path:

@@ -65,9 +65,11 @@ BEFORE_THE_PORT = ":"
 SERVED_WITHIN_SECONDS = 30
 COMMAND_WITHIN_SECONDS = 60
 
-# Where the review keeps what it remembers about its reader, by the XDG base directory rules
+# Where the review keeps what it remembers about its reader, and the names it outlined, by the XDG base directory
+# rules: the look's own, as a review removes the names other code outlined
 CONFIG_HOME_VARIABLE = "XDG_CONFIG_HOME"
 STATE_HOME_VARIABLE = "XDG_STATE_HOME"
+CACHE_HOME_VARIABLE = "XDG_CACHE_HOME"
 # Where git reads the settings of whoever runs it and of the machine: nowhere, so a look is the
 # same look on every machine
 GIT_VARIABLE_PREFIX = "GIT_"
@@ -75,11 +77,12 @@ GIT_SETTINGS_OF_THE_USER = "GIT_CONFIG_GLOBAL"
 GIT_WITHOUT_THE_MACHINES_SETTINGS = "GIT_CONFIG_NOSYSTEM"
 GIT_YES = "1"
 
-# What the look's own directory holds: the repository, the story's document, and the reader's two homes
+# What the look's own directory holds: the repository, the story's document, the reader's two homes and the cache
 REPOSITORY = "long-change"
 STORY_DOCUMENT = "story.json"
 CONFIG_HOME = "config"
 STATE_HOME = "state"
+CACHE_HOME = "cache"
 SCRATCH_PREFIX = "claude-review-look-"
 
 # How git commits what the change is made against, and as whom
@@ -139,6 +142,7 @@ def _environment(scratch: Path) -> dict[str, str]:
         **inherited,
         CONFIG_HOME_VARIABLE: str(scratch / CONFIG_HOME),
         STATE_HOME_VARIABLE: str(scratch / STATE_HOME),
+        CACHE_HOME_VARIABLE: str(scratch / CACHE_HOME),
         GIT_SETTINGS_OF_THE_USER: os.devnull,
         GIT_WITHOUT_THE_MACHINES_SETTINGS: GIT_YES,
     }

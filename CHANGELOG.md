@@ -95,7 +95,8 @@
   defines whose names hold what you typed, each with its file; pressing
   one takes you to it. Twenty are listed, and a line counts the rest. A
   file's names are read once ever: kept in `~/.cache/claude-review` by what
-  the file holds, so a later review reads only the files that changed.
+  the file holds, so a later review reads only the files that changed, and
+  removed once another release of the review starts.
   They are read in several processes, the files a search waits for first,
   and the review starts on the whole tree as you come to the filter;
   where a search outruns them, what is found so far shows over breathing

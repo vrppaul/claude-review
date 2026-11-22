@@ -28,6 +28,7 @@ from claude_review.hosting.hosted_review import HostedReview, host_review
 from claude_review.hosting.ports import bind, stable_port
 from claude_review.hosting.review_server import ReviewServer
 from claude_review.hosting.workspace import (
+    forget_outlines_of_other_code,
     forget_review,
     note_address,
     outlines_file,
@@ -163,6 +164,7 @@ async def _names_parsing(*, reads_code: bool) -> AsyncGenerator[NamesParsing]:
     are let go of with the review, unfinished work dropped."""
     workers = min(MOST_PARSING_WORKERS, os.process_cpu_count() or 1)
     generation = await asyncio.to_thread(outlines_generation)
+    await forget_outlines_of_other_code(generation)
     executor = ProcessPoolExecutor(max_workers=workers)
     starting = asyncio.create_task(asyncio.to_thread(_processes_started, executor, workers)) if reads_code else None
     try:

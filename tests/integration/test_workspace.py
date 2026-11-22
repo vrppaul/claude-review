@@ -19,7 +19,13 @@ from claude_review.cli.terminal_announcer import TerminalAnnouncer
 from claude_review.hosting.announcer import ReviewAnnouncer
 from claude_review.hosting.address import review_url
 from claude_review.hosting.errors import ReviewAlreadyOpenError, WorkspaceRefusedError
-from claude_review.hosting.workspace import KEPT_BY_EVERY_REVIEW, ONLY_THE_USER, note_address, review_workspace
+from claude_review.hosting.workspace import (
+    KEPT_BY_EVERY_REVIEW,
+    ONLY_THE_USER,
+    forget_outlines_of_other_code,
+    note_address,
+    review_workspace,
+)
 from tests.helpers import PNG
 
 # Two reviews, by the short names of their identities, as the command line names each
@@ -161,3 +167,18 @@ def test_the_terminal_is_told_where_the_images_stay(tmp_path: Path, capsys: pyte
     TerminalAnnouncer(open_browser=False).images_left_in(tmp_path)
 
     assert str(tmp_path) in capsys.readouterr().err
+
+
+async def test_the_names_other_code_outlined_are_removed_with_their_journals(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """No review of this code reads them, and they would stay in the cache for good."""
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path))
+    kept = tmp_path / "claude-review"
+    kept.mkdir()
+    for left in ["names-0123.sqlite", "names-0123.sqlite-wal", "names-4567.sqlite", "names-4567.sqlite-wal"]:
+        (kept / left).write_bytes(b"")
+
+    await forget_outlines_of_other_code("0123")
+
+    assert sorted(left.name for left in kept.iterdir()) == ["names-0123.sqlite", "names-0123.sqlite-wal"]

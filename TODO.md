@@ -305,8 +305,6 @@ What a thing is:
       machine: each answer gathers the outlines of every file holding it
       anew (on vscode, "e" in 16,000 files). Answering from what changed
       since the last answer would end it.
-- [ ] `chore(names)`: the kept outlines of an older generation of the code
-      are never removed from `~/.cache/claude-review` (836 KB each here).
 - [ ] `feat`: what the server does not find yet. A Svelte component is
       defined by its file, which the lookup reports as no definition
       (`CommentThread` gave 13 places and none defining it); a loop's
