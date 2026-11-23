@@ -41,11 +41,6 @@ tests. Remove items when done — don't check them off.
 
 ## Bugs
 
-- [ ] `fix(api)`: a body over `MAX_REQUEST_BYTES` is refused with 413
-      (`presentation/body_limit.py`), but no route's schema says it can be,
-      so the schema's fuzzing (`-m schema`) fails on `POST /api/message`
-      whenever it draws one that long (2 of 4 on 2026-11-23, none the run
-      before). Say 413 in the schema of every route that takes a body.
 - [ ] `fix(server)`: a file git takes for text may hold a NUL past its
       first 8,000 bytes, and the read callback that feeds a parse
       (`services/code_names/reading.py`, `_parsed`) hands tree-sitter

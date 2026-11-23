@@ -17,10 +17,12 @@ from fastapi import FastAPI
 from hypothesis import HealthCheck, settings
 from schemathesis import Case
 from schemathesis.checks import CheckFunction
+from schemathesis.config import SchemathesisConfig
 from schemathesis.specs.openapi.checks import positive_data_acceptance
 
 from claude_review.hosting.hosted_review import HostedReview
 from claude_review.presentation.api_schema import http_document
+from claude_review.presentation.errors import REFUSAL_STATUS, REFUSED_FOR_INPUT
 from claude_review.presentation.schemas.base import MAX_WAIT_SECONDS
 from claude_review.services.image_service import IMAGE_FORMATS
 from claude_review.services.review_opening import ReviewOpening
@@ -38,6 +40,15 @@ from tests.helpers import (
 # schema can say: that what it names — a thread, a file, a base — is in the
 # review, that a range starts before it ends, that a message says something
 BEYOND_THE_SCHEMA: list[CheckFunction] = [positive_data_acceptance]
+
+# What a request the schema does not allow is refused with: whatever the review refuses with. Schemathesis's own list
+# leaves out 413, which the review answers a body too long to read with before any field of it is checked
+REFUSALS = sorted(
+    {*REFUSAL_STATUS.values(), *(status for statuses in REFUSED_FOR_INPUT.values() for status in statuses)}
+)
+REFUSALS_OF_WHAT_IS_NOT_ALLOWED = SchemathesisConfig.from_dict(
+    {"checks": {"negative_data_rejection": {"expected-statuses": [str(status.value) for status in REFUSALS]}}}
+)
 
 schema = schemathesis.pytest.from_fixture("described_schema")
 
@@ -103,7 +114,7 @@ def changed_repository(tmp_git_repo: Path) -> Path:
 @pytest.fixture
 def described_schema() -> schemathesis.BaseSchema:
     """The API as the page's types are written from it: in-process, since the review serves no description of it."""
-    return schemathesis.openapi.from_dict(http_document())
+    return schemathesis.openapi.from_dict(http_document(), config=REFUSALS_OF_WHAT_IS_NOT_ALLOWED)
 
 
 @pytest.fixture
