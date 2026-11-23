@@ -195,7 +195,9 @@ async def test_files_chosen_while_the_files_are_read_leave_the_reader_where_they
     await read.evaluate("number => number.scrollIntoView({ block: 'start' })")
     await page.evaluate("() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)))")
     await page.keyboard.press("n")
-    await page.get_by_test_id("file-alone-view").wait_for()
+    # The place left is noted for Back once the file read alone is read, which its lines say
+    alone = page.get_by_test_id("file-alone-view")
+    await alone.get_by_role("button", name=f"Comment on line {CHANGED_LINE}", exact=True).wait_for()
     await page.keyboard.press("b")
     await page.get_by_test_id("diff-view").wait_for()
 
