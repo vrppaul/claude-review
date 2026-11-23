@@ -9,13 +9,8 @@
  * the same, and keeps them.
  */
 
-import type { PlaceRead, ReadingViewName } from '$lib/review/reading-view';
+import type { PlaceLeft } from '$lib/review/reading-view';
 import type { ReviewDiff } from '$lib/review/review-diff.svelte';
-
-/** Where the reader was as the page took them elsewhere: the view they read in, and where in it. */
-export interface PlaceLeft extends PlaceRead {
-	view: ReadingViewName;
-}
 
 /** The places left, and the take of the diff they were read in. */
 interface Stack {

@@ -13,9 +13,15 @@
 import { threadPlaceOf, type ThreadLines } from '$lib/anchors/views';
 import type { LineArrivedAt, NameOnLine } from '$lib/dom/arrived-line.svelte';
 import type { FileSections } from '$lib/dom/file-sections';
-import { fileSectionKey, type ReadingView, type ReadingViewName } from '$lib/review/reading-view';
+import {
+	fileSectionKey,
+	type PlaceLeft,
+	placeLeftIn,
+	type ReadingView,
+	type ReadingViewName
+} from '$lib/review/reading-view';
 import type { Threads } from '$lib/review/threads.svelte';
-import type { PlaceLeft, WayBack } from '$lib/review/way-back.svelte';
+import type { WayBack } from '$lib/review/way-back.svelte';
 import type { LinePlace, Thread } from '$lib/types';
 import { placeKey } from '$lib/utils/line-places';
 
@@ -180,7 +186,7 @@ export class Navigator {
 	 * Where they were is noted for Back.
 	 */
 	async readAlone(path: string): Promise<void> {
-		const left = this.#placeRead();
+		const left = placeLeftIn(this.#views.onScreen);
 		const alone = await this.#views.readAlone(path);
 		this.#noteComingInto(left, alone, path);
 		const section = alone.sectionOfFile(path);
@@ -228,7 +234,7 @@ export class Navigator {
 	 * for Back once they are taken somewhere else.
 	 */
 	async goToLine(path: string, line: LinePlace, name: NameOnLine | null): Promise<void> {
-		const left = this.#placeRead();
+		const left = placeLeftIn(this.#views.onScreen);
 		const arrived = { line: placeKey(line), name };
 		const onScreen = await this.#views.onScreen.drawLine(path, line);
 		if (onScreen !== null) {
@@ -244,22 +250,15 @@ export class Navigator {
 	 * Take the reader back to the last place they left in the take on
 	 * screen, as they saw it: in the view they read it in, how they chose
 	 * to read left as it is, or among the change's files where that view
-	 * cannot draw the place now. The place is taken off the way back, and
-	 * going there notes none.
+	 * cannot draw the place now; the keyboard on what they read from. The
+	 * place is taken off the way back, and going there notes none.
 	 */
 	async goBack(): Promise<void> {
 		const left = this.#wayBack.takeTop();
 		if (left === null) return;
-		if (await this.#views.show(left.view).returnTo(left.place)) return;
+		if (await this.#views.show(left.view).returnTo(left.place, 'to-the-place')) return;
 		const files = await this.#views.showTheChange();
-		await files.returnTo(left.place);
-	}
-
-	/** Where the reader reads, in the view on screen. */
-	#placeRead(): PlaceLeft | null {
-		const onScreen = this.#views.onScreen;
-		const read = onScreen.placeRead();
-		return read === null ? null : { ...read, view: onScreen.name };
+		await files.returnTo(left.place, 'to-the-place');
 	}
 
 	/**
@@ -281,7 +280,7 @@ export class Navigator {
 
 	/** Bring a thread on lines into view in the view of the Files way of reading that draws it, brought on screen for it. */
 	async #revealWhereRead(thread: Thread, lines: ThreadLines): Promise<void> {
-		const left = this.#placeRead();
+		const left = placeLeftIn(this.#views.onScreen);
 		const drawing = await this.#views.showWhereRead(lines);
 		this.#noteComingInto(left, drawing, lines.file);
 		this.#revealIn(drawing, thread, lines);
@@ -310,7 +309,7 @@ export class Navigator {
 
 	/** Show a file in the view of the Files way of reading that draws it, brought on screen for it, if it draws any. */
 	async #showWhereFileRead(path: string): Promise<void> {
-		const left = this.#placeRead();
+		const left = placeLeftIn(this.#views.onScreen);
 		const drawing = await this.#views.showWhereFileRead(path);
 		this.#noteComingInto(left, drawing, path);
 		const section = drawing.sectionOfFile(path);

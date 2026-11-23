@@ -24,6 +24,13 @@ export interface ReadingPlace {
 }
 
 /**
+ * Whether going back to a place puts the keyboard on it, or leaves it where
+ * it is: a reader who comes back by a control that stays, the header's
+ * switch, keeps it there.
+ */
+export type KeyboardOnReturn = 'to-the-place' | 'where-it-is';
+
+/**
  * Where the reader is reading in what they read: of its lines they see
  * whole, past what is kept in sight at the top of the area, the first that
  * `standsAlike` keeps, or else the first; or its top, where they see none.
@@ -65,18 +72,32 @@ export function bringBack(place: ReadingPlace, readIn: HTMLElement, root: HTMLEl
 /**
  * Take the reader back to a place among what announced itself in a reading
  * area: to what they read in at once, so the rows near it are built, and
- * once that has come to rest, to the place as they saw it; `keyboardTo` is
- * then handed what they read in and its line, where that is drawn, to put
- * the keyboard on. Nowhere, for what is not drawn.
+ * once that has come to rest, to the place as they saw it; where the
+ * keyboard goes to the place, `keyboardTo` is then handed what they read in
+ * and its line, where that is drawn, to put it on. Nowhere, for what is not
+ * drawn.
  */
 export function goBackAmong<Said extends Announcement>(
 	announced: Announced<Said>,
 	jumps: Jumps,
 	place: ReadingPlace,
+	keyboard: KeyboardOnReturn,
 	keyboardTo: (said: Said, line: HTMLElement | null) => void
 ): void {
 	const said = announced.get(place.within);
 	const area = announced.area;
 	if (said === undefined || area === null) return;
-	jumps.land(announced.band, said.element, () => keyboardTo(said, bringBack(place, said.element, area)));
+	jumps.land(announced.band, said.element, () => comeBack(place, said, area, keyboard, keyboardTo));
+}
+
+/** Put the reader back at a place in what announced itself, once at rest, and the keyboard on it where it goes there. */
+function comeBack<Said extends Announcement>(
+	place: ReadingPlace,
+	said: Said,
+	area: HTMLElement,
+	keyboard: KeyboardOnReturn,
+	keyboardTo: (said: Said, line: HTMLElement | null) => void
+): void {
+	const line = bringBack(place, said.element, area);
+	if (keyboard === 'to-the-place') keyboardTo(said, line);
 }

@@ -25,7 +25,13 @@ import { firstInDocument } from '$lib/dom/document-order';
 import type { Jumps } from '$lib/dom/jump';
 import { focusWhatRemains, moveByLine, seenWhole } from '$lib/dom/keyboard';
 import { LineReadFrom } from '$lib/dom/line-read-from.svelte';
-import { bringBack, goBackAmong, type ReadingPlace, readingPlaceIn } from '$lib/dom/reading-place';
+import {
+	bringBack,
+	goBackAmong,
+	type KeyboardOnReturn,
+	type ReadingPlace,
+	readingPlaceIn
+} from '$lib/dom/reading-place';
 
 /**
  * What every toggle that folds something carries — a thread, a file — so the
@@ -206,13 +212,13 @@ export class FileSections {
 
 	/**
 	 * Take the reader back to where they were reading, as they saw it, once
-	 * the view that draws it is drawn: the keyboard on the line they read
-	 * from, or on the file's own toggle where they read from none.
+	 * the view that draws it is drawn: where the keyboard goes there, on the
+	 * line they read from, or on the file's own toggle where they read from none.
 	 */
-	goBackTo(place: ReadingPlace): void {
+	goBackTo(place: ReadingPlace, keyboard: KeyboardOnReturn): void {
 		this.#onceDrawn(
 			() => this.#sections.get(place.within),
-			() => goBackAmong(this.#sections, this.#jumps, place, keyboardToPlace)
+			() => goBackAmong(this.#sections, this.#jumps, place, keyboard, keyboardToPlace)
 		);
 	}
 

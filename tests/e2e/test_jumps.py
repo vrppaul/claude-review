@@ -4,8 +4,9 @@ A file's rows are built once the reader comes near it, and built they may
 take more room than their section held for them: a thread under a line, a
 line that wraps. So what lies below may still move after the page took the
 reader there, and the page marks the file only once it has come to rest. A
-reader who moves meanwhile is left where they went. Only a browser lays a
-page out and scrolls it.
+reader who moves meanwhile is left where they went. Back, and the reader
+choosing again a way of reading they left, take them to where they read.
+Only a browser lays a page out and scrolls it.
 """
 
 import time
@@ -96,6 +97,9 @@ SCROLLED_DOWN_TO = "(area, offset) => { area.scrollTop = offset; }"
 LESS_THAN_A_PIXEL = 1
 # How far the reader turns the wheel against the page's own scroll, in pixels
 A_TURN_OF_THE_WHEEL = 200
+# The line of the far file the reader reads from, in the files and in the story, which leaves the far file out
+READ_FROM = CHANGED_LINES[2]
+BROUGHT_TO_THE_TOP = "(element) => element.scrollIntoView({ block: 'start' })"
 
 
 def _lines(path: str, changed: tuple[int, ...]) -> str:
@@ -307,3 +311,46 @@ async def test_back_from_a_jump_off_the_storys_words_brings_the_story_back_as_th
     await _go_back(page)
 
     await expect(page.get_by_test_id("story-view")).to_have_js_property("scrollTop", 0)
+
+
+async def _read_from_its_line(page: Page, section: Locator) -> Locator:
+    """The far file read in a section from its line, brought to the top of the area: the line, once the page sees it read."""
+    await section.evaluate(BROUGHT_TO_THE_TOP)
+    line = section.get_by_role("button", name=f"Comment on line {READ_FROM}", exact=True)
+    await line.evaluate(BROUGHT_TO_THE_TOP)
+    await page.evaluate(FRAMES_DRAWN, WATCHED_FOR_FRAMES)
+    return line
+
+
+async def _choose(page: Page, view: str) -> None:
+    await page.get_by_test_id(view).click()
+    await page.evaluate(FRAMES_DRAWN, WATCHED_FOR_FRAMES)
+
+
+async def test_files_chosen_again_after_the_story_show_the_reader_the_line_they_read_the_keyboard_left_on_files(
+    review: RunningReview, page: Page
+) -> None:
+    await page.goto(review.url)
+    await page.wait_for_selector('[data-testid="file-item"]')
+    line = await _read_from_its_line(page, _section(page, FAR_FILE))
+    await _choose(page, "read-as-story")
+
+    await _choose(page, "read-as-files")
+
+    await expect(line).to_be_in_viewport()
+    await expect(page.get_by_test_id("read-as-files")).to_be_focused()
+
+
+async def test_the_story_chosen_again_after_the_files_shows_the_reader_the_line_they_read(
+    review: RunningReview, page: Page
+) -> None:
+    await page.goto(review.url)
+    await page.wait_for_selector('[data-testid="file-item"]')
+    await _choose(page, "read-as-story")
+    piece = page.locator(f'[data-testid="story-piece"][data-path="{FAR_FILE}"]')
+    line = await _read_from_its_line(page, piece)
+    await _choose(page, "read-as-files")
+
+    await _choose(page, "read-as-story")
+
+    await expect(line).to_be_in_viewport()

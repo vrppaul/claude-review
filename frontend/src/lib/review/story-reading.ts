@@ -25,7 +25,7 @@ import {
 import { tick } from 'svelte';
 import type { ThreadLines } from '$lib/anchors/views';
 import type { FileSections } from '$lib/dom/file-sections';
-import type { ReadingPlace } from '$lib/dom/reading-place';
+import type { KeyboardOnReturn, ReadingPlace } from '$lib/dom/reading-place';
 import type { ReadingParts } from '$lib/dom/reading-parts';
 import {
 	type Drawn,
@@ -216,10 +216,10 @@ export class StoryReading implements ReadingView {
 	}
 
 	/** A story draws every piece and part it tells whole: once it is drawn, the place is there. */
-	async returnTo(place: ReadingPlace): Promise<boolean> {
+	async returnTo(place: ReadingPlace, keyboard: KeyboardOnReturn): Promise<boolean> {
 		await tick();
-		if (this.#story.pieces.keys.includes(place.within)) this.#sections.goBackTo(place);
-		else this.#parts.goBackTo(place);
+		if (this.#story.pieces.keys.includes(place.within)) this.#sections.goBackTo(place, keyboard);
+		else this.#parts.goBackTo(place, keyboard);
 		return true;
 	}
 

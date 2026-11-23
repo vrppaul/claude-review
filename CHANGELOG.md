@@ -104,6 +104,12 @@
   nothing: on a repository of 16,000 code files it answers in tens of
   milliseconds, and the review never holds more of the code than its
   processes are reading.
+- **Story and Files each come back where you left them.** Switching
+  from one to the other and back puts you on the line you read, where it
+  stood, the keyboard left on the switch; a file read alone comes back
+  too. After a retake you come back to the head of the file or the part
+  you read in, as the lines are numbered anew. A switch leaves nothing
+  for Back.
 
 ### Changed
 - **Help's "What's new" names no release.** The news it opens is of the

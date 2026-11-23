@@ -18,14 +18,27 @@
  * thread only the story draws brought it, or the review opened the way they
  * read last. Every way the page brings it passes through here, so nothing
  * watches what is on screen to catch it after.
+ *
+ * A view's place is lost with it as it leaves the screen, and only here is
+ * it known to be leaving while it is still drawn. So where the reader leaves
+ * each way of reading is kept here, and choosing that way again brings them
+ * back there. Only their choice does: a view brought for something goes
+ * where that takes it.
  */
 
 import type { ThreadLines } from '$lib/anchors/views';
+import type { ReadingPlace } from '$lib/dom/reading-place';
 import type { PageLayout, ReadingChoice } from '$lib/reader/page-layout.svelte';
 import type { FileAloneReading } from '$lib/review/file-alone-reading.svelte';
 import { whereRead } from '$lib/review/files-way';
 import type { ViewsOnScreen } from '$lib/review/navigator';
-import type { FilesReading, ReadingView, ReadingViewName } from '$lib/review/reading-view';
+import {
+	type FilesReading,
+	type PlaceLeft,
+	placeLeftIn,
+	type ReadingView,
+	type ReadingViewName
+} from '$lib/review/reading-view';
 import type { ReviewDiff } from '$lib/review/review-diff.svelte';
 
 /** Each view a review is read in, by its name: the files and a file read alone by what only they do. */
@@ -43,11 +56,29 @@ export interface StoryIntroductions {
 	noteStoryIntroduced: () => void;
 }
 
+/** Where the reader left a way of reading, and the take of the diff they read it in. */
+interface PlaceKept {
+	left: PlaceLeft;
+	take: number;
+}
+
 // The view every review can be read in, which draws the change's files; the one a file it did not touch is read
 // alone in; and the story's, which the reader is trying while it is on screen
 const FILES: ReadingViewName = 'files';
 const FILE_ALONE = 'file-alone' satisfies ReadingViewName;
 const STORY: ReadingViewName = 'story';
+// Where the head of what the reader read in stands as they come back to it: at the top of the reading area
+const HEAD_AT_THE_TOP = 0;
+
+/**
+ * Where the reader comes back to a place kept: as they left it, in the take
+ * it was read in; in another, which numbers the lines anew, the head of
+ * what they read in.
+ */
+function placeToComeBackTo(placeKept: PlaceKept, takeOnScreen: number): ReadingPlace {
+	const place = placeKept.left.place;
+	return placeKept.take === takeOnScreen ? place : { within: place.within, line: null, offset: HEAD_AT_THE_TOP };
+}
 
 export class ReadingViews implements ViewsOnScreen {
 	readonly #views: Views;
@@ -55,6 +86,8 @@ export class ReadingViews implements ViewsOnScreen {
 	readonly #diff: ReviewDiff;
 	readonly #introductions: StoryIntroductions;
 	#nameOnScreen: ReadingViewName;
+	// Where the reader left each way of reading, kept until they choose it again; none where they read nothing in it
+	readonly #placesKept: Record<ReadingChoice, PlaceKept | null> = { files: null, story: null };
 
 	/**
 	 * @param views each view this review is read in
@@ -95,11 +128,21 @@ export class ReadingViews implements ViewsOnScreen {
 		return this.#nameOnScreen === FILE_ALONE ? this.fileAlone.path : null;
 	}
 
-	/** Read the review the way the reader chooses, and the next review they open too. */
+	/**
+	 * Read the review the way the reader chooses, and the next review they
+	 * open too. A way they come back to is where they left it, the keyboard
+	 * left on whatever they chose it with; one they read nothing in, or a
+	 * file no longer in the change, from its top.
+	 */
 	choose(name: ReadingChoice): void {
 		// The reader asked: whatever they asked through (`WayIntoStory`) notes the story tried
-		this.#nameOnScreen = name;
 		this.#kept.set(name);
+		const placeKept = this.onScreen.readAs === name ? null : this.#placesKept[name];
+		const view = placeKept?.left.view ?? name;
+		this.#putOnScreen(view);
+		if (placeKept !== null) {
+			void this.#views[view].returnTo(placeToComeBackTo(placeKept, this.#diff.takeOnScreen), 'where-it-is');
+		}
 	}
 
 	/**
@@ -136,9 +179,11 @@ export class ReadingViews implements ViewsOnScreen {
 	 * Bring the change's files on screen in place of a file read alone that
 	 * the change now holds, taken again, and have them take the reader over
 	 * on the line they read (`FilesReading.takeOver`). A file the change
-	 * still leaves stays read alone as it is.
+	 * still leaves stays read alone as it is. One the reader left Files at
+	 * gives way too, for when they come back (`#keptFileAloneGivesWay`).
 	 */
 	async giveWayToTheChange(): Promise<void> {
+		this.#keptFileAloneGivesWay();
 		const path = this.fileReadAlone;
 		if (path === null || !this.#diff.holds(path)) return;
 		const read = this.onScreen.placeRead();
@@ -162,7 +207,28 @@ export class ReadingViews implements ViewsOnScreen {
 
 	/** Bring a view on screen for the reader: the story brought is being tried. */
 	#bring(name: ReadingViewName): void {
-		this.#nameOnScreen = name;
+		this.#putOnScreen(name);
 		if (name === STORY) this.#introductions.noteStoryIntroduced();
+	}
+
+	/** Put a view on screen, keeping where the reader leaves the one there under the way of reading it is one of. */
+	#putOnScreen(name: ReadingViewName): void {
+		if (name === this.#nameOnScreen) return;
+		const leaving = this.onScreen;
+		const left = placeLeftIn(leaving);
+		this.#placesKept[leaving.readAs] = left === null ? null : { left, take: this.#diff.takeOnScreen };
+		this.#nameOnScreen = name;
+	}
+
+	/**
+	 * A file read alone that the change now holds, where the reader left
+	 * Files, is come back to among the change's files: a file read alone is
+	 * one the change did not touch.
+	 */
+	#keptFileAloneGivesWay(): void {
+		const placeKept = this.#placesKept.files;
+		// What a view of files whole knows a section by is its file's path
+		if (placeKept?.left.view !== FILE_ALONE || !this.#diff.holds(placeKept.left.place.within)) return;
+		this.#placesKept.files = { ...placeKept, left: { ...placeKept.left, view: FILES } };
 	}
 }

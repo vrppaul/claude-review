@@ -24,6 +24,7 @@ from tests.helpers import (
     repository_opening,
     write_files,
 )
+from tests.stories import as_the_agent_writes, step, story_of
 
 # Three files, each changed far down: one above the file being read, and one
 # below it changed on enough lines that the line read can be scrolled to the top
@@ -135,3 +136,38 @@ async def test_a_retake_that_leaves_a_file_read_alone_untouched_keeps_the_reader
     await page.get_by_test_id("diff-retaken").wait_for()
 
     await expect(read).to_be_in_viewport()
+
+
+@in_the_browsers_loop
+async def review_told_with_a_thread_on_the_file_left(
+    review_with_a_thread_on_the_file_left: RunningReview,
+) -> RunningReview:
+    """The review with a thread on the file left, and a story the agent told of its change."""
+    review = review_with_a_thread_on_the_file_left
+    told = story_of(step(ABOVE_FILE, CHANGED_LINE, CHANGED_LINE))
+    async with AsyncClient(base_url=review.url) as agent:
+        (await agent.put("/api/story", json=as_the_agent_writes(told))).raise_for_status()
+    return review
+
+
+async def test_a_file_read_alone_the_reader_left_for_the_story_is_come_back_to_among_the_files_once_a_retake_changes_it(
+    review_told_with_a_thread_on_the_file_left: RunningReview, a_file_left_alone: Path, page: Page
+) -> None:
+    review = review_told_with_a_thread_on_the_file_left
+    await page.set_viewport_size(SCREEN)
+    await page.goto(review.url)
+    # The reader goes to the thread, into the file read alone, and leaves it for the story
+    await page.get_by_test_id("outside-file").wait_for()
+    await page.keyboard.press("n")
+    await page.get_by_test_id("file-alone-view").wait_for()
+    await page.get_by_test_id("read-as-story").click()
+    # The agent's work changes the file read alone, and retakes the diff
+    write_files(a_file_left_alone, {LEFT_FILE: _lines(LEFT_FILE, {CHANGED_LINE: "changed"})})
+    async with AsyncClient(base_url=review.url) as agent:
+        await agent.post("/api/retake", json={})
+    await page.get_by_test_id("diff-retaken").wait_for()
+
+    await page.get_by_test_id("read-as-files").click()
+
+    await expect(_section(page, LEFT_FILE)).to_be_in_viewport()
+    await expect(page.get_by_test_id("file-alone-view")).to_have_count(0)

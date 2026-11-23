@@ -269,10 +269,6 @@ The owner's list of 2026-11-16.
 
 - [ ] `feat(ui)`: a long thread shows its last three or four answers and
       folds the ones before them behind one line that opens them.
-- [ ] `feat(ui)`: switching from Story to Files and back returns each view
-      to where the reader left it; today each opens at its top.
-      `FileSections.readingPlace` / `returnTo` name a section by its key
-      and can carry the place.
 - [ ] `feat(ui)`: from a step of the story, a quick look at that step's
       whole file, and one press back to the same place in the story.
 

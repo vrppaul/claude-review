@@ -12,7 +12,7 @@
 import { tick } from 'svelte';
 import type { FileLines, ThreadLines } from '$lib/anchors/views';
 import type { FileSections } from '$lib/dom/file-sections';
-import type { ReadingPlace } from '$lib/dom/reading-place';
+import type { KeyboardOnReturn, ReadingPlace } from '$lib/dom/reading-place';
 import type { ReadingChoice } from '$lib/reader/page-layout.svelte';
 import { drawnByTheChange, threadsInFilesOrder } from '$lib/review/files-way';
 import type { ReadingProgress } from '$lib/review/reading-progress.svelte';
@@ -73,7 +73,7 @@ export interface ReadingView {
 	 * place is drawn: its file unfolded, its line read in. False where the
 	 * view cannot draw the place now, and the reader is not moved.
 	 */
-	returnTo: (place: ReadingPlace) => Promise<boolean>;
+	returnTo: (place: ReadingPlace, keyboard: KeyboardOnReturn) => Promise<boolean>;
 }
 
 /** Where the reader reads in a view, and what the way back there calls it. */
@@ -83,6 +83,17 @@ export interface PlaceRead {
 	called: string;
 	/** In full, on the pointer: `src/http/routes.ts:33`. */
 	calledInFull: string;
+}
+
+/** Where the reader was as they left a view: the view they read in, and where in it. */
+export interface PlaceLeft extends PlaceRead {
+	view: ReadingViewName;
+}
+
+/** Where the reader reads in a view, as the place they leave it at; null while nothing of it is being read. */
+export function placeLeftIn(view: ReadingView): PlaceLeft | null {
+	const read = view.placeRead();
+	return read === null ? null : { ...read, view: view.name };
 }
 
 /** A place in a section of lines, called by its file and the line read from; null for a section not drawn. */
@@ -201,11 +212,11 @@ export class FilesReading implements ReadingView {
 	 * top of a file is gone back to as the reader left the file, folded or
 	 * not. A file the diff on screen holds none of is not drawn.
 	 */
-	async returnTo(place: ReadingPlace): Promise<boolean> {
+	async returnTo(place: ReadingPlace, keyboard: KeyboardOnReturn): Promise<boolean> {
 		// What the files' own view knows a section by is its file's path
 		if (this.sectionOfFile(place.within) === null) return false;
 		await this.#drawPlace(place);
-		this.#sections.goBackTo(place);
+		this.#sections.goBackTo(place, keyboard);
 		return true;
 	}
 

@@ -14,7 +14,7 @@
 import { readFileOfTake } from '$lib/api/review-api';
 import type { ThreadLines } from '$lib/anchors/views';
 import type { FileSections } from '$lib/dom/file-sections';
-import type { ReadingPlace } from '$lib/dom/reading-place';
+import type { KeyboardOnReturn, ReadingPlace } from '$lib/dom/reading-place';
 import { threadsInFilesOrder, whereRead } from '$lib/review/files-way';
 import { type Drawn, fileSectionKey, placeInLines, type PlaceRead, type ReadingView } from '$lib/review/reading-view';
 import type { ReviewDiff } from '$lib/review/review-diff.svelte';
@@ -147,10 +147,10 @@ export class FileAloneReading implements ReadingView {
 	 * place once it is read. The view draws the file whatever the read came
 	 * to, its failure said in place, so it can always draw the place.
 	 */
-	async returnTo(place: ReadingPlace): Promise<boolean> {
+	async returnTo(place: ReadingPlace, keyboard: KeyboardOnReturn): Promise<boolean> {
 		// What a view of files whole knows a section by is its file's path
 		await this.open(place.within);
-		this.#sections.goBackTo(place);
+		this.#sections.goBackTo(place, keyboard);
 		return true;
 	}
 

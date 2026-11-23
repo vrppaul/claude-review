@@ -20,7 +20,7 @@ import { Announced, type Announcement } from '$lib/dom/announced';
 import { Crossing } from '$lib/dom/crossing';
 import type { Jumps } from '$lib/dom/jump';
 import { lendKeyboard, lendKeyboardToWhatRemains } from '$lib/dom/keyboard';
-import { goBackAmong, type ReadingPlace, readingPlaceIn } from '$lib/dom/reading-place';
+import { goBackAmong, type KeyboardOnReturn, type ReadingPlace, readingPlaceIn } from '$lib/dom/reading-place';
 
 /** A part as it announced itself: what whoever draws it knows it by, the whole of it, which the band reads it by, and its head. */
 interface Part extends Announcement {
@@ -129,11 +129,11 @@ export class ReadingParts {
 
 	/**
 	 * Take the reader back to where they were reading in a part, as they saw
-	 * it: the keyboard on the line they read from, or lent to the part's head
-	 * where they read from none.
+	 * it: where the keyboard goes there, on the line they read from, or lent
+	 * to the part's head where they read from none.
 	 */
-	goBackTo(place: ReadingPlace): void {
-		goBackAmong(this.#parts, this.#jumps, place, keyboardToPlace);
+	goBackTo(place: ReadingPlace, keyboard: KeyboardOnReturn): void {
+		goBackAmong(this.#parts, this.#jumps, place, keyboard, keyboardToPlace);
 	}
 
 	/**
