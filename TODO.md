@@ -41,6 +41,11 @@ tests. Remove items when done — don't check them off.
 
 ## Bugs
 
+- [ ] `fix(api)`: a body over `MAX_REQUEST_BYTES` is refused with 413
+      (`presentation/body_limit.py`), but no route's schema says it can be,
+      so the schema's fuzzing (`-m schema`) fails on `POST /api/message`
+      whenever it draws one that long (2 of 4 on 2026-11-23, none the run
+      before). Say 413 in the schema of every route that takes a body.
 - [ ] `fix(server)`: a file git takes for text may hold a NUL past its
       first 8,000 bytes, and the read callback that feeds a parse
       (`services/code_names/reading.py`, `_parsed`) hands tree-sitter
@@ -275,14 +280,11 @@ The owner's list of 2026-11-16.
 The owner's idea of 2026-11-18, a language server built in to find a name
 and where it is used, and what came of thinking it through: what a reader
 asks of a change, and what the review cannot answer yet. None is designed.
-The order proposed is the first two, then the uses of a name, each ready
-for the next; the rest in any order.
+The order proposed is Back from every jump, then the uses of a name, each
+ready for the next; the rest in any order.
 
 Where a thing is:
 
-- [ ] `feat`: the functions a change touches, under each file in the tree.
-      Git names the function in a hunk's heading (`@@ … @@ def handler():`),
-      and `services/unified_diff.py` reads past it.
 - [ ] `feat(ui)`: Back from every jump, not only to a line: going to a file
       (the agent's `show`, a file's row), a thread (n and p, a, the chips)
       or a chapter notes the place left, as going to where a check failed
