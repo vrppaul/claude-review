@@ -33,19 +33,10 @@ import {
 	readingPlaceIn
 } from '$lib/dom/reading-place';
 
-/**
- * What the toggle that folds a thread carries, so the keyboard can be put
- * back on the one drawn anew when the thread changes shape. A role of its
- * own, as a line's number has one.
- */
+/** What a thread's fold toggle carries, so the keyboard goes back on the one drawn anew as the thread changes shape. */
 export const FOLD_TOGGLE_ROLE = 'fold-toggle';
 
-/**
- * What the control that stands for a section of lines carries, to take the
- * keyboard where none of its lines is drawn: a file's fold toggle among the
- * files, a step's way to its file in a story. A piece of what no step tells
- * has none.
- */
+/** What the control standing for a section carries, to take the keyboard where none of its lines is drawn. */
 export const STANDS_FOR_ITS_SECTION_ROLE = 'stands-for-its-section';
 
 /** What the page finds a fold toggle by: as a thread's fold, or as what stands for a file's section. */
@@ -217,12 +208,7 @@ export class FileSections {
 		if (section && area) bringBack(place, section.element, area);
 	}
 
-	/**
-	 * Take the reader back to where they were reading, as they saw it, once
-	 * the view that draws it is drawn: where the keyboard goes there, on the
-	 * line they read from, or on what stands for its section where they read
-	 * from none.
-	 */
+	/** Take the reader back to where they were reading, as they saw it, once the view that draws it is drawn. */
 	goBackTo(place: ReadingPlace, keyboard: KeyboardOnReturn): void {
 		this.#onceDrawn(
 			() => this.#sections.get(place.within),
@@ -355,26 +341,12 @@ export class FileSections {
 		);
 	}
 
-	/**
-	 * Put the keyboard on a line's number, by the file it is a line of and
-	 * the key its place is known by, if what had it went: what remains where
-	 * a comment was put away, a thread deleted, or hidden lines shown. Where
-	 * the line is not drawn, what stands for its section takes it; where the
-	 * file is not drawn at all, what stands for the first section, which its
-	 * threads were drawn above. A section with nothing to stand for it, a
-	 * piece of what no step tells, leaves the keyboard where it is.
-	 */
+	/** Put the keyboard on a line's number, or what stands for it (`lineOrFile`), if what had it went. */
 	keyboardToLine(path: string, lineKey: string): void {
 		focusWhatRemains(() => this.lineOrFile(path, lineKey));
 	}
 
-	/**
-	 * A line's number, in whichever section draws that line of its file, by
-	 * the key its place is known by; or where it is not drawn, what stands
-	 * for the first section on the page to draw the file, or for the first
-	 * section of all where none draws it. Null where that section has
-	 * nothing to stand for it.
-	 */
+	/** A line's number, wherever it is drawn; or what stands for the file's first section, or for the first of all. */
 	lineOrFile(path: string, lineKey: string): HTMLElement | null {
 		const ofTheFile = this.#drawing(path);
 		if (ofTheFile.length === 0) return standInOf(firstInDocument(this.#elements()));

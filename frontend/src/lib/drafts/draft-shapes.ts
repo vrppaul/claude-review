@@ -263,11 +263,7 @@ function answersAfterTheReader(thread: Thread): string[] {
 	return thread.turns.slice(readersLast + 1).map((turn) => turn.id);
 }
 
-/**
- * A draft of the shape kept before a thread unread named its new answers,
- * out of one pages kept after 1.7.3: each file the agent named is held by no
- * base, since nobody said, and so goes where the change holds it, or nowhere.
- */
+/** A draft of the shape kept before a thread unread named its new answers, out of one pages kept after 1.7.3. */
 export function withNamedFiles(kept: DraftBeforeNamedFiles): DraftBeforeNewAnswers {
 	return { ...kept, version: SHAPE_BEFORE_NEW_ANSWERS, panel: kept.panel.map(panelTurnNamingFiles) };
 }

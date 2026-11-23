@@ -53,12 +53,7 @@ export function toldStep(file: string, line: number, reason: string | null = nul
 	return toldStepOfLines(file, line, line, reason);
 }
 
-/**
- * A step told of some lines of a file, with no reason, whose code stands at
- * these lines now, in this piece, as it was told: a round's work moved it,
- * or the piece is one a test made. Its lines are numbered as the file
- * stands, unless a test says they are of a file the change removed.
- */
+/** A step told of some lines of a file, with no reason, its code standing at these lines now, in this piece. */
 export function stepStandingAt(
 	file: string,
 	told: StepLines,

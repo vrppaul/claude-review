@@ -6,9 +6,8 @@
  * its own. An answer from an older version, which named nothing, falls to
  * the last question — where it used to go anyway.
  *
- * Read in that order, a long thread folds what lies between its opening and
- * its last turns: which turns fold is how the page shows what it holds, so
- * it is decided here, on the page.
+ * Which turns of a long thread fold is how the page shows what it holds, so
+ * the page decides it, here.
  */
 
 import type { Thread, Turn, TurnAuthor } from '$lib/types';
@@ -80,11 +79,7 @@ export function drawnTurnsOf(exchanges: readonly Exchange[]): DrawnTurn[] {
 	]);
 }
 
-/**
- * Which turns of a long thread fold behind one row, given every turn in the
- * order it draws them and which must stay in sight: those between the
- * comment that opened it and its last turns, up to the first that must stay.
- */
+/** Which turns of a long thread fold: those between its opening and its last turns, up to the first that stays in sight. */
 export function turnsToFold(drawn: readonly string[], staysInSight: (turnId: string) => boolean): string[] {
 	const beforeTheLast = drawn.slice(1, -LAST_IN_SIGHT);
 	const firstStaying = beforeTheLast.findIndex(staysInSight);
@@ -106,11 +101,7 @@ export interface TurnsRun {
 	open: boolean;
 }
 
-/**
- * A thread's drawn turns as runs, in sight or folded. A turn that arrived
- * among the folded ones since they were folded is in none of them: it splits
- * their run in two, each behind a row of its own, and stands between in sight.
- */
+/** A thread's drawn turns as runs, in sight or folded: a turn arriving among the folded stands in sight between two. */
 export function runsOf(drawn: readonly DrawnTurn[], folded: TurnsFolded): TurnsRun[] {
 	const runs: TurnsRun[] = [];
 	for (const turn of drawn) {

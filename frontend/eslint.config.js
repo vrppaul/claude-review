@@ -658,9 +658,7 @@ const NO_BARS_OF_ITS_OWN = [
 	}
 ];
 
-// Turns folded away are drawn by the library (TurnsFold): hidden until the browser's find in page comes to them,
-// which opens their fold. Outside the library nothing is hidden that way, nor answers find coming to it: the
-// browser's word for it is refused in markup and in any string, as a constant handed to `hidden` would carry it
+// Only the library's TurnsFold hides what find in page opens: the word is refused in markup and in any string
 const FOLDED_IN_THE_LIBRARY =
 	"Fold turns away with lib/ui TurnsFold, which keeps them where the browser's find reaches them.";
 const UNTIL_FOUND = '/until-found/';

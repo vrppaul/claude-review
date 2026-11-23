@@ -10,7 +10,7 @@
 import { chapterNumber, numberInChapter } from '$lib/review/story-contents';
 import type { FollowedStep } from '$lib/types';
 import type { TwinHalf } from '$lib/ui/twin-chip';
-import { counted, type CountedWords, FILES } from '$lib/utils/words';
+import { counted, type CountedWords, FILES, STEPS } from '$lib/utils/words';
 
 // What joins the first line of a step to its last
 const RANGE_DASH = '–';
@@ -22,8 +22,6 @@ const CHAPTER_FIRST = 'Chapter';
 const BEFORE_A_TITLE = ': ';
 // What chapters are called before their numbers, of one and of several
 const CHAPTERS: CountedWords = { one: A_CHAPTER, many: 'chapters' };
-// What steps are called where they are counted, and one of them inside a sentence
-const STEPS: CountedWords = { one: 'step', many: 'steps' };
 // What threads are called where a part of the story counts those hanging in it
 const THREADS: CountedWords = { one: 'thread', many: 'threads' };
 // What the lines a change added or removed are called where the part no step tells counts them
@@ -32,8 +30,7 @@ const CHANGED_LINES: CountedWords = { one: 'changed line', many: 'changed lines'
 const BETWEEN_NUMBERS = ', ';
 // How a file says that other chapters tell it too, before it names them
 const ALSO_IN = 'also in';
-// What a step's way to its file says before the file and after it: the view of the change's files, as the header's
-// switch names it
+// What a step's way to its file says around the file, naming the view as the header's switch does
 const OPEN = 'Open';
 const IN_FILES = 'in Files';
 // What is said of a part, or of some of the chapters, the reader has read through

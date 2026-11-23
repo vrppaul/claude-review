@@ -23,11 +23,7 @@ export interface ReadingPlace {
 	offset: number;
 }
 
-/**
- * Whether going back to a place puts the keyboard on it, or leaves it where
- * it is: a reader who comes back by a control that stays, the header's
- * switch, keeps it there.
- */
+/** Whether going back to a place puts the keyboard on it, or leaves it on the control that stays, as the header's switch. */
 export type KeyboardOnReturn = 'to-the-place' | 'where-it-is';
 
 /**
@@ -69,14 +65,7 @@ export function bringBack(place: ReadingPlace, readIn: HTMLElement, root: HTMLEl
 	return line ?? null;
 }
 
-/**
- * Take the reader back to a place among what announced itself in a reading
- * area: to what they read in at once, so the rows near it are built, and
- * once that has come to rest, to the place as they saw it; where the
- * keyboard goes to the place, `keyboardTo` is then handed what they read in
- * and its line, where that is drawn, to put it on. Nowhere, for what is not
- * drawn.
- */
+/** Take the reader back to a place among what announced itself in a reading area, as they saw it. */
 export function goBackAmong<Said extends Announcement>(
 	announced: Announced<Said>,
 	jumps: Jumps,

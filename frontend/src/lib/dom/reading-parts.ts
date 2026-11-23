@@ -122,11 +122,7 @@ export class ReadingParts {
 		return part === null || area === null ? null : readingPlaceIn(part.key, part.element, area, standsAlike);
 	}
 
-	/**
-	 * Take the reader back to where they were reading in a part, as they saw
-	 * it: where the keyboard goes there, on the line they read from, or lent
-	 * to the part's head where they read from none.
-	 */
+	/** Take the reader back to where they were reading in a part, as they saw it. */
 	goBackTo(place: ReadingPlace, keyboard: KeyboardOnReturn): void {
 		goBackAmong(this.#parts, this.#jumps, place, keyboard, keyboardToPlace);
 	}

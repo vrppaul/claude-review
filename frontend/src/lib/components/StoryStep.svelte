@@ -116,9 +116,7 @@
 					{/each}
 				{/snippet}
 				{#snippet atTheEnd()}
-					<!-- A quick look at the step's file among the change's files, on the step's first line, and Back returns
-						here; under the same icon as Files in the header. It takes the keyboard for the step where none of
-						its lines is drawn -->
+					<!-- A quick look at the step's file among the files, Back returning here; Files' icon, as in the header -->
 					<IconButton
 						tone="quiet"
 						size="xs"

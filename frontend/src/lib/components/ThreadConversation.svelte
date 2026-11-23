@@ -125,8 +125,7 @@
 	{/if}
 {/each}
 
-<!-- The rows a turn draws: a question, or an answer under it; after the last of its exchange, the answer still
-	awaited -->
+<!-- The rows a turn draws: a question, or an answer; after the last of its exchange, the answer still awaited -->
 {#snippet rowsOf(turn: DrawnTurn)}
 	{#if turn.kind === 'question'}
 		{@render question(turn.exchange)}

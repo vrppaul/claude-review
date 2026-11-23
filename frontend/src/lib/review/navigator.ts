@@ -255,13 +255,7 @@ export class Navigator {
 		if (section !== null) this.#goToLineFrom(left, section, { line: placeKey(firstLine), name: null });
 	}
 
-	/**
-	 * Take the reader back to the last place they left in the take on
-	 * screen, as they saw it: in the view they read it in, how they chose
-	 * to read left as it is, or among the change's files where that view
-	 * cannot draw the place now; the keyboard on what they read from. The
-	 * place is taken off the way back, and going there notes none.
-	 */
+	/** Take the reader back to the last place they left, as they saw it, in its view or else among the change's files. */
 	async goBack(): Promise<void> {
 		const left = this.#wayBack.takeTop();
 		if (left === null) return;
@@ -276,12 +270,7 @@ export class Navigator {
 		this.#sections.goToLine(section, arrived);
 	}
 
-	/**
-	 * Whether going to a line takes the reader away from the place they
-	 * left: into another view, whose lines may not be drawn yet, or within
-	 * one to a line they do not see. A line they see already leaves them
-	 * looking at what they saw, and Back would lead nowhere.
-	 */
+	/** Whether going to a line takes the reader away from the place left, into another view or out of their sight. */
 	#takenElsewhere(left: PlaceLeft, section: string, lineKey: string): boolean {
 		return left.view !== this.#views.onScreen.name || !this.#sections.seesLine(section, lineKey);
 	}

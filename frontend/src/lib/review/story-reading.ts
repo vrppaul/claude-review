@@ -41,12 +41,12 @@ import { OVERVIEW_PART } from '$lib/review/story-keys';
 import type { Threads } from '$lib/review/threads.svelte';
 import type { LinePlace, StoryBlock, Thread, ToldStory } from '$lib/types';
 import { namesTheFileAsItStands } from '$lib/utils/line-places';
+import { STEPS } from '$lib/utils/words';
 
 // What the way back calls the parts of a story that are no chapter: its overview, and what no step tells
 const OVERVIEW_CALLED = 'the overview';
 const LEFT_OUT_CALLED = 'what no step tells';
-// What the way back calls a step, before its number, and what stands between that and its file and line in full
-const STEP_CALLED = 'step';
+// What stands between a step the way back names and its file and line in full
 const BEFORE_ITS_FILE = ', ';
 
 /**
@@ -205,11 +205,7 @@ export class StoryReading implements ReadingView {
 		// Nothing of a story is folded: every piece it draws is on the page
 	}
 
-	/**
-	 * In a piece of a file, called by its step or by its file and line
-	 * (`#pieceRead`); else in a part of the story, its overview or a
-	 * chapter, called by its title.
-	 */
+	/** In a piece of a file (`#pieceRead`); else in a part of the story, called by its title. */
 	placeRead(section?: string): PlaceRead | null {
 		const inAPiece = this.#sections.readingPlace(namesTheFileAsItStands, section);
 		if (inAPiece !== null) return this.#pieceRead(inAPiece);
@@ -227,16 +223,12 @@ export class StoryReading implements ReadingView {
 		return true;
 	}
 
-	/**
-	 * A place in a piece: in a step's, called by the step's number, and in
-	 * full by its file and line besides; in what no step tells, by its file
-	 * and line alone.
-	 */
+	/** A place in a piece, called by its step's number where it is a step's, and in full by its file and line. */
 	#pieceRead(place: ReadingPlace): PlaceRead | null {
 		const inLines = placeInLines(this.#sections, place);
 		const step = this.#story.contents.stepAt(place.within);
 		if (inLines === null || step === null) return inLines;
-		const called = `${STEP_CALLED} ${step.number}`;
+		const called = `${STEPS.one} ${step.number}`;
 		return { place, called, calledInFull: `${called}${BEFORE_ITS_FILE}${inLines.calledInFull}` };
 	}
 

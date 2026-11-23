@@ -2979,13 +2979,7 @@
 		background: transparent;
 	}
 }
-/*
- * A row nobody says (TurnAside): across the column of what was said between
- * two rules (where a round ended, what the review did); a line of its own
- * under the turn it is about (TakenBack); or on the spine itself, what it
- * holds standing over the spine as an avatar does, a rule after it as a
- * round's mark draws one (TurnsFold)
- */
+/* A row nobody says (TurnAside): across the column, under its turn (TakenBack), or over the spine (TurnsFold) */
 .cr-ui-turn-aside-across {
 	display: flex;
 	align-items: center;
@@ -3005,18 +2999,13 @@
 	height: var(--cr-line);
 	background: var(--color-base-300);
 }
-/*
- * The turns a fold holds (TurnsFold), a row each, as far apart as the
- * conversation's. Hidden, they stand out of its flow, so no gap of theirs
- * breaks the spine between the fold's row and the turn after it; and only
- * shown are they laid out, so a browser that takes "until found" for plain
- * hidden hides them still
- */
+/* Laid out only shown, so a browser taking "until found" for plain hidden hides the folded turns still */
 .cr-ui-turns-folded:not([hidden]) {
 	display: flex;
 	flex-direction: column;
 	gap: var(--cr-turn-row-gap);
 }
+/* Hidden, out of the flow, so no gap of theirs breaks the spine under the fold's row */
 .cr-ui-turns-folded[hidden] {
 	position: absolute;
 }

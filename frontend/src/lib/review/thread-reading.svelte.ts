@@ -182,11 +182,7 @@ export class ThreadReading {
 		this.#takenBack.delete(threadId);
 	}
 
-	/**
-	 * Whether a turn must stay in sight: an answer not read yet, a question
-	 * still with the agent, words being rewritten, and the question asking
-	 * failed on, the failure under it.
-	 */
+	/** Whether a turn stays in sight: a new answer, a question with the agent, words being rewritten, or an ask failed. */
 	#staysInSight(threadId: string, turnId: string, card: InSightOnTheCard, lastQuestion: string): boolean {
 		return (
 			this.isNewAnswer(threadId, turnId) ||

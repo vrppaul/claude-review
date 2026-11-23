@@ -33,10 +33,8 @@ import type { Snippet } from 'svelte';
  *   read before it is opened.
  * - warned: what opens on something to look at again, a check the code
  *   changed after: the warning's words inside its edge.
- * - folded-away: what opens what was folded out of the way, earlier turns of
- *   a thread: quieter than what is read round it, its edge a rule's and its
- *   words muted, on the card's ground it stands on, so it covers the spine
- *   it stands over as an avatar does; its words turn ink under the pointer.
+ * - folded-away: what opens a thread's earlier turns, quieter than what is
+ *   read round it, on the card's ground so it covers the spine as an avatar does.
  */
 export type ButtonTone =
 	'primary' | 'quiet' | 'secondary' | 'asking' | 'danger' | 'marked' | 'failing' | 'warned' | 'folded-away';

@@ -19,11 +19,8 @@
  * read last. Every way the page brings it passes through here, so nothing
  * watches what is on screen to catch it after.
  *
- * A view's place is lost with it as it leaves the screen, and only here is
- * it known to be leaving while it is still drawn. So where the reader leaves
- * each way of reading is kept here, and choosing that way again brings them
- * back there. Only their choice does: a view brought for something goes
- * where that takes it.
+ * Only here is a view known to be leaving while it is still drawn, so where
+ * the reader leaves each way of reading is kept here, for their choosing it.
  */
 
 import type { ThreadLines } from '$lib/anchors/views';
@@ -110,12 +107,7 @@ export class ReadingViews implements ViewsOnScreen {
 		return this.#nameOnScreen === FILE_ALONE ? this.fileAlone.path : null;
 	}
 
-	/**
-	 * Read the review the way the reader chooses, and the next review they
-	 * open too. A way they come back to is where they left it, the keyboard
-	 * left on whatever they chose it with; one they read nothing in, or a
-	 * file no longer in the change, from its top.
-	 */
+	/** Read the review the way the reader chooses, and the next review they open too, back where they left it. */
 	choose(name: ReadingChoice): void {
 		// The reader asked: whatever they asked through (`WayIntoStory`) notes the story tried
 		this.#kept.set(name);

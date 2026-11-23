@@ -17,6 +17,9 @@ export const FILES: CountedWords = { one: 'file', many: 'files' };
 /** Files counted with what they have done: "3 files have changed". */
 export const FILES_HAVING: CountedWords = { one: 'file has', many: 'files have' };
 
+/** What a story's steps are called where they are counted, and one of them inside a sentence. */
+export const STEPS: CountedWords = { one: 'step', many: 'steps' };
+
 /** What the reader's comments are called where they are counted. */
 export const COMMENTS: CountedWords = { one: 'comment', many: 'comments' };
 

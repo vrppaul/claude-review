@@ -1,12 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 
-	/**
-	 * How what it holds is laid out: across the column, a rule either side — where a round ended, what the review
-	 * did; on a line of its own under the turn it is about, on the tint of what cannot be undone: that it was
-	 * taken back (TakenBack); or standing on the spine, as an avatar does, a rule after it across the rest of the
-	 * row: the button that opens earlier turns folded away (TurnsFold).
-	 */
+	/** How what it holds is laid out: across the column between rules, under its turn (TakenBack), or on the spine (TurnsFold). */
 	type Lays = 'across' | 'taken-back' | 'on-the-spine';
 
 	const LAYS: Record<Lays, string> = {

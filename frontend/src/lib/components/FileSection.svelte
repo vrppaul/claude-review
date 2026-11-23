@@ -124,8 +124,7 @@
 				Viewed<span class="sr-only">: {file.path}</span>
 			</Checkbox>
 
-			<!-- Its lines fold under the chevron at the header's far end, as everything on the page folds; it takes the
-				keyboard for the file where none of its lines is drawn -->
+			<!-- Its lines fold under the chevron at the header's far end, as everything on the page folds -->
 			<FoldToggle
 				folded={collapsed}
 				subject={file.path}
