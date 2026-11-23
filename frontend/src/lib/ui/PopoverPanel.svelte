@@ -18,7 +18,11 @@
 		type Way
 	} from './pane';
 
-	interface Props extends Omit<HTMLAttributes<HTMLDivElement>, 'class' | 'style' | 'children' | 'role' | 'aria-label'> {
+	// A press on the pane is the pane's own to answer: a steered one keeps the keyboard in its field
+	interface Props extends Omit<
+		HTMLAttributes<HTMLDivElement>,
+		'class' | 'style' | 'children' | 'role' | 'aria-label' | 'onmousedown'
+	> {
 		/** What the pane is to a screen reader: a pane of controls, a list to pick from, or a note of something that happened. */
 		role: 'dialog' | 'listbox' | 'status';
 		/** What the pane is called, said to whoever cannot see it. */

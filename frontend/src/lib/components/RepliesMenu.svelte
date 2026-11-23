@@ -87,29 +87,31 @@
 		</IconButton>
 	{/snippet}
 
-	<!-- One row a thread, on the pane's own room: where it hangs, and what the agent last said in it; an unread
-		answer says so by its dot -->
-	<div class="px-3 py-2">
-		{#each threads as thread (thread.id)}
-			<Row names="path" testId="reply-row" onclick={() => goTo(thread)}>
-				{#snippet leading()}
-					<!-- Room for the mark of an unread answer in every row, so where each hangs stands in one line -->
-					<span class="flex w-(--cr-list-row-dot-slot)">
-						{#if review.threads.reading.isUnread(thread.id)}
-							<Dot tone="unread" testId="reply-unread" />
-							<span class="sr-only">unread:</span>
-						{/if}
-					</span>
-				{/snippet}
-				{#snippet label()}
-					{anchorShortPlace(thread.anchor)}
-				{/snippet}
-				{#snippet said()}
-					{lastAnswer(thread)}
-				{/snippet}
-			</Row>
-		{:else}
-			<EmptyNote within="list" testId="no-replies">Nothing new. Answers land here.</EmptyNote>
-		{/each}
-	</div>
+	<!-- One row a thread, on the pane's own room and as far below its head as a kind's title would stand: where it
+		hangs, and what the agent last said in it; an unread answer says so by its dot -->
+	{#if threads.length === 0}
+		<EmptyNote within="list" testId="no-replies">Nothing new. Answers land here.</EmptyNote>
+	{:else}
+		<div class="px-3 pt-2 pb-1">
+			{#each threads as thread (thread.id)}
+				<Row names="path" testId="reply-row" onclick={() => goTo(thread)}>
+					{#snippet leading()}
+						<!-- Room for the mark of an unread answer in every row, so where each hangs stands in one line -->
+						<span class="flex w-(--cr-list-row-dot-slot)">
+							{#if review.threads.reading.isUnread(thread.id)}
+								<Dot tone="unread" testId="reply-unread" />
+								<span class="sr-only">unread:</span>
+							{/if}
+						</span>
+					{/snippet}
+					{#snippet label()}
+						{anchorShortPlace(thread.anchor)}
+					{/snippet}
+					{#snippet said()}
+						{lastAnswer(thread)}
+					{/snippet}
+				</Row>
+			{/each}
+		</div>
+	{/if}
 </Popover>

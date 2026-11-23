@@ -228,11 +228,11 @@ describe('the agent panel', () => {
 
 	it('keeps the keyboard in the field at a press on the list’s own words', async () => {
 		const user = userEvent.setup({ delay: null });
-		const { getByTestId, getByText, getByRole } = render(AgentPanel, inReview(review));
+		const { getByTestId, getByRole } = render(AgentPanel, inReview(review));
 		const field = getByTestId('panel-input');
 		await user.type(field, 'Look at @');
 
-		await user.click(getByText('Files'));
+		await user.click(getByTestId('thread-picker-files-heading'));
 
 		expect(getByRole('listbox')).toBeTruthy();
 		expect(document.activeElement).toBe(field);

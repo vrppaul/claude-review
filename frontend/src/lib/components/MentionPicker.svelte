@@ -91,8 +91,10 @@
 {/snippet}
 
 <!-- A kind's name over its options, as far in as a row's own room -->
-{#snippet kind(id: string, title: string)}
-	<p {id} role="presentation" class="cr-faint px-(--cr-list-row-room) pt-2 pb-1 text-xs">{title}</p>
+{#snippet kind(id: string, title: string, testId: string)}
+	<p {id} role="presentation" data-testid={testId} class="cr-faint px-(--cr-list-row-room) pt-2 pb-1 text-xs">
+		{title}
+	</p>
 {/snippet}
 
 <!-- A pane as every pane by a control is, headed and put away by its cross, pointing into the field that steers it:
@@ -113,7 +115,7 @@
 	<div id={listId} role="listbox" aria-label={THREADS_AND_FILES} data-testid="thread-picker-list" class="px-3 pb-1">
 		{#if mentions.threads.length > 0}
 			<div role="group" aria-labelledby={threadsHeading} data-testid="thread-picker-threads">
-				{@render kind(threadsHeading, THREADS)}
+				{@render kind(threadsHeading, THREADS, 'thread-picker-threads-heading')}
 				{#each mentions.threads as { pick, index } (pick.thread.id)}
 					{#snippet place()}
 						{anchorShortPlace(pick.thread.anchor)}
@@ -127,7 +129,7 @@
 		{/if}
 		{#if mentions.files.length > 0}
 			<div role="group" aria-labelledby={filesHeading} data-testid="thread-picker-files">
-				{@render kind(filesHeading, FILES)}
+				{@render kind(filesHeading, FILES, 'thread-picker-files-heading')}
 				{#each mentions.files as { pick, index } (pick.path)}
 					{#snippet path()}
 						{pick.path}
