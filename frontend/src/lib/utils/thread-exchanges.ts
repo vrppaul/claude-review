@@ -92,24 +92,35 @@ export function turnsToFold(drawn: readonly string[], staysInSight: (turnId: str
 	return folding.length >= FEWEST_FOLDED ? folding : [];
 }
 
-/** A thread's drawn turns round its fold: those before it, those it holds, and those after it. */
-export interface TurnsRoundTheFold {
-	before: DrawnTurn[];
-	held: DrawnTurn[];
-	after: DrawnTurn[];
+/** The turns of a thread folded behind its rows of earlier replies, and those of them the reader opened, by id. */
+export interface TurnsFolded {
+	turns: readonly string[];
+	opened: readonly string[];
+}
+
+/** Turns a thread draws one after another: never folded, or folded behind one row. */
+export interface TurnsRun {
+	turns: DrawnTurn[];
+	folded: boolean;
+	/** Whether its turns stand in sight: the reader opened its row, or it has none. */
+	open: boolean;
 }
 
 /**
- * Split a thread's drawn turns round the turns folded in it. The fold holds
- * the run of folded turns from the first: a turn that arrived inside that
- * run since it was folded ends it, so it is drawn in its place and in sight.
+ * A thread's drawn turns as runs, in sight or folded. A turn that arrived
+ * among the folded ones since they were folded is in none of them: it splits
+ * their run in two, each behind a row of its own, and stands between in sight.
  */
-export function splitAtTheFold(drawn: readonly DrawnTurn[], folded: readonly string[]): TurnsRoundTheFold {
-	const start = drawn.findIndex((turn) => folded.includes(turn.id));
-	if (start === -1) return { before: [...drawn], held: [], after: [] };
-	const runLength = drawn.slice(start).findIndex((turn) => !folded.includes(turn.id));
-	const end = runLength === -1 ? drawn.length : start + runLength;
-	return { before: drawn.slice(0, start), held: drawn.slice(start, end), after: drawn.slice(end) };
+export function runsOf(drawn: readonly DrawnTurn[], folded: TurnsFolded): TurnsRun[] {
+	const runs: TurnsRun[] = [];
+	for (const turn of drawn) {
+		const isFolded = folded.turns.includes(turn.id);
+		const open = !isFolded || folded.opened.includes(turn.id);
+		const last = runs.at(-1);
+		if (last?.folded === isFolded && last.open === open) last.turns.push(turn);
+		else runs.push({ turns: [turn], folded: isFolded, open });
+	}
+	return runs;
 }
 
 /**

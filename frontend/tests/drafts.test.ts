@@ -28,19 +28,23 @@ function reload() {
 }
 
 describe('an unsent review', () => {
-	it('comes back folded, unread and waited on as it was left', async () => {
+	it('comes back folded, unread, its new answers new, and waited on as it was left', async () => {
 		fakeServer().answer('POST /api/ask', null);
 		const folded = review.threads.add(newComment({ startLine: 1, body: 'folded' }));
 		const unread = review.threads.add(newComment({ startLine: 2, body: 'unread' }));
 		const asked = review.threads.add(newComment({ startLine: 3, body: 'asked' }));
+		const answered = review.threads.add(newComment({ startLine: 4, body: 'answered' }));
 		review.threads.reading.setFolded(folded, true);
 		review.threads.reading.markUnread(unread);
+		review.threads.receiveReply(answered, 'Because.', null);
+		const [answer] = review.threads.all.flatMap((thread) => thread.turns);
 		await review.threads.ask(asked);
 
 		reload();
 
 		expect(review.threads.reading.isFolded(folded)).toBe(true);
 		expect(review.threads.reading.isUnread(unread)).toBe(true);
+		expect(review.threads.reading.isNewAnswer(answered, answer.id)).toBe(true);
 		expect(review.threads.reading.awaiting(asked).map((question) => question.id)).toEqual([asked]);
 	});
 

@@ -17,13 +17,13 @@
 	import {
 		drawnTurnsOf,
 		exchangesOf,
-		splitAtTheFold,
+		runsOf,
 		turnsToFold,
 		type DrawnTurn,
-		type Exchange
+		type Exchange,
+		type TurnsFolded
 	} from '$lib/utils/thread-exchanges';
 	import { timeAgo } from '$lib/utils/time';
-	import { REPLIES } from '$lib/utils/words';
 	import AgentOnItsWay from './AgentOnItsWay.svelte';
 	import { ASK_AGENT_NOW, ASKED_TO_DROP_IT, NOBODY_LISTENING } from './agent-waits';
 	import CommentBox from './CommentBox.svelte';
@@ -35,8 +35,8 @@
 
 	// What the copy kept of what a thread lost its place in says it is
 	const WRITTEN_AGAINST = 'Written against';
-	// The turns of a thread nothing is folded in
-	const NONE_FOLDED: readonly string[] = [];
+	// A thread nothing is folded in
+	const NONE_FOLDED: TurnsFolded = { turns: [], opened: [] };
 
 	interface Props {
 		thread: Thread;
@@ -52,7 +52,7 @@
 	const exchanges = $derived(exchangesOf(thread));
 	const drawn = $derived(drawnTurnsOf(exchanges));
 	const folded = $derived(review.threads.reading.turnsFolded(thread.id));
-	const roundTheFold = $derived(splitAtTheFold(drawn, folded?.turns ?? NONE_FOLDED));
+	const runs = $derived(runsOf(drawn, folded ?? NONE_FOLDED));
 	// Who spoke last: after an answer there is nothing new to hand over until the reader says something. On a
 	// thread the agent raised, the opening is already the agent's word
 	const lastWord = $derived(thread.turns.at(-1)?.author ?? thread.raised_by);
@@ -87,10 +87,12 @@
 
 	/**
 	 * Whether a turn must stay in sight: an answer not read yet, a question still with the agent (its awaited answer
-	 * stands after it), words being rewritten, and the question asking it failed on, the failure under it.
+	 * stands after it), words being rewritten, and the question asking it failed on, the failure under it. In a thread
+	 * a reload brought back unread without naming its new answers, any of them may be new, so every turn stays.
 	 */
 	function staysInSight(turnId: string): boolean {
 		return (
+			!review.threads.reading.namesNewAnswers(thread.id) ||
 			review.threads.reading.isNewAnswer(thread.id, turnId) ||
 			awaiting.some((question) => question.id === turnId) ||
 			review.threads.writing.edit(thread.id, turnId) !== undefined ||
@@ -133,25 +135,29 @@
 	and what can be done to it stand on its card's bar (ThreadBar); in the first turn, over its words, stands what an
 	outdated thread was written against. What the reader said and the agent has not been handed is theirs to
 	rewrite, where it stands, or to delete, from the menu at the head of its turn -->
-{#each roundTheFold.before as turn (turn.id)}
-	{@render rowsOf(turn)}
-{/each}
-{#if roundTheFold.held.length > 0}
-	<TurnsFold
-		count={roundTheFold.held.length}
-		counts={REPLIES}
-		open={folded?.open ?? false}
-		onShow={() => review.threads.reading.showFoldedTurns(thread.id)}
-		onHide={hideEarlierTurns}
-		testId="earlier-turns"
-	>
-		{#each roundTheFold.held as turn (turn.id)}
+<!-- Each run of turns known by its first, so a row the reader pressed stays the same row, the keyboard on it -->
+{#each runs as run (run.turns[0]?.id)}
+	{#if run.folded}
+		<TurnsFold
+			count={run.turns.length}
+			open={run.open}
+			onShow={() =>
+				review.threads.reading.showFoldedTurns(
+					thread.id,
+					run.turns.map((turn) => turn.id)
+				)}
+			onHide={hideEarlierTurns}
+			testId="earlier-turns"
+		>
+			{#each run.turns as turn (turn.id)}
+				{@render rowsOf(turn)}
+			{/each}
+		</TurnsFold>
+	{:else}
+		{#each run.turns as turn (turn.id)}
 			{@render rowsOf(turn)}
 		{/each}
-	</TurnsFold>
-{/if}
-{#each roundTheFold.after as turn (turn.id)}
-	{@render rowsOf(turn)}
+	{/if}
 {/each}
 
 <!-- The rows a turn draws: a question, or an answer under it; after the last of its exchange, the answer still

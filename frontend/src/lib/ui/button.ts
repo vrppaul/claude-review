@@ -33,8 +33,13 @@ import type { Snippet } from 'svelte';
  *   read before it is opened.
  * - warned: what opens on something to look at again, a check the code
  *   changed after: the warning's words inside its edge.
+ * - folded-away: what opens what was folded out of the way, earlier turns of
+ *   a thread: quieter than what is read round it, its edge a rule's and its
+ *   words muted, on the card's ground it stands on, so it covers the spine
+ *   it stands over as an avatar does; its words turn ink under the pointer.
  */
-export type ButtonTone = 'primary' | 'quiet' | 'secondary' | 'asking' | 'danger' | 'marked' | 'failing' | 'warned';
+export type ButtonTone =
+	'primary' | 'quiet' | 'secondary' | 'asking' | 'danger' | 'marked' | 'failing' | 'warned' | 'folded-away';
 
 /** xs among words and small controls, 24 pixels; sm in a row of acts and where it ends a bar, 32 pixels. */
 export type ButtonSize = 'xs' | 'sm';
@@ -54,7 +59,8 @@ export const BUTTON_TONES: Record<ButtonTone, string> = {
 	danger: 'cr-ui-danger cr-ui-filled',
 	marked: 'cr-ui-marked',
 	failing: 'cr-ui-failing',
-	warned: 'cr-ui-warned'
+	warned: 'cr-ui-warned',
+	'folded-away': 'cr-ui-folded-away'
 };
 
 export const BUTTON_SIZES: Record<ButtonSize, string> = { xs: 'cr-ui-xs', sm: 'cr-ui-sm' };

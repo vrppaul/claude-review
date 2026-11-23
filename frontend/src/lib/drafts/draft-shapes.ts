@@ -17,8 +17,9 @@
  * went out it keeps no more, the review saying what the agent has; it is
  * kept under the name the review gives itself rather than under its title,
  * which another review on the same port may share; a thread on lines
- * says how it stands there, where it said only that it was outdated; and a
- * file the agent named says whether the review's base holds it. A
+ * says how it stands there, where it said only that it was outdated; a
+ * file the agent named says whether the review's base holds it; and a
+ * thread unread says which of its answers are new. A
  * draft a release kept is brought up to date — never thrown away: it is an
  * hour of somebody's reading. A shape no release kept is not read.
  */
@@ -43,7 +44,9 @@ import { COMMENT_ID_PREFIX, IdSequence, TURN_ID_PREFIX } from '$lib/utils/ids';
 import { AGENT, READER } from '$lib/utils/speakers';
 
 /** The shape drafts are kept in now. */
-export const DRAFT_SHAPE = 25;
+export const DRAFT_SHAPE = 26;
+// The shape pages kept before a thread unread said which of its answers are new
+const SHAPE_BEFORE_NEW_ANSWERS = 25;
 // The shape pages kept after 1.7.3, the last before each file the agent named said whether the review's base holds it
 const SHAPE_BEFORE_NAMED_FILES = 24;
 // The shape releases 1.6.0 to 1.7.3 kept, the last before a thread on lines said how it stands
@@ -60,7 +63,10 @@ export interface IssuedIds {
 /** How the page was reading the threads: folded, unread, waiting on an answer, and what was taken back. */
 export interface ThreadsRead {
 	folded: string[];
-	unread: string[];
+	/** Threads with something nobody has looked at, and which of their answers that is, by id. */
+	unread: Record<string, readonly string[]>;
+	/** Threads a draft of an older shape kept unread without saying which answers: none of them is known as new. */
+	unreadUnnamed: string[];
 	/** Questions with the agent, oldest first, by the thread they were asked in. */
 	awaiting: Record<string, AwaitedQuestion[]>;
 	/** Questions the reader took back, and when, by the thread they were asked in. */
@@ -130,8 +136,17 @@ type ThreadBeforeStanding = Omit<Thread, 'anchor'> & { anchor: KeptAnchor };
 /** Something said in the panel as drafts kept it before each file the agent named said whether the base holds it. */
 type PanelTurnBeforeNamedFiles = Omit<PanelTurn, 'files'> & { files?: string[] };
 
+/** How the page was reading the threads before a thread unread said which of its answers are new. */
+type ThreadsReadBeforeNewAnswers = Omit<ThreadsRead, 'unread' | 'unreadUnnamed'> & { unread: string[] };
+
+/** A draft of the shape pages kept before a thread unread said which of its answers are new. */
+interface DraftBeforeNewAnswers extends Omit<Draft, 'version' | 'read'> {
+	version: typeof SHAPE_BEFORE_NEW_ANSWERS;
+	read: ThreadsReadBeforeNewAnswers;
+}
+
 /** A draft of the shape pages kept after 1.7.3, each file the agent named kept by its path alone. */
-interface DraftBeforeNamedFiles extends Omit<Draft, 'version' | 'panel'> {
+interface DraftBeforeNamedFiles extends Omit<DraftBeforeNewAnswers, 'version' | 'panel'> {
 	version: typeof SHAPE_BEFORE_NAMED_FILES;
 	panel: PanelTurnBeforeNamedFiles[];
 }
@@ -230,13 +245,28 @@ export function isDraftBeforeStanding(value: unknown): value is DraftBeforeStand
 	return isDraftOfShape(value, SHAPE_BEFORE_STANDING);
 }
 
+/** Whether what was read from storage is a draft of the shape pages kept before a thread unread named its new answers. */
+export function isDraftBeforeNewAnswers(value: unknown): value is DraftBeforeNewAnswers {
+	return isDraftOfShape(value, SHAPE_BEFORE_NEW_ANSWERS);
+}
+
 /**
- * A draft of the current shape, out of one pages kept after 1.7.3: each file
- * the agent named is held by no base, since nobody said, and so goes where
- * the change holds it, or nowhere.
+ * A draft of the current shape, out of one kept before a thread unread said
+ * which of its answers are new: each such thread stays unread, none of its
+ * answers known as new, since nobody said.
  */
-export function withNamedFiles(kept: DraftBeforeNamedFiles): Draft {
-	return { ...kept, version: DRAFT_SHAPE, panel: kept.panel.map(panelTurnNamingFiles) };
+export function withNewAnswers(kept: DraftBeforeNewAnswers): Draft {
+	const { unread, ...read } = kept.read;
+	return { ...kept, version: DRAFT_SHAPE, read: { ...read, unread: {}, unreadUnnamed: unread } };
+}
+
+/**
+ * A draft of the shape kept before a thread unread named its new answers,
+ * out of one pages kept after 1.7.3: each file the agent named is held by no
+ * base, since nobody said, and so goes where the change holds it, or nowhere.
+ */
+export function withNamedFiles(kept: DraftBeforeNamedFiles): DraftBeforeNewAnswers {
+	return { ...kept, version: SHAPE_BEFORE_NEW_ANSWERS, panel: kept.panel.map(panelTurnNamingFiles) };
 }
 
 /** Something said in the panel, each file the agent named in it held by no base. */
@@ -294,7 +324,7 @@ export function emptyDraft(round: number): Draft {
 	return {
 		version: DRAFT_SHAPE,
 		threads: [],
-		read: { folded: [], unread: [], awaiting: {}, takenBack: {} },
+		read: { folded: [], unread: {}, unreadUnnamed: [], awaiting: {}, takenBack: {} },
 		writing: [],
 		reviewBody: '',
 		panel: [],
@@ -326,32 +356,34 @@ export function upToDate(kept: ReleasedDraft): Draft {
 		comments: commentIdsPast(kept.comments),
 		turns: turnIds.issued
 	};
-	return withNamedFiles({
-		version: SHAPE_BEFORE_NAMED_FILES,
-		threads: comments.map(threadOf),
-		read: {
-			folded: comments.filter((comment) => comment.collapsed).map(idOf),
-			unread: comments.filter((comment) => comment.unread).map(idOf),
-			awaiting: Object.fromEntries(
-				comments.filter((comment) => comment.awaiting.length > 0).map((comment) => [comment.id, comment.awaiting])
-			),
-			// A question in a thread was never kept as taken back before
-			takenBack: {}
-		},
-		// Nothing being written was kept until the fields were held by the review
-		writing: [],
-		reviewBody: kept.reviewBody ?? '',
-		// The panel came after threads did; an older draft simply has nothing said
-		panel: (kept.panel ?? []).map(upToDatePanelTurn),
-		// The panel kept nothing half-written until it could hold images
-		// A composer kept before it said what it uploaded: its images count as handed in
-		composer: kept.composer ? { ...kept.composer, uploaded: [] } : emptyComposer(),
-		issued,
-		told: null,
-		// Which files were read was never kept before
-		files: emptyFilesRead(),
-		round: roundReached(comments, sent)
-	});
+	return withNewAnswers(
+		withNamedFiles({
+			version: SHAPE_BEFORE_NAMED_FILES,
+			threads: comments.map(threadOf),
+			read: {
+				folded: comments.filter((comment) => comment.collapsed).map(idOf),
+				unread: comments.filter((comment) => comment.unread).map(idOf),
+				awaiting: Object.fromEntries(
+					comments.filter((comment) => comment.awaiting.length > 0).map((comment) => [comment.id, comment.awaiting])
+				),
+				// A question in a thread was never kept as taken back before
+				takenBack: {}
+			},
+			// Nothing being written was kept until the fields were held by the review
+			writing: [],
+			reviewBody: kept.reviewBody ?? '',
+			// The panel came after threads did; an older draft simply has nothing said
+			panel: (kept.panel ?? []).map(upToDatePanelTurn),
+			// The panel kept nothing half-written until it could hold images
+			// A composer kept before it said what it uploaded: its images count as handed in
+			composer: kept.composer ? { ...kept.composer, uploaded: [] } : emptyComposer(),
+			issued,
+			told: null,
+			// Which files were read was never kept before
+			files: emptyFilesRead(),
+			round: roundReached(comments, sent)
+		})
+	);
 }
 
 /**

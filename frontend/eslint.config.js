@@ -659,12 +659,15 @@ const NO_BARS_OF_ITS_OWN = [
 ];
 
 // Turns folded away are drawn by the library (TurnsFold): hidden until the browser's find in page comes to them,
-// which opens their fold. Outside the library nothing is hidden that way, nor answers find coming to it
+// which opens their fold. Outside the library nothing is hidden that way, nor answers find coming to it: the
+// browser's word for it is refused in markup and in any string, as a constant handed to `hidden` would carry it
 const FOLDED_IN_THE_LIBRARY =
 	"Fold turns away with lib/ui TurnsFold, which keeps them where the browser's find reaches them.";
+const UNTIL_FOUND = '/until-found/';
 const NO_FINDABLE_FOLDS_OF_ITS_OWN = [
-	{ selector: "SvelteAttribute[key.name='hidden'] SvelteLiteral[value='until-found']", message: FOLDED_IN_THE_LIBRARY },
-	{ selector: "SvelteAttribute[key.name='hidden'] Literal[value='until-found']", message: FOLDED_IN_THE_LIBRARY },
+	{ selector: `SvelteLiteral[value=${UNTIL_FOUND}]`, message: FOLDED_IN_THE_LIBRARY },
+	{ selector: `Literal[value=${UNTIL_FOUND}]`, message: FOLDED_IN_THE_LIBRARY },
+	{ selector: `TemplateElement[value.raw=${UNTIL_FOUND}]`, message: FOLDED_IN_THE_LIBRARY },
 	{ selector: "SvelteAttribute[key.name='onbeforematch']", message: FOLDED_IN_THE_LIBRARY }
 ];
 

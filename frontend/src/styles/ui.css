@@ -224,6 +224,14 @@
 	border-color: var(--cr-warning-border);
 	color: var(--color-warning);
 }
+.cr-ui-folded-away {
+	border-color: var(--color-base-300);
+	background-color: var(--cr-ground-card);
+	color: var(--cr-muted);
+}
+.cr-ui-folded-away:hover {
+	color: var(--color-base-content);
+}
 /*
  * One that is off, whether it lets the keyboard go (disabled) or keeps it
  * (aria-disabled), keeps its ground and steps back to faint words; a filled
@@ -2972,51 +2980,39 @@
 	}
 }
 /*
- * A row nobody says stands in the column of what was said: across it
- * between two rules (where a round ended, what the review did), or a line
- * of its own under the turn it is about (TakenBack)
+ * A row nobody says (TurnAside): across the column of what was said between
+ * two rules (where a round ended, what the review did); a line of its own
+ * under the turn it is about (TakenBack); or on the spine itself, what it
+ * holds standing over the spine as an avatar does, a rule after it as a
+ * round's mark draws one (TurnsFold)
  */
-.cr-ui-turn-aside {
-	padding-left: calc(var(--cr-turn-avatar-size) + var(--cr-turn-gap));
-}
 .cr-ui-turn-aside-across {
 	display: flex;
 	align-items: center;
 	gap: --spacing(2);
+	padding-left: calc(var(--cr-turn-avatar-size) + var(--cr-turn-gap));
 }
-.cr-ui-turn-aside-rule,
-.cr-ui-turns-fold-rule {
+.cr-ui-turn-aside-on-the-spine {
+	display: flex;
+	align-items: center;
+	gap: var(--cr-turn-gap);
+}
+.cr-ui-turn-aside-on-the-spine > :not(.cr-ui-turn-aside-rule) {
+	position: relative;
+}
+.cr-ui-turn-aside-rule {
 	flex-grow: 1;
 	height: var(--cr-line);
 	background: var(--color-base-300);
 }
 /*
- * Earlier turns folded away (TurnsFold): a row of the conversation whose one
- * button stands on the spine, over it as an avatar is, on the card's own
- * ground, its edge the rule's and its words muted, so it reads quieter than
- * the turns round it; its words turn ink under the pointer. A rule runs
- * across the rest of the row, as a round's mark draws one
+ * The turns a fold holds (TurnsFold), a row each, as far apart as the
+ * conversation's. Hidden, they stand out of its flow, so no gap of theirs
+ * breaks the spine between the fold's row and the turn after it; and only
+ * shown are they laid out, so a browser that takes "until found" for plain
+ * hidden hides them still
  */
-.cr-ui-turns-fold {
-	display: flex;
-	align-items: center;
-	gap: var(--cr-turn-gap);
-}
-.cr-ui-turns-fold-button {
-	position: relative;
-	border-color: var(--color-base-300);
-	background-color: var(--cr-ground-card);
-	color: var(--cr-muted);
-}
-.cr-ui-turns-fold-button:hover {
-	color: var(--color-base-content);
-}
-/*
- * The turns it folds, a row each, as far apart as the conversation's. Hidden,
- * they stand out of its flow, so no gap of theirs breaks the spine between
- * the row and the turn after it
- */
-.cr-ui-turns-folded {
+.cr-ui-turns-folded:not([hidden]) {
 	display: flex;
 	flex-direction: column;
 	gap: var(--cr-turn-row-gap);

@@ -16,17 +16,12 @@ import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 
 import type { ThreadsRead } from '$lib/drafts/draft-shapes';
 import type { AwaitedQuestion, TakenBackQuestion } from '$lib/types';
+import type { TurnsFolded } from '$lib/utils/thread-exchanges';
 
 /** What a thread with nothing asked of it is waiting for: nothing. */
 const NOTHING_AWAITED: readonly AwaitedQuestion[] = [];
 /** The answers known to be unread in a thread new for some other reason: none. */
 const NO_ANSWERS: readonly string[] = [];
-
-/** The turns of a thread folded behind its row of earlier replies, by id, and whether the reader opened the row. */
-export interface TurnsFolded {
-	turns: readonly string[];
-	open: boolean;
-}
 
 export class ThreadReading {
 	readonly #folded = new SvelteSet<string>();
@@ -40,10 +35,11 @@ export class ThreadReading {
 	/**
 	 * Threads with something nobody has looked at, and which of their
 	 * answers that is, by id: none for a thread the agent raised, whose
-	 * opening is what is new, nor for one a reload brought back unread — the
-	 * draft keeps that a thread is unread, not which answers made it so.
+	 * opening is what is new.
 	 */
 	readonly #unread = new SvelteMap<string, readonly string[]>();
+	// Threads a draft of an older shape kept unread without naming which answers are new
+	readonly #unreadUnnamed = new SvelteSet<string>();
 	// Questions with the agent, by thread, oldest first
 	readonly #awaiting = new SvelteMap<string, AwaitedQuestion[]>();
 	// Questions the reader took back while they were waited on, by thread, and when
@@ -52,7 +48,11 @@ export class ThreadReading {
 	/** @param read how the threads were being read before a reload */
 	constructor(read: ThreadsRead) {
 		for (const threadId of read.folded) this.#folded.add(threadId);
-		for (const threadId of read.unread) this.#unread.set(threadId, NO_ANSWERS);
+		for (const [threadId, answers] of Object.entries(read.unread)) this.#unread.set(threadId, answers);
+		for (const threadId of read.unreadUnnamed) {
+			this.#unreadUnnamed.add(threadId);
+			this.markUnread(threadId);
+		}
 		for (const [threadId, waiting] of Object.entries(read.awaiting)) {
 			this.#awaiting.set(threadId, waiting);
 		}
@@ -84,15 +84,15 @@ export class ThreadReading {
 		return this.#turnsFolded.get(threadId);
 	}
 
-	/** Fold these turns of a thread behind its row of earlier replies, the row shut. */
+	/** Fold these turns of a thread behind its rows of earlier replies, every row shut. */
 	foldTurns(threadId: string, turns: readonly string[]): void {
-		this.#turnsFolded.set(threadId, { turns, open: false });
+		this.#turnsFolded.set(threadId, { turns, opened: [] });
 	}
 
-	/** Open a thread's row of earlier replies: the turns it folds stand under it. */
-	showFoldedTurns(threadId: string): void {
+	/** Open one row of a thread's earlier replies: the folded turns it holds stand under it. */
+	showFoldedTurns(threadId: string, turns: readonly string[]): void {
 		const folded = this.#turnsFolded.get(threadId);
-		if (folded) this.#turnsFolded.set(threadId, { ...folded, open: true });
+		if (folded) this.#turnsFolded.set(threadId, { ...folded, opened: [...folded.opened, ...turns] });
 	}
 
 	/** Whether an answer arrived in the thread that nobody has looked at. */
@@ -115,12 +115,19 @@ export class ThreadReading {
 		return this.#unread.get(threadId)?.includes(answerId) ?? false;
 	}
 
+	/** Whether the page knows which answers of an unread thread are new: not where a draft of an older shape did not say. */
+	namesNewAnswers(threadId: string): boolean {
+		return !this.#unreadUnnamed.has(threadId);
+	}
+
 	markRead(threadId: string): void {
 		this.#unread.delete(threadId);
+		this.#unreadUnnamed.delete(threadId);
 	}
 
 	markAllRead(): void {
 		this.#unread.clear();
+		this.#unreadUnnamed.clear();
 	}
 
 	/** The questions in a thread still with the agent, oldest first. */
@@ -172,6 +179,7 @@ export class ThreadReading {
 		this.#folded.delete(threadId);
 		this.#turnsFolded.delete(threadId);
 		this.#unread.delete(threadId);
+		this.#unreadUnnamed.delete(threadId);
 		this.#awaiting.delete(threadId);
 		this.#takenBack.delete(threadId);
 	}
@@ -180,7 +188,8 @@ export class ThreadReading {
 	get kept(): ThreadsRead {
 		return {
 			folded: [...this.#folded],
-			unread: [...this.#unread.keys()],
+			unread: Object.fromEntries(this.#unread),
+			unreadUnnamed: [...this.#unreadUnnamed],
 			awaiting: Object.fromEntries(this.#awaiting),
 			takenBack: Object.fromEntries(this.#takenBack)
 		};

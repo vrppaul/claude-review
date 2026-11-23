@@ -118,11 +118,12 @@
   last three turns, a thread of six turns or more folds the rest behind
   one row, "Show 2 earlier replies", which opens them and hides them
   again. An answer not read yet, a question still with the agent and words
-  being rewritten never fold. Nothing folds while you read: an answer
-  arriving stays in sight, and the fold is worked out again only as the
-  page loads, as the thread is opened after being folded or resolved, and
-  at Hide. The browser's find in page reaches the folded turns and opens
-  them.
+  being rewritten never fold, and a reload keeps which answers are new.
+  Nothing folds while you read: an answer arriving stays in sight, one
+  landing among the folded turns between two rows of their own, and the
+  fold is worked out again only as the page loads, as the thread is opened
+  after being folded or resolved, and at Hide. The browser's find in page
+  reaches the folded turns and opens them.
 
 ### Changed
 - **Help's "What's new" names no release.** The news it opens is of the

@@ -10,7 +10,7 @@ import { inSight, said } from './elements';
 import { fakeServer, SERVER_ERROR, type FakeServer } from './fake-server';
 import { newComment } from './new-comment';
 import type { Review } from '$lib/review/review.svelte';
-import type { Turn } from '$lib/types';
+import type { Thread, Turn } from '$lib/types';
 import { handedPush, handOverNext } from './pushes';
 import { inReview, openReview } from './review';
 
@@ -632,26 +632,110 @@ describe('a long thread', () => {
 		review = openReview({ files: [file] });
 	});
 
-	/** A thread of seven turns, the comment that opened it among them, every answer read. */
-	function longThread(): string {
+	/** What is said under the comment that opens a long thread, in turn: the agent answering, the reader replying. */
+	const SIX_TURNS = [
+		['author', 'Because.'],
+		['reader', 'And 4?'],
+		['author', 'Same.'],
+		['reader', 'And 5?'],
+		['author', 'Also.'],
+		['reader', 'Thanks.']
+	] as const;
+	const EIGHT_TURNS = [...SIX_TURNS, ['author', 'Done.'], ['reader', 'Good.']] as const;
+
+	/** A thread of the comment that opened it and what is said under it, every answer read. */
+	function longThread(said: readonly (readonly ['author' | 'reader', string])[] = SIX_TURNS): string {
 		const id = review.threads.add(onTheAddedLine('Why 3?'));
-		for (const [author, body] of [
-			['author', 'Because.'],
-			['reader', 'And 4?'],
-			['author', 'Same.'],
-			['reader', 'And 5?'],
-			['author', 'Also.'],
-			['reader', 'Thanks.']
-		] as const) {
+		for (const [author, body] of said) {
 			review.threads.addTurn(id, { author, body, images: [] });
 		}
 		return id;
 	}
 
-	/** Whether the reader sees each turn of the thread, in the order it draws them. */
-	function turnsInSight(): boolean[] {
-		return screen.getAllByTestId(/^thread-(question|answer)$/).map(inSight);
+	/** The thread of this id, as the review holds it. */
+	function threadOf(id: string): Thread {
+		return new Map(review.threads.all.map((thread) => [thread.id, thread])).get(id) as Thread;
 	}
+
+	/** Whether the reader sees each turn of a thread, in the order it draws them. */
+	function turnsInSight(drawn: HTMLElement = document.body): boolean[] {
+		return within(drawn)
+			.getAllByTestId(/^thread-(question|answer)$/)
+			.map(inSight);
+	}
+
+	/** What each row of earlier replies says, in the order the thread draws them. */
+	function rowsOfEarlierReplies(): string[] {
+		return screen.getAllByTestId('earlier-turns-toggle').map(said);
+	}
+
+	it('keeps in sight an answer not read yet, a question still with the agent and words being rewritten, folding only what lies before them', () => {
+		const unreadIn = longThread(EIGHT_TURNS);
+		const awaitedIn = longThread(EIGHT_TURNS);
+		const rewrittenIn = longThread(EIGHT_TURNS);
+		review.threads.reading.answerArrived(unreadIn, threadOf(unreadIn).turns[2].id);
+		review.threads.reading.asked(awaitedIn, threadOf(awaitedIn).turns[3].id);
+		review.threads.writing.openEdit(threadOf(rewrittenIn), threadOf(rewrittenIn).turns[1].id);
+
+		render(DiffView, inReview(review));
+		const [unread, awaited, rewritten] = screen.getAllByTestId('comment-thread');
+
+		expect(turnsInSight(unread)).toEqual([true, false, false, true, true, true, true, true, true]);
+		expect(turnsInSight(awaited)).toEqual([true, false, false, false, true, true, true, true, true]);
+		expect(turnsInSight(rewritten)).toEqual([true, true, true, true, true, true, true, true, true]);
+	});
+
+	it('keeps its fold when drawn again, as a file comes near, however much was said meanwhile', () => {
+		const id = longThread();
+		const { unmount } = render(DiffView, inReview(review));
+		review.threads.addTurn(id, { author: 'author', body: 'Done.', images: [] });
+		review.threads.addTurn(id, { author: 'reader', body: 'Good.', images: [] });
+		unmount();
+
+		render(DiffView, inReview(review));
+
+		expect(rowsOfEarlierReplies()).toEqual(['Show 3 earlier replies']);
+	});
+
+	it('opens the fold as the browser’s find in page comes to words in it', () => {
+		longThread();
+		render(DiffView, inReview(review));
+
+		screen.getByTestId('earlier-turns-held').dispatchEvent(new Event('beforematch'));
+		flushSync();
+
+		expect(turnsInSight()).toEqual([true, true, true, true, true, true, true]);
+	});
+
+	it('folds anew at Hide, what was said since it was folded counted in', async () => {
+		const user = userEvent.setup({ delay: null });
+		const id = longThread();
+		render(DiffView, inReview(review));
+		await user.click(screen.getByTestId('earlier-turns-toggle'));
+		review.threads.addTurn(id, { author: 'author', body: 'Done.', images: [] });
+		review.threads.addTurn(id, { author: 'reader', body: 'Good.', images: [] });
+		flushSync();
+
+		await user.click(screen.getByTestId('earlier-turns-toggle'));
+
+		expect(rowsOfEarlierReplies()).toEqual(['Show 5 earlier replies']);
+	});
+
+	it('draws an answer landing among the folded turns in its place, in sight, each run round it behind a row of its own', async () => {
+		const user = userEvent.setup({ delay: null });
+		const id = longThread();
+		render(DiffView, inReview(review));
+
+		review.threads.receiveReply(id, 'To the comment itself.', id);
+		flushSync();
+
+		expect(turnsInSight()).toEqual([true, false, true, false, false, true, true, true]);
+		expect(rowsOfEarlierReplies()).toEqual(['Show 1 earlier reply', 'Show 2 earlier replies']);
+
+		await user.click(screen.getAllByTestId('earlier-turns-toggle')[1]);
+
+		expect(turnsInSight()).toEqual([true, false, true, true, true, true, true, true]);
+	});
 
 	it('folds what lies between its opening and its last three turns behind one button, which shows and hides them, the keyboard kept on it', async () => {
 		const user = userEvent.setup({ delay: null });
