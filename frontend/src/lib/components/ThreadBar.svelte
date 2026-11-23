@@ -109,7 +109,7 @@
 		<FoldToggle
 			{folded}
 			subject="this thread"
-			role={FOLD_TOGGLE_ROLE}
+			foundAs={FOLD_TOGGLE_ROLE}
 			testId={folded ? 'unfold-thread' : 'fold-comment'}
 			onToggle={toggleFold}
 		/>

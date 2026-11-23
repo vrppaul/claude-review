@@ -48,6 +48,9 @@ export const FOLD_TOGGLE_ROLE = 'fold-toggle';
  */
 export const STANDS_FOR_ITS_SECTION_ROLE = 'stands-for-its-section';
 
+/** What the page finds a fold toggle by: as a thread's fold, or as what stands for a file's section. */
+export type FoldToggleRole = typeof FOLD_TOGGLE_ROLE | typeof STANDS_FOR_ITS_SECTION_ROLE;
+
 // Long enough to find what was pointed at, short enough not to become part
 // of how the file looks
 const MARKED_FOR = 2000;

@@ -129,7 +129,7 @@
 			<FoldToggle
 				folded={collapsed}
 				subject={file.path}
-				role={STANDS_FOR_ITS_SECTION_ROLE}
+				foundAs={STANDS_FOR_ITS_SECTION_ROLE}
 				testId="collapse-file"
 				onToggle={() => review.reading.toggleFolded(file.path)}
 			/>
