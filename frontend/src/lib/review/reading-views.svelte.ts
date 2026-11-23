@@ -138,7 +138,7 @@ export class ReadingViews implements ViewsOnScreen {
 		// The reader asked: whatever they asked through (`WayIntoStory`) notes the story tried
 		this.#kept.set(name);
 		const placeKept = this.onScreen.readAs === name ? null : this.#placesKept[name];
-		const view = placeKept?.left.view ?? name;
+		const view = placeKept === null ? name : this.#viewDrawingNow(placeKept.left);
 		this.#putOnScreen(view);
 		if (placeKept !== null) {
 			void this.#views[view].returnTo(placeToComeBackTo(placeKept, this.#diff.takeOnScreen), 'where-it-is');
@@ -179,11 +179,9 @@ export class ReadingViews implements ViewsOnScreen {
 	 * Bring the change's files on screen in place of a file read alone that
 	 * the change now holds, taken again, and have them take the reader over
 	 * on the line they read (`FilesReading.takeOver`). A file the change
-	 * still leaves stays read alone as it is. One the reader left Files at
-	 * gives way too, for when they come back (`#keptFileAloneGivesWay`).
+	 * still leaves stays read alone as it is.
 	 */
 	async giveWayToTheChange(): Promise<void> {
-		this.#keptFileAloneGivesWay();
 		const path = this.fileReadAlone;
 		if (path === null || !this.#diff.holds(path)) return;
 		const read = this.onScreen.placeRead();
@@ -221,14 +219,12 @@ export class ReadingViews implements ViewsOnScreen {
 	}
 
 	/**
-	 * A file read alone that the change now holds, where the reader left
-	 * Files, is come back to among the change's files: a file read alone is
-	 * one the change did not touch.
+	 * The view that draws a place left now: the one it was read in, but for a
+	 * file read alone that the change has come to hold since, which is read
+	 * among the change's files.
 	 */
-	#keptFileAloneGivesWay(): void {
-		const placeKept = this.#placesKept.files;
+	#viewDrawingNow(left: PlaceLeft): ReadingViewName {
 		// What a view of files whole knows a section by is its file's path
-		if (placeKept?.left.view !== FILE_ALONE || !this.#diff.holds(placeKept.left.place.within)) return;
-		this.#placesKept.files = { ...placeKept, left: { ...placeKept.left, view: FILES } };
+		return left.view === FILE_ALONE && this.#diff.holds(left.place.within) ? FILES : left.view;
 	}
 }
