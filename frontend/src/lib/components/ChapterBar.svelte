@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { KEPT_IN_SIGHT_ROLE } from '$lib/dom/in-sight';
 	import { useReview } from '$lib/review/context';
+	import { chapterNumber } from '$lib/review/story-contents';
 	import Bar from '$lib/ui/Bar.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
-	import { chapterByNumber, chapterNumber, stepAmong } from './story-words';
+	import { chapterByNumber, stepAmong } from './story-words';
 
 	const review = useReview();
 

@@ -163,6 +163,35 @@ describe('going to where a check failed', () => {
 	});
 });
 
+describe("opening a step's file from the story", () => {
+	// A story whose one step tells line 2 of the file, read as the story
+	const TOLD_OF_LINE_TWO = storyHeld({ chapters: [toldChapter('ch-1', [toldStep('src/app.py', 2)])] });
+
+	/** The review on screen, read as its story of line 2. */
+	function readAsTheStory(): Review {
+		const review = onScreenFailing([], TOLD_OF_LINE_TWO);
+		review.views.show('story');
+		flushSync();
+		return review;
+	}
+
+	it("takes the reader to the step's first line among the change's files, the keyboard on its number", async () => {
+		const review = readAsTheStory();
+
+		await press('step-open-in-files');
+
+		expect([review.views.onScreen.name, document.activeElement?.textContent?.trim()]).toEqual(['files', '2']);
+	});
+
+	it('offers the way back to the step, by its number', async () => {
+		readAsTheStory();
+
+		await press('step-open-in-files');
+
+		expect(screen.getByTestId('go-back').textContent?.trim()).toBe('Back to step 1.1');
+	});
+});
+
 // Where the reader read before the page took them elsewhere is read off the page as laid out, which jsdom does not
 // do: the browser tests note it (tests/e2e/test_jumps.py), and these leave it on the way back by hand
 describe('going back to where the reader was before going to a line', () => {

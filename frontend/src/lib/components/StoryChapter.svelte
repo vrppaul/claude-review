@@ -1,20 +1,13 @@
 <script lang="ts">
 	import { chapterText } from '$lib/anchors/story';
 	import { useReview } from '$lib/review/context';
-	import type { ChapterListed } from '$lib/review/story-contents';
+	import { type ChapterListed, chapterNumber } from '$lib/review/story-contents';
 	import Bands from '$lib/ui/Bands.svelte';
 	import Callout from '$lib/ui/Callout.svelte';
 	import Heading from '$lib/ui/Heading.svelte';
 	import TwinChip from '$lib/ui/TwinChip.svelte';
 	import AskableBlock from './AskableBlock.svelte';
-	import {
-		AGENT_UPDATING_REASONS,
-		CHANGED_AFTER_TOLD_LEAD,
-		chapterCounts,
-		chapterNumber,
-		stepNumber,
-		stepsChanged
-	} from './story-words';
+	import { AGENT_UPDATING_REASONS, CHANGED_AFTER_TOLD_LEAD, chapterCounts, stepsChanged } from './story-words';
 	import StoryPart from './StoryPart.svelte';
 	import StoryStep from './StoryStep.svelte';
 	import TermCard from './TermCard.svelte';
@@ -74,7 +67,7 @@
 		{/if}
 
 		{#each chapter.steps as step (step.section)}
-			<StoryStep {step} number={stepNumber(chapter.place, step.place)} />
+			<StoryStep {step} />
 		{/each}
 	</Bands>
 </StoryPart>

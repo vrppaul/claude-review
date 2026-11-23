@@ -1,20 +1,19 @@
 /**
- * How a story's parts are numbered, named and counted on the page, said one
- * way wherever they are said: in a chapter's heading, beside a step, in the
- * head of a piece, in the story's contents. And how its writing is said: the
- * acts that have it written again or stop it, by one name in the wait for a
- * story and in its head, and the command that attaches the agent to write it.
+ * How a story's parts are named and counted on the page, said one way
+ * wherever they are said: in a chapter's heading, beside a step, in the head
+ * of a piece, in the story's contents. And how its writing is said: the acts
+ * that have it written again or stop it, by one name in the wait for a story
+ * and in its head, and the command that attaches the agent to write it. How
+ * the parts are numbered is the story's listing's (`story-contents.ts`).
  */
 
+import { chapterNumber, numberInChapter } from '$lib/review/story-contents';
 import type { FollowedStep } from '$lib/types';
 import type { TwinHalf } from '$lib/ui/twin-chip';
 import { counted, type CountedWords, FILES } from '$lib/utils/words';
 
-// What joins the first line of a step to its last, and a chapter's number to a step's
+// What joins the first line of a step to its last
 const RANGE_DASH = '–';
-const NUMBER_SEPARATOR = '.';
-// The number the first of anything in a story goes by: chapters and steps are counted from one
-const FIRST_NUMBER = 1;
 // What a step and a chapter are called before their numbers: at the head of a heading, and inside a sentence
 const A_STEP = 'Step';
 const A_CHAPTER = 'chapter';
@@ -33,6 +32,10 @@ const CHANGED_LINES: CountedWords = { one: 'changed line', many: 'changed lines'
 const BETWEEN_NUMBERS = ', ';
 // How a file says that other chapters tell it too, before it names them
 const ALSO_IN = 'also in';
+// What a step's way to its file says before the file and after it: the view of the change's files, as the header's
+// switch names it
+const OPEN = 'Open';
+const IN_FILES = 'in Files';
 // What is said of a part, or of some of the chapters, the reader has read through
 const READ = 'read';
 // What a step whose code a round changed after the story was told is said to be, to whoever cannot see it step back
@@ -77,16 +80,6 @@ export const ATTACH_COMMAND = '/review-ui';
 
 /** The lines a step tells: the first and the last, both among them. */
 type StepLines = FollowedStep['lines'];
-
-/** A chapter's number, by its place among the chapters. */
-export function chapterNumber(chapterPlace: number): number {
-	return chapterPlace + FIRST_NUMBER;
-}
-
-/** A step as the story numbers it: its chapter's number, then its own among the chapter's steps. */
-export function stepNumber(chapterPlace: number, stepPlace: number): string {
-	return `${chapterNumber(chapterPlace)}${NUMBER_SEPARATOR}${stepPlace + FIRST_NUMBER}`;
-}
 
 /** A step's lines as the head of its piece says them: "42", or "42–47". */
 export function linesSaid({ first, last }: StepLines): string {
@@ -153,7 +146,7 @@ export function chapterAmong(place: number, chapters: number): string {
 
 /** Which of its chapter's steps a step is, as the bar a chapter is read under says: "step 2 of 5". */
 export function stepAmong(stepPlace: number, steps: number): string {
-	return `${STEPS.one} ${stepPlace + FIRST_NUMBER} ${OUT_OF} ${steps}`;
+	return `${STEPS.one} ${numberInChapter(stepPlace)} ${OUT_OF} ${steps}`;
 }
 
 /** What a part is called in the contents once the reader has read it through: "Chapter 2: The end, read". */
@@ -203,6 +196,11 @@ function numbersOf(places: readonly number[]): string {
 /** Another chapter that tells the file of a piece, by its place, as a way to it on the piece's head says it: "also in chapter 4". */
 export function alsoInChapter(place: number): string {
 	return `${ALSO_IN} ${A_CHAPTER} ${chapterNumber(place)}`;
+}
+
+/** What a step's way to its file among the change's files says it does: "Open src/app.py in Files". */
+export function openInFiles(path: string): string {
+	return `${OPEN} ${path} ${IN_FILES}`;
 }
 
 /** The other chapters that tell a file, by their places, in the contents, a column with no room for the word: "also in 1", "also in 1, 4". */

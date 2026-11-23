@@ -39,11 +39,12 @@ import {
 	type ReadingViewName
 } from '$lib/review/reading-view';
 import type { ReviewDiff } from '$lib/review/review-diff.svelte';
+import type { StoryReading } from '$lib/review/story-reading';
 
-/** Each view a review is read in, by its name: the files and a file read alone by what only they do. */
+/** Each view a review is read in, by its name, and by what only it does. */
 interface Views {
 	files: FilesReading;
-	story: ReadingView;
+	story: StoryReading;
 	'file-alone': FileAloneReading;
 }
 
@@ -102,6 +103,11 @@ export class ReadingViews implements ViewsOnScreen {
 	/** The view a file the change did not touch is read alone in, on screen or not. */
 	get fileAlone(): FileAloneReading {
 		return this.#views[FILE_ALONE];
+	}
+
+	/** The view the review is read in as its story, on screen or not. */
+	get story(): StoryReading {
+		return this.#views.story;
 	}
 
 	/** The file read alone now; null while another view is on screen. */

@@ -20,15 +20,19 @@ import {
 	type ReadingView,
 	type ReadingViewName
 } from '$lib/review/reading-view';
+import { firstLineOf } from '$lib/review/story-pieces';
+import type { StoryReading } from '$lib/review/story-reading';
 import type { Threads } from '$lib/review/threads.svelte';
 import type { WayBack } from '$lib/review/way-back.svelte';
-import type { LinePlace, Thread } from '$lib/types';
+import type { DiffFile, LinePlace, Thread } from '$lib/types';
 import { placeKey } from '$lib/utils/line-places';
 
 /** The views the review is read in, as moving the reader needs them. */
 export interface ViewsOnScreen {
 	/** The view the review is read in now. */
 	readonly onScreen: ReadingView;
+	/** The view the review is read in as its story, on screen or not: where a step's place is read. */
+	readonly story: StoryReading;
 	/**
 	 * Bring on screen the change's files, read against the review's own base,
 	 * and hand their view over: as it is, where that base could not be
@@ -244,6 +248,28 @@ export class Navigator {
 		const drawing = await this.#views.showWhereFileRead(path);
 		const section = await drawing.drawLine(path, line);
 		if (section !== null) this.#goToLineFrom(left, section, arrived);
+	}
+
+	/**
+	 * Take the reader from a step of the story to its file among the
+	 * change's files, on the first line the step's piece draws
+	 * (`firstLineOf`), as `goToLine` takes them to a line; how they chose to
+	 * read stays. The step, as they saw it, is noted for Back: they acted
+	 * from it, whichever piece was at the top of the area.
+	 *
+	 * @param stepSection what the step's section is known by
+	 * @param piece the piece of its file the step shows
+	 */
+	async openStepInFiles(stepSection: string, piece: DiffFile): Promise<void> {
+		const line = firstLineOf(piece);
+		if (line === null) return;
+		const left = this.#views.story.placeLeftIn(stepSection);
+		const files = await this.#views.showTheChange();
+		const section = await files.drawLine(piece.path, line);
+		if (section === null) return;
+		// The files come on screen in the story's place, so the step is left whatever line of them is in sight
+		if (left !== null) this.#wayBack.note(left);
+		this.#sections.goToLine(section, { line: placeKey(line), name: null });
 	}
 
 	/**

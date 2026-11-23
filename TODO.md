@@ -269,17 +269,14 @@ The owner's list of 2026-11-16.
 
 - [ ] `feat(ui)`: a long thread shows its last three or four answers and
       folds the ones before them behind one line that opens them.
-- [ ] `feat(ui)`: from a step of the story, a quick look at that step's
-      whole file, and one press back to the same place in the story.
 
 ## Finding your way in a review
 
 The owner's idea of 2026-11-18, a language server built in to find a name
 and where it is used, and what came of thinking it through: what a reader
 asks of a change, and what the review cannot answer yet. None is designed.
-The order proposed is the first two, the whole-file look under Quality of
-life, then the uses of a name, each ready for the next; the rest in any
-order.
+The order proposed is the first two, then the uses of a name, each ready
+for the next; the rest in any order.
 
 Where a thing is:
 

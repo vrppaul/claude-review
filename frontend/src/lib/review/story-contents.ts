@@ -9,8 +9,10 @@
  *
  * Here too every step, and whatever the story leaves out of a file, is
  * given what its section of the page is known by: this is the one walk of
- * the story that names them. The pieces the story draws are laid out from
- * this listing (`story-pieces.ts`), under the keys it gave.
+ * the story that names them. Each step is numbered here too: the page
+ * heads it by its number, and the way back calls a place in it so. The
+ * pieces the story draws are laid out from this listing
+ * (`story-pieces.ts`), under the keys it gave.
  */
 
 import {
@@ -57,6 +59,8 @@ export interface StepListed {
 	section: string;
 	/** Where the step stands among its chapter's steps: what it is numbered by, after its chapter. */
 	place: number;
+	/** The step as the story numbers it: its chapter's number, then its own, "1.2". */
+	number: string;
 	/** What it shows of its file; null where the review says its code is not in the change as it now stands. */
 	shown: StepShown | null;
 }
@@ -100,6 +104,25 @@ export interface StoryContents {
 
 // What is above the first part, or above none
 const NONE_ABOVE: ReadonlySet<string> = new Set();
+// The number the first chapter, and the first step of a chapter, go by: both are counted from one
+const FIRST_NUMBER = 1;
+// What joins a chapter's number to a step's
+const NUMBER_SEPARATOR = '.';
+
+/** A chapter's number, by its place among the chapters. */
+export function chapterNumber(chapterPlace: number): number {
+	return chapterPlace + FIRST_NUMBER;
+}
+
+/** A step's number among its chapter's steps, by its place among them. */
+export function numberInChapter(stepPlace: number): number {
+	return stepPlace + FIRST_NUMBER;
+}
+
+/** A step as the story numbers it: its chapter's number, then its own among the chapter's steps. */
+function stepNumber(chapterPlace: number, stepPlace: number): string {
+	return `${chapterNumber(chapterPlace)}${NUMBER_SEPARATOR}${numberInChapter(stepPlace)}`;
+}
 
 /** The files a chapter shows code of, with where it stands and what its part is known by. */
 interface ChapterTelling {
@@ -173,7 +196,7 @@ function chapterListed(told: FollowedChapter, place: number, telling: readonly C
 			files.set(piece.path, listed);
 			shown = { piece, lines, fileListed: listed };
 		}
-		steps.push({ told: step, section, place: stepPlace, shown });
+		steps.push({ told: step, section, place: stepPlace, number: stepNumber(place, stepPlace), shown });
 	}
 	return { told, place, part: chapterPartKey(told.id), files: [...files.values()], steps };
 }

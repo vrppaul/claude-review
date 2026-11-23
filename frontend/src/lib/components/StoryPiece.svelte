@@ -26,6 +26,8 @@
 		beside?: Snippet;
 		/** What follows the file and its change on the header: the ways to the other chapters that tell a step's file. */
 		afterTheFile?: Snippet;
+		/** What stands at the header's far end: a step's way to its file among the change's files. */
+		atTheEnd?: Snippet;
 	}
 
 	// What the file's name is in the piece's header: the piece's heading, or plain words where a step's
@@ -41,7 +43,7 @@
 		'what-no-step-tells': 'cr-story-bleed border-y border-base-300'
 	};
 
-	let { sectionKey, piece, shows, above, numbered, beside, afterTheFile }: Props = $props();
+	let { sectionKey, piece, shows, above, numbered, beside, afterTheFile, atTheEnd }: Props = $props();
 	const review = useReview();
 
 	const fileNamed = $derived(numbered === undefined ? AS_ITS_HEADING : AS_PLAIN_WORDS);
@@ -78,6 +80,11 @@
 				{beside}
 			/>
 			{@render afterTheFile?.()}
+			{#if atTheEnd}
+				<!-- Pushed to the far end, as a file's bar among the files pushes its controls -->
+				<div class="flex-1"></div>
+				{@render atTheEnd()}
+			{/if}
 		</Bar>
 	{/snippet}
 </LinesSection>

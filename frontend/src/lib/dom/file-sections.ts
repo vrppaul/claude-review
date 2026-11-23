@@ -190,9 +190,18 @@ export class FileSections {
 	 */
 	readingPlace(standsAlike: (lineKey: string) => boolean): ReadingPlace | null {
 		const section = this.#sections.beingRead;
-		const area = this.#sections.area;
-		if (section === null || area === null) return null;
-		return readingPlaceIn(section.key, section.element, area, standsAlike);
+		return section === null ? null : this.#placeReadIn(section, standsAlike);
+	}
+
+	/**
+	 * Where the reader is reading in a section named by its key, read as in
+	 * the section being read, wherever it stands in the area: a section the
+	 * reader acted from, though another is at the top. None for a section
+	 * not drawn, or while the reading area is not watched.
+	 */
+	readingPlaceInSection(sectionKey: string, standsAlike: (lineKey: string) => boolean): ReadingPlace | null {
+		const section = this.#sections.get(sectionKey);
+		return section === undefined ? null : this.#placeReadIn(section, standsAlike);
 	}
 
 	/** Whether the reader sees a line's number whole in a section now, by the key its place is known by. */
@@ -380,6 +389,12 @@ export class FileSections {
 	 */
 	line(path: string, lineKey: string): HTMLElement | null {
 		return lineAmong(this.#drawing(path), lineKey);
+	}
+
+	/** Where the reader is reading in a section, as `readingPlaceIn` reads it; none while the area is not watched. */
+	#placeReadIn(section: Section, standsAlike: (lineKey: string) => boolean): ReadingPlace | null {
+		const area = this.#sections.area;
+		return area === null ? null : readingPlaceIn(section.key, section.element, area, standsAlike);
 	}
 
 	/** The sections on the page that draw a file. */

@@ -17,6 +17,7 @@ from httpx2 import AsyncClient
 from playwright.async_api import Locator, Page, expect
 
 from claude_review.domain.models import CommentSeverity
+from claude_review.domain.story import Step, Story
 from tests.e2e.browsers_loop import in_the_browsers_loop
 from tests.e2e.page_reads import FOCUSED_ELEMENT, SCROLLED
 from tests.helpers import (
@@ -100,6 +101,8 @@ A_TURN_OF_THE_WHEEL = 200
 # The line of the far file the reader reads from, in the files and in the story, which leaves the far file out
 READ_FROM = CHANGED_LINES[2]
 BROUGHT_TO_THE_TOP = "(element) => element.scrollIntoView({ block: 'start' })"
+# A story whose one step tells that line of the far file: screens down the files, near the head of the story
+A_STORY_OF_THE_FAR_FILE = story_of(step(FAR_FILE, READ_FROM, READ_FROM))
 
 
 def _lines(path: str, changed: tuple[int, ...]) -> str:
@@ -118,13 +121,24 @@ def many_hunks(tmp_path: Path) -> Path:
     return repo
 
 
+async def _told(many_hunks: Path, servers: ReviewServers, story: Story[Step]) -> RunningReview:
+    """A review of the change, which the agent has told this story of."""
+    started = await servers.start(await repository_opening(many_hunks))
+    async with AsyncClient(base_url=started.url) as agent:
+        await agent.put(STORY_ROUTE, json=as_the_agent_writes(story))
+    return started
+
+
 @in_the_browsers_loop
 async def review(many_hunks: Path, servers: ReviewServers) -> RunningReview:
     """A review of the change, which the agent has told a story of."""
-    started = await servers.start(await repository_opening(many_hunks))
-    async with AsyncClient(base_url=started.url) as agent:
-        await agent.put(STORY_ROUTE, json=as_the_agent_writes(A_STORY))
-    return started
+    return await _told(many_hunks, servers, A_STORY)
+
+
+@in_the_browsers_loop
+async def review_told_from_the_far_file(many_hunks: Path, servers: ReviewServers) -> RunningReview:
+    """A review of the change, whose story tells a line of the far file alone."""
+    return await _told(many_hunks, servers, A_STORY_OF_THE_FAR_FILE)
 
 
 @in_the_browsers_loop
@@ -353,4 +367,36 @@ async def test_the_story_chosen_again_after_the_files_shows_the_reader_the_line_
 
     await _choose(page, "read-as-story")
 
+    await expect(line).to_be_in_viewport()
+
+
+async def _open_the_steps_file(page: Page) -> None:
+    """Read the review as its story, and press the step's way to its file among the change's files."""
+    await page.click('[data-testid="read-as-story"]')
+    await page.get_by_test_id("step-open-in-files").click()
+    await page.evaluate(FRAMES_DRAWN, WATCHED_FOR_FRAMES)
+
+
+async def test_a_steps_file_opened_from_the_story_shows_the_reader_the_steps_first_line_among_the_files(
+    review_told_from_the_far_file: RunningReview, page: Page
+) -> None:
+    await page.goto(review_told_from_the_far_file.url)
+    await page.wait_for_selector('[data-testid="file-item"]')
+
+    await _open_the_steps_file(page)
+
+    line = _section(page, FAR_FILE).get_by_role("button", name=f"Comment on line {READ_FROM}", exact=True)
+    await expect(line).to_be_in_viewport()
+
+
+async def test_back_from_a_steps_file_brings_the_story_back_at_the_step(
+    review_told_from_the_far_file: RunningReview, page: Page
+) -> None:
+    await page.goto(review_told_from_the_far_file.url)
+    await page.wait_for_selector('[data-testid="file-item"]')
+    await _open_the_steps_file(page)
+
+    await page.keyboard.press("b")
+
+    line = page.get_by_test_id("step-frame").get_by_role("button", name=f"Comment on line {READ_FROM}", exact=True)
     await expect(line).to_be_in_viewport()

@@ -108,6 +108,12 @@
   from one to the other and back puts you on the line you read, where it
   stood, the keyboard left on the switch; a file read alone comes back
   too. A switch leaves nothing for Back.
+- **A story's step opens its file among the files.** A button at the end
+  of each step's bar, under the Files icon, takes you to the file among
+  the change's files, on the step's first line. Back, or `b`, brings the
+  story back at the step as you saw it, and says where: "Back to step
+  1.3". A place in a step's code is called by its step wherever Back
+  offers it.
 
 ### Changed
 - **Help's "What's new" names no release.** The news it opens is of the

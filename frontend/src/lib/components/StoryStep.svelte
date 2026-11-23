@@ -7,6 +7,8 @@
 	import CodeFrameHead from '$lib/ui/CodeFrameHead.svelte';
 	import CodeFrameRow from '$lib/ui/CodeFrameRow.svelte';
 	import Heading from '$lib/ui/Heading.svelte';
+	import Icon from '$lib/ui/Icon.svelte';
+	import IconButton from '$lib/ui/IconButton.svelte';
 	import InlineCode from '$lib/ui/InlineCode.svelte';
 	import Tag from '$lib/ui/Tag.svelte';
 	import AskableBlock from './AskableBlock.svelte';
@@ -18,18 +20,17 @@
 		changedStepNamed,
 		CODE_NO_LONGER_FOUND,
 		linesSaid,
+		openInFiles,
 		stepNamed
 	} from './story-words';
 	import StoryPiece from './StoryPiece.svelte';
 
 	interface Props {
-		/** The step as its chapter lists it: as told, with what its section is known by and its file as the chapter lists it. */
+		/** The step as its chapter lists it: as told and numbered, with what its section is known by and its file as the chapter lists it. */
 		step: StepListed;
-		/** The step as the story numbers it: its chapter's number, then its own. */
-		number: string;
 	}
 
-	let { step, number }: Props = $props();
+	let { step }: Props = $props();
 	const review = useReview();
 
 	const told = $derived(step.told);
@@ -38,7 +39,7 @@
 	// Whether it shows code a round changed after it was told: one whose code is no longer found shows none
 	const changed = $derived(told.now?.changed_since_told === true);
 	// What its heading is named, with whether a round changed its code after it was told
-	const named = $derived(changed ? changedStepNamed(number) : stepNamed(number));
+	const named = $derived(changed ? changedStepNamed(step.number) : stepNamed(step.number));
 </script>
 
 <!-- The number heads the step, in its piece's header before its file, as a file's name heads it among the files:
@@ -46,7 +47,7 @@
 	as it now stands under a number and reason that step back, and is named so -->
 {#snippet stepNumber()}
 	<Heading tag="h3" heads="piece" tone={changed ? 'faint' : 'agent'} testId="step-number" aria-label={named}>
-		{number}
+		{step.number}
 	</Heading>
 {/snippet}
 
@@ -112,6 +113,20 @@
 							{alsoInChapter(other.place)}
 						</Chip>
 					{/each}
+				{/snippet}
+				{#snippet atTheEnd()}
+					<!-- A quick look at the step's file among the change's files, on the step's first line, and Back returns
+						here; under the same icon as Files in the header -->
+					<IconButton
+						tone="quiet"
+						size="xs"
+						shape="square"
+						label={openInFiles(shown.piece.path)}
+						testId="step-open-in-files"
+						onclick={() => void review.navigator.openStepInFiles(step.section, shown.piece)}
+					>
+						<Icon name="files" size="xs" />
+					</IconButton>
 				{/snippet}
 			</StoryPiece>
 		</CodeFrame>

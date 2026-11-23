@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { useReview } from '$lib/review/context';
-	import { tellsFirst } from '$lib/review/story-contents';
+	import { chapterNumber, tellsFirst } from '$lib/review/story-contents';
 	import { LEFT_OUT_PART, OVERVIEW_PART } from '$lib/review/story-keys';
 	import {
 		threadsInTheChapter,
@@ -23,7 +23,6 @@
 		alsoInShort,
 		chapterAmong,
 		chapterEntitled,
-		chapterNumber,
 		chaptersCounted,
 		leftOutThenAndNow,
 		leftOutThenAndNowSaid,
