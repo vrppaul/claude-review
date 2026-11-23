@@ -16,7 +16,6 @@ import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 
 import type { ThreadsRead } from '$lib/drafts/draft-shapes';
 import type { AwaitedQuestion, TakenBackQuestion, Thread } from '$lib/types';
-import { READER } from '$lib/utils/speakers';
 import { drawnTurnsOf, exchangesOf, turnsToFold, type TurnsFolded } from '$lib/utils/thread-exchanges';
 
 /** What a thread with nothing asked of it is waiting for: nothing. */
@@ -88,9 +87,10 @@ export class ThreadReading {
 
 	/** Fold what lies between the comment that opened a thread and its last turns, every row shut, but what stays in sight. */
 	foldEarlierTurns(thread: Thread, card: InSightOnTheCard): void {
-		const drawn = drawnTurnsOf(exchangesOf(thread)).map((turn) => turn.id);
-		// The question asked last: the reader's last reply, or the comment that opened the thread
-		const lastQuestion = thread.turns.findLast((turn) => turn.author === READER)?.id ?? thread.id;
+		const exchanges = exchangesOf(thread);
+		const drawn = drawnTurnsOf(exchanges).map((turn) => turn.id);
+		// The question asked last, which a failed ask was about
+		const lastQuestion = exchanges.at(-1)?.id;
 		const turns = turnsToFold(drawn, (turnId) => this.#staysInSight(thread.id, turnId, card, lastQuestion));
 		this.#turnsFolded.set(thread.id, { turns, opened: [] });
 	}
@@ -183,7 +183,7 @@ export class ThreadReading {
 	}
 
 	/** Whether a turn stays in sight: a new answer, a question with the agent, words being rewritten, or an ask failed. */
-	#staysInSight(threadId: string, turnId: string, card: InSightOnTheCard, lastQuestion: string): boolean {
+	#staysInSight(threadId: string, turnId: string, card: InSightOnTheCard, lastQuestion: string | undefined): boolean {
 		return (
 			this.isNewAnswer(threadId, turnId) ||
 			this.awaiting(threadId).some((question) => question.id === turnId) ||

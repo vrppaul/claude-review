@@ -270,7 +270,10 @@ export class Navigator {
 		this.#sections.goToLine(section, arrived);
 	}
 
-	/** Whether going to a line takes the reader away from the place left, into another view or out of their sight. */
+	/**
+	 * Whether going to a line takes the reader away from the place left, into another view or out of their sight: a
+	 * line already in sight leaves them looking at what they saw, and Back would lead nowhere.
+	 */
 	#takenElsewhere(left: PlaceLeft, section: string, lineKey: string): boolean {
 		return left.view !== this.#views.onScreen.name || !this.#sections.seesLine(section, lineKey);
 	}
