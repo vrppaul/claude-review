@@ -26,7 +26,7 @@ from starlette.testclient import WebSocketTestSession
 
 from claude_review.domain.interfaces import PageChannel
 from claude_review.domain.kept_review import KeptReview
-from claude_review.domain.models import FIRST_ROUND, FIRST_TAKE, ReaderSettings
+from claude_review.domain.models import FIRST_ROUND, FIRST_TAKE, LineSide, ReaderSettings
 from claude_review.domain.page_events import DiffRetaken, PageEvent
 from claude_review.domain.story import Step, Story, StoryHeld
 from claude_review.hosting.workspace import ReaderFiles, ReviewWorkspace
@@ -61,6 +61,7 @@ from tests.helpers import (
     WAIT_FOR_EVENT,
     FixedClock,
     ReviewFactory,
+    committed_repository,
     files_opening_of,
     http_client,
     next_push,
@@ -98,6 +99,8 @@ LONG_FILE = "src/long.py"
 LINES_OF_THE_LONG_FILE = 4000
 STEPS_OF_THE_LONG_STORY = [step(LONG_FILE, line, line) for line in range(1, LINES_OF_THE_LONG_FILE, 2)]
 A_LONG_STORY = story_of(*STEPS_OF_THE_LONG_STORY)
+# A file of two lines a change removes whole: a step on it tells the lines it had
+REMOVED_FILE = "src/removed.py"
 # Steps that tell each of the two, and a story that tells the whole change
 THE_LINE_ADDED = step(EDITED_FILE, 2, 2)
 THE_FILE_ADDED = step(ADDED_FILE, 1, 2)
@@ -197,6 +200,23 @@ async def test_a_page_reads_the_story_as_told_each_step_with_the_piece_of_the_ch
     assert [(told.file, rows_of(told.now.piece)) for told in held.story.chapters[0].steps] == [
         (EDITED_FILE, ["and a line since"]),
         (ADDED_FILE, ["def added() -> None:", "    return None"]),
+    ]
+
+
+async def test_a_page_reads_each_steps_lines_numbered_as_its_file_stands_or_as_it_stood_where_the_change_removed_it(
+    reviews: ReviewFactory, tmp_path: Path
+) -> None:
+    repository = committed_repository(tmp_path / "repo", {EDITED_FILE: "initial content\n", REMOVED_FILE: "one\ntwo\n"})
+    write_files(repository, {EDITED_FILE: THE_CHANGE[EDITED_FILE]})
+    (repository / REMOVED_FILE).unlink()
+    async with http_client(reviews.app(await repository_opening(repository))) as agent:
+        await tell(agent, story_of(THE_LINE_ADDED, step(REMOVED_FILE, 1, 2)))
+        held = (await held_by(agent)).held
+
+    assert held is not None
+    assert [(told.file, told.now.side) for told in held.story.chapters[0].steps] == [
+        (EDITED_FILE, LineSide.NEW),
+        (REMOVED_FILE, LineSide.OLD),
     ]
 
 

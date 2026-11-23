@@ -4,6 +4,7 @@ import type {
 	DiffFile,
 	FollowedChapter,
 	FollowedStep,
+	LineSide,
 	StoryAsking,
 	StoryHeld,
 	StoryResponse,
@@ -20,6 +21,8 @@ const SECOND_ROUND = FIRST_ROUND + 1;
 type CodeMovedOn = NonNullable<StoryHeld['moved_on']>;
 /** The lines of a file a step was told on, or stands at now: the first and the last, both among them. */
 type StepLines = FollowedStep['lines'];
+/** The side a step's lines are numbered on where its file still has lines: the file as it stands. */
+const AS_IT_STANDS: LineSide = 'new';
 
 /** The piece of a file that shows the lines it gained from one to another, both among them. */
 export function gainedPiece(file: string, first: number, last: number): DiffFile {
@@ -41,7 +44,7 @@ export function gainedPiece(file: string, first: number, last: number): DiffFile
  */
 export function toldStepOfLines(file: string, first: number, last: number, reason: string | null = null): FollowedStep {
 	const lines = { first, last };
-	const now = { lines, piece: gainedPiece(file, first, last), changed_since_told: false };
+	const now = { lines, side: AS_IT_STANDS, piece: gainedPiece(file, first, last), changed_since_told: false };
 	return { file, lines, reason, now, commentable: true };
 }
 
@@ -53,17 +56,24 @@ export function toldStep(file: string, line: number, reason: string | null = nul
 /**
  * A step told of some lines of a file, with no reason, whose code stands at
  * these lines now, in this piece, as it was told: a round's work moved it,
- * or the piece is one a test made.
+ * or the piece is one a test made. Its lines are numbered as the file
+ * stands, unless a test says they are of a file the change removed.
  */
-export function stepStandingAt(file: string, told: StepLines, now: StepLines, piece: DiffFile): FollowedStep {
-	const standing = { lines: now, piece, changed_since_told: false };
+export function stepStandingAt(
+	file: string,
+	told: StepLines,
+	now: StepLines,
+	piece: DiffFile,
+	side: LineSide = AS_IT_STANDS
+): FollowedStep {
+	const standing = { lines: now, side, piece, changed_since_told: false };
 	return { file, lines: told, reason: null, now: standing, commentable: true };
 }
 
 /** A step that shows one line a file gained, which a round's work changed after it was told. */
 export function changedStep(file: string, line: number, reason: string | null = null): FollowedStep {
 	const lines = { first: line, last: line };
-	const now = { lines, piece: gainedPiece(file, line, line), changed_since_told: true };
+	const now = { lines, side: AS_IT_STANDS, piece: gainedPiece(file, line, line), changed_since_told: true };
 	return { file, lines, reason, now, commentable: true };
 }
 

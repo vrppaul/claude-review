@@ -35,6 +35,7 @@ from claude_review.domain.models import (
     FIRST_TAKE,
     DiffFile,
     EpochMillis,
+    LineSide,
     LineSpan,
     OverviewList,
     thread_may_name,
@@ -268,6 +269,8 @@ class StepNow(StoryPart):
     """Where a step's code stands on a take of the change: its lines there, the piece they are, and if it changed."""
 
     lines: LineSpan
+    # The side those lines are numbered on: the file as it stands, or as it stood where the change left no line of it
+    side: LineSide
     piece: DiffFile
     # Whether a round's work changed it after the step was told: its rows say something else than those told
     changed_since_told: bool

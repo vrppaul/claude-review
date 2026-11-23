@@ -253,7 +253,9 @@ def _lines_put_in(hunk: DiffHunk) -> int:
 
 def _as_told_step(step: ToldStep) -> FollowedStep:
     """A step on the take it was told of: on the lines it was told on, showing what it was told with."""
-    return step.followed(StepNow(lines=step.lines, piece=step.piece, changed_since_told=False))
+    return step.followed(
+        StepNow(lines=step.lines, side=side_told_by(step.piece), piece=step.piece, changed_since_told=False)
+    )
 
 
 def _not_placed(step: ToldStep) -> FollowedStep:
@@ -264,7 +266,10 @@ def _not_placed(step: ToldStep) -> FollowedStep:
 def _cut_again(step: ToldStep, lines: LineSpan, file: PlacedFile) -> FollowedStep:
     """A step on the lines it now stands at, cut again, and marked if it shows other rows than it was told with."""
     piece = file.piece([file.rows_at(lines)])
-    return step.followed(StepNow(lines=lines, piece=piece, changed_since_told=_shows_other_rows(step.piece, piece)))
+    now = StepNow(
+        lines=lines, side=side_told_by(piece), piece=piece, changed_since_told=_shows_other_rows(step.piece, piece)
+    )
+    return step.followed(now)
 
 
 def _shows_other_rows(told: DiffFile, now: DiffFile) -> bool:

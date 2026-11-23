@@ -2267,6 +2267,7 @@ export interface components {
          */
         StepNow: {
             lines: components["schemas"]["LineSpan-Output"];
+            side: components["schemas"]["LineSide"];
             piece: components["schemas"]["DiffFile"];
             /** Changed Since Told */
             changed_since_told: boolean;

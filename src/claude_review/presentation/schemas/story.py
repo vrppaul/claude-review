@@ -18,7 +18,7 @@ from typing import Annotated, Self
 from pydantic import ConfigDict, Field, StrictBool
 
 from claude_review.domain import models, story
-from claude_review.domain.models import MAX_ID_LENGTH, MAX_PATH_LENGTH
+from claude_review.domain.models import MAX_ID_LENGTH, MAX_PATH_LENGTH, LineSide
 from claude_review.domain.story import ToldFrom
 from claude_review.presentation.schemas.base import MAX_TEXT_LENGTH, LinesWritten, Schema, made_or_none
 from claude_review.presentation.schemas.content import DiffFile
@@ -211,6 +211,8 @@ class StepNow(Schema):
 
     # The lines it stands at there, which a round's work may have moved from those it was told on
     lines: LineSpan
+    # The side those lines are numbered on: the file as it stands, or as it stood where the change left no line of it
+    side: LineSide
     # The rows of the file the step is, to be drawn as a file is
     piece: DiffFile
     # Whether a round's work changed them after the step was told
@@ -220,6 +222,7 @@ class StepNow(Schema):
     def from_domain(cls, now: story.StepNow) -> Self:
         return cls(
             lines=LineSpan.from_domain(now.lines),
+            side=now.side,
             piece=DiffFile.from_domain(now.piece),
             changed_since_told=now.changed_since_told,
         )

@@ -134,7 +134,9 @@ TOLD_CHAPTER = CHAPTER.told([TOLD_STEP])
 TOLD_STORY = STORY.told([TOLD_CHAPTER], [LEFT_OUT])
 # Each followed onto a later take: the step moved down, showing other rows, and marked; nothing left out there
 FOLLOWED_STEP = TOLD_STEP.followed(
-    StepNow(lines=LineSpan(first=14, last=15), piece=FILE.showing(OTHER_ROWS), changed_since_told=True)
+    StepNow(
+        lines=LineSpan(first=14, last=15), side=LineSide.NEW, piece=FILE.showing(OTHER_ROWS), changed_since_told=True
+    )
 )
 FOLLOWED_CHAPTER = TOLD_CHAPTER.followed([FOLLOWED_STEP])
 # A story asked for and not yet taken, and one an agent took: stopping one writes only that it was stopped,
