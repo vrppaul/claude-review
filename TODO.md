@@ -263,6 +263,24 @@ tests. Remove items when done — don't check them off.
       `Attempt` in two notices, `changedSinceFailed` in `FileSection`, and
       what the diff itself keeps of the whole review not put back.
 
+## Left from the quality-of-life work
+
+Each waits on the owner's word; asked on 2026-11-23, not answered yet.
+
+- [ ] `fix(ui)`: Back from the agent's jump out of the story. A file the
+      agent shows that the story does not draw brings Files on screen and
+      notes no Back (`Navigator.#noteComingInto` notes only a file read
+      alone). Note Back whenever a jump changes the view on screen.
+- [ ] `fix(ui)`: a late answer landing inside a fold leaves rows that fold
+      one turn each, "Show 1 earlier reply". Keep them (nothing moves under
+      the reader), or show a one-turn run at once.
+- [ ] `fix(ui)`: "Back to step 2.6" sets the step in the code font, as the
+      way back sets every place's name (`cr-ui-back-to-place`). Keep it, or
+      set titles and steps in plain type and paths in code.
+- [ ] `style`: `story_telling.py` `_as_told_step` and `_cut_again` hold
+      `StepNow(...)`'s arguments on one line; a trailing comma would set one
+      to a line, which the owner asked about.
+
 ## Finding your way in a review
 
 The owner's idea of 2026-11-18, a language server built in to find a name
