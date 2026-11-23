@@ -202,8 +202,7 @@ const UP_TO_DATE_1_5_0: Draft = {
 	],
 	read: {
 		folded: ['comment-2'],
-		unread: {},
-		unreadUnnamed: ['comment-2'],
+		unread: { 'comment-2': [] },
 		awaiting: { 'comment-2': [{ id: 'turn-3', at: 1150 }] },
 		takenBack: {}
 	},
@@ -321,7 +320,7 @@ describe('the draft the last release kept, as it wrote it', () => {
 		expect(readKept()).toEqual({
 			...WRITTEN_BY_1_7_3,
 			version: DRAFT_SHAPE,
-			read: { ...WRITTEN_BY_1_7_3.read, unread: {}, unreadUnnamed: [] },
+			read: { ...WRITTEN_BY_1_7_3.read, unread: {} },
 			threads: [
 				{ ...fullThread(), id: 'comment-1', anchor: lineAnchor('a.py', 'new', 3, 4, ['x = 1', 'y = 2']) },
 				{
@@ -353,7 +352,7 @@ describe('the draft the pages since the last release kept, as they wrote it', ()
 		expect(readKept()).toEqual({
 			...KEPT_SINCE_1_7_3,
 			version: DRAFT_SHAPE,
-			read: { ...KEPT_SINCE_1_7_3.read, unread: {}, unreadUnnamed: [] },
+			read: { ...KEPT_SINCE_1_7_3.read, unread: {} },
 			panel: [
 				{ id: 'answer-1', author: 'author', body: 'Moved it.', at: 60, files: [{ path: 'a.py', held_by_base: false }] }
 			]
@@ -361,22 +360,34 @@ describe('the draft the pages since the last release kept, as they wrote it', ()
 	});
 });
 
+/** A thread the agent answered, then answered twice more after the reader's reply. */
+const ANSWERED_AFTER_A_REPLY: Thread = {
+	...fullThread(),
+	turns: [
+		{ id: 'turn-1', author: 'author', body: 'History', round: 2, at: 50, images: [] },
+		{ id: 'turn-2', author: 'reader', body: 'And now?', round: 2, at: 60, images: [] },
+		{ id: 'turn-3', author: 'author', body: 'Moved.', round: 2, at: 70, images: [] },
+		{ id: 'turn-4', author: 'author', body: 'Tested.', round: 2, at: 80, images: [] }
+	]
+};
+
 /** A draft as the pages kept it before an unread thread named its new answers: shape 25, one thread unread. */
 const KEPT_BEFORE_NEW_ANSWERS = {
 	...KEPT_SINCE_1_7_3,
 	version: 25,
+	threads: [ANSWERED_AFTER_A_REPLY],
 	panel: [],
 	read: { folded: [], unread: ['comment-1'], awaiting: {}, takenBack: {} }
 };
 
 describe('the draft the pages kept before an unread thread named its new answers', () => {
-	it('comes back in the current shape, its thread unread still, none of its answers named as new, since nobody said', () => {
+	it("comes back in the current shape, its thread unread still, the agent's answers after the reader's last turn new", () => {
 		storeDraft(KEPT_BEFORE_NEW_ANSWERS);
 
 		expect(readKept()).toEqual({
 			...KEPT_BEFORE_NEW_ANSWERS,
 			version: DRAFT_SHAPE,
-			read: { folded: [], unread: {}, unreadUnnamed: ['comment-1'], awaiting: {}, takenBack: {} }
+			read: { folded: [], unread: { 'comment-1': ['turn-3', 'turn-4'] }, awaiting: {}, takenBack: {} }
 		});
 	});
 });
@@ -389,7 +400,6 @@ describe('a draft this release kept', () => {
 			read: {
 				folded: ['comment-1'],
 				unread: { 'comment-1': ['turn-2'] },
-				unreadUnnamed: [],
 				awaiting: { 'comment-1': [{ id: 'comment-1', at: 40 }] },
 				takenBack: { 'comment-1': [{ id: 'turn-2', at: 60 }] }
 			},
@@ -530,7 +540,7 @@ describe('a draft written by an older release', () => {
 
 		expect(draft?.threads[0].body).toBe('written before threads existed');
 		expect(draft?.threads[0].turns).toEqual([]);
-		expect(draft?.read).toEqual({ folded: [], unread: {}, unreadUnnamed: [], awaiting: {}, takenBack: {} });
+		expect(draft?.read).toEqual({ folded: [], unread: {}, awaiting: {}, takenBack: {} });
 	});
 
 	it('keeps how each thread was being read, apart from what it says', () => {
@@ -541,8 +551,7 @@ describe('a draft written by an older release', () => {
 		expect(draft?.threads).toEqual([fullThread()]);
 		expect(draft?.read).toEqual({
 			folded: ['comment-1'],
-			unread: {},
-			unreadUnnamed: ['comment-1'],
+			unread: { 'comment-1': ['turn-1'] },
 			awaiting: { 'comment-1': [{ id: 'comment-1', at: 40 }] },
 			takenBack: {}
 		});

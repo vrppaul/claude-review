@@ -65,8 +65,6 @@ export interface ThreadsRead {
 	folded: string[];
 	/** Threads with something nobody has looked at, and which of their answers that is, by id. */
 	unread: Record<string, readonly string[]>;
-	/** Threads a draft of an older shape kept unread without saying which answers: none of them is known as new. */
-	unreadUnnamed: string[];
 	/** Questions with the agent, oldest first, by the thread they were asked in. */
 	awaiting: Record<string, AwaitedQuestion[]>;
 	/** Questions the reader took back, and when, by the thread they were asked in. */
@@ -137,7 +135,7 @@ type ThreadBeforeStanding = Omit<Thread, 'anchor'> & { anchor: KeptAnchor };
 type PanelTurnBeforeNamedFiles = Omit<PanelTurn, 'files'> & { files?: string[] };
 
 /** How the page was reading the threads before a thread unread said which of its answers are new. */
-type ThreadsReadBeforeNewAnswers = Omit<ThreadsRead, 'unread' | 'unreadUnnamed'> & { unread: string[] };
+type ThreadsReadBeforeNewAnswers = Omit<ThreadsRead, 'unread'> & { unread: string[] };
 
 /** A draft of the shape pages kept before a thread unread said which of its answers are new. */
 interface DraftBeforeNewAnswers extends Omit<Draft, 'version' | 'read'> {
@@ -250,14 +248,19 @@ export function isDraftBeforeNewAnswers(value: unknown): value is DraftBeforeNew
 	return isDraftOfShape(value, SHAPE_BEFORE_NEW_ANSWERS);
 }
 
-/**
- * A draft of the current shape, out of one kept before a thread unread said
- * which of its answers are new: each such thread stays unread, none of its
- * answers known as new, since nobody said.
- */
+/** A draft of the current shape, out of one kept before a thread unread said which of its answers are new. */
 export function withNewAnswers(kept: DraftBeforeNewAnswers): Draft {
-	const { unread, ...read } = kept.read;
-	return { ...kept, version: DRAFT_SHAPE, read: { ...read, unread: {}, unreadUnnamed: unread } };
+	const unread = new Set(kept.read.unread);
+	const named = kept.threads
+		.filter((thread) => unread.has(thread.id))
+		.map((thread) => [thread.id, answersAfterTheReader(thread)] as const);
+	return { ...kept, version: DRAFT_SHAPE, read: { ...kept.read, unread: Object.fromEntries(named) } };
+}
+
+/** What made a thread unread: the agent's turns after the reader's last, or all of them where the reader said none. */
+function answersAfterTheReader(thread: Thread): string[] {
+	const readersLast = thread.turns.findLastIndex((turn) => turn.author === READER);
+	return thread.turns.slice(readersLast + 1).map((turn) => turn.id);
 }
 
 /**
@@ -324,7 +327,7 @@ export function emptyDraft(round: number): Draft {
 	return {
 		version: DRAFT_SHAPE,
 		threads: [],
-		read: { folded: [], unread: {}, unreadUnnamed: [], awaiting: {}, takenBack: {} },
+		read: { folded: [], unread: {}, awaiting: {}, takenBack: {} },
 		writing: [],
 		reviewBody: '',
 		panel: [],

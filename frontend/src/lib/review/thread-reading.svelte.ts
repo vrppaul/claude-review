@@ -44,8 +44,6 @@ export class ThreadReading {
 	 * opening is what is new.
 	 */
 	readonly #unread = new SvelteMap<string, readonly string[]>();
-	// Threads a draft of an older shape kept unread without naming which answers are new
-	readonly #unreadUnnamed = new SvelteSet<string>();
 	// Questions with the agent, by thread, oldest first
 	readonly #awaiting = new SvelteMap<string, AwaitedQuestion[]>();
 	// Questions the reader took back while they were waited on, by thread, and when
@@ -55,10 +53,6 @@ export class ThreadReading {
 	constructor(read: ThreadsRead) {
 		for (const threadId of read.folded) this.#folded.add(threadId);
 		for (const [threadId, answers] of Object.entries(read.unread)) this.#unread.set(threadId, answers);
-		for (const threadId of read.unreadUnnamed) {
-			this.#unreadUnnamed.add(threadId);
-			this.markUnread(threadId);
-		}
 		for (const [threadId, waiting] of Object.entries(read.awaiting)) {
 			this.#awaiting.set(threadId, waiting);
 		}
@@ -127,19 +121,12 @@ export class ThreadReading {
 		return this.#unread.get(threadId)?.includes(answerId) ?? false;
 	}
 
-	/** Whether the page knows which answers of an unread thread are new: not where a draft of an older shape did not say. */
-	namesNewAnswers(threadId: string): boolean {
-		return !this.#unreadUnnamed.has(threadId);
-	}
-
 	markRead(threadId: string): void {
 		this.#unread.delete(threadId);
-		this.#unreadUnnamed.delete(threadId);
 	}
 
 	markAllRead(): void {
 		this.#unread.clear();
-		this.#unreadUnnamed.clear();
 	}
 
 	/** The questions in a thread still with the agent, oldest first. */
@@ -191,7 +178,6 @@ export class ThreadReading {
 		this.#folded.delete(threadId);
 		this.#turnsFolded.delete(threadId);
 		this.#unread.delete(threadId);
-		this.#unreadUnnamed.delete(threadId);
 		this.#awaiting.delete(threadId);
 		this.#takenBack.delete(threadId);
 	}
@@ -203,7 +189,6 @@ export class ThreadReading {
 	 */
 	#staysInSight(threadId: string, turnId: string, card: InSightOnTheCard, lastQuestion: string): boolean {
 		return (
-			!this.namesNewAnswers(threadId) ||
 			this.isNewAnswer(threadId, turnId) ||
 			this.awaiting(threadId).some((question) => question.id === turnId) ||
 			card.rewriting(turnId) ||
@@ -216,7 +201,6 @@ export class ThreadReading {
 		return {
 			folded: [...this.#folded],
 			unread: Object.fromEntries(this.#unread),
-			unreadUnnamed: [...this.#unreadUnnamed],
 			awaiting: Object.fromEntries(this.#awaiting),
 			takenBack: Object.fromEntries(this.#takenBack)
 		};
