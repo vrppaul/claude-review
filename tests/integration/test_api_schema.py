@@ -22,7 +22,7 @@ from schemathesis.specs.openapi.checks import positive_data_acceptance
 
 from claude_review.hosting.hosted_review import HostedReview
 from claude_review.presentation.api_schema import http_document
-from claude_review.presentation.errors import REFUSAL_STATUS, REFUSED_FOR_INPUT
+from claude_review.presentation.errors import REFUSED_FOR_INPUT
 from claude_review.presentation.schemas.base import MAX_WAIT_SECONDS
 from claude_review.services.image_service import IMAGE_FORMATS
 from claude_review.services.review_opening import ReviewOpening
@@ -41,13 +41,11 @@ from tests.helpers import (
 # review, that a range starts before it ends, that a message says something
 BEYOND_THE_SCHEMA: list[CheckFunction] = [positive_data_acceptance]
 
-# What a request the schema does not allow is refused with: whatever the review refuses with. Schemathesis's own list
-# leaves out 413, which the review answers a body too long to read with before any field of it is checked
-REFUSALS = sorted(
-    {*REFUSAL_STATUS.values(), *(status for statuses in REFUSED_FOR_INPUT.values() for status in statuses)}
-)
+# What a request the schema does not allow is refused with: what the review refuses a request for its input with,
+# 413 among them, which Schemathesis's own list leaves out
+REFUSALS_FOR_INPUT = sorted({status for statuses in REFUSED_FOR_INPUT.values() for status in statuses})
 REFUSALS_OF_WHAT_IS_NOT_ALLOWED = SchemathesisConfig.from_dict(
-    {"checks": {"negative_data_rejection": {"expected-statuses": [str(status.value) for status in REFUSALS]}}}
+    {"checks": {"negative_data_rejection": {"expected-statuses": [str(status.value) for status in REFUSALS_FOR_INPUT]}}}
 )
 
 schema = schemathesis.pytest.from_fixture("described_schema")

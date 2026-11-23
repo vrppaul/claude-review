@@ -19,7 +19,7 @@ from playwright.async_api import Locator, Page, expect
 from claude_review.domain.models import CommentSeverity
 from claude_review.domain.story import Step, Story
 from tests.e2e.browsers_loop import in_the_browsers_loop
-from tests.e2e.page_reads import FOCUSED_ELEMENT, SCROLLED
+from tests.e2e.page_reads import BROUGHT_TO_THE_TOP, FOCUSED_ELEMENT, FRAMES_DRAWN, SCROLLED
 from tests.helpers import (
     ReviewServers,
     RunningReview,
@@ -72,10 +72,6 @@ MARKED_AT_EACH_MOVE = """(section) => {
     section.closest('main').addEventListener('scroll', () => moves.push(section.hasAttribute('data-marked')));
     return moves;
 }"""
-# Let the page draw a number of frames
-FRAMES_DRAWN = (
-    "async (count) => { for (let frame = 0; frame < count; frame += 1) await new Promise(requestAnimationFrame); }"
-)
 # How long the area is watched once the page has marked a file, in frames: a third of a second at sixty a
 # second, many times the few frames the page takes to put a file right
 WATCHED_FOR_FRAMES = 20
@@ -100,7 +96,6 @@ LESS_THAN_A_PIXEL = 1
 A_TURN_OF_THE_WHEEL = 200
 # The line of the far file the reader reads from, in the files and in the story, which leaves the far file out
 READ_FROM = CHANGED_LINES[2]
-BROUGHT_TO_THE_TOP = "(element) => element.scrollIntoView({ block: 'start' })"
 # A story whose one step tells that line of the far file: screens down the files, near the head of the story
 A_STORY_OF_THE_FAR_FILE = story_of(step(FAR_FILE, READ_FROM, READ_FROM))
 

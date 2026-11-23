@@ -203,14 +203,35 @@ async def test_a_page_reads_the_story_as_told_each_step_with_the_piece_of_the_ch
     ]
 
 
-async def test_a_page_reads_each_steps_lines_numbered_as_its_file_stands_or_as_it_stood_where_the_change_removed_it(
-    reviews: ReviewFactory, tmp_path: Path
-) -> None:
+@pytest.fixture
+def a_change_removing_a_file(tmp_path: Path) -> Path:
+    """A repository whose change adds a line to one file and removes another whole."""
     repository = committed_repository(tmp_path / "repo", {EDITED_FILE: "initial content\n", REMOVED_FILE: "one\ntwo\n"})
     write_files(repository, {EDITED_FILE: THE_CHANGE[EDITED_FILE]})
     (repository / REMOVED_FILE).unlink()
-    async with http_client(reviews.app(await repository_opening(repository))) as agent:
+    return repository
+
+
+async def test_a_page_reads_each_steps_lines_numbered_as_its_file_stands_or_as_it_stood_where_the_change_removed_it(
+    reviews: ReviewFactory, a_change_removing_a_file: Path
+) -> None:
+    async with http_client(reviews.app(await repository_opening(a_change_removing_a_file))) as agent:
         await tell(agent, story_of(THE_LINE_ADDED, step(REMOVED_FILE, 1, 2)))
+        held = (await held_by(agent)).held
+
+    assert held is not None
+    assert [(told.file, told.now.side) for told in held.story.chapters[0].steps] == [
+        (EDITED_FILE, LineSide.NEW),
+        (REMOVED_FILE, LineSide.OLD),
+    ]
+
+
+async def test_a_page_reads_each_step_followed_onto_a_later_take_numbered_on_the_side_its_file_is_told_by(
+    reviews: ReviewFactory, a_change_removing_a_file: Path
+) -> None:
+    async with http_client(reviews.app(await repository_opening(a_change_removing_a_file))) as agent:
+        await tell(agent, story_of(THE_LINE_ADDED, step(REMOVED_FILE, 1, 2)))
+        await take_again_after(agent, a_change_removing_a_file, FILE_ADDED_SINCE)
         held = (await held_by(agent)).held
 
     assert held is not None
