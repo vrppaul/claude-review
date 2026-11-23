@@ -100,7 +100,7 @@ export interface TurnsFolded {
 
 /** Turns a thread draws one after another: never folded, or folded behind one row. */
 export interface TurnsRun {
-	turns: DrawnTurn[];
+	turns: [DrawnTurn, ...DrawnTurn[]];
 	folded: boolean;
 	/** Whether its turns stand in sight: the reader opened its row, or it has none. */
 	open: boolean;

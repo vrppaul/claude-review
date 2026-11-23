@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { untrack } from 'svelte';
 	import type { Thread } from '$lib/types';
 	import { anchorOutdated, anchorQuoteReads, anchorReplaces, anchorWrittenAgainst } from '$lib/anchors/views';
 	import { tourStop } from '$lib/guide/tour';
 	import { useReview } from '$lib/review/context';
+	import type { InSightOnTheCard } from '$lib/review/thread-reading.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import Failure from '$lib/ui/Failure.svelte';
 	import Icon from '$lib/ui/Icon.svelte';
@@ -14,15 +14,7 @@
 	import TurnsFold from '$lib/ui/TurnsFold.svelte';
 	import { AGENT, READER } from '$lib/utils/speakers';
 	import { splitSuggestions } from '$lib/utils/suggestion';
-	import {
-		drawnTurnsOf,
-		exchangesOf,
-		runsOf,
-		turnsToFold,
-		type DrawnTurn,
-		type Exchange,
-		type TurnsFolded
-	} from '$lib/utils/thread-exchanges';
+	import { drawnTurnsOf, exchangesOf, runsOf, type DrawnTurn, type Exchange } from '$lib/utils/thread-exchanges';
 	import { timeAgo } from '$lib/utils/time';
 	import AgentOnItsWay from './AgentOnItsWay.svelte';
 	import { ASK_AGENT_NOW, ASKED_TO_DROP_IT, NOBODY_LISTENING } from './agent-waits';
@@ -35,8 +27,6 @@
 
 	// What the copy kept of what a thread lost its place in says it is
 	const WRITTEN_AGAINST = 'Written against';
-	// A thread nothing is folded in
-	const NONE_FOLDED: TurnsFolded = { turns: [], opened: [] };
 
 	interface Props {
 		thread: Thread;
@@ -51,8 +41,7 @@
 
 	const exchanges = $derived(exchangesOf(thread));
 	const drawn = $derived(drawnTurnsOf(exchanges));
-	const folded = $derived(review.threads.reading.turnsFolded(thread.id));
-	const runs = $derived(runsOf(drawn, folded ?? NONE_FOLDED));
+	const runs = $derived(runsOf(drawn, review.threads.reading.turnsFolded(thread.id)));
 	// Who spoke last: after an answer there is nothing new to hand over until the reader says something. On a
 	// thread the agent raised, the opening is already the agent's word
 	const lastWord = $derived(thread.turns.at(-1)?.author ?? thread.raised_by);
@@ -68,41 +57,17 @@
 	// Whether what the reader said last is theirs to hand over: nothing waited on, the last word theirs, and none of
 	// their words being rewritten
 	const yoursToAsk = $derived(awaiting.length === 0 && lastWord !== AGENT && !rewriting);
+	const inSight = $derived<InSightOnTheCard>({
+		rewriting: (turnId: string) => review.threads.writing.edit(thread.id, turnId) !== undefined,
+		askFailed: askFailed !== null
+	});
 
-	// Drawn for the first time since the page loaded or the thread was last folded whole, its earlier turns fold.
-	// Drawn again, as a file's rows are built anew when it comes near, it keeps the fold it has: nothing folds under
-	// the reader's eyes
-	if (untrack(() => folded) === undefined) foldEarlierTurns();
+	// Earlier turns fold as the thread is drawn with none folded; drawn again, as its file comes near, it keeps its fold
+	$effect.pre(() => review.threads.reading.foldAsDrawn(thread, inSight));
 
-	/** Fold what lies between the comment that opened the thread and its last turns, but for what must stay in sight. */
-	function foldEarlierTurns() {
-		review.threads.reading.foldTurns(
-			thread.id,
-			turnsToFold(
-				drawn.map((turn) => turn.id),
-				staysInSight
-			)
-		);
-	}
-
-	/**
-	 * Whether a turn must stay in sight: an answer not read yet, a question still with the agent (its awaited answer
-	 * stands after it), words being rewritten, and the question asking it failed on, the failure under it. In a thread
-	 * a reload brought back unread without naming its new answers, any of them may be new, so every turn stays.
-	 */
-	function staysInSight(turnId: string): boolean {
-		return (
-			!review.threads.reading.namesNewAnswers(thread.id) ||
-			review.threads.reading.isNewAnswer(thread.id, turnId) ||
-			awaiting.some((question) => question.id === turnId) ||
-			review.threads.writing.edit(thread.id, turnId) !== undefined ||
-			(askFailed !== null && turnId === exchanges.at(-1)?.id)
-		);
-	}
-
-	/** Fold the earlier turns again, worked out anew; the keyboard stays on the row's button, or with the thread if the row went. */
+	/** Fold the earlier turns again, worked out anew; the keyboard stays on the row's button, or with the thread. */
 	function hideEarlierTurns() {
-		foldEarlierTurns();
+		review.threads.reading.foldEarlierTurns(thread, inSight);
 		review.sections.keyboardToThread(thread.id);
 	}
 
@@ -136,7 +101,7 @@
 	outdated thread was written against. What the reader said and the agent has not been handed is theirs to
 	rewrite, where it stands, or to delete, from the menu at the head of its turn -->
 <!-- Each run of turns known by its first, so a row the reader pressed stays the same row, the keyboard on it -->
-{#each runs as run (run.turns[0]?.id)}
+{#each runs as run (run.turns[0].id)}
 	{#if run.folded}
 		<TurnsFold
 			count={run.turns.length}

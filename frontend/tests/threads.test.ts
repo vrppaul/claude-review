@@ -685,6 +685,24 @@ describe('a long thread', () => {
 		expect(turnsInSight(rewritten)).toEqual([true, true, true, true, true, true, true, true, true]);
 	});
 
+	it('keeps in sight the question asking failed on, the failure under it, as it folds anew', async () => {
+		const user = userEvent.setup({ delay: null });
+		fakeServer().refuse('POST /api/ask', SERVER_ERROR);
+		review.answerer.setAttached(true);
+		const id = longThread(SIX_TURNS.slice(0, 4));
+		render(DiffView, inReview(review));
+		await user.click(screen.getByTestId('ask-now-thread'));
+		await screen.findByTestId('ask-error');
+		review.threads.receiveReply(id, 'One.', null);
+		review.threads.receiveReply(id, 'Two.', null);
+		review.threads.receiveReply(id, 'Three.', null);
+
+		await user.click(screen.getByTestId('fold-comment'));
+		await user.click(screen.getByTestId('unfold-thread'));
+
+		expect(turnsInSight()).toEqual([true, false, false, false, true, true, true, true]);
+	});
+
 	it('keeps its fold when drawn again, as a file comes near, however much was said meanwhile', () => {
 		const id = longThread();
 		const { unmount } = render(DiffView, inReview(review));

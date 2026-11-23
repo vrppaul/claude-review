@@ -15,22 +15,28 @@
 import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 
 import type { ThreadsRead } from '$lib/drafts/draft-shapes';
-import type { AwaitedQuestion, TakenBackQuestion } from '$lib/types';
-import type { TurnsFolded } from '$lib/utils/thread-exchanges';
+import type { AwaitedQuestion, TakenBackQuestion, Thread } from '$lib/types';
+import { READER } from '$lib/utils/speakers';
+import { drawnTurnsOf, exchangesOf, turnsToFold, type TurnsFolded } from '$lib/utils/thread-exchanges';
 
 /** What a thread with nothing asked of it is waiting for: nothing. */
 const NOTHING_AWAITED: readonly AwaitedQuestion[] = [];
 /** The answers known to be unread in a thread new for some other reason: none. */
 const NO_ANSWERS: readonly string[] = [];
+/** The earlier turns folded in a thread whose turns are not drawn: none. */
+const NOTHING_FOLDED: TurnsFolded = { turns: [], opened: [] };
+
+/** What keeps a thread's turns in sight that only its card knows. */
+export interface InSightOnTheCard {
+	/** Whether the reader's words in this turn are being rewritten. */
+	rewriting: (turnId: string) => boolean;
+	/** Whether handing the thread over failed, which is said under its last question. */
+	askFailed: boolean;
+}
 
 export class ThreadReading {
 	readonly #folded = new SvelteSet<string>();
-	/**
-	 * The earlier turns folded in each thread, worked out as its turns are
-	 * first drawn and kept while it stays open, so nothing folds under the
-	 * reader's eyes: none for a thread not drawn open since the page loaded
-	 * or since it was last folded whole.
-	 */
+	// The earlier turns folded in each thread drawn open, kept while it stays open: nothing folds under the reader
 	readonly #turnsFolded = new SvelteMap<string, TurnsFolded>();
 	/**
 	 * Threads with something nobody has looked at, and which of their
@@ -65,28 +71,34 @@ export class ThreadReading {
 		return this.#folded.has(threadId);
 	}
 
-	/**
-	 * Fold a thread away, to get its space back without settling it, or bring
-	 * it back. Folded, it lets go of its earlier turns folded, which its next
-	 * opening works out anew.
-	 */
+	/** Fold a thread away, to get its space back without settling it, or bring it back. */
 	setFolded(threadId: string, folded: boolean): void {
 		if (folded) {
 			this.#folded.add(threadId);
+			// Its next opening works its earlier turns folded out anew
 			this.#turnsFolded.delete(threadId);
 		} else {
 			this.#folded.delete(threadId);
 		}
 	}
 
-	/** The earlier turns folded in a thread; none until its turns are first drawn. */
-	turnsFolded(threadId: string): TurnsFolded | undefined {
-		return this.#turnsFolded.get(threadId);
+	/** The earlier turns folded in a thread; none until its turns are drawn. */
+	turnsFolded(threadId: string): TurnsFolded {
+		return this.#turnsFolded.get(threadId) ?? NOTHING_FOLDED;
 	}
 
-	/** Fold these turns of a thread behind its rows of earlier replies, every row shut. */
-	foldTurns(threadId: string, turns: readonly string[]): void {
-		this.#turnsFolded.set(threadId, { turns, opened: [] });
+	/** A thread's turns are drawn: their earlier ones fold where no fold is held, so a card drawn again keeps its own. */
+	foldAsDrawn(thread: Thread, card: InSightOnTheCard): void {
+		if (!this.#turnsFolded.has(thread.id)) this.foldEarlierTurns(thread, card);
+	}
+
+	/** Fold what lies between the comment that opened a thread and its last turns, every row shut, but what stays in sight. */
+	foldEarlierTurns(thread: Thread, card: InSightOnTheCard): void {
+		const drawn = drawnTurnsOf(exchangesOf(thread)).map((turn) => turn.id);
+		// The question asked last: the reader's last reply, or the comment that opened the thread
+		const lastQuestion = thread.turns.findLast((turn) => turn.author === READER)?.id ?? thread.id;
+		const turns = turnsToFold(drawn, (turnId) => this.#staysInSight(thread.id, turnId, card, lastQuestion));
+		this.#turnsFolded.set(thread.id, { turns, opened: [] });
 	}
 
 	/** Open one row of a thread's earlier replies: the folded turns it holds stand under it. */
@@ -182,6 +194,21 @@ export class ThreadReading {
 		this.#unreadUnnamed.delete(threadId);
 		this.#awaiting.delete(threadId);
 		this.#takenBack.delete(threadId);
+	}
+
+	/**
+	 * Whether a turn must stay in sight: an answer not read yet, a question
+	 * still with the agent, words being rewritten, and the question asking
+	 * failed on, the failure under it.
+	 */
+	#staysInSight(threadId: string, turnId: string, card: InSightOnTheCard, lastQuestion: string): boolean {
+		return (
+			!this.namesNewAnswers(threadId) ||
+			this.isNewAnswer(threadId, turnId) ||
+			this.awaiting(threadId).some((question) => question.id === turnId) ||
+			card.rewriting(turnId) ||
+			(card.askFailed && turnId === lastQuestion)
+		);
 	}
 
 	/** How the threads were being read, as the draft keeps it. */
