@@ -121,6 +121,11 @@
 		opened = fitNow.placement;
 	}
 
+	/** A press in a steered pane leaves the keyboard in the field that steers it; what was pressed answers all the same. */
+	function keepTheKeyboardOut(event: MouseEvent) {
+		event.preventDefault();
+	}
+
 	/** Something under the pane scrolled: it is fitted again, unless it scrolls with the spot it stands by. */
 	function noteScroll() {
 		if (!scrollsWithItsSpot) void measure();
@@ -154,6 +159,7 @@
 	style:--cr-pane-shift={pixels(fit?.shift)}
 	style:--cr-pane-most-width={pixels(fit?.mostWidth)}
 	style:--cr-pane-most-height={pixels(fit?.mostHeight)}
+	onmousedown={steered ? keepTheKeyboardOut : undefined}
 >
 	<!-- Over the arrow's inner half, and round at the pane's corners, so nothing lit inside it shows past them -->
 	<div class="cr-ui-pane-inside">

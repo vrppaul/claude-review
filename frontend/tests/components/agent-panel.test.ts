@@ -226,6 +226,29 @@ describe('the agent panel', () => {
 		expect(document.activeElement).toBe(field);
 	});
 
+	it('keeps the keyboard in the field at a press on the list’s own words', async () => {
+		const user = userEvent.setup({ delay: null });
+		const { getByTestId, getByText, getByRole } = render(AgentPanel, inReview(review));
+		const field = getByTestId('panel-input');
+		await user.type(field, 'Look at @');
+
+		await user.click(getByText('Files'));
+
+		expect(getByRole('listbox')).toBeTruthy();
+		expect(document.activeElement).toBe(field);
+	});
+
+	it('keeps the list while the reader presses in the field', async () => {
+		const user = userEvent.setup({ delay: null });
+		const { getByTestId, getByRole } = render(AgentPanel, inReview(review));
+		const field = getByTestId('panel-input');
+		await user.type(field, 'Look at @');
+
+		await user.click(field);
+
+		expect(getByRole('listbox')).toBeTruthy();
+	});
+
 	it('puts the list away at a press outside it', async () => {
 		const user = userEvent.setup({ delay: null });
 		const { getByTestId, queryByRole } = render(AgentPanel, inReview(review));

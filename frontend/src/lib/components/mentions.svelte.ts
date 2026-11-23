@@ -72,7 +72,10 @@ export class Mentions {
 			offered
 				.files()
 				.filter((file) => answersTo(this.#query, file.path))
-				.map((file, at) => ({ pick: { kind: 'file', path: file.path }, index: this.#threads.length + at }))
+				.map((file, fileIndex) => ({
+					pick: { kind: 'file', path: file.path },
+					index: this.#threads.length + fileIndex
+				}))
 		);
 		this.#candidates = $derived([...this.#threads, ...this.#files].map((listed) => listed.pick));
 	}
