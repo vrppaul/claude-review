@@ -118,6 +118,8 @@ export class ReadingViews implements ViewsOnScreen {
 	choose(name: ReadingChoice): void {
 		// The reader asked: whatever they asked through (`WayIntoStory`) notes the story tried
 		this.#kept.set(name);
+		// The view chosen is the one read: whatever was left in it before, the reader is in it now
+		if (name === this.#nameOnScreen) return;
 		// Read before the view on screen leaves, which keeps its own place under its way of reading
 		const left = this.#placesKept[name];
 		const view = left === null ? name : this.#viewDrawingNow(left);

@@ -183,6 +183,28 @@ async def test_files_chosen_from_a_file_read_alone_show_the_reader_the_line_they
     await expect(read).to_be_in_viewport()
 
 
+async def test_files_chosen_while_the_files_are_read_leave_the_reader_where_they_are(
+    long_review_with_a_thread_on_the_file_left: RunningReview, page: Page
+) -> None:
+    review = long_review_with_a_thread_on_the_file_left
+    await page.set_viewport_size(SCREEN)
+    await page.goto(review.url)
+    # The reader reads the changed line of the file the change touches, goes into the file read alone and back
+    read = _section(page, ABOVE_FILE).get_by_role("button", name=f"Comment on line {CHANGED_LINE}", exact=True)
+    await read.scroll_into_view_if_needed()
+    await read.evaluate("number => number.scrollIntoView({ block: 'start' })")
+    await page.evaluate("() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)))")
+    await page.keyboard.press("n")
+    await page.get_by_test_id("file-alone-view").wait_for()
+    await page.keyboard.press("b")
+    await page.get_by_test_id("diff-view").wait_for()
+
+    await page.get_by_test_id("read-as-files").click()
+
+    await expect(page.get_by_test_id("file-alone-view")).to_have_count(0)
+    await expect(read).to_be_in_viewport()
+
+
 @in_the_browsers_loop
 async def review_told_with_a_thread_on_the_file_left(
     review_with_a_thread_on_the_file_left: RunningReview,
