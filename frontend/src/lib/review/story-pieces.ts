@@ -12,10 +12,10 @@
  */
 
 import { STORY_PIECES_NUMBERING } from '$lib/anchors/numbering';
-import { type DrawnRows, fileDraws, numberOn } from '$lib/anchors/placement';
+import { type DrawnRows, fileDraws } from '$lib/anchors/placement';
 import type { FileLines } from '$lib/anchors/views';
 import type { StoryContents } from '$lib/review/story-contents';
-import type { DiffFile, DiffLine, LinePlace, LineSide } from '$lib/types';
+import type { DiffFile } from '$lib/types';
 import { type FileStats, fileStats, totalOf } from '$lib/utils/file-stats';
 
 /** A piece of a file a story draws, and what its section is known by. */
@@ -29,27 +29,6 @@ type DrawnPiece = KeyedPiece & DrawnRows;
 
 // How much a story changes a file it draws nothing of
 const NO_CHANGE = totalOf([]);
-// The sides a piece's first line is looked for on, in turn: the file as it stands, then the lines the change removed
-const SIDES_A_PIECE_STARTS_ON: readonly LineSide[] = ['new', 'old'];
-
-/**
- * The first line a piece draws of its file as it stands, as a step's lines
- * are numbered; of a piece that draws none of it, a removed file's, the
- * first line it removed. Null for a piece that draws no line.
- */
-export function firstLineOf(piece: DiffFile): LinePlace | null {
-	const rows = piece.hunks.flatMap((hunk) => hunk.lines);
-	for (const side of SIDES_A_PIECE_STARTS_ON) {
-		const number = firstNumberOn(side, rows);
-		if (number !== undefined) return { side, number };
-	}
-	return null;
-}
-
-/** The number of the first of some rows that has one on a side. */
-function firstNumberOn(side: LineSide, rows: readonly DiffLine[]): number | undefined {
-	return rows.map((row) => numberOn(side, row)).find((number): number is number => number !== null);
-}
 
 /** How much some pieces of a file change it together. */
 function changeIn(pieces: readonly DrawnPiece[]): FileStats {

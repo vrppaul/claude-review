@@ -4,12 +4,12 @@ import { userEvent } from '@testing-library/user-event';
 import ReviewScreen from '$lib/components/ReviewScreen.svelte';
 import type { PlaceLeft, ReadingViewName } from '$lib/review/reading-view';
 import type { Review } from '$lib/review/review.svelte';
-import { OVERVIEW_PART } from '$lib/review/story-keys';
+import { OVERVIEW_PART, stepSectionKey } from '$lib/review/story-keys';
 import type { CheckFailure, FileOfTakeResponse, StoryHeld } from '$lib/types';
 import { flushSync } from 'svelte';
-import { storyHeld, toldChapter, toldStep } from '../story';
+import { stepStandingAt, storyHeld, toldChapter, toldStep } from '../story';
 import { failedCheck, failure } from '../checks';
-import { A_LATER_TAKE, contextLine, diffFile, diffResponse, hunk } from '../diff';
+import { A_LATER_TAKE, contextLine, diffFile, diffResponse, hunk, removedLine } from '../diff';
 import { fakeServer } from '../fake-server';
 import { frames } from '../frames';
 import { openReview } from '../review';
@@ -165,7 +165,8 @@ describe('going to where a check failed', () => {
 
 describe("opening a step's file from the story", () => {
 	// A story whose one step tells line 2 of the file, read as the story
-	const TOLD_OF_LINE_TWO = storyHeld({ chapters: [toldChapter('ch-1', [toldStep('src/app.py', 2)])] });
+	const STEP_ON_LINE_TWO = toldStep('src/app.py', 2);
+	const TOLD_OF_LINE_TWO = storyHeld({ chapters: [toldChapter('ch-1', [STEP_ON_LINE_TWO])] });
 
 	/** The review on screen, read as its story of line 2. */
 	function readAsTheStory(): Review {
@@ -189,6 +190,51 @@ describe("opening a step's file from the story", () => {
 		await press('step-open-in-files');
 
 		expect(screen.getByTestId('go-back').textContent?.trim()).toBe('Back to step 1.1');
+	});
+
+	it('goes back to the step pressed, though another step stands above it at the head of the area', async () => {
+		const told = storyHeld({ chapters: [toldChapter('ch-1', [toldStep('src/app.py', 2), toldStep('src/app.py', 3)])] });
+		const review = onScreenFailing([], told);
+		review.views.show('story');
+		flushSync();
+		const [, lower] = screen.getAllByTestId('step-open-in-files');
+		await userEvent.setup({ delay: null }).click(lower);
+		await settled();
+		await frames();
+
+		await press('go-back');
+
+		expect(document.activeElement?.textContent?.trim()).toBe('3');
+	});
+
+	it("puts the keyboard on the step's way to its file, going back to a step none of whose lines was seen", async () => {
+		const review = readAsTheStory();
+		review.wayBack.note(leftAt('story', stepSectionKey(STEP_ON_LINE_TWO), null, 'step 1.1'));
+		flushSync();
+
+		await press('go-back');
+
+		expect(document.activeElement?.getAttribute('aria-label')).toBe('Open src/app.py in Files');
+	});
+
+	it('opens a step of a file the change removed on the first line it removed', async () => {
+		const gone = diffFile({
+			path: 'src/gone.py',
+			status: 'deleted',
+			hunks: [hunk([removedLine(1, 'one'), removedLine(2, 'two')], { header: '', old_start: 1, new_start: 0 })]
+		});
+		const ofTheRemovedLines = stepStandingAt(gone.path, { first: 1, last: 2 }, { first: 1, last: 2 }, gone, 'old');
+		const review = openReview({
+			files: [file, gone],
+			story: storyHeld({ chapters: [toldChapter('ch-1', [ofTheRemovedLines])] })
+		});
+		render(ReviewScreen, { props: { review } });
+		review.views.show('story');
+		flushSync();
+
+		await press('step-open-in-files');
+
+		expect(document.activeElement?.getAttribute('aria-label')).toBe('Comment on removed line 1');
 	});
 });
 

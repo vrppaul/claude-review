@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, onTestFinished, vi } from 'vitest';
 import { tick } from 'svelte';
-import { FileSections, FOLD_TOGGLE_ROLE } from '$lib/dom/file-sections';
+import { FileSections, STANDS_FOR_ITS_SECTION_ROLE } from '$lib/dom/file-sections';
 import { Jumps } from '$lib/dom/jump';
 import { broughtIntoView } from './elements';
 import { frames } from './frames';
@@ -441,7 +441,7 @@ describe('what stands for a line where it is not drawn', () => {
 	function sectionWithToggle(): { element: HTMLElement; toggle: HTMLElement } {
 		const element = document.createElement('div');
 		const toggle = document.createElement('button');
-		toggle.dataset.role = FOLD_TOGGLE_ROLE;
+		toggle.dataset.role = STANDS_FOR_ITS_SECTION_ROLE;
 		element.append(toggle);
 		document.body.append(element);
 		return { element, toggle };

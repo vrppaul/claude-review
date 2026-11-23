@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { DiffFile, ReviewMode } from '$lib/types';
+	import { STANDS_FOR_ITS_SECTION_ROLE } from '$lib/dom/file-sections';
 	import { messageOf } from '$lib/utils/errors';
 	import { fileStats } from '$lib/utils/file-stats';
 	import { languageOf } from '$lib/utils/highlight';
@@ -123,10 +124,12 @@
 				Viewed<span class="sr-only">: {file.path}</span>
 			</Checkbox>
 
-			<!-- Its lines fold under the chevron at the header's far end, as everything on the page folds -->
+			<!-- Its lines fold under the chevron at the header's far end, as everything on the page folds; it takes the
+				keyboard for the file where none of its lines is drawn -->
 			<FoldToggle
 				folded={collapsed}
 				subject={file.path}
+				role={STANDS_FOR_ITS_SECTION_ROLE}
 				testId="collapse-file"
 				onToggle={() => review.reading.toggleFolded(file.path)}
 			/>

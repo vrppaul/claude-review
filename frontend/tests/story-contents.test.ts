@@ -36,7 +36,7 @@ describe('what a story lists of itself', () => {
 		expect(listed.files.map(({ firstPiece, alsoIn }) => [firstPiece.path, alsoIn])).toEqual([['b.py', []]]);
 		expect(listed.steps.map(({ shown }) => shown)).toEqual([
 			null,
-			{ piece: ofB.now?.piece, lines: ofB.now?.lines, fileListed: b }
+			{ piece: ofB.now?.piece, lines: ofB.now?.lines, firstLine: { side: 'new', number: 1 }, fileListed: b }
 		]);
 	});
 

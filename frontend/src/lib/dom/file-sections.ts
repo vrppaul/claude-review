@@ -34,11 +34,19 @@ import {
 } from '$lib/dom/reading-place';
 
 /**
- * What every toggle that folds something carries — a thread, a file — so the
- * keyboard can be put back on the one drawn anew when what it folds changes
- * shape. A role of its own, as a line's number has one.
+ * What the toggle that folds a thread carries, so the keyboard can be put
+ * back on the one drawn anew when the thread changes shape. A role of its
+ * own, as a line's number has one.
  */
 export const FOLD_TOGGLE_ROLE = 'fold-toggle';
+
+/**
+ * What the control that stands for a section of lines carries, to take the
+ * keyboard where none of its lines is drawn: a file's fold toggle among the
+ * files, a step's way to its file in a story. A piece of what no step tells
+ * has none.
+ */
+export const STANDS_FOR_ITS_SECTION_ROLE = 'stands-for-its-section';
 
 // Long enough to find what was pointed at, short enough not to become part
 // of how the file looks
@@ -222,7 +230,8 @@ export class FileSections {
 	/**
 	 * Take the reader back to where they were reading, as they saw it, once
 	 * the view that draws it is drawn: where the keyboard goes there, on the
-	 * line they read from, or on the file's own toggle where they read from none.
+	 * line they read from, or on what stands for its section where they read
+	 * from none.
 	 */
 	goBackTo(place: ReadingPlace, keyboard: KeyboardOnReturn): void {
 		this.#onceDrawn(
@@ -360,10 +369,10 @@ export class FileSections {
 	 * Put the keyboard on a line's number, by the file it is a line of and
 	 * the key its place is known by, if what had it went: what remains where
 	 * a comment was put away, a thread deleted, or hidden lines shown. Where
-	 * the line is not drawn, the file's own toggle takes it; where the file
-	 * is not drawn at all, the toggle of the first section, which its threads
-	 * were drawn above. A section that folds nothing, a piece of a story, has
-	 * no toggle to take it, and the keyboard is left where it is.
+	 * the line is not drawn, what stands for its section takes it; where the
+	 * file is not drawn at all, what stands for the first section, which its
+	 * threads were drawn above. A section with nothing to stand for it, a
+	 * piece of what no step tells, leaves the keyboard where it is.
 	 */
 	keyboardToLine(path: string, lineKey: string): void {
 		focusWhatRemains(() => this.lineOrFile(path, lineKey));
@@ -371,15 +380,15 @@ export class FileSections {
 
 	/**
 	 * A line's number, in whichever section draws that line of its file, by
-	 * the key its place is known by; or the toggle that stands for it where
-	 * it is not drawn: that of the first section on the page to draw the
-	 * file, or of the first section of all where none draws it. Null where
-	 * that section has no toggle.
+	 * the key its place is known by; or where it is not drawn, what stands
+	 * for the first section on the page to draw the file, or for the first
+	 * section of all where none draws it. Null where that section has
+	 * nothing to stand for it.
 	 */
 	lineOrFile(path: string, lineKey: string): HTMLElement | null {
 		const ofTheFile = this.#drawing(path);
-		if (ofTheFile.length === 0) return toggleOf(firstInDocument(this.#elements()));
-		return lineAmong(ofTheFile, lineKey) ?? toggleOf(firstInDocument(ofTheFile));
+		if (ofTheFile.length === 0) return standInOf(firstInDocument(this.#elements()));
+		return lineAmong(ofTheFile, lineKey) ?? standInOf(firstInDocument(ofTheFile));
 	}
 
 	/**
@@ -572,12 +581,12 @@ function lineAmong(sections: HTMLElement[], lineKey: string): HTMLElement | null
 	return sections.map((section) => lineIn(section, lineKey)).find((found) => found !== null) ?? null;
 }
 
-/** Put the keyboard on the line gone back to, or where none is drawn on the section's own toggle, the screen left still. */
+/** Put the keyboard on the line gone back to, or where none is drawn on what stands for its section, the screen left still. */
 function keyboardToPlace(section: Section, line: HTMLElement | null): void {
-	(line ?? toggleOf(section.element))?.focus({ preventScroll: true });
+	(line ?? standInOf(section.element))?.focus({ preventScroll: true });
 }
 
-/** The toggle that folds a file's section: what stands for the file where nothing in it is drawn to stand for; null where the section folds nothing. */
-function toggleOf(section: HTMLElement | null): HTMLElement | null {
-	return section?.querySelector<HTMLElement>(`[data-role="${FOLD_TOGGLE_ROLE}"]`) ?? null;
+/** The control that stands for a section where none of its lines is drawn (`STANDS_FOR_ITS_SECTION_ROLE`); null where it has none. */
+function standInOf(section: HTMLElement | null): HTMLElement | null {
+	return section?.querySelector<HTMLElement>(`[data-role="${STANDS_FOR_ITS_SECTION_ROLE}"]`) ?? null;
 }

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Thread } from '$lib/types';
 	import { anchorOutdated } from '$lib/anchors/views';
+	import { FOLD_TOGGLE_ROLE } from '$lib/dom/file-sections';
 	import { useReview } from '$lib/review/context';
 	import BreathingDots from '$lib/ui/BreathingDots.svelte';
 	import Button from '$lib/ui/Button.svelte';
@@ -108,6 +109,7 @@
 		<FoldToggle
 			{folded}
 			subject="this thread"
+			role={FOLD_TOGGLE_ROLE}
 			testId={folded ? 'unfold-thread' : 'fold-comment'}
 			onToggle={toggleFold}
 		/>

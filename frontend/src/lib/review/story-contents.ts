@@ -22,7 +22,7 @@ import {
 	OVERVIEW_PART,
 	stepSectionKey
 } from '$lib/review/story-keys';
-import type { DiffFile, FollowedChapter, FollowedStep, LeftOut, ToldStory } from '$lib/types';
+import type { DiffFile, FollowedChapter, FollowedStep, LeftOut, LinePlace, ToldStory } from '$lib/types';
 
 /** Another chapter, as a file's listing names it: by its number, and as a way to it. */
 interface OtherChapter {
@@ -48,6 +48,8 @@ interface StepShown {
 	piece: DiffFile;
 	/** The lines its code stands at now: a round's work may have moved them from those it was told on. */
 	lines: FollowedStep['lines'];
+	/** The first of those lines, on the side the review numbers them on: where the reader opening its file is taken. */
+	firstLine: LinePlace;
 	/** Its file, as its chapter lists it: one listing for every step of the file that shows code of it. */
 	fileListed: FileListed;
 }
@@ -191,10 +193,10 @@ function chapterListed(told: FollowedChapter, place: number, telling: readonly C
 		const section = stepSectionKey(step);
 		let shown: StepShown | null = null;
 		if (step.now !== null) {
-			const { piece, lines } = step.now;
+			const { piece, lines, side } = step.now;
 			const listed = files.get(piece.path) ?? fileListed(piece, section, place, telling);
 			files.set(piece.path, listed);
-			shown = { piece, lines, fileListed: listed };
+			shown = { piece, lines, firstLine: { side, number: lines.first }, fileListed: listed };
 		}
 		steps.push({ told: step, section, place: stepPlace, number: stepNumber(place, stepPlace), shown });
 	}

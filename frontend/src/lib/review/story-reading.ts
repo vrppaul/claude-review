@@ -221,12 +221,12 @@ export class StoryReading implements ReadingView {
 	}
 
 	/**
-	 * Where the reader reads in one piece, as the place they leave the story
-	 * at: the piece they acted from, wherever it stands in the area. None
-	 * for a piece not drawn.
+	 * Where the reader reads in a step, as the place they leave the story
+	 * at: the step they acted from, wherever it stands in the area. None for
+	 * a step not drawn.
 	 */
-	placeLeftIn(section: string): PlaceLeft | null {
-		const place = this.#sections.readingPlaceInSection(section, namesTheFileAsItStands);
+	placeLeftAtStep(stepSection: string): PlaceLeft | null {
+		const place = this.#sections.readingPlaceInSection(stepSection, namesTheFileAsItStands);
 		const read = place === null ? null : this.#pieceRead(place);
 		return read === null ? null : { ...read, view: this.name };
 	}

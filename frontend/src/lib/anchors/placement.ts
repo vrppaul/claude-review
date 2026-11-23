@@ -3,7 +3,7 @@ import type { FileLines, ThreadOnLines } from '$lib/anchors/views';
 import type { DiffFile, DiffLine, LineSide, Thread } from '$lib/types';
 
 /** A line's number on one side; null for a line that is not on it. */
-export function numberOn(side: LineSide, line: DiffLine): number | null {
+function numberOn(side: LineSide, line: DiffLine): number | null {
 	return side === 'old' ? line.old_number : line.new_number;
 }
 

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { askableReason, stepReason } from '$lib/anchors/story';
+	import { STANDS_FOR_ITS_SECTION_ROLE } from '$lib/dom/file-sections';
 	import { useReview } from '$lib/review/context';
 	import type { StepListed } from '$lib/review/story-contents';
 	import Chip from '$lib/ui/Chip.svelte';
@@ -116,14 +117,16 @@
 				{/snippet}
 				{#snippet atTheEnd()}
 					<!-- A quick look at the step's file among the change's files, on the step's first line, and Back returns
-						here; under the same icon as Files in the header -->
+						here; under the same icon as Files in the header. It takes the keyboard for the step where none of
+						its lines is drawn -->
 					<IconButton
 						tone="quiet"
 						size="xs"
 						shape="square"
 						label={openInFiles(shown.piece.path)}
 						testId="step-open-in-files"
-						onclick={() => void review.navigator.openStepInFiles(step.section, shown.piece)}
+						data-role={STANDS_FOR_ITS_SECTION_ROLE}
+						onclick={() => void review.navigator.openStepInFiles(step.section, shown.piece.path, shown.firstLine)}
 					>
 						<Icon name="files" size="xs" />
 					</IconButton>

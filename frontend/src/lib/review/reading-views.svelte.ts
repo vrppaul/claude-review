@@ -105,9 +105,9 @@ export class ReadingViews implements ViewsOnScreen {
 		return this.#views[FILE_ALONE];
 	}
 
-	/** The view the review is read in as its story, on screen or not. */
-	get story(): StoryReading {
-		return this.#views.story;
+	/** Where the reader reads in a step, as the story reads it, on screen or not. */
+	placeLeftAtStep(stepSection: string): PlaceLeft | null {
+		return this.#views.story.placeLeftAtStep(stepSection);
 	}
 
 	/** The file read alone now; null while another view is on screen. */

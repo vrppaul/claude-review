@@ -20,19 +20,21 @@ import {
 	type ReadingView,
 	type ReadingViewName
 } from '$lib/review/reading-view';
-import { firstLineOf } from '$lib/review/story-pieces';
-import type { StoryReading } from '$lib/review/story-reading';
 import type { Threads } from '$lib/review/threads.svelte';
 import type { WayBack } from '$lib/review/way-back.svelte';
-import type { DiffFile, LinePlace, Thread } from '$lib/types';
+import type { LinePlace, Thread } from '$lib/types';
 import { placeKey } from '$lib/utils/line-places';
 
 /** The views the review is read in, as moving the reader needs them. */
 export interface ViewsOnScreen {
 	/** The view the review is read in now. */
 	readonly onScreen: ReadingView;
-	/** The view the review is read in as its story, on screen or not: where a step's place is read. */
-	readonly story: StoryReading;
+	/**
+	 * Where the reader reads in a step of the story, by what its section is
+	 * known by, as the place they leave the story at: the step they acted
+	 * from, wherever it stands in the area. Null for a step not drawn.
+	 */
+	placeLeftAtStep: (stepSection: string) => PlaceLeft | null;
 	/**
 	 * Bring on screen the change's files, read against the review's own base,
 	 * and hand their view over: as it is, where that base could not be
@@ -252,24 +254,20 @@ export class Navigator {
 
 	/**
 	 * Take the reader from a step of the story to its file among the
-	 * change's files, on the first line the step's piece draws
-	 * (`firstLineOf`), as `goToLine` takes them to a line; how they chose to
-	 * read stays. The step, as they saw it, is noted for Back: they acted
-	 * from it, whichever piece was at the top of the area.
+	 * change's files, on the step's first line, as `goToLine` takes them to
+	 * a line; how they chose to read stays. The step, as they saw it, is
+	 * noted for Back: they acted from it, whichever piece was at the top of
+	 * the area.
 	 *
 	 * @param stepSection what the step's section is known by
-	 * @param piece the piece of its file the step shows
+	 * @param path the step's file
+	 * @param firstLine the first of the step's lines, on the side they are numbered on
 	 */
-	async openStepInFiles(stepSection: string, piece: DiffFile): Promise<void> {
-		const line = firstLineOf(piece);
-		if (line === null) return;
-		const left = this.#views.story.placeLeftIn(stepSection);
+	async openStepInFiles(stepSection: string, path: string, firstLine: LinePlace): Promise<void> {
+		const left = this.#views.placeLeftAtStep(stepSection);
 		const files = await this.#views.showTheChange();
-		const section = await files.drawLine(piece.path, line);
-		if (section === null) return;
-		// The files come on screen in the story's place, so the step is left whatever line of them is in sight
-		if (left !== null) this.#wayBack.note(left);
-		this.#sections.goToLine(section, { line: placeKey(line), name: null });
+		const section = await files.drawLine(path, firstLine);
+		if (section !== null) this.#goToLineFrom(left, section, { line: placeKey(firstLine), name: null });
 	}
 
 	/**
@@ -287,14 +285,20 @@ export class Navigator {
 		await files.returnTo(left.place, 'to-the-place');
 	}
 
-	/**
-	 * Go to a line's number in a section, noting the place left for Back
-	 * where the reader is taken somewhere else: a line they see already
-	 * leaves them looking at what they saw, and Back would lead nowhere.
-	 */
+	/** Go to a line's number in a section, noting the place left for Back where the reader is taken somewhere else. */
 	#goToLineFrom(left: PlaceLeft | null, section: string, arrived: LineArrivedAt): void {
-		if (left !== null && !this.#sections.seesLine(section, arrived.line)) this.#wayBack.note(left);
+		if (left !== null && this.#takenElsewhere(left, section, arrived.line)) this.#wayBack.note(left);
 		this.#sections.goToLine(section, arrived);
+	}
+
+	/**
+	 * Whether going to a line takes the reader away from the place they
+	 * left: into another view, whose lines may not be drawn yet, or within
+	 * one to a line they do not see. A line they see already leaves them
+	 * looking at what they saw, and Back would lead nowhere.
+	 */
+	#takenElsewhere(left: PlaceLeft, section: string, lineKey: string): boolean {
+		return left.view !== this.#views.onScreen.name || !this.#sections.seesLine(section, lineKey);
 	}
 
 	/** Bring a thread on lines of a file into view, where the view on screen draws them or else where Files does. */

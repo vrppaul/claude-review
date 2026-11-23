@@ -233,6 +233,7 @@ describe('moving the reader in whatever view the review is read in', () => {
 	function onlyIn(view: ReadingView): ViewsOnScreen {
 		return {
 			onScreen: view,
+			placeLeftAtStep: () => null,
 			showTheChange: () => Promise.resolve(view),
 			readAlone: () => Promise.resolve(view),
 			showWhereRead: () => Promise.resolve(view),
