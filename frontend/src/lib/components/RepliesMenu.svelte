@@ -87,22 +87,22 @@
 		</IconButton>
 	{/snippet}
 
-	<!-- One row a thread, inside the pane's margin: where it hangs, and what the agent last said in it -->
-	<div class="p-1">
+	<!-- One row a thread, on the pane's own room: where it hangs, and what the agent last said in it; an unread
+		answer says so by its dot -->
+	<div class="px-3 py-2">
 		{#each threads as thread (thread.id)}
-			{@const unread = review.threads.reading.isUnread(thread.id)}
 			<Row names="path" testId="reply-row" onclick={() => goTo(thread)}>
 				{#snippet leading()}
 					<!-- Room for the mark of an unread answer in every row, so where each hangs stands in one line -->
 					<span class="flex w-(--cr-list-row-dot-slot)">
-						{#if unread}
+						{#if review.threads.reading.isUnread(thread.id)}
 							<Dot tone="unread" testId="reply-unread" />
 							<span class="sr-only">unread:</span>
 						{/if}
 					</span>
 				{/snippet}
 				{#snippet label()}
-					<span class={unread ? 'text-(--cr-unread)' : 'cr-muted'}>{anchorShortPlace(thread.anchor)}</span>
+					{anchorShortPlace(thread.anchor)}
 				{/snippet}
 				{#snippet said()}
 					{lastAnswer(thread)}

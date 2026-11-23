@@ -71,7 +71,7 @@
 			<!-- A row a thread: where it hangs, and what it says -->
 			<Row names="path" testId="off-screen-thread" onclick={() => review.navigator.reveal(thread)}>
 				{#snippet label()}
-					<span class="cr-comment-ref">{anchorShortPlace(thread.anchor)}</span>
+					{anchorShortPlace(thread.anchor)}
 				{/snippet}
 				{#snippet said()}
 					{plainWords(thread.body)}

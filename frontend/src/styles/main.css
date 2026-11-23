@@ -205,16 +205,6 @@
 }
 
 /*
- * Where a comment hangs, named in its words: in the mark colour — the same
- * one selection uses — because both are the reader's own marks on someone
- * else's code. What a comment says is set in its reading face (ui.css).
- */
-.cr-comment-ref {
-	color: var(--cr-mark-text);
-	font-variant-numeric: tabular-nums;
-}
-
-/*
  * Code wraps at word boundaries, and only breaks inside a word when a single
  * token is wider than the column. Breaking at any character, which is what
  * the two-column layouts used to do, splits identifiers mid-word.
