@@ -92,57 +92,55 @@
 
 <!-- A summary, and the two ways out: at the pane's foot, in sight however far what was written scrolls -->
 {#snippet sending()}
-	<div class="p-3">
-		<Field
-			{@attach focusOnDraw}
-			holds="message"
-			voice="reader"
-			testId="review-body"
-			placeholder="Summary — optional, about the change as a whole"
-			maxlength={review.limits.max_text_length}
-			aria-label="Summary of the review"
-			value={submission.body}
-			oninput={(event: Event & { currentTarget: HTMLTextAreaElement }) => submission.setBody(event.currentTarget.value)}
-		/>
+	<Field
+		{@attach focusOnDraw}
+		holds="message"
+		voice="reader"
+		testId="review-body"
+		placeholder="Summary — optional, about the change as a whole"
+		maxlength={review.limits.max_text_length}
+		aria-label="Summary of the review"
+		value={submission.body}
+		oninput={(event: Event & { currentTarget: HTMLTextAreaElement }) => submission.setBody(event.currentTarget.value)}
+	/>
 
-		<div class="mt-2">
-			<Actions testId="finish-actions">
-				{#snippet aside()}
-					<span class="cr-faint hidden text-xs lg:inline">{FINISH_CHORD_NAME} sends</span>
-				{/snippet}
-				{#snippet others()}
-					{#if inRounds}
-						<Button
-							tone="quiet"
-							size="sm"
-							testId="end-review"
-							disabled={!submission.canEnd}
-							onclick={() => submission.end()}
-						>
-							End review
-						</Button>
-					{/if}
-				{/snippet}
-				{#snippet main()}
+	<div class="mt-2">
+		<Actions testId="finish-actions">
+			{#snippet aside()}
+				<span class="cr-faint hidden text-xs lg:inline">{FINISH_CHORD_NAME} sends</span>
+			{/snippet}
+			{#snippet others()}
+				{#if inRounds}
 					<Button
-						tone="primary"
+						tone="quiet"
 						size="sm"
-						testId="modal-submit"
-						disabled={!submission.canSend}
-						onclick={() => submission.send()}
+						testId="end-review"
+						disabled={!submission.canEnd}
+						onclick={() => submission.end()}
 					>
-						{#if submission.sending}
-							<BreathingDots tone="inherited" testId="pane-sending-dots" />
-							Sending
-						{:else if inRounds}
-							Send round {review.rounds.current}
-						{:else}
-							Send review
-						{/if}
+						End review
 					</Button>
-				{/snippet}
-			</Actions>
-		</div>
+				{/if}
+			{/snippet}
+			{#snippet main()}
+				<Button
+					tone="primary"
+					size="sm"
+					testId="modal-submit"
+					disabled={!submission.canSend}
+					onclick={() => submission.send()}
+				>
+					{#if submission.sending}
+						<BreathingDots tone="inherited" testId="pane-sending-dots" />
+						Sending
+					{:else if inRounds}
+						Send round {review.rounds.current}
+					{:else}
+						Send review
+					{/if}
+				</Button>
+			{/snippet}
+		</Actions>
 	</div>
 {/snippet}
 
