@@ -299,11 +299,6 @@ Where a thing is:
 
 What a thing is:
 
-- [ ] `perf(names)`: a text most files hold, searched while a large tree is
-      first outlined, holds the loop 50–100 ms at an answer on a busy
-      machine: each answer gathers the outlines of every file holding it
-      anew (on vscode, "e" in 16,000 files). Answering from what changed
-      since the last answer would end it.
 - [ ] `feat`: what the server does not find yet. A Svelte component is
       defined by its file, which the lookup reports as no definition
       (`CommentThread` gave 13 places and none defining it); a loop's
