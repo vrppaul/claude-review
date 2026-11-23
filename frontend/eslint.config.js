@@ -658,8 +658,19 @@ const NO_BARS_OF_ITS_OWN = [
 	}
 ];
 
+// Turns folded away are drawn by the library (TurnsFold): hidden until the browser's find in page comes to them,
+// which opens their fold. Outside the library nothing is hidden that way, nor answers find coming to it
+const FOLDED_IN_THE_LIBRARY =
+	"Fold turns away with lib/ui TurnsFold, which keeps them where the browser's find reaches them.";
+const NO_FINDABLE_FOLDS_OF_ITS_OWN = [
+	{ selector: "SvelteAttribute[key.name='hidden'] SvelteLiteral[value='until-found']", message: FOLDED_IN_THE_LIBRARY },
+	{ selector: "SvelteAttribute[key.name='hidden'] Literal[value='until-found']", message: FOLDED_IN_THE_LIBRARY },
+	{ selector: "SvelteAttribute[key.name='onbeforematch']", message: FOLDED_IN_THE_LIBRARY }
+];
+
 // What a component outside the library is refused: drawing a part of the library its own way
 const DRAWN_BY_THE_LIBRARY_ALONE = [
+	...NO_FINDABLE_FOLDS_OF_ITS_OWN,
 	...NO_LIBRARY_CLASSES_OUTSIDE,
 	...NO_CARDS_OF_ITS_OWN,
 	...NO_CODE_BOXES_OF_ITS_OWN,

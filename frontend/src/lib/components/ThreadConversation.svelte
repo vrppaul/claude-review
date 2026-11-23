@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import type { Thread } from '$lib/types';
 	import { anchorOutdated, anchorQuoteReads, anchorReplaces, anchorWrittenAgainst } from '$lib/anchors/views';
 	import { tourStop } from '$lib/guide/tour';
@@ -10,10 +11,19 @@
 	import TakenBack from '$lib/ui/TakenBack.svelte';
 	import Turn from '$lib/ui/Turn.svelte';
 	import TurnAside from '$lib/ui/TurnAside.svelte';
+	import TurnsFold from '$lib/ui/TurnsFold.svelte';
 	import { AGENT, READER } from '$lib/utils/speakers';
 	import { splitSuggestions } from '$lib/utils/suggestion';
-	import { exchangesOf } from '$lib/utils/thread-exchanges';
+	import {
+		drawnTurnsOf,
+		exchangesOf,
+		splitAtTheFold,
+		turnsToFold,
+		type DrawnTurn,
+		type Exchange
+	} from '$lib/utils/thread-exchanges';
 	import { timeAgo } from '$lib/utils/time';
+	import { REPLIES } from '$lib/utils/words';
 	import AgentOnItsWay from './AgentOnItsWay.svelte';
 	import { ASK_AGENT_NOW, ASKED_TO_DROP_IT, NOBODY_LISTENING } from './agent-waits';
 	import CommentBox from './CommentBox.svelte';
@@ -25,6 +35,8 @@
 
 	// What the copy kept of what a thread lost its place in says it is
 	const WRITTEN_AGAINST = 'Written against';
+	// The turns of a thread nothing is folded in
+	const NONE_FOLDED: readonly string[] = [];
 
 	interface Props {
 		thread: Thread;
@@ -38,6 +50,9 @@
 	const review = useReview();
 
 	const exchanges = $derived(exchangesOf(thread));
+	const drawn = $derived(drawnTurnsOf(exchanges));
+	const folded = $derived(review.threads.reading.turnsFolded(thread.id));
+	const roundTheFold = $derived(splitAtTheFold(drawn, folded?.turns ?? NONE_FOLDED));
 	// Who spoke last: after an answer there is nothing new to hand over until the reader says something. On a
 	// thread the agent raised, the opening is already the agent's word
 	const lastWord = $derived(thread.turns.at(-1)?.author ?? thread.raised_by);
@@ -53,6 +68,41 @@
 	// Whether what the reader said last is theirs to hand over: nothing waited on, the last word theirs, and none of
 	// their words being rewritten
 	const yoursToAsk = $derived(awaiting.length === 0 && lastWord !== AGENT && !rewriting);
+
+	// Drawn for the first time since the page loaded or the thread was last folded whole, its earlier turns fold.
+	// Drawn again, as a file's rows are built anew when it comes near, it keeps the fold it has: nothing folds under
+	// the reader's eyes
+	if (untrack(() => folded) === undefined) foldEarlierTurns();
+
+	/** Fold what lies between the comment that opened the thread and its last turns, but for what must stay in sight. */
+	function foldEarlierTurns() {
+		review.threads.reading.foldTurns(
+			thread.id,
+			turnsToFold(
+				drawn.map((turn) => turn.id),
+				staysInSight
+			)
+		);
+	}
+
+	/**
+	 * Whether a turn must stay in sight: an answer not read yet, a question still with the agent (its awaited answer
+	 * stands after it), words being rewritten, and the question asking it failed on, the failure under it.
+	 */
+	function staysInSight(turnId: string): boolean {
+		return (
+			review.threads.reading.isNewAnswer(thread.id, turnId) ||
+			awaiting.some((question) => question.id === turnId) ||
+			review.threads.writing.edit(thread.id, turnId) !== undefined ||
+			(askFailed !== null && turnId === exchanges.at(-1)?.id)
+		);
+	}
+
+	/** Fold the earlier turns again, worked out anew; the keyboard stays on the row's button, or with the thread if the row went. */
+	function hideEarlierTurns() {
+		foldEarlierTurns();
+		review.sections.keyboardToThread(thread.id);
+	}
 
 	/** Take a question back; its turn of the agent's goes, and the keyboard stays with the thread. */
 	async function takeBackAndStay(questionId: string) {
@@ -78,16 +128,63 @@
 </script>
 
 <!-- A thread reads as a conversation, a turn to a row: each question, the answers held to it, and the answer
-	still awaited. A turn kept from an older version may not say when it was said. What the thread hangs on and
-	what can be done to it stand on its card's bar (ThreadBar); in the first turn, over its words, stands what an
+	still awaited. A long one folds what lies between the comment that opened it and its last turns behind one row,
+	which shows them again. A turn kept from an older version may not say when it was said. What the thread hangs on
+	and what can be done to it stand on its card's bar (ThreadBar); in the first turn, over its words, stands what an
 	outdated thread was written against. What the reader said and the agent has not been handed is theirs to
 	rewrite, where it stands, or to delete, from the menu at the head of its turn -->
-{#each exchanges as exchange, index (exchange.id)}
-	{@const waitedOn = askedAt(exchange.id)}
+{#each roundTheFold.before as turn (turn.id)}
+	{@render rowsOf(turn)}
+{/each}
+{#if roundTheFold.held.length > 0}
+	<TurnsFold
+		count={roundTheFold.held.length}
+		counts={REPLIES}
+		open={folded?.open ?? false}
+		onShow={() => review.threads.reading.showFoldedTurns(thread.id)}
+		onHide={hideEarlierTurns}
+		testId="earlier-turns"
+	>
+		{#each roundTheFold.held as turn (turn.id)}
+			{@render rowsOf(turn)}
+		{/each}
+	</TurnsFold>
+{/if}
+{#each roundTheFold.after as turn (turn.id)}
+	{@render rowsOf(turn)}
+{/each}
+
+<!-- The rows a turn draws: a question, or an answer under it; after the last of its exchange, the answer still
+	awaited -->
+{#snippet rowsOf(turn: DrawnTurn)}
+	{#if turn.kind === 'question'}
+		{@render question(turn.exchange)}
+	{:else}
+		{@const answeredAt = turn.answer.at}
+		<Turn
+			speaker="agent"
+			testId="thread-answer"
+			data-tour={tourStop('answer')}
+			landing={review.threads.reading.isNewAnswer(thread.id, turn.id)}
+		>
+			{#snippet head()}
+				{#if answeredAt !== undefined}
+					<span>answered {howLongAgo(answeredAt)}</span>
+				{/if}
+			{/snippet}
+			<MarkdownRenderer text={turn.answer.body} dense />
+		</Turn>
+	{/if}
+	{#if turn.endsExchange}
+		{@render awaited(turn.exchange)}
+	{/if}
+{/snippet}
+
+{#snippet question(exchange: Exchange)}
 	{@const takenBackAt = review.threads.reading.takenBackAt(thread.id, exchange.id)}
 	<!-- The first question is the comment that opened the thread; the last, what the reader said last -->
-	{@const opening = index === 0}
-	{@const last = index === exchanges.length - 1}
+	{@const opening = exchange === exchanges[0]}
+	{@const last = exchange === exchanges.at(-1)}
 	{@const editing = review.threads.writing.edit(thread.id, exchange.id)}
 	{@const handed = review.threads.handing.has(thread.id, exchange.id)}
 	<!-- Asking stands at the last words while none of the thread's are being rewritten; the menu, at no words that are -->
@@ -151,25 +248,12 @@
 	{#if takenBackAt !== undefined}
 		<TakenBack ago={howLongAgo(takenBackAt)} said={ASKED_TO_DROP_IT} testId="thread-taken-back" />
 	{/if}
+{/snippet}
 
-	{#each exchange.answers as answer (answer.id)}
-		<Turn
-			speaker="agent"
-			testId="thread-answer"
-			data-tour={tourStop('answer')}
-			landing={review.threads.reading.isNewAnswer(thread.id, answer.id)}
-		>
-			{#snippet head()}
-				{#if answer.at !== undefined}
-					<span>answered {howLongAgo(answer.at)}</span>
-				{/if}
-			{/snippet}
-			<MarkdownRenderer text={answer.body} dense />
-		</Turn>
-	{/each}
-
+<!-- The answer still awaited after a question: the agent's turn, on its way -->
+{#snippet awaited(exchange: Exchange)}
+	{@const waitedOn = askedAt(exchange.id)}
 	{#if waitedOn !== undefined}
-		<!-- The answer still awaited: the agent's turn, on its way -->
 		<AgentOnItsWay
 			testId="awaiting-answer"
 			tour="awaited-answer"
@@ -177,7 +261,7 @@
 			takeBack={() => takeBackAndStay(exchange.id)}
 		/>
 	{/if}
-{/each}
+{/snippet}
 
 <!-- At the head of what the reader said last, while it is theirs to hand over: the way to hand it over now, or, with
 	no agent there to hear it, where it goes instead. With the review not reached, neither -->

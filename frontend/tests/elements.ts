@@ -6,6 +6,11 @@ export function said(element: HTMLElement): string {
 	return element.textContent.replace(/\s+/g, ' ').trim();
 }
 
+/** Whether the reader sees an element: neither it nor anything round it is hidden. */
+export function inSight(element: HTMLElement): boolean {
+	return element.closest('[hidden]') === null;
+}
+
 /** The words a piece of markup shows, read as the browser reads it: its tags gone, its entities turned to what they stand for. */
 export function textShownBy(markup: string): string {
 	const holder = document.createElement('div');

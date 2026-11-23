@@ -20,6 +20,9 @@ export const FILES_HAVING: CountedWords = { one: 'file has', many: 'files have' 
 /** What the reader's comments are called where they are counted. */
 export const COMMENTS: CountedWords = { one: 'comment', many: 'comments' };
 
+/** What everything said under the comment that opened a thread is called, counted: the agent's and the reader's alike. */
+export const REPLIES: CountedWords = { one: 'reply', many: 'replies' };
+
 /** The words that go with a count, said without it: the singular for one, the plural for none and for many. */
 export function wordsFor(count: number, words: CountedWords): string {
 	return count === 1 ? words.one : words.many;

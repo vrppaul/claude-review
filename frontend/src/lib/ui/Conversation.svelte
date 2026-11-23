@@ -3,7 +3,7 @@
 
 	interface Props {
 		testId: string;
-		/** Its rows: turns (Turn) and rows nobody says (TurnAside); or the parts of a comment being written, as the thread it becomes. */
+		/** Its rows: turns (Turn), rows nobody says (TurnAside) and earlier turns folded away (TurnsFold); or the parts of a comment being written, as the thread it becomes. */
 		children: Snippet;
 	}
 

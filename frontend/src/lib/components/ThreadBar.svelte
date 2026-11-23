@@ -14,14 +14,12 @@
 	import Tag from '$lib/ui/Tag.svelte';
 	import { plainWords } from '$lib/utils/plain-words';
 	import { raisedByAgent } from '$lib/utils/speakers';
-	import { counted, type CountedWords } from '$lib/utils/words';
+	import { counted, REPLIES } from '$lib/utils/words';
 	import { headingOf } from './anchor-headings';
 	import ReopenButton from './ReopenButton.svelte';
 	import { severityTone } from './severity-tone';
 	import { threadVoice } from './thread-voice';
 
-	// What everything said under the comment that opened a thread is called, counted: the agent's and the reader's alike
-	const REPLIES: CountedWords = { one: 'reply', many: 'replies' };
 	// What a folded thread's first words are, where the comment that opened it is an image and nothing more
 	const AN_IMAGE = 'an image';
 

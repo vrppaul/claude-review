@@ -2895,10 +2895,11 @@
 	width: var(--cr-line);
 	background: var(--cr-axis);
 }
-.cr-ui-turn-row:nth-child(1 of .cr-ui-turn-row)::before {
+/* Its ends are the conversation's own first and last rows: the turns a fold holds (TurnsFold) are never one */
+.cr-ui-conversation > .cr-ui-turn-row:nth-child(1 of .cr-ui-turn-row)::before {
 	top: calc(var(--cr-turn-avatar-size) / 2);
 }
-.cr-ui-turn-row:nth-last-child(1 of .cr-ui-turn-row)::before {
+.cr-ui-conversation > .cr-ui-turn-row:nth-last-child(1 of .cr-ui-turn-row)::before {
 	bottom: auto;
 	height: calc(var(--cr-turn-avatar-size) / 2);
 }
@@ -2983,10 +2984,45 @@
 	align-items: center;
 	gap: --spacing(2);
 }
-.cr-ui-turn-aside-rule {
+.cr-ui-turn-aside-rule,
+.cr-ui-turns-fold-rule {
 	flex-grow: 1;
 	height: var(--cr-line);
 	background: var(--color-base-300);
+}
+/*
+ * Earlier turns folded away (TurnsFold): a row of the conversation whose one
+ * button stands on the spine, over it as an avatar is, on the card's own
+ * ground, its edge the rule's and its words muted, so it reads quieter than
+ * the turns round it; its words turn ink under the pointer. A rule runs
+ * across the rest of the row, as a round's mark draws one
+ */
+.cr-ui-turns-fold {
+	display: flex;
+	align-items: center;
+	gap: var(--cr-turn-gap);
+}
+.cr-ui-turns-fold-button {
+	position: relative;
+	border-color: var(--color-base-300);
+	background-color: var(--cr-ground-card);
+	color: var(--cr-muted);
+}
+.cr-ui-turns-fold-button:hover {
+	color: var(--color-base-content);
+}
+/*
+ * The turns it folds, a row each, as far apart as the conversation's. Hidden,
+ * they stand out of its flow, so no gap of theirs breaks the spine between
+ * the row and the turn after it
+ */
+.cr-ui-turns-folded {
+	display: flex;
+	flex-direction: column;
+	gap: var(--cr-turn-row-gap);
+}
+.cr-ui-turns-folded[hidden] {
+	position: absolute;
 }
 /*
  * That a turn was taken back (TakenBack): a line of its own under it on the

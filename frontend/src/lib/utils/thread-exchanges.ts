@@ -5,10 +5,19 @@
  * before either is answered still read straight: each answer lands under
  * its own. An answer from an older version, which named nothing, falls to
  * the last question — where it used to go anyway.
+ *
+ * Read in that order, a long thread folds what lies between its opening and
+ * its last turns: which turns fold is how the page shows what it holds, so
+ * it is decided here, on the page.
  */
 
 import type { Thread, Turn, TurnAuthor } from '$lib/types';
 import { AGENT, READER } from '$lib/utils/speakers';
+
+// How many of a thread's last turns stay in sight however long it grows
+const LAST_IN_SIGHT = 3;
+// The fewest turns worth folding behind a row: one turn behind a row saves nothing
+const FEWEST_FOLDED = 2;
 
 /** One question — the comment that opened the thread, or a reply of the reader's — and the answers to it. */
 export interface Exchange {
@@ -50,6 +59,57 @@ export function exchangesOf(thread: Thread): Exchange[] {
 		}
 	}
 	return exchanges;
+}
+
+/** A turn as a thread draws it, in its order: a question, or an answer under the question it answers. */
+export type DrawnTurn = { id: string; exchange: Exchange; endsExchange: boolean } & (
+	{ kind: 'question' } | { kind: 'answer'; answer: Turn }
+);
+
+/** A thread's turns in the order it draws them: each question, then the answers to it; the last of each says so. */
+export function drawnTurnsOf(exchanges: readonly Exchange[]): DrawnTurn[] {
+	return exchanges.flatMap((exchange): DrawnTurn[] => [
+		{ kind: 'question', id: exchange.id, exchange, endsExchange: exchange.answers.length === 0 },
+		...exchange.answers.map((answer): DrawnTurn => ({
+			kind: 'answer',
+			id: answer.id,
+			exchange,
+			answer,
+			endsExchange: answer === exchange.answers.at(-1)
+		}))
+	]);
+}
+
+/**
+ * Which turns of a long thread fold behind one row, given every turn in the
+ * order it draws them and which must stay in sight: those between the
+ * comment that opened it and its last turns, up to the first that must stay.
+ */
+export function turnsToFold(drawn: readonly string[], staysInSight: (turnId: string) => boolean): string[] {
+	const beforeTheLast = drawn.slice(1, -LAST_IN_SIGHT);
+	const firstStaying = beforeTheLast.findIndex(staysInSight);
+	const folding = firstStaying === -1 ? beforeTheLast : beforeTheLast.slice(0, firstStaying);
+	return folding.length >= FEWEST_FOLDED ? folding : [];
+}
+
+/** A thread's drawn turns round its fold: those before it, those it holds, and those after it. */
+export interface TurnsRoundTheFold {
+	before: DrawnTurn[];
+	held: DrawnTurn[];
+	after: DrawnTurn[];
+}
+
+/**
+ * Split a thread's drawn turns round the turns folded in it. The fold holds
+ * the run of folded turns from the first: a turn that arrived inside that
+ * run since it was folded ends it, so it is drawn in its place and in sight.
+ */
+export function splitAtTheFold(drawn: readonly DrawnTurn[], folded: readonly string[]): TurnsRoundTheFold {
+	const start = drawn.findIndex((turn) => folded.includes(turn.id));
+	if (start === -1) return { before: [...drawn], held: [], after: [] };
+	const runLength = drawn.slice(start).findIndex((turn) => !folded.includes(turn.id));
+	const end = runLength === -1 ? drawn.length : start + runLength;
+	return { before: drawn.slice(0, start), held: drawn.slice(start, end), after: drawn.slice(end) };
 }
 
 /**

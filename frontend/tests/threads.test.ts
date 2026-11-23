@@ -6,7 +6,7 @@ import { userEvent } from '@testing-library/user-event';
 import CommentThread from '$lib/components/CommentThread.svelte';
 import DiffView from '$lib/components/DiffView.svelte';
 import { addedLine, contextLine, diffFile, hunk } from './diff';
-import { said } from './elements';
+import { inSight, said } from './elements';
 import { fakeServer, SERVER_ERROR, type FakeServer } from './fake-server';
 import { newComment } from './new-comment';
 import type { Review } from '$lib/review/review.svelte';
@@ -624,6 +624,73 @@ describe('a thread is a conversation', () => {
 		expect(getByTestId('resolved-thread')).toBeTruthy();
 		expect(review.threads.all[0].resolved).toBe(true);
 		expect(id).toBe(review.threads.all[0].id);
+	});
+});
+
+describe('a long thread', () => {
+	beforeEach(() => {
+		review = openReview({ files: [file] });
+	});
+
+	/** A thread of seven turns, the comment that opened it among them, every answer read. */
+	function longThread(): string {
+		const id = review.threads.add(onTheAddedLine('Why 3?'));
+		for (const [author, body] of [
+			['author', 'Because.'],
+			['reader', 'And 4?'],
+			['author', 'Same.'],
+			['reader', 'And 5?'],
+			['author', 'Also.'],
+			['reader', 'Thanks.']
+		] as const) {
+			review.threads.addTurn(id, { author, body, images: [] });
+		}
+		return id;
+	}
+
+	/** Whether the reader sees each turn of the thread, in the order it draws them. */
+	function turnsInSight(): boolean[] {
+		return screen.getAllByTestId(/^thread-(question|answer)$/).map(inSight);
+	}
+
+	it('folds what lies between its opening and its last three turns behind one button, which shows and hides them, the keyboard kept on it', async () => {
+		const user = userEvent.setup({ delay: null });
+		longThread();
+		render(DiffView, inReview(review));
+		const toggle = screen.getByTestId('earlier-turns-toggle');
+
+		expect(turnsInSight()).toEqual([true, false, false, false, true, true, true]);
+		expect(said(toggle)).toBe('Show 3 earlier replies');
+
+		toggle.focus();
+		await user.keyboard('{Enter}');
+
+		expect(turnsInSight()).toEqual([true, true, true, true, true, true, true]);
+		expect(said(toggle)).toBe('Hide 3 earlier replies');
+		expect(document.activeElement).toBe(toggle);
+
+		await user.keyboard('{Enter}');
+
+		expect(turnsInSight()).toEqual([true, false, false, false, true, true, true]);
+		expect(document.activeElement).toBe(toggle);
+	});
+
+	it('folds nothing more as answers arrive, and folds anew once the thread is folded by its bar and opened', async () => {
+		const user = userEvent.setup({ delay: null });
+		const id = longThread();
+		render(DiffView, inReview(review));
+
+		review.threads.receiveReply(id, 'One more.', null);
+		review.threads.receiveReply(id, 'And another.', null);
+		flushSync();
+
+		expect(turnsInSight()).toEqual([true, false, false, false, true, true, true, true, true]);
+		expect(said(screen.getByTestId('earlier-turns-toggle'))).toBe('Show 3 earlier replies');
+
+		await user.click(screen.getByTestId('fold-comment'));
+		await user.click(screen.getByTestId('unfold-thread'));
+
+		expect(said(screen.getByTestId('earlier-turns-toggle'))).toBe('Show 5 earlier replies');
 	});
 });
 

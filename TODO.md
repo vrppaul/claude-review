@@ -263,13 +263,6 @@ tests. Remove items when done — don't check them off.
       `Attempt` in two notices, `changedSinceFailed` in `FileSection`, and
       what the diff itself keeps of the whole review not put back.
 
-## Quality of life
-
-The owner's list of 2026-11-16.
-
-- [ ] `feat(ui)`: a long thread shows its last three or four answers and
-      folds the ones before them behind one line that opens them.
-
 ## Finding your way in a review
 
 The owner's idea of 2026-11-18, a language server built in to find a name

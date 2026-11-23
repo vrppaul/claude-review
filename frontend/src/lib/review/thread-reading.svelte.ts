@@ -1,13 +1,15 @@
 /**
  * How this page reads the threads, apart from what the threads say: which
- * are folded away, which carry an answer nobody has looked at, which
+ * are folded away, which turns of a long one are folded behind its row of
+ * earlier replies, which carry an answer nobody has looked at, which
  * questions are with the agent and not answered yet, and which the reader
  * took back.
  *
  * None of it goes on the wire — it is how the threads are read, not what
  * they say — so folding a thread or reading its answer tells the server
  * nothing. It is kept with the draft all the same: a reload should not
- * unfold what was folded, nor forget what is still being waited on.
+ * unfold what was folded, nor forget what is still being waited on. All
+ * but the earlier turns folded, which a reload works out anew.
  */
 
 import { SvelteMap, SvelteSet } from 'svelte/reactivity';
@@ -20,8 +22,21 @@ const NOTHING_AWAITED: readonly AwaitedQuestion[] = [];
 /** The answers known to be unread in a thread new for some other reason: none. */
 const NO_ANSWERS: readonly string[] = [];
 
+/** The turns of a thread folded behind its row of earlier replies, by id, and whether the reader opened the row. */
+export interface TurnsFolded {
+	turns: readonly string[];
+	open: boolean;
+}
+
 export class ThreadReading {
 	readonly #folded = new SvelteSet<string>();
+	/**
+	 * The earlier turns folded in each thread, worked out as its turns are
+	 * first drawn and kept while it stays open, so nothing folds under the
+	 * reader's eyes: none for a thread not drawn open since the page loaded
+	 * or since it was last folded whole.
+	 */
+	readonly #turnsFolded = new SvelteMap<string, TurnsFolded>();
 	/**
 	 * Threads with something nobody has looked at, and which of their
 	 * answers that is, by id: none for a thread the agent raised, whose
@@ -50,10 +65,34 @@ export class ThreadReading {
 		return this.#folded.has(threadId);
 	}
 
-	/** Fold a thread away, to get its space back without settling it, or bring it back. */
+	/**
+	 * Fold a thread away, to get its space back without settling it, or bring
+	 * it back. Folded, it lets go of its earlier turns folded, which its next
+	 * opening works out anew.
+	 */
 	setFolded(threadId: string, folded: boolean): void {
-		if (folded) this.#folded.add(threadId);
-		else this.#folded.delete(threadId);
+		if (folded) {
+			this.#folded.add(threadId);
+			this.#turnsFolded.delete(threadId);
+		} else {
+			this.#folded.delete(threadId);
+		}
+	}
+
+	/** The earlier turns folded in a thread; none until its turns are first drawn. */
+	turnsFolded(threadId: string): TurnsFolded | undefined {
+		return this.#turnsFolded.get(threadId);
+	}
+
+	/** Fold these turns of a thread behind its row of earlier replies, the row shut. */
+	foldTurns(threadId: string, turns: readonly string[]): void {
+		this.#turnsFolded.set(threadId, { turns, open: false });
+	}
+
+	/** Open a thread's row of earlier replies: the turns it folds stand under it. */
+	showFoldedTurns(threadId: string): void {
+		const folded = this.#turnsFolded.get(threadId);
+		if (folded) this.#turnsFolded.set(threadId, { ...folded, open: true });
 	}
 
 	/** Whether an answer arrived in the thread that nobody has looked at. */
@@ -131,6 +170,7 @@ export class ThreadReading {
 	/** The thread is gone: nothing about reading it is worth keeping. */
 	forget(threadId: string): void {
 		this.#folded.delete(threadId);
+		this.#turnsFolded.delete(threadId);
 		this.#unread.delete(threadId);
 		this.#awaiting.delete(threadId);
 		this.#takenBack.delete(threadId);
