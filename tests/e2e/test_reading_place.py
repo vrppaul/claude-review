@@ -138,6 +138,51 @@ async def test_a_retake_that_leaves_a_file_read_alone_untouched_keeps_the_reader
     await expect(read).to_be_in_viewport()
 
 
+@pytest.fixture
+def a_long_change_and_a_file_left_alone(tmp_path: Path) -> Path:
+    """A repository where one file changed on enough lines to scroll, and another the change did not touch."""
+    paths = (ABOVE_FILE, LEFT_FILE)
+    repo = committed_repository(tmp_path / "repo", {path: _lines(path) for path in paths})
+    write_files(repo, {ABOVE_FILE: _lines(ABOVE_FILE, dict.fromkeys(CHANGED_BELOW, "changed"))})
+    return repo
+
+
+@in_the_browsers_loop
+async def long_review_with_a_thread_on_the_file_left(
+    a_long_change_and_a_file_left_alone: Path, servers: ReviewServers
+) -> RunningReview:
+    """The long review, with a thread the agent raised on a line far down the file the change did not touch."""
+    review = await servers.start(await repository_opening(a_long_change_and_a_file_left_alone))
+    raised = {
+        "lines": pointed_json(LEFT_FILE, CHANGED_LINE),
+        "body": "the agent forgot this",
+        "severity": CommentSeverity.NOTE,
+    }
+    async with AsyncClient(base_url=review.url) as agent:
+        (await agent.post("/api/point", json=raised)).raise_for_status()
+    return review
+
+
+async def test_files_chosen_from_a_file_read_alone_show_the_reader_the_line_they_read_among_the_files(
+    long_review_with_a_thread_on_the_file_left: RunningReview, page: Page
+) -> None:
+    review = long_review_with_a_thread_on_the_file_left
+    await page.set_viewport_size(SCREEN)
+    await page.goto(review.url)
+    # The reader reads the changed line of the file the change touches, from the top of the area, then goes to the
+    # thread, into the file read alone
+    read = _section(page, ABOVE_FILE).get_by_role("button", name=f"Comment on line {CHANGED_LINE}", exact=True)
+    await read.scroll_into_view_if_needed()
+    await read.evaluate("number => number.scrollIntoView({ block: 'start' })")
+    await page.evaluate("() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)))")
+    await page.keyboard.press("n")
+    await page.get_by_test_id("file-alone-view").wait_for()
+
+    await page.get_by_test_id("read-as-files").click()
+
+    await expect(read).to_be_in_viewport()
+
+
 @in_the_browsers_loop
 async def review_told_with_a_thread_on_the_file_left(
     review_with_a_thread_on_the_file_left: RunningReview,

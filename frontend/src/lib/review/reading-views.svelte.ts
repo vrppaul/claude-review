@@ -27,7 +27,6 @@
  */
 
 import type { ThreadLines } from '$lib/anchors/views';
-import type { ReadingPlace } from '$lib/dom/reading-place';
 import type { PageLayout, ReadingChoice } from '$lib/reader/page-layout.svelte';
 import type { FileAloneReading } from '$lib/review/file-alone-reading.svelte';
 import { whereRead } from '$lib/review/files-way';
@@ -56,29 +55,11 @@ export interface StoryIntroductions {
 	noteStoryIntroduced: () => void;
 }
 
-/** Where the reader left a way of reading, and the take of the diff they read it in. */
-interface PlaceKept {
-	left: PlaceLeft;
-	take: number;
-}
-
 // The view every review can be read in, which draws the change's files; the one a file it did not touch is read
 // alone in; and the story's, which the reader is trying while it is on screen
 const FILES: ReadingViewName = 'files';
 const FILE_ALONE = 'file-alone' satisfies ReadingViewName;
 const STORY: ReadingViewName = 'story';
-// Where the head of what the reader read in stands as they come back to it: at the top of the reading area
-const HEAD_AT_THE_TOP = 0;
-
-/**
- * Where the reader comes back to a place kept: as they left it, in the take
- * it was read in; in another, which numbers the lines anew, the head of
- * what they read in.
- */
-function placeToComeBackTo(placeKept: PlaceKept, takeOnScreen: number): ReadingPlace {
-	const place = placeKept.left.place;
-	return placeKept.take === takeOnScreen ? place : { within: place.within, line: null, offset: HEAD_AT_THE_TOP };
-}
 
 export class ReadingViews implements ViewsOnScreen {
 	readonly #views: Views;
@@ -86,8 +67,8 @@ export class ReadingViews implements ViewsOnScreen {
 	readonly #diff: ReviewDiff;
 	readonly #introductions: StoryIntroductions;
 	#nameOnScreen: ReadingViewName;
-	// Where the reader left each way of reading, kept until they choose it again; none where they read nothing in it
-	readonly #placesKept: Record<ReadingChoice, PlaceKept | null> = { files: null, story: null };
+	// Where the reader last left each way of reading; none where they read nothing in it
+	readonly #placesKept: Record<ReadingChoice, PlaceLeft | null> = { files: null, story: null };
 
 	/**
 	 * @param views each view this review is read in
@@ -137,12 +118,12 @@ export class ReadingViews implements ViewsOnScreen {
 	choose(name: ReadingChoice): void {
 		// The reader asked: whatever they asked through (`WayIntoStory`) notes the story tried
 		this.#kept.set(name);
-		const placeKept = this.onScreen.readAs === name ? null : this.#placesKept[name];
-		const view = placeKept === null ? name : this.#viewDrawingNow(placeKept.left);
+		// Read before the view on screen leaves, which keeps its own place under its way of reading
+		const left = this.#placesKept[name];
+		const view = left === null ? name : this.#viewDrawingNow(left);
+		if (view === this.#nameOnScreen) return;
 		this.#putOnScreen(view);
-		if (placeKept !== null) {
-			void this.#views[view].returnTo(placeToComeBackTo(placeKept, this.#diff.takeOnScreen), 'where-it-is');
-		}
+		if (left !== null) void this.#views[view].returnTo(left.place, 'where-it-is');
 	}
 
 	/**
@@ -213,8 +194,7 @@ export class ReadingViews implements ViewsOnScreen {
 	#putOnScreen(name: ReadingViewName): void {
 		if (name === this.#nameOnScreen) return;
 		const leaving = this.onScreen;
-		const left = placeLeftIn(leaving);
-		this.#placesKept[leaving.readAs] = left === null ? null : { left, take: this.#diff.takeOnScreen };
+		this.#placesKept[leaving.readAs] = placeLeftIn(leaving);
 		this.#nameOnScreen = name;
 	}
 
