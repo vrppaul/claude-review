@@ -62,3 +62,8 @@ back, `{"type":"closed"}` once the review is over, or `{"type":"timeout"}` when 
 `--until-event` it waits on through the timeouts, so it can be driven from a loop.
 [The skill](../skills/review-ui/SKILL.md) documents the loop, and `claude-review story --help` shows a story's whole
 document.
+
+`check` reports a run of the tests, a linter or a type checker, passed or failed. A failed one names each place it
+failed with `--failure "tests/test_a.py:42: test_rename: AssertionError"`, repeated, and the review draws it under
+its line. The agent never reports a check out of date: the review marks it once a file changes after it, and
+`retake` names it to run again.

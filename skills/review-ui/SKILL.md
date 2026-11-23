@@ -334,20 +334,32 @@ somebody who is waiting.
     of the diff belongs to that base, so their gutters are shut there. Yours
     is anchored in the review's own diff and is not.
 
-11. Report each check you run — the tests, a linter, a type checker — as it
-    ends:
+11. Report every check you run — the tests, a linter, a type checker — each
+    time it ends, whether it passed or failed:
     ```bash
+    claude-review check --port <port> --name ruff --status passed \
+      --summary "All checks passed"
     claude-review check --port <port> --name pytest --status failed \
       --summary "1 failed, 411 passed" \
       --failure "tests/test_names.py:42: test_rename: AssertionError"
     ```
-    The reader cannot see that your tests ran, nor on which code. The review
-    stamps each check with the tree as it stands, and shows it out of date
-    once a file changes after it. Name it by its tool — `pytest`, `ruff`,
-    `ty`, `vitest`, `eslint`, `svelte-check` — and report it again under the
-    same name when you run it again: it replaces the one before. Repeat
-    `--failure` for each place it failed, written as compilers print it, the
-    path from the repository's root. A diff review only, as `retake` is.
+    The reader cannot see that your tests ran, nor on which code: a run you
+    leave unreported, green or red, is one they cannot count on. The review
+    stamps each check with the tree as it stands. Name it by its tool —
+    `pytest`, `ruff`, `ty`, `vitest`, `eslint`, `svelte-check` — and report
+    it again under the same name when you run it again: it replaces the one
+    before.
+
+    A failed check names where it failed: one `--failure` for each place,
+    up to 100, written as compilers print it (`path:line: what: why`, a
+    column after the line if the tool gives one), the path from the
+    repository's root. The review draws each under its line. A failure with
+    no line to name goes in `--summary`. A passed check takes no `--failure`.
+
+    You never report a check as out of date: the review says so itself,
+    once a file changes after the check ran. `retake` names those checks in
+    `checks_out_of_date` (step 9), and `catch-up` marks them: run each again
+    and report it. A diff review only, as `retake` is.
 
 While you work, the review says when the working tree has moved on and
 offers the user a "Retake" of its own. It never swaps the diff by itself, so

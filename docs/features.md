@@ -62,6 +62,17 @@ Everything a review does, by what you are doing at the time. How to start one is
 - When the working tree moves on, the review says so and offers to take the diff again. It never swaps the diff under
   a comment you are writing.
 
+## Checks
+
+- The agent reports each run of its tests, linters and type checkers, passed or failed. A chip after the view switch
+  says the worst of them: "1 of 3 failed", "2 of 3 out of date", "3 checks".
+- The chip opens them: what failed first, each failure under its check, then what the code changed after.
+- A failure is drawn under its line, and its file's row in the tree counts them. Press one to go to its line, read in
+  where the diff left it out; `b` takes you back.
+- A check is out of date once a file changes after it, measured by git's trees: a commit made after it leaves it
+  current. It and its failures turn grey, and the agent is told which to run again.
+- In a review of a diff only: files and a conversation have no tree to stamp a check with.
+
 ## Story
 
 The same diff, told by the agent that made it, in the order it is best read. Press Story in the header of a diff
