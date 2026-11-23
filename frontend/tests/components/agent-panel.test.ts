@@ -213,6 +213,29 @@ describe('the agent panel', () => {
 		expect(document.activeElement).toBe(field);
 	});
 
+	it('puts the list away by Escape from its cross, the keyboard back in the field', async () => {
+		const user = userEvent.setup({ delay: null });
+		const { getByTestId, queryByRole } = render(AgentPanel, inReview(review));
+		const field = getByTestId('panel-input');
+		await user.type(field, 'Look at @');
+		getByTestId('thread-picker-close').focus();
+
+		await user.keyboard('{Escape}');
+
+		expect(queryByRole('listbox')).toBeNull();
+		expect(document.activeElement).toBe(field);
+	});
+
+	it('puts the list away at a press outside it', async () => {
+		const user = userEvent.setup({ delay: null });
+		const { getByTestId, queryByRole } = render(AgentPanel, inReview(review));
+		await user.type(getByTestId('panel-input'), 'Look at @');
+
+		await user.click(getByTestId('panel-empty'));
+
+		expect(queryByRole('listbox')).toBeNull();
+	});
+
 	it('keeps the option the arrow keys move to in view in the list', async () => {
 		const user = userEvent.setup({ delay: null });
 		review.threads.add(newComment({ file: 'src/routes.py', startLine: 2, body: 'Why catch here?' }));

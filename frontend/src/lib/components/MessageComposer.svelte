@@ -79,7 +79,7 @@
 		field.setSelectionRange(typed.caret, typed.caret);
 	}
 
-	/** Put the picker away by its cross, which took the keyboard: it goes back to the field, to carry on typing. */
+	/** Put the picker away by its cross or by Escape from it: the keyboard goes back to the field, to carry on typing. */
 	function putPickerAway() {
 		mentions.close();
 		field?.focus();
@@ -144,8 +144,15 @@
 </script>
 
 <div class="relative">
-	{#if mentions.shown}
-		<MentionPicker {mentions} {listId} onTake={take} onClose={putPickerAway} />
+	{#if mentions.shown && field}
+		<MentionPicker
+			{mentions}
+			{listId}
+			{field}
+			onTake={take}
+			onClose={putPickerAway}
+			onPressedOutside={() => mentions.close()}
+		/>
 	{/if}
 
 	{#if pointed.length > 0}

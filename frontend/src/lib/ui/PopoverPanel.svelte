@@ -37,6 +37,11 @@
 		comesIn?: boolean;
 		head?: Head | undefined;
 		/**
+		 * Whether it lists what a field outside it steers, the keys that move in it being the field's: no taller than
+		 * leaves in sight the words written about it, and no stop of its own for Tab.
+		 */
+		steered?: boolean;
+		/**
 		 * Move what it stands by to where that stands now, before each fit: for a pane by a stretch of text, which
 		 * no control holds and which moves as its line wraps.
 		 */
@@ -69,6 +74,7 @@
 		fading = false,
 		comesIn = false,
 		head,
+		steered = false,
 		place,
 		scrollsWithItsSpot = false,
 		testId,
@@ -141,7 +147,8 @@
 		edge && PANE_EDGES[edge],
 		!arrow && 'cr-ui-arrowless',
 		fading && 'cr-ui-pane-fading',
-		comesIn && 'cr-ui-pane-coming'
+		comesIn && 'cr-ui-pane-coming',
+		steered && 'cr-ui-pane-steered'
 	]}
 	style:--cr-arrow-offset="{arrowOffset}px"
 	style:--cr-pane-shift={pixels(fit?.shift)}
@@ -153,9 +160,17 @@
 		{#if head}
 			<PaneHead {head} {testId} />
 		{/if}
-		<div bind:this={body} class="cr-scroller cr-ui-pane-body">
-			{@render children()}
-		</div>
+		{#if steered}
+			<!-- A browser makes a scroller holding nothing the keyboard can take a stop for Tab: a steered list's
+				options are the field's to move through -->
+			<div bind:this={body} class="cr-scroller cr-ui-pane-body" tabindex="-1">
+				{@render children()}
+			</div>
+		{:else}
+			<div bind:this={body} class="cr-scroller cr-ui-pane-body">
+				{@render children()}
+			</div>
+		{/if}
 		{#if foot}
 			<div class={['cr-ui-pane-foot', footAsks && 'cr-ui-pane-foot-asking']}>{@render foot()}</div>
 		{/if}

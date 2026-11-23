@@ -868,6 +868,10 @@
 	max-height: var(--cr-pane-most-height, none);
 	translate: var(--cr-pane-shift, 0px) 0;
 }
+/* A pane steered from a field (steered): no taller than leaves the reader's words about it in sight */
+.cr-ui-popover.cr-ui-pane-steered {
+	max-height: min(var(--cr-pane-most-height, var(--cr-pane-steered-tallest)), var(--cr-pane-steered-tallest));
+}
 /* What the pane holds, over the arrow's inner half; it rounds what scrolls or is lit inside it */
 .cr-ui-pane-inside {
 	position: relative;

@@ -14,7 +14,21 @@ import { fileToken, mentionBeingTyped, type TypedText } from '$lib/anchors/menti
 import type { DiffFile, Thread } from '$lib/types';
 
 /** A thread or a file a message can point at. */
-export type Mentionable = { kind: 'thread'; thread: Thread } | { kind: 'file'; path: string };
+export type Mentionable = ThreadMention | FileMention;
+export interface ThreadMention {
+	kind: 'thread';
+	thread: Thread;
+}
+export interface FileMention {
+	kind: 'file';
+	path: string;
+}
+
+/** One the picker lists, with its place among all it lists, which the keys and the field's highlight count by. */
+export interface Listed<Pick extends Mentionable> {
+	pick: Pick;
+	index: number;
+}
 
 /** What the picker offers from: the review's threads and files, as they stand. */
 export interface Offered {
@@ -37,29 +51,30 @@ export function optionIdOf(listId: string, index: number): string {
 	return `${listId}-option-${index}`;
 }
 
-/** What tells one candidate from every other, for a list to be keyed by. */
-export function keyOf(pick: Mentionable): string {
-	return pick.kind === 'thread' ? pick.thread.id : pick.path;
-}
-
 export class Mentions {
 	#open = $state(false);
 	// What has been typed since the @
 	#query = $state('');
 	#highlighted = $state(0);
+	readonly #threads: Listed<ThreadMention>[];
+	readonly #files: Listed<FileMention>[];
 	readonly #candidates: Mentionable[];
 
 	constructor(offered: Offered) {
-		this.#candidates = $derived([
-			...offered
+		this.#threads = $derived(
+			offered
 				.threads()
 				.filter((thread) => answersTo(this.#query, `${anchorToken(thread.anchor)} ${thread.body}`))
-				.map((thread): Mentionable => ({ kind: 'thread', thread })),
-			...offered
+				.map((thread, index) => ({ pick: { kind: 'thread', thread }, index }))
+		);
+		// The files after the threads, counted on from the last of them
+		this.#files = $derived(
+			offered
 				.files()
 				.filter((file) => answersTo(this.#query, file.path))
-				.map((file): Mentionable => ({ kind: 'file', path: file.path }))
-		]);
+				.map((file, at) => ({ pick: { kind: 'file', path: file.path }, index: this.#threads.length + at }))
+		);
+		this.#candidates = $derived([...this.#threads, ...this.#files].map((listed) => listed.pick));
 	}
 
 	/** Whether the picker is on screen: open, with something in it to pick. */
@@ -67,8 +82,14 @@ export class Mentions {
 		return this.#open && this.#candidates.length > 0;
 	}
 
-	get candidates(): Mentionable[] {
-		return this.#candidates;
+	/** The threads listed, first. */
+	get threads(): Listed<ThreadMention>[] {
+		return this.#threads;
+	}
+
+	/** The files listed, after the threads. */
+	get files(): Listed<FileMention>[] {
+		return this.#files;
 	}
 
 	get highlighted(): number {

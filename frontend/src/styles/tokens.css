@@ -211,8 +211,11 @@
 	--cr-dialog-window-height: min(40rem, 100dvh - 2 * var(--cr-dialog-window-room));
 	/* The list a pane in two columns holds at its start (lib/ui PaneColumns): a place's line read to its way */
 	--cr-pane-columns-list: 28rem;
-	/* The tallest the list of threads to mention stands over the field, before it scrolls itself */
-	--cr-mention-list-tallest: 15rem;
+	/*
+	 * The tallest a pane steered from a field stands over it, its head with it, before what it lists scrolls: short
+	 * enough to leave in sight the words the reader writes about it (lib/ui PopoverPanel)
+	 */
+	--cr-pane-steered-tallest: 18rem;
 	/*
 	 * An arrow: what a pane points at what opened it with, and a hanging
 	 * card up at what it is about, a square this long on its side turned on
