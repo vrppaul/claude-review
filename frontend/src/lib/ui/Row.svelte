@@ -53,7 +53,7 @@
 		/** What it is called: a path cut where the row ends, a title whole. */
 		label: Snippet;
 		/** What it says of what it names, after its label in quieter words: a thread's, after the line it hangs on. */
-		said?: Snippet;
+		said?: Snippet | undefined;
 		/**
 		 * Where what it says stands: right after its label; or at its end, where a list of names says the file each
 		 * is in. Either way in the room the label leaves, so the label is cut last.

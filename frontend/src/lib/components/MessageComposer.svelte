@@ -79,6 +79,12 @@
 		field.setSelectionRange(typed.caret, typed.caret);
 	}
 
+	/** Put the picker away by its cross, which took the keyboard: it goes back to the field, to carry on typing. */
+	function putPickerAway() {
+		mentions.close();
+		field?.focus();
+	}
+
 	/** Take a thread out of the message by taking its token out of the words. */
 	function drop(thread: Thread) {
 		composer.setText(withoutThread(draft, thread));
@@ -139,7 +145,7 @@
 
 <div class="relative">
 	{#if mentions.shown}
-		<MentionPicker {mentions} {listId} onTake={take} />
+		<MentionPicker {mentions} {listId} onTake={take} onClose={putPickerAway} />
 	{/if}
 
 	{#if pointed.length > 0}
