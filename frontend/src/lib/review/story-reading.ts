@@ -32,7 +32,6 @@ import {
 	LINES_WITH_THEIR_THREADS,
 	NOTHING_DRAWN,
 	placeInLines,
-	type PlaceLeft,
 	type PlaceRead,
 	type ReadingView
 } from '$lib/review/reading-view';
@@ -211,24 +210,13 @@ export class StoryReading implements ReadingView {
 	 * (`#pieceRead`); else in a part of the story, its overview or a
 	 * chapter, called by its title.
 	 */
-	placeRead(): PlaceRead | null {
-		const inAPiece = this.#sections.readingPlace(namesTheFileAsItStands);
+	placeRead(section?: string): PlaceRead | null {
+		const inAPiece = this.#sections.readingPlace(namesTheFileAsItStands, section);
 		if (inAPiece !== null) return this.#pieceRead(inAPiece);
-		const inAPart = this.#parts.readingPlace(namesTheFileAsItStands);
+		const inAPart = this.#parts.readingPlace(namesTheFileAsItStands, section);
 		if (inAPart === null) return null;
 		const called = this.#partCalled(inAPart.within);
 		return { place: inAPart, called, calledInFull: called };
-	}
-
-	/**
-	 * Where the reader reads in a step, as the place they leave the story
-	 * at: the step they acted from, wherever it stands in the area. None for
-	 * a step not drawn.
-	 */
-	placeLeftAtStep(stepSection: string): PlaceLeft | null {
-		const place = this.#sections.readingPlaceInSection(stepSection, namesTheFileAsItStands);
-		const read = place === null ? null : this.#pieceRead(place);
-		return read === null ? null : { ...read, view: this.name };
 	}
 
 	/** A story draws every piece and part it tells whole: once it is drawn, the place is there. */

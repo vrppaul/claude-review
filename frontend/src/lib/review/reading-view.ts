@@ -66,8 +66,8 @@ export interface ReadingView {
 	 * section it is drawn in, by its key; null where the view cannot draw it.
 	 */
 	drawLine: (path: string, line: LinePlace) => Promise<string | null>;
-	/** Where the reader reads in it, and what to call that place; null while nothing of it is being read. */
-	placeRead: () => PlaceRead | null;
+	/** Where the reader reads in the section named, or else the one being read, and what to call it; null for none. */
+	placeRead: (section?: string) => PlaceRead | null;
 	/**
 	 * Put the reader back at a place read in it, as they saw it, once the
 	 * place is drawn: its file unfolded, its line read in. False where the
@@ -90,9 +90,9 @@ export interface PlaceLeft extends PlaceRead {
 	view: ReadingViewName;
 }
 
-/** Where the reader reads in a view, as the place they leave it at; null while nothing of it is being read. */
-export function placeLeftIn(view: ReadingView): PlaceLeft | null {
-	const read = view.placeRead();
+/** Where the reader reads in a view, in the section named or the one being read, as the place they leave it at. */
+export function placeLeftIn(view: ReadingView, section?: string): PlaceLeft | null {
+	const read = view.placeRead(section);
 	return read === null ? null : { ...read, view: view.name };
 }
 
@@ -201,8 +201,8 @@ export class FilesReading implements ReadingView {
 		return fileSectionKey(path);
 	}
 
-	placeRead(): PlaceRead | null {
-		const place = this.#sections.readingPlace(namesTheFileAsItStands);
+	placeRead(section?: string): PlaceRead | null {
+		const place = this.#sections.readingPlace(namesTheFileAsItStands, section);
 		return place === null ? null : placeInLines(this.#sections, place);
 	}
 

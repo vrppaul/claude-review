@@ -105,11 +105,6 @@ export class ReadingViews implements ViewsOnScreen {
 		return this.#views[FILE_ALONE];
 	}
 
-	/** Where the reader reads in a step, as the story reads it, on screen or not. */
-	placeLeftAtStep(stepSection: string): PlaceLeft | null {
-		return this.#views.story.placeLeftAtStep(stepSection);
-	}
-
 	/** The file read alone now; null while another view is on screen. */
 	get fileReadAlone(): string | null {
 		return this.#nameOnScreen === FILE_ALONE ? this.fileAlone.path : null;
@@ -171,8 +166,8 @@ export class ReadingViews implements ViewsOnScreen {
 	 * still leaves stays read alone as it is.
 	 */
 	async giveWayToTheChange(): Promise<void> {
-		const path = this.fileReadAlone;
-		if (path === null || !this.#diff.holds(path)) return;
+		const path = this.fileAlone.path;
+		if (path === null || !this.#readAmongTheFilesNow(this.#nameOnScreen, path)) return;
 		const read = this.onScreen.placeRead();
 		const files = this.#views.files;
 		this.#bring(FILES);
@@ -206,13 +201,14 @@ export class ReadingViews implements ViewsOnScreen {
 		this.#nameOnScreen = name;
 	}
 
-	/**
-	 * The view that draws a place left now: the one it was read in, but for a
-	 * file read alone that the change has come to hold since, which is read
-	 * among the change's files.
-	 */
+	/** The view that draws a place left now: the one it was read in, or the change's files (`#readAmongTheFilesNow`). */
 	#viewDrawingNow(left: PlaceLeft): ReadingViewName {
+		return this.#readAmongTheFilesNow(left.view, left.place.within) ? FILES : left.view;
+	}
+
+	/** Whether a section of a view is a file read alone that the change has come to hold, read among its files now. */
+	#readAmongTheFilesNow(view: ReadingViewName, section: string): boolean {
 		// What a view of files whole knows a section by is its file's path
-		return left.view === FILE_ALONE && this.#diff.holds(left.place.within) ? FILES : left.view;
+		return view === FILE_ALONE && this.#diff.holds(section);
 	}
 }

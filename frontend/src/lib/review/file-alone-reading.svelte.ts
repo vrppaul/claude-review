@@ -137,8 +137,8 @@ export class FileAloneReading implements ReadingView {
 		return Promise.resolve(this.sectionOfFile(path));
 	}
 
-	placeRead(): PlaceRead | null {
-		const place = this.#sections.readingPlace(namesTheFileAsItStands);
+	placeRead(section?: string): PlaceRead | null {
+		const place = this.#sections.readingPlace(namesTheFileAsItStands, section);
 		return place === null ? null : placeInLines(this.#sections, place);
 	}
 

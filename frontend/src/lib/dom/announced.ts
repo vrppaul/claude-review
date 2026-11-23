@@ -45,6 +45,11 @@ export class Announced<Said extends Announcement> {
 		return this.#byKey.get(key);
 	}
 
+	/** The one known by a key, where it is drawn; with no key named, the one being read. */
+	namedOrRead(key?: string): Said | null {
+		return key === undefined ? this.beingRead : (this.#byKey.get(key) ?? null);
+	}
+
 	/** The one an element is, where it is one of them. */
 	of(element: Element): Said | undefined {
 		return this.#byElement.get(element);

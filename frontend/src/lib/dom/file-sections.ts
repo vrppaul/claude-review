@@ -194,25 +194,12 @@ export class FileSections {
 		return atTheTop?.path === this.fileInView ? atTheTop : null;
 	}
 
-	/**
-	 * Where the reader is reading in the section being read, while the
-	 * reading area is watched, as `readingPlaceIn` reads it. None while no
-	 * section is being read.
-	 */
-	readingPlace(standsAlike: (lineKey: string) => boolean): ReadingPlace | null {
-		const section = this.#sections.beingRead;
-		return section === null ? null : this.#placeReadIn(section, standsAlike);
-	}
-
-	/**
-	 * Where the reader is reading in a section named by its key, read as in
-	 * the section being read, wherever it stands in the area: a section the
-	 * reader acted from, though another is at the top. None for a section
-	 * not drawn, or while the reading area is not watched.
-	 */
-	readingPlaceInSection(sectionKey: string, standsAlike: (lineKey: string) => boolean): ReadingPlace | null {
-		const section = this.#sections.get(sectionKey);
-		return section === undefined ? null : this.#placeReadIn(section, standsAlike);
+	/** Where the reader reads in the section named, or else the one being read, as `readingPlaceIn` reads it. */
+	readingPlace(standsAlike: (lineKey: string) => boolean, sectionKey?: string): ReadingPlace | null {
+		// A section named is read wherever it stands: one the reader acted from, though another is at the top
+		const section = this.#sections.namedOrRead(sectionKey);
+		const area = this.#sections.area;
+		return section === null || area === null ? null : readingPlaceIn(section.key, section.element, area, standsAlike);
 	}
 
 	/** Whether the reader sees a line's number whole in a section now, by the key its place is known by. */
@@ -401,12 +388,6 @@ export class FileSections {
 	 */
 	line(path: string, lineKey: string): HTMLElement | null {
 		return lineAmong(this.#drawing(path), lineKey);
-	}
-
-	/** Where the reader is reading in a section, as `readingPlaceIn` reads it; none while the area is not watched. */
-	#placeReadIn(section: Section, standsAlike: (lineKey: string) => boolean): ReadingPlace | null {
-		const area = this.#sections.area;
-		return area === null ? null : readingPlaceIn(section.key, section.element, area, standsAlike);
 	}
 
 	/** The sections on the page that draw a file. */

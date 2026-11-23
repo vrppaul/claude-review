@@ -30,12 +30,6 @@ export interface ViewsOnScreen {
 	/** The view the review is read in now. */
 	readonly onScreen: ReadingView;
 	/**
-	 * Where the reader reads in a step of the story, by what its section is
-	 * known by, as the place they leave the story at: the step they acted
-	 * from, wherever it stands in the area. Null for a step not drawn.
-	 */
-	placeLeftAtStep: (stepSection: string) => PlaceLeft | null;
-	/**
 	 * Bring on screen the change's files, read against the review's own base,
 	 * and hand their view over: as it is, where that base could not be
 	 * brought back, and then it may draw less. It need not be drawn yet: the
@@ -252,19 +246,10 @@ export class Navigator {
 		if (section !== null) this.#goToLineFrom(left, section, arrived);
 	}
 
-	/**
-	 * Take the reader from a step of the story to its file among the
-	 * change's files, on the step's first line, as `goToLine` takes them to
-	 * a line; how they chose to read stays. The step, as they saw it, is
-	 * noted for Back: they acted from it, whichever piece was at the top of
-	 * the area.
-	 *
-	 * @param stepSection what the step's section is known by
-	 * @param path the step's file
-	 * @param firstLine the first of the step's lines, on the side they are numbered on
-	 */
+	/** Take the reader from a story's step to its file among the change's files, on its first line, as `goToLine` does. */
 	async openStepInFiles(stepSection: string, path: string, firstLine: LinePlace): Promise<void> {
-		const left = this.#views.placeLeftAtStep(stepSection);
+		// Back returns to the step they acted from, whichever piece was at the top of the area; the story is on screen
+		const left = placeLeftIn(this.#views.onScreen, stepSection);
 		const files = await this.#views.showTheChange();
 		const section = await files.drawLine(path, firstLine);
 		if (section !== null) this.#goToLineFrom(left, section, { line: placeKey(firstLine), name: null });

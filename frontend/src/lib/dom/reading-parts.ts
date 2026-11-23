@@ -115,14 +115,9 @@ export class ReadingParts {
 		this.#jumps.land(this.#parts.band, part.element);
 	}
 
-	/**
-	 * Where the reader is reading in the part being read, while the reading
-	 * area is watched, as `readingPlaceIn` reads it: the part's top where
-	 * they see no line of it, as over the overview. None while no part is
-	 * being read.
-	 */
-	readingPlace(standsAlike: (lineKey: string) => boolean): ReadingPlace | null {
-		const part = this.#parts.beingRead;
+	/** Where the reader reads in the part named, or else the one being read, as `readingPlaceIn` reads it. */
+	readingPlace(standsAlike: (lineKey: string) => boolean, partKey?: string): ReadingPlace | null {
+		const part = this.#parts.namedOrRead(partKey);
 		const area = this.#parts.area;
 		return part === null || area === null ? null : readingPlaceIn(part.key, part.element, area, standsAlike);
 	}
