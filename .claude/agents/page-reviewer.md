@@ -31,6 +31,8 @@ Where the page's gates are blind, and you look:
   same in Files and Story.
 - A fix made by a list without looking at the whole: after each change, what stands beside it (spacing to its
   neighbours, its frame, the row it sits in).
+- A changed token, `cr-` class or library part: find every place it reaches yourself, and look at the ones the
+  author's hand-over does not name.
 
 In the browser, on the long change `uv run python scripts/look.py` serves until its page is closed, driven by a
 Playwright script of your own in your scratch directory: in each theme and width the change can differ in, a window

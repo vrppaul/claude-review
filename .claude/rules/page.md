@@ -9,13 +9,13 @@ What eslint and stylelint refuse, and why, is in `frontend/eslint.config.js` and
 
 ## Types and state
 
-- The page draws what the server says: a rule that decides from the review's state (what counts, what is stale, where a thread hangs) is the server's. The page keeps layout, what is in sight, keys, focus, scroll, the draft.
+- The page draws what the server says: a rule deciding from the review's state (what counts, what is stale, where a thread hangs) is the server's; the page keeps layout, what is in sight, keys, focus, scroll, the draft.
 - Svelte 5 runes; TypeScript in strict mode, no `any`.
 - To the compiler a value read from a list or a table by position or key may be missing. Build so that holds, never check around it: a line carries its markup, not a list beside it.
 - A place the reader is at is the thing they are at (an id), not its position in a list that changes.
 - Find, walk or pair things; reach for an index only where the position is the meaning.
 - A function an interface asks for is written as a property (`label: (anchor: Kind) => string`), so the compiler holds it to its parameter types.
-- A component's module script exports nothing another module imports: eslint reads a `.svelte` import only through Svelte's catch-all declaration. A type or a function others use lives in a `.ts` module.
+- A component's module script exports nothing: eslint reads a `.svelte` import only through Svelte's catch-all declaration. What others use lives in a `.ts` module.
 - A callback handed to a child component or to `<svelte:window>` names its parameter's type; svelte-check holds it to the prop.
 - An object or array only ever replaced whole — what the server sent, a list rebuilt with `map`, `filter` or a spread — is `$state.raw`: deep `$state` wraps every line of a diff in a proxy.
 
@@ -24,25 +24,26 @@ What eslint and stylelint refuse, and why, is in `frontend/eslint.config.js` and
 - Every kind of element the page draws — a button, a field, a pane, a notice, a mark, a list's row — is a part of `frontend/src/lib/ui/`, whose file says what it is for.
 - A kind the library lacks is added there first, with the variants the page uses now and an eslint rule refusing it elsewhere, where a pattern can tell it.
 - The parts of `frontend/src/lib/` build on each other in one direction, as `LAYERS` in `frontend/eslint.config.js` lists them: components build on everything, and only components build on them.
-- The page's own code never finds an element by test id or by a page-wide id. An element announces itself to whoever needs it, as every file section and thread does to `FileSections`.
+- The page's own code finds no element by test id or page-wide id: an element announces itself to whoever needs it, as each file section and thread does to `FileSections`.
 - A selector that cannot be avoided reads a `data-role`, or one of two attributes that say which of many an element stands for: `data-place`, the line a line number is, and `data-tour`, the name the tour lights a place by.
 - Every new container gets a `data-testid`; a part of the library takes its own as `testId`.
 - Markup a library draws (mermaid's `g.node`) is read by the library's names in the module that calls it, and gets its test ids there by `setAttribute`.
-- A change to what the reader sees is looked at in a browser, in each theme and width it can differ in, before it is called done: in the report, never in a test.
+- A change to what the reader sees is looked at in a browser, in each theme and width it can differ in, before it is done: in the report, never in a test.
 
 ## Styling
 
 - A colour, a layer or a shadow is written once, in `frontend/src/styles/tokens.css`, for both themes. Every other stylesheet and the markup only name tokens.
 - A colour is named by what it means, never by its hue: the top of `frontend/src/styles/tokens.css` says whose each is.
 - A utility never overrides what a `cr-` class sets on the same element: change it with another `cr-` class, or use the utility in place of the class.
+- A changed token, `cr-` class or library part is looked at in a browser wherever it reaches, found by search, before it is done; the hand-over names where.
 
 ## Panes and keys
 
 - A menu or a pane opened from a control is a `Popover`, its look a `PopoverPanel`.
 - A modal is a `Dialog`, closed with `close()` and never by no longer drawing it, so the browser gives the keyboard back.
-- A key the review answers is a row of `KEYMAP` in `frontend/src/lib/components/keymap.ts`. A key of one view alone is a row that names its `views`, never a check in a handler.
+- A key the review answers is a row of `KEYMAP` (`frontend/src/lib/components/keymap.ts`). A key of one view alone is a row that names its `views`, never a check in a handler.
 - Whatever reads keys an editable field can send asks `isComposingText` first: a key building a word in an input method is never the page's.
-- When something is put away, sent or removed, what remains takes the keyboard (`focusWhatRemains`): it is never left on nothing.
+- What remains takes the keyboard when something is put away, sent or removed (`focusWhatRemains`).
 
 ## Moving the reader
 
