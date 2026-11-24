@@ -46,11 +46,12 @@ WINDOW_THE_PANEL_NARROWS: ViewportSize = {"width": 1200, "height": 560}
 WHAT_THE_AGENT_SAYS = "The tests pass."
 # How much of what holds the keyboard the reader sees, in sight inside the pane: all of it
 WHOLE = 1
-# The ways a reader walks with Tab: to the definition, to the uses the pane lists at first, and on to Show more
-TABS_THROUGH_THE_PANE = 7
-# Out of the pane from the first way in it: on past Show more and the ways to the change's import and call, its
-# last stop, or back past its close and the two ways to read it, Full and Compact
-TABS_OUT_OF_THE_PANE = TABS_THROUGH_THE_PANE + 3
+# The ways a reader walks with Tab from the definition's: to the change's import and call, to the uses the change
+# did not touch that the pane lists at first, and on to Show more
+TABS_THROUGH_THE_PANE = 9
+# Out of the pane from the first way in it: on past Show more, its last stop, or back past its close and the two ways
+# to read it, Full and Compact
+TABS_OUT_OF_THE_PANE = TABS_THROUGH_THE_PANE + 1
 TABS_BACK_OUT_OF_THE_PANE = 4
 # The number of the line the change's call stands on: after the import, a blank line and the lines before it
 PRESSED_LINE_NUMBER = str(LINES_BEFORE + 3)
