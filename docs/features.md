@@ -17,6 +17,9 @@ Everything a review does, by what you are doing at the time. How to start one is
 - Under each file the tree lists the functions and classes the change touched: press one to go to it, or its icon to
   see where it is defined and used. The filter finds them by name too, and lists under "Not in this change" those the
   repository defines elsewhere; a toggle beside it lists the files alone.
+- Ctrl+click a name in the code, Cmd+click on a Mac, and a pane by it lists where it is defined, where it is used, and
+  where the change uses it, the name marked on each line. Full reads the same places in a window, the code round the
+  one chosen beside the list; "Go to symbol" takes you there, in the diff or in the file alone.
 - Syntax highlighting that reads a hunk whole, so a docstring stays a docstring: JavaScript, TypeScript, Python, CSS,
   JSON, HTML and XML, shell, YAML, Markdown, Rust, Go, SQL and PHP.
 - A Markdown file can be read raw, rendered, or both side by side.

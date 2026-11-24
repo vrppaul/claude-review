@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-11-24
+
 ### Added
 - **The news goes back to older releases.** Two arrows on the What's new
   card lead to the news of the release before and of the one after, as
