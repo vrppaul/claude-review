@@ -928,13 +928,14 @@
 /*
  * What a pane stands by where no control opens it (Popover's at): a box of
  * the area it is drawn in, where what it is about stands, so the pane opens
- * beside that whole and scrolls with it, under what the area keeps in sight
- * at its top as the code goes under it. The box is no control: every press
- * goes through it to what stands there, and only its pane takes one
+ * beside that whole and scrolls with it. The box lays its pane on the panes'
+ * layer, as a trigger's pane stands, over every file's bar it reaches. The
+ * box is no control: every press goes through it to what stands there, and
+ * only its pane takes one
  */
 .cr-ui-popover-spot {
 	position: absolute;
-	z-index: var(--cr-layer-with-content);
+	z-index: var(--cr-layer-popover);
 	top: var(--cr-spot-top);
 	left: var(--cr-spot-left);
 	width: var(--cr-spot-width);

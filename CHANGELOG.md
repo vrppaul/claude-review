@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fixed
+- **The pane of a name stands over every file's bar.** Opened near a
+  file's end, it went under the bar of the file after it.
+
 ## [1.8.0] - 2026-11-24
 
 ### Added
