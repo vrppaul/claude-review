@@ -40,19 +40,19 @@ interface Group {
 	holds: (place: NamePlace) => boolean;
 }
 
-// The groups, in the order they stand: the uses the change did not touch before its own, as what the agent may
-// have forgotten
+// The groups, in the order they stand: where the name is defined, then the change's own uses, which the reader is
+// reading, before the uses it did not touch
 const GROUPS: readonly Group[] = [
 	{ heading: 'Defined', testId: 'name-defined', holds: (place) => place.defined_as !== null },
-	{
-		heading: 'Used where the change did not touch',
-		testId: 'name-used-untouched',
-		holds: (place) => place.defined_as === null && !place.added
-	},
 	{
 		heading: 'Used in this change',
 		testId: 'name-used-in-the-change',
 		holds: (place) => place.defined_as === null && place.added
+	},
+	{
+		heading: 'Used where the change did not touch',
+		testId: 'name-used-untouched',
+		holds: (place) => place.defined_as === null && !place.added
 	}
 ];
 // How many places of a group show before the rest wait behind a way to show them

@@ -183,7 +183,7 @@ describe('asking where a name is defined and used', () => {
 		expect(screen.queryByTestId('name-lookup-foot')).toBeNull();
 	});
 
-	it('lists where the name is defined, used where the change did not touch, and used in the change, with a count', async () => {
+	it('lists where the name is defined, used in the change, and used where the change did not touch, with a count', async () => {
 		server.answer('GET /api/name', TOTAL);
 		opened();
 
@@ -192,8 +192,8 @@ describe('asking where a name is defined and used', () => {
 		expect(screen.getByTestId('name-lookup-count').textContent).toBe('1 definition, 2 uses');
 		expect(listed()).toEqual([
 			'Defined 1 src/notes.txt 1total = 0Go to symbol',
-			'Used where the change did not touch 1 src/report.txt 9print(total)Go to symbol',
-			'Used in this change 1 src/notes.txt 2say(😀, total)Go to symbol'
+			'Used in this change 1 src/notes.txt 2say(😀, total)Go to symbol',
+			'Used where the change did not touch 1 src/report.txt 9print(total)Go to symbol'
 		]);
 	});
 
@@ -474,7 +474,7 @@ describe('reading where a name stands in a window', () => {
 			within(window)
 				.getAllByTestId('name-place')
 				.map((row) => row.textContent)
-		).toEqual(['1total = 0Go to symbol', '9print(total)Go to symbol', '2say(😀, total)Go to symbol']);
+		).toEqual(['1total = 0Go to symbol', '2say(😀, total)Go to symbol', '9print(total)Go to symbol']);
 		expect(codeShown()).toEqual(['src/notes.txt not in this change', ...linesOf('src/notes.txt', 1, 10)]);
 		expect(namesAsked()).toHaveLength(1);
 	});
@@ -482,7 +482,7 @@ describe('reading where a name stands in a window', () => {
 	it('says a place on a line the change wrote is in this change', async () => {
 		await openedInTheWindow();
 
-		await userEvent.setup().click(screen.getAllByTestId('name-place')[2]);
+		await userEvent.setup().click(screen.getAllByTestId('name-place')[1]);
 		await settled();
 
 		expect(codeShown()).toEqual(['src/notes.txt in this change', ...linesOf('src/notes.txt', 1, 11)]);
@@ -491,11 +491,11 @@ describe('reading where a name stands in a window', () => {
 	it('shows the code round a place chosen with the pointer, with what it stands in and that the change leaves it', async () => {
 		await openedInTheWindow();
 
-		await userEvent.setup().click(screen.getAllByTestId('name-place')[1]);
+		await userEvent.setup().click(screen.getAllByTestId('name-place')[2]);
 		await settled();
 
 		expect(codeShown()).toEqual(['src/report.txt, in report not in this change', ...linesOf('src/report.txt', 1, 18)]);
-		expect(document.activeElement).toBe(screen.getAllByTestId('go-to-symbol')[1]);
+		expect(document.activeElement).toBe(screen.getAllByTestId('go-to-symbol')[2]);
 	});
 
 	it('chooses the place whose way the keyboard is on, Tab walking on from the first', async () => {
@@ -505,7 +505,7 @@ describe('reading where a name stands in a window', () => {
 		await userEvent.setup().tab();
 		await settled();
 
-		expect(codeShown()).toEqual(['src/report.txt, in report not in this change', ...linesOf('src/report.txt', 1, 18)]);
+		expect(codeShown()).toEqual(['src/notes.txt in this change', ...linesOf('src/notes.txt', 1, 11)]);
 	});
 
 	it('takes the reader to the place chosen at Go to symbol, the window put away, the keyboard on its line', async () => {

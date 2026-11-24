@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed
+- **A name's uses in the change come first.** The pane and the window of
+  a name looked up list where it is defined, then where the change uses
+  it, then where it is used on lines the change did not touch.
+
 ### Fixed
 - **The pane of a name stands over every file's bar.** Opened near a
   file's end, it went under the bar of the file after it.
