@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [1.8.1] - 2026-11-24
+
 ### Changed
 - **A name's uses in the change come first.** The pane and the window of
   a name looked up list where it is defined, then where the change uses
