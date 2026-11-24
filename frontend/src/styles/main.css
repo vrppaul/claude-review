@@ -859,6 +859,8 @@
  * is painted by what it is, in the colour it has in a story told, as board
  * StoryOptIn draws it. Send feedback sketched (FeedbackSketch.svelte) the
  * same way, as board Feedback draws it: Help's ways, and the card it opens.
+ * A name looked up (NameLookupSketch.svelte) is drawn in the code's own
+ * words instead, below.
  */
 .cr-sketch {
 	--cr-sketch-ground: var(--cr-ground-reading);
@@ -951,6 +953,86 @@
 	--cr-sketch-written-ring: var(--cr-agent-chip);
 	--cr-sketch-written-title: var(--cr-agent);
 	--cr-sketch-written-task: var(--cr-agent);
+}
+/*
+ * A name looked up, sketched in the code's own face and marks: the line it
+ * is pressed in, the gesture's keys at its end, and the pane of its places
+ * under it, as far below as the pane's arrow is tall, the arrow at the name
+ */
+.cr-name-sketch {
+	--cr-name-sketch-arrow: --spacing(1.5);
+	--cr-name-sketch-name-room: --spacing(0.5);
+
+	flex-direction: column;
+	gap: var(--cr-name-sketch-arrow);
+	color: var(--cr-muted);
+	font-family: var(--font-mono);
+	font-size: var(--text-2xs);
+	line-height: var(--text-2xs--line-height);
+	white-space: nowrap;
+}
+.cr-name-sketch-line {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: --spacing(3);
+}
+/* The name, wherever it stands, on the reader's chip as the page marks it; the one pressed edged too */
+.cr-name-sketch-name {
+	position: relative;
+	padding: 0 var(--cr-name-sketch-name-room);
+	border-radius: var(--radius-field);
+	background: var(--cr-mark-chip);
+	color: var(--cr-mark-text);
+}
+.cr-name-sketch-pressed {
+	outline: var(--cr-line) solid var(--cr-mark-border);
+}
+/* The pointer that pressed it, resting on the name's end, edged in the ground so it stands off the chip */
+.cr-name-sketch-pointer {
+	position: absolute;
+	top: 50%;
+	right: calc(-1 * var(--cr-name-sketch-arrow));
+	overflow: visible;
+	fill: var(--color-base-content);
+	stroke: var(--cr-sketch-ground);
+}
+/* The pane, on a pane's ground and edge, a hairline between its places */
+.cr-name-sketch-pane {
+	position: relative;
+	border: var(--cr-line) solid var(--cr-pane-edge);
+	border-radius: var(--radius-box);
+	background: var(--color-base-200);
+}
+.cr-name-sketch-place {
+	display: flex;
+	justify-content: space-between;
+	gap: --spacing(3);
+	padding: --spacing(1) --spacing(2);
+}
+.cr-name-sketch-place + .cr-name-sketch-place {
+	border-top: var(--cr-line) solid var(--cr-pane-edge);
+}
+.cr-name-sketch-file {
+	color: var(--cr-faint);
+}
+/* Its arrow, out of its top edge at the middle of the name pressed: on its ground over the edge, the edge carried on */
+.cr-name-sketch-arrow {
+	position: absolute;
+	bottom: 100%;
+	left: calc(
+		var(--cr-name-sketch-name-from) + var(--cr-name-sketch-name-room) + var(--cr-name-sketch-name-length) / 2 -
+			var(--cr-name-sketch-arrow)
+	);
+	margin-bottom: calc(-1 * var(--cr-line));
+	overflow: visible;
+}
+.cr-name-sketch-arrow-ground {
+	fill: var(--color-base-200);
+}
+.cr-name-sketch-arrow-edge {
+	fill: none;
+	stroke: var(--cr-pane-edge);
 }
 
 /*

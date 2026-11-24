@@ -9,7 +9,7 @@
 import { REPOSITORY_URL } from '$lib/guide/repository';
 
 /** The drawings an entry can ask for, by name; `NewsIllustration` draws them. */
-export type DrawingName = 'pasted-screenshot' | 'story-sketch';
+export type DrawingName = 'pasted-screenshot' | 'story-sketch' | 'name-lookup-sketch';
 
 /**
  * A picture above the words. Either a file — a screenshot, or a GIF to show
@@ -75,6 +75,7 @@ export const RELEASE_NEWS: ReleaseNews[] = [
 			'The agent reports the checks it ran: a chip says how they stand, a failure is drawn under its line, and a check goes out of date once a file changes after it.',
 			'The agent can point at a file the change did not touch, and the page opens it alone.',
 			'The review answers every request some 40 ms sooner.'
-		]
+		],
+		illustration: { kind: 'drawing', name: 'name-lookup-sketch' }
 	}
 ];

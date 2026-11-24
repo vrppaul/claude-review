@@ -2,6 +2,7 @@
 	import type { Component } from 'svelte';
 	import type { DrawingName, Illustration } from '$lib/guide/news';
 	import Picture from '$lib/ui/Picture.svelte';
+	import NameLookupSketch from './NameLookupSketch.svelte';
 	import PastedScreenshot from './PastedScreenshot.svelte';
 	import StorySketch from './StorySketch.svelte';
 
@@ -14,7 +15,8 @@
 	// Every drawing an entry can name; a name missing here does not type-check
 	const DRAWINGS: Record<DrawingName, Component> = {
 		'pasted-screenshot': PastedScreenshot,
-		'story-sketch': StorySketch
+		'story-sketch': StorySketch,
+		'name-lookup-sketch': NameLookupSketch
 	};
 </script>
 
